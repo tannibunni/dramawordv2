@@ -10,23 +10,18 @@ import {
   Modal,
   Image,
   Dimensions,
+  ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { TMDBService, TMDBShow } from '../../services/tmdbService';
 
 const { width } = Dimensions.get('window');
 
-interface Show {
-  id: string;
-  title: string;
-  originalTitle: string;
-  overview: string;
-  posterPath: string;
-  releaseDate: string;
-  rating: number;
-  genre: string;
+interface Show extends TMDBShow {
   status: 'watching' | 'completed' | 'plan_to_watch';
   wordCount: number;
-  lastWatched: string;
+  lastWatched?: string;
 }
 
 const ShowsScreen: React.FC = () => {
@@ -36,87 +31,83 @@ const ShowsScreen: React.FC = () => {
   const [selectedShow, setSelectedShow] = useState<Show | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [filter, setFilter] = useState<'all' | 'watching' | 'completed' | 'plan_to_watch'>('all');
+  const [loading, setLoading] = useState(false);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [hasMoreData, setHasMoreData] = useState(true);
 
   useEffect(() => {
-    loadShows();
+    loadPopularShows();
   }, []);
 
   useEffect(() => {
     filterShows();
   }, [shows, searchText, filter]);
 
-  const loadShows = () => {
-    // 模拟API调用
-    setTimeout(() => {
-      const mockShows: Show[] = [
-        {
-          id: '1',
-          title: '老友记',
-          originalTitle: 'Friends',
-          overview: '六个好朋友在纽约的生活故事，充满了友情、爱情和幽默。',
-          posterPath: 'https://via.placeholder.com/150x225/4F6DFF/FFFFFF?text=Friends',
-          releaseDate: '1994-09-22',
-          rating: 9.0,
-          genre: '喜剧',
-          status: 'watching',
-          wordCount: 1250,
-          lastWatched: '2024-01-15',
-        },
-        {
-          id: '2',
-          title: '绝命毒师',
-          originalTitle: 'Breaking Bad',
-          overview: '一个高中化学老师为了家庭而走上制毒道路的黑暗故事。',
-          posterPath: 'https://via.placeholder.com/150x225/6BCF7A/FFFFFF?text=BB',
-          releaseDate: '2008-01-20',
-          rating: 9.5,
-          genre: '犯罪/剧情',
-          status: 'completed',
-          wordCount: 890,
-          lastWatched: '2024-01-10',
-        },
-        {
-          id: '3',
-          title: '办公室',
-          originalTitle: 'The Office',
-          overview: '一个虚构的纸业公司办公室里的日常工作和生活。',
-          posterPath: 'https://via.placeholder.com/150x225/F4B942/FFFFFF?text=Office',
-          releaseDate: '2005-03-24',
-          rating: 8.9,
-          genre: '喜剧',
-          status: 'watching',
-          wordCount: 567,
-          lastWatched: '2024-01-14',
-        },
-        {
-          id: '4',
-          title: '权力的游戏',
-          originalTitle: 'Game of Thrones',
-          overview: '七个王国争夺铁王座的史诗级奇幻剧。',
-          posterPath: 'https://via.placeholder.com/150x225/F76C6C/FFFFFF?text=GoT',
-          releaseDate: '2011-04-17',
-          rating: 9.3,
-          genre: '奇幻/剧情',
-          status: 'plan_to_watch',
-          wordCount: 0,
-          lastWatched: '',
-        },
-        {
-          id: '5',
-          title: '纸牌屋',
-          originalTitle: 'House of Cards',
-          overview: '一个政治家的权力斗争和阴谋故事。',
-          posterPath: 'https://via.placeholder.com/150x225/888888/FFFFFF?text=HoC',
-          releaseDate: '2013-02-01',
-          rating: 8.7,
-          genre: '政治/剧情',
-          status: 'completed',
-          wordCount: 432,
-          lastWatched: '2024-01-08',
-        },
-      ];
-      setShows(mockShows);
-    }, 1000);
+  const loadPopularShows = async (page: number = 1) => {
+    try {
+      setLoading(true);
+      const response = await TMDBService.getPopularShows(page);
+      
+      const showsWithStatus: Show[] = response.results.map(show => ({
+        ...show,
+        status: 'plan_to_watch' as const,
+        wordCount: 0,
+      }));
+
+      if (page === 1) {
+        setShows(showsWithStatus);
+      } else {
+        setShows(prev => [...prev, ...showsWithStatus]);
+      }
+      
+      setCurrentPage(page);
+      setHasMoreData(page < response.total_pages);
+    } catch (error) {
+      console.error('Failed to load popular shows:', error);
+      Alert.alert('错误', '加载热门剧集失败，请稍后重试');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const searchShows = async (query: string) => {
+    if (!query.trim()) {
+      loadPopularShows();
+      return;
+    }
+
+    try {
+      setSearchLoading(true);
+      const response = await TMDBService.searchShows(query);
+      
+      const showsWithStatus: Show[] = response.results.map(show => ({
+        ...show,
+        status: 'plan_to_watch' as const,
+        wordCount: 0,
+      }));
+
+      setShows(showsWithStatus);
+      setCurrentPage(1);
+      setHasMoreData(response.page < response.total_pages);
+    } catch (error) {
+      console.error('Failed to search shows:', error);
+      Alert.alert('错误', '搜索剧集失败，请稍后重试');
+    } finally {
+      setSearchLoading(false);
+    }
+  };
+
+  const loadMoreShows = () => {
+    if (!hasMoreData || loading) return;
+    
+    if (searchText) {
+      // 搜索模式下加载更多搜索结果
+      searchShows(searchText);
+    } else {
+      // 热门剧集模式下加载更多
+      loadPopularShows(currentPage + 1);
+    }
   };
 
   const filterShows = () => {
@@ -127,12 +118,12 @@ const ShowsScreen: React.FC = () => {
       filtered = filtered.filter(show => show.status === filter);
     }
 
-    // 按搜索文本过滤
+    // 按搜索文本过滤（本地过滤，用于状态筛选）
     if (searchText) {
       filtered = filtered.filter(show =>
-        show.title.toLowerCase().includes(searchText.toLowerCase()) ||
-        show.originalTitle.toLowerCase().includes(searchText.toLowerCase()) ||
-        show.genre.toLowerCase().includes(searchText.toLowerCase())
+        show.name.toLowerCase().includes(searchText.toLowerCase()) ||
+        show.original_name.toLowerCase().includes(searchText.toLowerCase()) ||
+        show.genres.some(genre => genre.name.toLowerCase().includes(searchText.toLowerCase()))
       );
     }
 
@@ -157,7 +148,7 @@ const ShowsScreen: React.FC = () => {
     }
   };
 
-  const changeShowStatus = (showId: string, newStatus: Show['status']) => {
+  const changeShowStatus = (showId: number, newStatus: Show['status']) => {
     setShows(prevShows =>
       prevShows.map(show =>
         show.id === showId ? { ...show, status: newStatus } : show
@@ -175,23 +166,32 @@ const ShowsScreen: React.FC = () => {
       style={styles.showItem}
       onPress={() => openShowDetail(item)}
     >
-      <Image source={{ uri: item.posterPath }} style={styles.poster} />
+      <Image 
+        source={{ 
+          uri: item.poster_path 
+            ? TMDBService.getImageUrl(item.poster_path, 'w185')
+            : 'https://via.placeholder.com/150x225/CCCCCC/FFFFFF?text=No+Image'
+        }} 
+        style={styles.poster} 
+      />
       
       <View style={styles.showInfo}>
         <View style={styles.showHeader}>
-          <Text style={styles.showTitle}>{item.title}</Text>
+          <Text style={styles.showTitle}>{item.name}</Text>
           <View style={[styles.statusBadge, { backgroundColor: getStatusColor(item.status) }]}>
             <Text style={styles.statusText}>{getStatusText(item.status)}</Text>
           </View>
         </View>
         
-        <Text style={styles.originalTitle}>{item.originalTitle}</Text>
-        <Text style={styles.genreText}>{item.genre}</Text>
+        <Text style={styles.originalTitle}>{item.original_name}</Text>
+        <Text style={styles.genreText}>
+          {item.genres.map(genre => genre.name).join(', ')}
+        </Text>
         
         <View style={styles.showMeta}>
           <View style={styles.ratingContainer}>
             <Ionicons name="star" size={16} color="#F4B942" />
-            <Text style={styles.ratingText}>{item.rating}</Text>
+            <Text style={styles.ratingText}>{item.vote_average.toFixed(1)}</Text>
           </View>
           <Text style={styles.wordCountText}>{item.wordCount} 个单词</Text>
         </View>
@@ -205,53 +205,90 @@ const ShowsScreen: React.FC = () => {
 
   const renderFilterButton = (filterType: Show['status'] | 'all', label: string) => (
     <TouchableOpacity
-      style={[styles.filterButton, filter === filterType && styles.filterButtonActive]}
+      style={[
+        styles.filterButton,
+        filter === filterType && styles.filterButtonActive
+      ]}
       onPress={() => setFilter(filterType)}
     >
-      <Text style={[styles.filterButtonText, filter === filterType && styles.filterButtonTextActive]}>
+      <Text style={[
+        styles.filterButtonText,
+        filter === filterType && styles.filterButtonTextActive
+      ]}>
         {label}
       </Text>
     </TouchableOpacity>
   );
+
+  const renderFooter = () => {
+    if (!hasMoreData) {
+      return (
+        <View style={styles.footer}>
+          <Text style={styles.footerText}>没有更多数据了</Text>
+        </View>
+      );
+    }
+    
+    if (loading) {
+      return (
+        <View style={styles.footer}>
+          <ActivityIndicator size="small" color="#4F6DFF" />
+          <Text style={styles.footerText}>加载中...</Text>
+        </View>
+      );
+    }
+    
+    return null;
+  };
 
   return (
     <SafeAreaView style={styles.container}>
       {/* 搜索栏 */}
       <View style={styles.searchContainer}>
         <View style={styles.searchInputContainer}>
-          <Ionicons name="search" size={20} color="#888888" />
+          <Ionicons name="search" size={20} color="#666" style={styles.searchIcon} />
           <TextInput
             style={styles.searchInput}
             placeholder="搜索剧集..."
             value={searchText}
             onChangeText={setSearchText}
+            onSubmitEditing={() => searchShows(searchText)}
+            returnKeyType="search"
           />
+          {searchLoading && (
+            <ActivityIndicator size="small" color="#4F6DFF" style={styles.searchLoading} />
+          )}
         </View>
       </View>
 
-      {/* 过滤器 */}
+      {/* 筛选按钮 */}
       <View style={styles.filterContainer}>
         {renderFilterButton('all', '全部')}
         {renderFilterButton('watching', '观看中')}
         {renderFilterButton('completed', '已完成')}
-        {renderFilterButton('plan_to_watch', '计划')}
-      </View>
-
-      {/* 统计信息 */}
-      <View style={styles.statsContainer}>
-        <Text style={styles.statsText}>
-          共 {filteredShows.length} 部剧集
-          {filter === 'all' && ` (观看中 ${shows.filter(s => s.status === 'watching').length} 部)`}
-        </Text>
+        {renderFilterButton('plan_to_watch', '计划观看')}
       </View>
 
       {/* 剧集列表 */}
       <FlatList
         data={filteredShows}
         renderItem={renderShowItem}
-        keyExtractor={(item) => item.id}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.listContainer}
+        keyExtractor={(item) => item.id.toString()}
+        style={styles.list}
+        contentContainerStyle={styles.listContent}
+        onEndReached={loadMoreShows}
+        onEndReachedThreshold={0.1}
+        ListFooterComponent={renderFooter}
+        ListEmptyComponent={
+          !loading ? (
+            <View style={styles.emptyContainer}>
+              <Ionicons name="tv-outline" size={64} color="#CCC" />
+              <Text style={styles.emptyText}>
+                {searchText ? '没有找到相关剧集' : '暂无剧集数据'}
+              </Text>
+            </View>
+          ) : null
+        }
       />
 
       {/* 剧集详情模态框 */}
@@ -264,72 +301,78 @@ const ShowsScreen: React.FC = () => {
           <SafeAreaView style={styles.modalContainer}>
             <View style={styles.modalHeader}>
               <TouchableOpacity
-                style={styles.closeButton}
                 onPress={() => setShowDetailModal(false)}
+                style={styles.closeButton}
               >
-                <Ionicons name="close" size={24} color="#2D2D2D" />
+                <Ionicons name="close" size={24} color="#000" />
               </TouchableOpacity>
               <Text style={styles.modalTitle}>剧集详情</Text>
-              <View style={styles.placeholder} />
             </View>
 
             <View style={styles.modalContent}>
-              <Image source={{ uri: selectedShow.posterPath }} style={styles.modalPoster} />
-              
-              <Text style={styles.modalShowTitle}>{selectedShow.title}</Text>
-              <Text style={styles.modalOriginalTitle}>{selectedShow.originalTitle}</Text>
-              
-              <View style={styles.modalMeta}>
-                <View style={styles.ratingContainer}>
-                  <Ionicons name="star" size={20} color="#F4B942" />
-                  <Text style={styles.modalRatingText}>{selectedShow.rating}</Text>
-                </View>
-                <Text style={styles.modalGenreText}>{selectedShow.genre}</Text>
-                <Text style={styles.modalDateText}>{selectedShow.releaseDate}</Text>
-              </View>
+              <Image
+                source={{
+                  uri: selectedShow.poster_path
+                    ? TMDBService.getImageUrl(selectedShow.poster_path, 'w500')
+                    : 'https://via.placeholder.com/300x450/CCCCCC/FFFFFF?text=No+Image'
+                }}
+                style={styles.modalPoster}
+              />
 
-              <Text style={styles.modalOverview}>{selectedShow.overview}</Text>
-
-              <View style={styles.modalStats}>
-                <View style={styles.modalStatItem}>
-                  <Text style={styles.modalStatLabel}>观看状态</Text>
-                  <Text style={styles.modalStatValue}>
-                    {getStatusText(selectedShow.status)}
+              <View style={styles.modalInfo}>
+                <Text style={styles.modalShowTitle}>{selectedShow.name}</Text>
+                <Text style={styles.modalOriginalTitle}>{selectedShow.original_name}</Text>
+                
+                <View style={styles.modalMeta}>
+                  <View style={styles.modalRating}>
+                    <Ionicons name="star" size={20} color="#F4B942" />
+                    <Text style={styles.modalRatingText}>{selectedShow.vote_average.toFixed(1)}</Text>
+                  </View>
+                  <Text style={styles.modalYear}>
+                    {new Date(selectedShow.first_air_date).getFullYear()}
+                  </Text>
+                  <Text style={styles.modalSeasons}>
+                    {selectedShow.number_of_seasons} 季
                   </Text>
                 </View>
-                <View style={styles.modalStatItem}>
-                  <Text style={styles.modalStatLabel}>学习单词</Text>
-                  <Text style={styles.modalStatValue}>{selectedShow.wordCount} 个</Text>
-                </View>
-                {selectedShow.lastWatched && (
-                  <View style={styles.modalStatItem}>
-                    <Text style={styles.modalStatLabel}>最后观看</Text>
-                    <Text style={styles.modalStatValue}>{selectedShow.lastWatched}</Text>
-                  </View>
-                )}
-              </View>
 
-              <View style={styles.modalActions}>
-                <TouchableOpacity
-                  style={[styles.modalActionButton, { backgroundColor: '#4F6DFF' }]}
-                  onPress={() => {
-                    console.log('开始学习');
-                    setShowDetailModal(false);
-                  }}
-                >
-                  <Ionicons name="play" size={20} color="white" />
-                  <Text style={styles.modalActionText}>开始学习</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.modalActionButton, { backgroundColor: '#F76C6C' }]}
-                  onPress={() => {
-                    console.log('删除剧集');
-                    setShowDetailModal(false);
-                  }}
-                >
-                  <Ionicons name="trash" size={20} color="white" />
-                  <Text style={styles.modalActionText}>删除</Text>
-                </TouchableOpacity>
+                <Text style={styles.modalOverview}>{selectedShow.overview}</Text>
+
+                <View style={styles.modalGenres}>
+                  {selectedShow.genres.map(genre => (
+                    <View key={genre.id} style={styles.genreTag}>
+                      <Text style={styles.genreTagText}>{genre.name}</Text>
+                    </View>
+                  ))}
+                </View>
+
+                <View style={styles.modalActions}>
+                  <TouchableOpacity
+                    style={[
+                      styles.actionButton,
+                      selectedShow.status === 'watching' && styles.actionButtonActive
+                    ]}
+                    onPress={() => {
+                      changeShowStatus(selectedShow.id, 'watching');
+                      setShowDetailModal(false);
+                    }}
+                  >
+                    <Text style={styles.actionButtonText}>开始观看</Text>
+                  </TouchableOpacity>
+                  
+                  <TouchableOpacity
+                    style={[
+                      styles.actionButton,
+                      selectedShow.status === 'completed' && styles.actionButtonActive
+                    ]}
+                    onPress={() => {
+                      changeShowStatus(selectedShow.id, 'completed');
+                      setShowDetailModal(false);
+                    }}
+                  >
+                    <Text style={styles.actionButtonText}>标记完成</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
             </View>
           </SafeAreaView>
@@ -342,86 +385,84 @@ const ShowsScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9F9FB',
+    backgroundColor: '#F8F9FA',
   },
   searchContainer: {
-    padding: 20,
-    paddingBottom: 10,
+    padding: 16,
+    backgroundColor: '#FFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E5EA',
   },
   searchInputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'white',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
+    backgroundColor: '#F2F2F7',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+  },
+  searchIcon: {
+    marginRight: 8,
   },
   searchInput: {
     flex: 1,
-    marginLeft: 12,
+    height: 40,
     fontSize: 16,
-    color: '#2D2D2D',
+    color: '#000',
+  },
+  searchLoading: {
+    marginLeft: 8,
   },
   filterContainer: {
     flexDirection: 'row',
-    paddingHorizontal: 20,
-    paddingBottom: 10,
+    padding: 16,
+    backgroundColor: '#FFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E5EA',
   },
   filterButton: {
     paddingHorizontal: 16,
     paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: '#F0F0F0',
     marginRight: 12,
+    borderRadius: 20,
+    backgroundColor: '#F2F2F7',
   },
   filterButtonActive: {
     backgroundColor: '#4F6DFF',
   },
   filterButtonText: {
     fontSize: 14,
-    color: '#888888',
-    fontWeight: '500',
+    color: '#666',
   },
   filterButtonTextActive: {
-    color: 'white',
+    color: '#FFF',
   },
-  statsContainer: {
-    paddingHorizontal: 20,
-    paddingBottom: 10,
+  list: {
+    flex: 1,
   },
-  statsText: {
-    fontSize: 14,
-    color: '#888888',
-  },
-  listContainer: {
-    padding: 20,
-    paddingTop: 0,
+  listContent: {
+    padding: 16,
   },
   showItem: {
     flexDirection: 'row',
-    backgroundColor: 'white',
+    backgroundColor: '#FFF',
     borderRadius: 12,
-    padding: 16,
+    padding: 12,
     marginBottom: 12,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
-    shadowRadius: 8,
+    shadowRadius: 4,
     elevation: 3,
   },
   poster: {
-    width: 60,
-    height: 90,
+    width: 80,
+    height: 120,
     borderRadius: 8,
-    marginRight: 16,
+    marginRight: 12,
   },
   showInfo: {
     flex: 1,
+    justifyContent: 'space-between',
   },
   showHeader: {
     flexDirection: 'row',
@@ -430,30 +471,30 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   showTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#2D2D2D',
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#000',
     flex: 1,
+    marginRight: 8,
   },
   statusBadge: {
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 12,
-    marginLeft: 8,
   },
   statusText: {
-    fontSize: 10,
-    color: 'white',
-    fontWeight: '600',
+    fontSize: 12,
+    color: '#FFF',
+    fontWeight: '500',
   },
   originalTitle: {
     fontSize: 14,
-    color: '#888888',
+    color: '#666',
     marginBottom: 4,
   },
   genreText: {
     fontSize: 12,
-    color: '#4F6DFF',
+    color: '#999',
     marginBottom: 8,
   },
   showMeta: {
@@ -468,133 +509,147 @@ const styles = StyleSheet.create({
   },
   ratingText: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#2D2D2D',
+    color: '#666',
     marginLeft: 4,
   },
   wordCountText: {
     fontSize: 12,
-    color: '#888888',
+    color: '#999',
   },
   lastWatchedText: {
     fontSize: 12,
-    color: '#888888',
+    color: '#999',
+  },
+  emptyContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 60,
+  },
+  emptyText: {
+    fontSize: 16,
+    color: '#999',
+    marginTop: 16,
+  },
+  footer: {
+    alignItems: 'center',
+    paddingVertical: 20,
+  },
+  footerText: {
+    fontSize: 14,
+    color: '#999',
+    marginTop: 8,
   },
   modalContainer: {
     flex: 1,
-    backgroundColor: '#F9F9FB',
+    backgroundColor: '#FFF',
   },
   modalHeader: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 20,
+    padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
-    backgroundColor: 'white',
+    borderBottomColor: '#E5E5EA',
   },
   closeButton: {
-    padding: 4,
+    padding: 8,
   },
   modalTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#2D2D2D',
-  },
-  placeholder: {
-    width: 32,
+    color: '#000',
+    marginLeft: 16,
   },
   modalContent: {
     flex: 1,
-    padding: 20,
+    padding: 16,
   },
   modalPoster: {
-    width: 120,
-    height: 180,
+    width: width - 32,
+    height: (width - 32) * 1.5,
     borderRadius: 12,
     alignSelf: 'center',
     marginBottom: 20,
   },
+  modalInfo: {
+    flex: 1,
+  },
   modalShowTitle: {
     fontSize: 24,
-    fontWeight: 'bold',
-    color: '#2D2D2D',
-    textAlign: 'center',
+    fontWeight: '700',
+    color: '#000',
     marginBottom: 4,
   },
   modalOriginalTitle: {
     fontSize: 16,
-    color: '#888888',
-    textAlign: 'center',
-    marginBottom: 16,
+    color: '#666',
+    marginBottom: 12,
   },
   modalMeta: {
     flexDirection: 'row',
-    justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 16,
+  },
+  modalRating: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginRight: 16,
   },
   modalRatingText: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#2D2D2D',
+    color: '#000',
     marginLeft: 4,
   },
-  modalGenreText: {
+  modalYear: {
     fontSize: 14,
-    color: '#4F6DFF',
-    marginHorizontal: 12,
+    color: '#666',
+    marginRight: 16,
   },
-  modalDateText: {
+  modalSeasons: {
     fontSize: 14,
-    color: '#888888',
+    color: '#666',
   },
   modalOverview: {
     fontSize: 16,
-    color: '#2D2D2D',
+    color: '#333',
     lineHeight: 24,
-    marginBottom: 24,
-    textAlign: 'center',
+    marginBottom: 16,
   },
-  modalStats: {
-    backgroundColor: 'white',
-    borderRadius: 12,
-    padding: 20,
-    marginBottom: 24,
-  },
-  modalStatItem: {
+  modalGenres: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 8,
+    flexWrap: 'wrap',
+    marginBottom: 24,
   },
-  modalStatLabel: {
-    fontSize: 14,
-    color: '#888888',
+  genreTag: {
+    backgroundColor: '#F2F2F7',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    marginRight: 8,
+    marginBottom: 8,
   },
-  modalStatValue: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#2D2D2D',
+  genreTagText: {
+    fontSize: 12,
+    color: '#666',
   },
   modalActions: {
     flexDirection: 'row',
     justifyContent: 'space-between',
   },
-  modalActionButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+  actionButton: {
     flex: 1,
-    paddingVertical: 16,
-    borderRadius: 12,
-    marginHorizontal: 6,
+    backgroundColor: '#F2F2F7',
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginHorizontal: 4,
   },
-  modalActionText: {
-    color: 'white',
+  actionButtonActive: {
+    backgroundColor: '#4F6DFF',
+  },
+  actionButtonText: {
     fontSize: 16,
-    fontWeight: '600',
-    marginLeft: 8,
+    color: '#666',
+    fontWeight: '500',
   },
 });
 
