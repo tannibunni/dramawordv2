@@ -75,33 +75,66 @@ export const searchWord = async (req: Request, res: Response): Promise<void> => 
       return;
     }
 
-    // 3. 使用 OpenAI 生成新单词信息
-    logger.info(`🤖 Generating new word data with AI: ${searchTerm}`);
-    const generatedData = await generateWordData(searchTerm);
+    // 3. 尝试使用 OpenAI 生成新单词信息
+    logger.info(`🤖 Attempting to generate new word data with AI: ${searchTerm}`);
     
-    // 4. 保存到数据库
-    wordData = new Word({
-      word: searchTerm,
-      phonetic: generatedData.phonetic,
-      definitions: generatedData.definitions,
-      searchCount: 1,
-      lastSearched: new Date()
-    });
-    
-    await wordData.save();
-    logger.info(`💾 Saved new word to database: ${searchTerm}`);
-    
-    // 5. 保存到内存缓存
-    wordCache.set(searchTerm, wordData);
-    
-    // 6. 保存搜索历史
-    await saveSearchHistoryToDB(searchTerm, wordData.definitions[0]?.definition || '暂无释义');
+    try {
+      const generatedData = await generateWordData(searchTerm);
+      
+      // 4. 保存到数据库
+      wordData = new Word({
+        word: searchTerm,
+        phonetic: generatedData.phonetic,
+        definitions: generatedData.definitions,
+        searchCount: 1,
+        lastSearched: new Date()
+      });
+      
+      await wordData.save();
+      logger.info(`💾 Saved new word to database: ${searchTerm}`);
+      
+      // 5. 保存到内存缓存
+      wordCache.set(searchTerm, wordData);
+      
+      // 6. 保存搜索历史
+      await saveSearchHistoryToDB(searchTerm, wordData.definitions[0]?.definition || '暂无释义');
 
-    res.json({
-      success: true,
-      data: wordData,
-      source: 'ai'
-    });
+      res.json({
+        success: true,
+        data: wordData,
+        source: 'ai'
+      });
+    } catch (aiError) {
+      logger.warn(`⚠️ AI generation failed for ${searchTerm}, using fallback data:`, aiError);
+      
+      // 使用模拟数据作为后备方案
+      const fallbackData = getFallbackWordData(searchTerm);
+      
+      // 保存到数据库
+      wordData = new Word({
+        word: searchTerm,
+        phonetic: fallbackData.phonetic,
+        definitions: fallbackData.definitions,
+        searchCount: 1,
+        lastSearched: new Date()
+      });
+      
+      await wordData.save();
+      logger.info(`💾 Saved fallback word to database: ${searchTerm}`);
+      
+      // 保存到内存缓存
+      wordCache.set(searchTerm, wordData);
+      
+      // 保存搜索历史
+      await saveSearchHistoryToDB(searchTerm, wordData.definitions[0]?.definition || '暂无释义');
+
+      res.json({
+        success: true,
+        data: wordData,
+        source: 'fallback',
+        message: 'AI service unavailable, using basic definition'
+      });
+    }
 
   } catch (error) {
     logger.error('❌ Search word error:', error);
@@ -306,6 +339,92 @@ async function generateWordData(word: string) {
     logger.error('❌ OpenAI API error:', error);
     throw error;
   }
+}
+
+// 获取后备单词数据（当 OpenAI 不可用时使用）
+function getFallbackWordData(word: string) {
+  const commonWords: { [key: string]: any } = {
+    'hello': {
+      phonetic: '/həˈloʊ/',
+      definitions: [
+        {
+          partOfSpeech: 'int.',
+          definition: '喂，你好',
+          examples: [
+            { english: 'Hello, how are you?', chinese: '你好，你好吗？' },
+            { english: 'Hello there!', chinese: '你好！' }
+          ]
+        }
+      ]
+    },
+    'world': {
+      phonetic: '/wɜːrld/',
+      definitions: [
+        {
+          partOfSpeech: 'n.',
+          definition: '世界，地球',
+          examples: [
+            { english: 'The world is beautiful.', chinese: '这个世界很美丽。' },
+            { english: 'People around the world.', chinese: '世界各地的人们。' }
+          ]
+        }
+      ]
+    },
+    'learn': {
+      phonetic: '/lɜːrn/',
+      definitions: [
+        {
+          partOfSpeech: 'v.',
+          definition: '学习，学会',
+          examples: [
+            { english: 'I want to learn English.', chinese: '我想学习英语。' },
+            { english: 'She learns quickly.', chinese: '她学得很快。' }
+          ]
+        }
+      ]
+    },
+    'study': {
+      phonetic: '/ˈstʌdi/',
+      definitions: [
+        {
+          partOfSpeech: 'v.',
+          definition: '学习，研究',
+          examples: [
+            { english: 'I study every day.', chinese: '我每天学习。' },
+            { english: 'He studies medicine.', chinese: '他学医。' }
+          ]
+        },
+        {
+          partOfSpeech: 'n.',
+          definition: '学习，研究',
+          examples: [
+            { english: 'This is my study room.', chinese: '这是我的书房。' },
+            { english: 'A study of history.', chinese: '历史研究。' }
+          ]
+        }
+      ]
+    }
+  };
+
+  // 如果单词在常见词列表中，返回预定义数据
+  if (commonWords[word.toLowerCase()]) {
+    return commonWords[word.toLowerCase()];
+  }
+
+  // 否则返回通用模板
+  return {
+    phonetic: `/${word}/`,
+    definitions: [
+      {
+        partOfSpeech: 'n.',
+        definition: `${word} 的基本含义`,
+        examples: [
+          { english: `This is ${word}.`, chinese: `这是 ${word}。` },
+          { english: `I like ${word}.`, chinese: `我喜欢 ${word}。` }
+        ]
+      }
+    ]
+  };
 }
 
 export const wordController = {
