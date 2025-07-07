@@ -7,8 +7,10 @@ import {
   ScrollView,
   TouchableOpacity,
   Dimensions,
+  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { audioService } from '../../services/audioService';
 
 const { width } = Dimensions.get('window');
 
@@ -122,6 +124,16 @@ const HomeScreen: React.FC = () => {
     }
   };
 
+  // 播放单词发音
+  const playPronunciation = async (word: string) => {
+    try {
+      await audioService.playWordPronunciation(word);
+    } catch (error) {
+      console.error('发音播放失败:', error);
+      Alert.alert('播放失败', '音频播放失败，请稍后重试');
+    }
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false}>
@@ -189,6 +201,13 @@ const HomeScreen: React.FC = () => {
                 <View style={[styles.difficultyBadge, { backgroundColor: getDifficultyColor(word.difficulty) }]}>
                   <Text style={styles.difficultyText}>{getDifficultyText(word.difficulty)}</Text>
                 </View>
+                <TouchableOpacity 
+                  style={styles.pronunciationButton}
+                  onPress={() => playPronunciation(word.word)}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons name="volume-medium" size={20} color="#4F6DFF" />
+                </TouchableOpacity>
                 <TouchableOpacity style={styles.addButton}>
                   <Ionicons name="add-circle" size={24} color="#4F6DFF" />
                 </TouchableOpacity>
@@ -353,6 +372,9 @@ const styles = StyleSheet.create({
     fontSize: 10,
     color: 'white',
     fontWeight: '600',
+  },
+  pronunciationButton: {
+    padding: 4,
   },
   addButton: {
     padding: 4,

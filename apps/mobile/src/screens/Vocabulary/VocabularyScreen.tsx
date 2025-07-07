@@ -9,8 +9,10 @@ import {
   TextInput,
   Modal,
   Dimensions,
+  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { audioService } from '../../services/audioService';
 
 const { width } = Dimensions.get('window');
 
@@ -158,6 +160,16 @@ const VocabularyScreen: React.FC = () => {
     setShowDetailModal(true);
   };
 
+  // 播放单词发音
+  const playPronunciation = async (word: string) => {
+    try {
+      await audioService.playWordPronunciation(word);
+    } catch (error) {
+      console.error('发音播放失败:', error);
+      Alert.alert('播放失败', '音频播放失败，请稍后重试');
+    }
+  };
+
   const renderWordItem = ({ item }: { item: VocabularyWord }) => (
     <TouchableOpacity
       style={styles.wordItem}
@@ -166,7 +178,16 @@ const VocabularyScreen: React.FC = () => {
       <View style={styles.wordHeader}>
         <View style={styles.wordInfo}>
           <Text style={styles.wordText}>{item.word}</Text>
-          <Text style={styles.phoneticText}>{item.phonetic}</Text>
+          <View style={styles.phoneticRow}>
+            <Text style={styles.phoneticText}>{item.phonetic}</Text>
+            <TouchableOpacity
+              style={styles.pronunciationButton}
+              onPress={() => playPronunciation(item.word)}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="volume-medium" size={16} color={colors.primary[500]} />
+            </TouchableOpacity>
+          </View>
         </View>
         <TouchableOpacity
           style={[styles.masteredButton, { backgroundColor: item.mastered ? '#6BCF7A' : '#F0F0F0' }]}
@@ -412,6 +433,10 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#2D2D2D',
   },
+  phoneticRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
   phoneticText: {
     fontSize: 14,
     color: '#888888',
@@ -559,6 +584,10 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     marginLeft: 8,
+  },
+  pronunciationButton: {
+    padding: 4,
+    borderRadius: 20,
   },
 });
 

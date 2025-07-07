@@ -14,6 +14,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../../../../packages/ui/src/tokens';
 import { useNavigation } from '../../components/navigation/NavigationContext';
 import { wordService, WordData } from '../../services/wordService';
+import { audioService } from '../../services/audioService';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -139,11 +140,14 @@ const WordCardScreen: React.FC<WordCardScreenProps> = ({ navigation = {}, route 
   };
 
   // 播放发音
-  const playPronunciation = () => {
-    if (wordData?.audioUrl) {
-      Alert.alert('发音', '发音功能开发中...');
-    } else {
-      Alert.alert('提示', '暂无发音数据');
+  const playPronunciation = async () => {
+    if (wordData) {
+      try {
+        await audioService.playWordPronunciation(wordData.word);
+      } catch (error) {
+        console.error('发音播放失败:', error);
+        Alert.alert('播放失败', '音频播放失败，请稍后重试');
+      }
     }
   };
 
