@@ -1,0 +1,25 @@
+{
+  "name": "dramawordv2",
+  "version": "1.0.0",
+  "description": "剧词记 - 英语学习APP",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:mobile": "cd apps/mobile && npm start",
+    "dev:api": "cd services/api && npm run dev",
+    "install:all": "npm install && cd apps/mobile && npm install && cd ../../services/api && npm install",
+    "build": "turbo run build",
+    "test": "turbo run test",
+    "lint": "turbo run lint"
+  },
+  "devDependencies": {
+    "turbo": "^1.10.0"
+  },
+  "engines": {
+    "node": ">=16.0.0",
+    "npm": ">=8.0.0"
+  }
+} 

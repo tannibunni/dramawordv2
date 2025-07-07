@@ -1,0 +1,1 @@
+{"version":3,"file":"appleService.js","sourceRoot":"","sources":["../../src/services/appleService.ts"],"names":[],"mappings":";;;;;;AAAA,0EAAgD;AAChD,2CAA8C;AAE9C,MAAa,YAAY;IACvB,MAAM,CAAC,KAAK,CAAC,aAAa,CAAC,OAAe;QACxC,OAAO,2BAAe,CAAC,aAAa,CAAC,OAAO,EAAE;YAC5C,QAAQ,EAAE,mBAAW,CAAC,QAAQ;YAC9B,gBAAgB,EAAE,KAAK;SACxB,CAAC,CAAC;IACL,CAAC;CACF;AAPD,oCAOC"}

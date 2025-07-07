@@ -1,0 +1,12 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.wordRoutes = void 0;
+const express_1 = require("express");
+const wordController_1 = require("../controllers/wordController");
+const router = (0, express_1.Router)();
+exports.wordRoutes = router;
+router.post('/words/search', wordController_1.searchWord);
+router.get('/words/popular', wordController_1.getPopularWords);
+router.get('/words/recent-searches', wordController_1.getRecentSearches);
+router.post('/words/history', wordController_1.saveSearchHistory);
+//# sourceMappingURL=wordRoutes.js.map

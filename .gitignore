@@ -1,0 +1,3 @@
+   services/api/.env
+   services/api/.env.backup
+   services/api/env.example
