@@ -58,7 +58,8 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
         token: loginResponse.data.token,
       });
     } catch (error) {
-      console.error('微信登录失败:', error);
+      const message = error instanceof Error ? error.message : String(error);
+      console.error('微信登录失败:', message);
       Alert.alert('登录失败', '微信登录失败，请重试');
     } finally {
       setLoading(false);
@@ -86,7 +87,8 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
         throw new Error(res.message || 'Apple登录失败');
       }
     } catch (error) {
-      Alert.alert('登录失败', error.message || 'Apple登录失败，请重试');
+      const message = error instanceof Error ? error.message : String(error);
+      Alert.alert('登录失败', message || 'Apple登录失败，请重试');
     } finally {
       setLoading(false);
     }

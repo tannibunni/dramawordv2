@@ -282,16 +282,15 @@ export class WechatController {
           message: '当前账号不是微信登录'
         });
       }
-
       // 清除微信相关信息
-      user.auth.wechatId = null;
-      user.auth.wechatOpenId = null;
-      user.auth.wechatUnionId = null;
-      user.auth.wechatNickname = null;
-      user.auth.wechatAvatar = null;
-      user.auth.wechatAccessToken = null;
-      user.auth.wechatRefreshToken = null;
-      user.auth.wechatTokenExpiresAt = null;
+      user.auth.wechatId = '';
+      user.auth.wechatOpenId = '';
+      user.auth.wechatUnionId = '';
+      user.auth.wechatNickname = '';
+      user.auth.wechatAvatar = '';
+      user.auth.wechatAccessToken = '';
+      user.auth.wechatRefreshToken = '';
+      user.auth.wechatTokenExpiresAt = new Date(0);
 
       await user.save();
 

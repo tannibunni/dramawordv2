@@ -1,3 +1,4 @@
+require('dotenv').config();
 const axios = require('axios');
 
 // TMDB API 配置
