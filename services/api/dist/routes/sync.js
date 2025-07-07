@@ -43,4 +43,3 @@ router.delete('/cleanup', (0, validateRequest_1.validateRequest)({
     }
 }), syncController_1.SyncController.cleanupSyncData);
 exports.default = router;
-//# sourceMappingURL=sync.js.map

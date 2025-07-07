@@ -15,4 +15,3 @@ class AppleService {
     }
 }
 exports.AppleService = AppleService;
-//# sourceMappingURL=appleService.js.map

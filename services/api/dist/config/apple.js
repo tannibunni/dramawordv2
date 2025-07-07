@@ -8,4 +8,3 @@ exports.appleConfig = {
     privateKey: process.env.APPLE_PRIVATE_KEY,
     redirectUri: 'dramaword://apple-login',
 };
-//# sourceMappingURL=apple.js.map

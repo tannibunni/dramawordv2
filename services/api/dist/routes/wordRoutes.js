@@ -9,4 +9,3 @@ router.post('/words/search', wordController_1.searchWord);
 router.get('/words/popular', wordController_1.getPopularWords);
 router.get('/words/recent-searches', wordController_1.getRecentSearches);
 router.post('/words/history', wordController_1.saveSearchHistory);
-//# sourceMappingURL=wordRoutes.js.map

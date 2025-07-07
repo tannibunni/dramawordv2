@@ -35,4 +35,3 @@ const uploadDir = 'uploads/avatars/';
 if (!fs_1.default.existsSync(uploadDir)) {
     fs_1.default.mkdirSync(uploadDir, { recursive: true });
 }
-//# sourceMappingURL=upload.js.map

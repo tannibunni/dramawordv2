@@ -29,7 +29,7 @@ class WechatService {
             const response = await axios_1.default.get(`${wechat_1.wechatConfig.api.accessToken}?${params.toString()}`);
             const data = response.data;
             if (data.errcode) {
-                const errorMessage = wechat_1.wechatErrorCodes[data.errcode] || data.errmsg || '未知错误';
+                const errorMessage = wechat_1.wechatErrorCodes[String(data.errcode)] || data.errmsg || '未知错误';
                 logger_1.logger.error(`微信获取access_token失败: ${data.errcode} - ${errorMessage}`);
                 throw new Error(`微信登录失败: ${errorMessage}`);
             }
@@ -51,7 +51,7 @@ class WechatService {
             const response = await axios_1.default.get(`${wechat_1.wechatConfig.api.userInfo}?${params.toString()}`);
             const data = response.data;
             if (data.errcode) {
-                const errorMessage = wechat_1.wechatErrorCodes[data.errcode] || data.errmsg || '未知错误';
+                const errorMessage = wechat_1.wechatErrorCodes[String(data.errcode)] || data.errmsg || '未知错误';
                 logger_1.logger.error(`微信获取用户信息失败: ${data.errcode} - ${errorMessage}`);
                 throw new Error(`获取用户信息失败: ${errorMessage}`);
             }
@@ -73,7 +73,7 @@ class WechatService {
             const response = await axios_1.default.get(`${wechat_1.wechatConfig.api.refreshToken}?${params.toString()}`);
             const data = response.data;
             if (data.errcode) {
-                const errorMessage = wechat_1.wechatErrorCodes[data.errcode] || data.errmsg || '未知错误';
+                const errorMessage = wechat_1.wechatErrorCodes[String(data.errcode)] || data.errmsg || '未知错误';
                 logger_1.logger.error(`微信刷新access_token失败: ${data.errcode} - ${errorMessage}`);
                 throw new Error(`刷新token失败: ${errorMessage}`);
             }
@@ -143,4 +143,3 @@ class WechatService {
     }
 }
 exports.WechatService = WechatService;
-//# sourceMappingURL=wechatService.js.map

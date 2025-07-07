@@ -311,4 +311,3 @@ class SyncService {
 }
 exports.SyncService = SyncService;
 exports.default = SyncService.getInstance();
-//# sourceMappingURL=syncService.js.map

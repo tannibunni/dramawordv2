@@ -2,10 +2,10 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.wechatErrorCodes = exports.wechatConfig = void 0;
 exports.wechatConfig = {
-    appId: 'wxa225945508659eb8',
-    appSecret: '83265da729625c5cf5a613da6e3dc96b',
-    bundleId: 'com.tanny.dramaword',
-    universalLinks: 'https://dramaword.com/app/',
+    appId: process.env.WECHAT_APP_ID || 'wxa225945508659eb8',
+    appSecret: process.env.WECHAT_APP_SECRET || '83265da729625c5cf5a613da6e3dc96b',
+    bundleId: process.env.WECHAT_BUNDLE_ID || 'com.tanny.dramaword',
+    universalLinks: process.env.WECHAT_UNIVERSAL_LINKS || 'https://dramaword.com/app/',
     api: {
         accessToken: 'https://api.weixin.qq.com/sns/oauth2/access_token',
         userInfo: 'https://api.weixin.qq.com/sns/userinfo',
@@ -157,4 +157,3 @@ exports.wechatErrorCodes = {
     '9001035': '设备申请参数不合法',
     '9001036': '查询起始值begin不合法',
 };
-//# sourceMappingURL=wechat.js.map

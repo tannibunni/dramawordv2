@@ -291,4 +291,3 @@ UserSchema.methods.updateStudyStreak = function () {
     return this.save();
 };
 exports.User = mongoose_1.default.model('User', UserSchema);
-//# sourceMappingURL=User.js.map

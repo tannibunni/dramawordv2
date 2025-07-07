@@ -17,4 +17,3 @@ exports.logger = {
         }
     }
 };
-//# sourceMappingURL=logger.js.map

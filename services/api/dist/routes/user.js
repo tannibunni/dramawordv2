@@ -46,4 +46,3 @@ router.get('/stats', auth_1.authenticateToken, userController_1.UserController.g
 router.delete('/account', auth_1.authenticateToken, userController_1.UserController.deleteAccount);
 router.post('/avatar', auth_1.authenticateToken, upload_1.uploadAvatar.single('avatar'), userController_1.UserController.uploadAvatar);
 exports.default = router;
-//# sourceMappingURL=user.js.map

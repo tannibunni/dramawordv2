@@ -62,4 +62,3 @@ class AppleController {
     }
 }
 exports.AppleController = AppleController;
-//# sourceMappingURL=appleController.js.map

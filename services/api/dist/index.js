@@ -19,6 +19,7 @@ const user_1 = __importDefault(require("./routes/user"));
 const sync_1 = __importDefault(require("./routes/sync"));
 const wechat_1 = __importDefault(require("./routes/wechat"));
 const apple_1 = __importDefault(require("./routes/apple"));
+const tmdb_1 = __importDefault(require("./routes/tmdb"));
 const logger_1 = require("./utils/logger");
 const app = (0, express_1.default)();
 const PORT = process.env.PORT || 3001;
@@ -35,6 +36,7 @@ app.use('/api/users', user_1.default);
 app.use('/api/sync', sync_1.default);
 app.use('/api/wechat', wechat_1.default);
 app.use('/api/apple', apple_1.default);
+app.use('/api/tmdb', tmdb_1.default);
 app.get('/health', (req, res) => {
     res.json({ status: 'OK', timestamp: new Date().toISOString() });
 });
@@ -61,6 +63,7 @@ const startServer = async () => {
             logger_1.logger.info(`👥 User API: http://localhost:${PORT}/api/users`);
             logger_1.logger.info(`🔄 Sync API: http://localhost:${PORT}/api/sync`);
             logger_1.logger.info(`💬 WeChat API: http://localhost:${PORT}/api/wechat`);
+            logger_1.logger.info(`🎬 TMDB API: http://localhost:${PORT}/api/tmdb`);
         });
     }
     catch (error) {
@@ -70,4 +73,3 @@ const startServer = async () => {
 };
 startServer();
 exports.default = app;
-//# sourceMappingURL=index.js.map

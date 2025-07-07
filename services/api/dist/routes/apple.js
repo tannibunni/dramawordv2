@@ -11,4 +11,3 @@ router.post('/login', (0, validateRequest_1.validateRequest)({
     body: { idToken: { type: 'string', required: true } }
 }), appleController_1.AppleController.login);
 exports.default = router;
-//# sourceMappingURL=apple.js.map

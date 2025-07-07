@@ -100,7 +100,7 @@ class UserController {
             const user = new User_1.User(userData);
             await user.save();
             const learningRecord = new UserLearningRecord_1.UserLearningRecord({
-                userId: user._id.toString(),
+                userId: String(user._id),
                 records: [],
                 totalWords: 0,
                 totalReviews: 0,
@@ -108,7 +108,7 @@ class UserController {
                 lastStudyDate: new Date()
             });
             await learningRecord.save();
-            const token = (0, auth_1.generateToken)(user._id.toString());
+            const token = (0, auth_1.generateToken)(String(user._id));
             logger_1.logger.info(`新用户注册成功: ${username} (${loginType})`);
             res.status(201).json({
                 success: true,
@@ -120,9 +120,9 @@ class UserController {
                         nickname: user.nickname,
                         avatar: user.avatar,
                         level: user.learningStats.level,
-                        levelName: user.levelName,
+                        levelName: user.levelName || '初学者',
                         experience: user.learningStats.experience,
-                        experienceToNextLevel: user.experienceToNextLevel
+                        experienceToNextLevel: user.experienceToNextLevel || 0
                     },
                     token
                 }
@@ -439,7 +439,7 @@ class UserController {
                 });
             }
             logger_1.logger.info(`用户头像上传成功: ${user.username}`);
-            res.json({
+            return res.json({
                 success: true,
                 message: '头像上传成功',
                 data: {
@@ -456,7 +456,7 @@ class UserController {
         }
         catch (error) {
             logger_1.logger.error('上传头像失败:', error);
-            res.status(500).json({
+            return res.status(500).json({
                 success: false,
                 message: '上传头像失败',
                 error: error instanceof Error ? error.message : 'Unknown error'
@@ -465,4 +465,3 @@ class UserController {
     }
 }
 exports.UserController = UserController;
-//# sourceMappingURL=userController.js.map

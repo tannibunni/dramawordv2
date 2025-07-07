@@ -270,4 +270,3 @@ ShowSchema.statics.findByWord = function (word) {
     }).sort({ popularity: -1 });
 };
 exports.Show = mongoose_1.default.model('Show', ShowSchema);
-//# sourceMappingURL=Show.js.map

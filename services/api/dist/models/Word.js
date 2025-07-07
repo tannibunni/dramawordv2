@@ -41,8 +41,7 @@ const WordSchema = new mongoose_1.Schema({
         required: true,
         unique: true,
         lowercase: true,
-        trim: true,
-        index: true
+        trim: true
     },
     phonetic: {
         type: String,
@@ -83,4 +82,3 @@ WordSchema.index({ word: 1 });
 WordSchema.index({ searchCount: -1 });
 WordSchema.index({ lastSearched: -1 });
 exports.Word = mongoose_1.default.model('Word', WordSchema);
-//# sourceMappingURL=Word.js.map

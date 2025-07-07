@@ -15,6 +15,6 @@ interface ValidationSchema {
     query?: Record<string, ValidationRule>;
     params?: Record<string, ValidationRule>;
 }
-export declare const validateRequest: (schema: ValidationSchema) => (req: Request, res: Response, next: NextFunction) => Response<any, Record<string, any>> | undefined;
+export declare const validateRequest: (schema: ValidationSchema) => (req: Request, res: Response, next: NextFunction) => Response<any, Record<string, any>>;
 export {};
 //# sourceMappingURL=validateRequest.d.ts.map

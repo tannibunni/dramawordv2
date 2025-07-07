@@ -66,7 +66,7 @@ export class WechatService {
       const data = response.data as WechatAccessTokenResponse;
 
       if (data.errcode) {
-        const errorMessage = wechatErrorCodes[data.errcode as keyof typeof wechatErrorCodes] || data.errmsg || '未知错误';
+        const errorMessage = wechatErrorCodes[String(data.errcode) as keyof typeof wechatErrorCodes] || data.errmsg || '未知错误';
         logger.error(`微信获取access_token失败: ${data.errcode} - ${errorMessage}`);
         throw new Error(`微信登录失败: ${errorMessage}`);
       }
@@ -94,7 +94,7 @@ export class WechatService {
       const data = response.data as WechatUserInfoResponse;
 
       if (data.errcode) {
-        const errorMessage = wechatErrorCodes[data.errcode as keyof typeof wechatErrorCodes] || data.errmsg || '未知错误';
+        const errorMessage = wechatErrorCodes[String(data.errcode) as keyof typeof wechatErrorCodes] || data.errmsg || '未知错误';
         logger.error(`微信获取用户信息失败: ${data.errcode} - ${errorMessage}`);
         throw new Error(`获取用户信息失败: ${errorMessage}`);
       }
@@ -122,7 +122,7 @@ export class WechatService {
       const data = response.data as WechatAccessTokenResponse;
 
       if (data.errcode) {
-        const errorMessage = wechatErrorCodes[data.errcode as keyof typeof wechatErrorCodes] || data.errmsg || '未知错误';
+        const errorMessage = wechatErrorCodes[String(data.errcode) as keyof typeof wechatErrorCodes] || data.errmsg || '未知错误';
         logger.error(`微信刷新access_token失败: ${data.errcode} - ${errorMessage}`);
         throw new Error(`刷新token失败: ${errorMessage}`);
       }

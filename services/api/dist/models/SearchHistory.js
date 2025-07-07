@@ -40,8 +40,7 @@ const SearchHistorySchema = new mongoose_1.Schema({
         type: String,
         required: true,
         lowercase: true,
-        trim: true,
-        index: true
+        trim: true
     },
     definition: {
         type: String,
@@ -49,13 +48,11 @@ const SearchHistorySchema = new mongoose_1.Schema({
     },
     timestamp: {
         type: Date,
-        default: Date.now,
-        index: true
+        default: Date.now
     },
     userId: {
         type: String,
-        required: false,
-        index: true
+        required: false
     }
 }, {
     timestamps: true
@@ -64,4 +61,3 @@ SearchHistorySchema.index({ word: 1 });
 SearchHistorySchema.index({ timestamp: -1 });
 SearchHistorySchema.index({ userId: 1, timestamp: -1 });
 exports.SearchHistory = mongoose_1.default.model('SearchHistory', SearchHistorySchema);
-//# sourceMappingURL=SearchHistory.js.map

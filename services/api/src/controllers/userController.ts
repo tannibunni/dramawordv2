@@ -116,7 +116,7 @@ export class UserController {
 
       // 创建学习记录
       const learningRecord = new UserLearningRecord({
-        userId: user._id.toString(),
+        userId: String(user._id),
         records: [],
         totalWords: 0,
         totalReviews: 0,
@@ -126,7 +126,7 @@ export class UserController {
       await learningRecord.save();
 
       // 生成JWT token
-      const token = generateToken(user._id.toString());
+      const token = generateToken(String(user._id));
 
       logger.info(`新用户注册成功: ${username} (${loginType})`);
 
@@ -140,9 +140,9 @@ export class UserController {
             nickname: user.nickname,
             avatar: user.avatar,
             level: user.learningStats.level,
-            levelName: user.levelName,
+            levelName: (user as any).levelName || '初学者',
             experience: user.learningStats.experience,
-            experienceToNextLevel: user.experienceToNextLevel
+            experienceToNextLevel: (user as any).experienceToNextLevel || 0
           },
           token
         }
@@ -248,9 +248,9 @@ export class UserController {
             nickname: user.nickname,
             avatar: user.avatar,
             level: user.learningStats.level,
-            levelName: user.levelName,
+            levelName: (user as any).levelName,
             experience: user.learningStats.experience,
-            experienceToNextLevel: user.experienceToNextLevel,
+            experienceToNextLevel: (user as any).experienceToNextLevel,
             learningStats: user.learningStats,
             settings: user.settings
           },
@@ -290,9 +290,9 @@ export class UserController {
             avatar: user.avatar,
             email: user.email,
             level: user.learningStats.level,
-            levelName: user.levelName,
+            levelName: (user as any).levelName,
             experience: user.learningStats.experience,
-            experienceToNextLevel: user.experienceToNextLevel,
+            experienceToNextLevel: (user as any).experienceToNextLevel,
             learningStats: user.learningStats,
             settings: user.settings,
             auth: {
@@ -426,17 +426,17 @@ export class UserController {
       const stats = {
         learningStats: user.learningStats,
         level: user.learningStats.level,
-        levelName: user.levelName,
+        levelName: (user as any).levelName,
         experience: user.learningStats.experience,
-        experienceToNextLevel: user.experienceToNextLevel,
+        experienceToNextLevel: (user as any).experienceToNextLevel,
         learningRecord: learningRecord ? {
           totalWords: learningRecord.totalWords,
           totalReviews: learningRecord.totalReviews,
           averageMastery: learningRecord.averageMastery,
-          wordsToReview: learningRecord.wordsToReview,
-          masteredWords: learningRecord.masteredWords,
-          learningWords: learningRecord.learningWords,
-          newWords: learningRecord.newWords,
+          wordsToReview: (learningRecord as any).wordsToReview,
+          masteredWords: (learningRecord as any).masteredWords,
+          learningWords: (learningRecord as any).learningWords,
+          newWords: (learningRecord as any).newWords,
           lastStudyDate: learningRecord.lastStudyDate
         } : null,
         recentSearchHistory: searchHistory

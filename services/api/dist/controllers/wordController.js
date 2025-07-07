@@ -257,4 +257,3 @@ exports.wordController = {
     getRecentSearches: exports.getRecentSearches,
     saveSearchHistory: exports.saveSearchHistory
 };
-//# sourceMappingURL=wordController.js.map

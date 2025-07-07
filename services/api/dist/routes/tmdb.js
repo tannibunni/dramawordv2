@@ -1,0 +1,13 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const tmdbController_1 = require("../controllers/tmdbController");
+const router = (0, express_1.Router)();
+router.get('/status', tmdbController_1.TMDBController.getStatus);
+router.get('/search', tmdbController_1.TMDBController.searchShows);
+router.get('/shows/popular', tmdbController_1.TMDBController.getPopularShows);
+router.get('/shows/on-the-air', tmdbController_1.TMDBController.getOnTheAirShows);
+router.get('/shows/:id', tmdbController_1.TMDBController.getShowDetails);
+router.get('/shows/:id/seasons/:seasonNumber', tmdbController_1.TMDBController.getSeasonDetails);
+router.get('/shows/:id/similar', tmdbController_1.TMDBController.getSimilarShows);
+exports.default = router;

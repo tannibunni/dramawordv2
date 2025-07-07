@@ -39,4 +39,3 @@ const disconnectDatabase = async () => {
     }
 };
 exports.disconnectDatabase = disconnectDatabase;
-//# sourceMappingURL=database.js.map

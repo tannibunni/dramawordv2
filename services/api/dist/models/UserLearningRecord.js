@@ -39,8 +39,7 @@ const UserLearningRecordSchema = new mongoose_1.Schema({
     userId: {
         type: String,
         required: true,
-        unique: true,
-        index: true
+        unique: true
     },
     records: [{
             word: {
@@ -314,4 +313,3 @@ UserLearningRecordSchema.statics.getUserStats = function (userId) {
     });
 };
 exports.UserLearningRecord = mongoose_1.default.model('UserLearningRecord', UserLearningRecordSchema);
-//# sourceMappingURL=UserLearningRecord.js.map

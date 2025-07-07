@@ -33,4 +33,3 @@ router.post('/auth-url', (0, validateRequest_1.validateRequest)({
 }), wechatController_1.WechatController.getAuthUrl);
 router.post('/unbind', auth_1.authenticateToken, wechatController_1.WechatController.unbind);
 exports.default = router;
-//# sourceMappingURL=wechat.js.map

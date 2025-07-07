@@ -18,19 +18,18 @@ export class TMDBController {
         });
       }
 
-      const pageNumber = parseInt(page as string) || 1;
-      const result = await TMDBService.searchShows(query, pageNumber);
-
+      const results = await TMDBService.searchShows(query, parseInt(page as string));
+      logger.info(`TMDB search successful: "${query}" - ${results.results.length} results`);
+      
       res.json({
         success: true,
-        data: result
+        data: results
       });
     } catch (error) {
-      logger.error('TMDB search shows error:', error);
+      logger.error('TMDB search failed:', error);
       res.status(500).json({
         success: false,
-        error: 'Failed to search shows',
-        message: error instanceof Error ? error.message : 'Unknown error'
+        error: 'Failed to search shows'
       });
     }
   }
@@ -42,8 +41,15 @@ export class TMDBController {
   static async getShowDetails(req: Request, res: Response) {
     try {
       const { id } = req.params;
-      const showId = parseInt(id);
+      
+      if (!id) {
+        return res.status(400).json({
+          success: false,
+          error: 'Show ID is required'
+        });
+      }
 
+      const showId = parseInt(id);
       if (isNaN(showId)) {
         return res.status(400).json({
           success: false,
@@ -51,18 +57,17 @@ export class TMDBController {
         });
       }
 
-      const result = await TMDBService.getShowDetails(showId);
-
+      const show = await TMDBService.getShowDetails(showId);
+      
       res.json({
         success: true,
-        data: result
+        data: show
       });
     } catch (error) {
-      logger.error('TMDB get show details error:', error);
+      logger.error('TMDB show details failed:', error);
       res.status(500).json({
         success: false,
-        error: 'Failed to get show details',
-        message: error instanceof Error ? error.message : 'Unknown error'
+        error: 'Failed to get show details'
       });
     }
   }
@@ -74,9 +79,17 @@ export class TMDBController {
   static async getSeasonDetails(req: Request, res: Response) {
     try {
       const { id, seasonNumber } = req.params;
+      
+      if (!id || !seasonNumber) {
+        return res.status(400).json({
+          success: false,
+          error: 'Show ID and season number are required'
+        });
+      }
+
       const showId = parseInt(id);
       const season = parseInt(seasonNumber);
-
+      
       if (isNaN(showId) || isNaN(season)) {
         return res.status(400).json({
           success: false,
@@ -84,18 +97,17 @@ export class TMDBController {
         });
       }
 
-      const result = await TMDBService.getSeasonDetails(showId, season);
-
+      const seasonDetails = await TMDBService.getSeasonDetails(showId, season);
+      
       res.json({
         success: true,
-        data: result
+        data: seasonDetails
       });
     } catch (error) {
-      logger.error('TMDB get season details error:', error);
+      logger.error('TMDB season details failed:', error);
       res.status(500).json({
         success: false,
-        error: 'Failed to get season details',
-        message: error instanceof Error ? error.message : 'Unknown error'
+        error: 'Failed to get season details'
       });
     }
   }
@@ -107,10 +119,15 @@ export class TMDBController {
   static async getSimilarShows(req: Request, res: Response) {
     try {
       const { id } = req.params;
-      const { page = 1 } = req.query;
-      const showId = parseInt(id);
-      const pageNumber = parseInt(page as string) || 1;
+      
+      if (!id) {
+        return res.status(400).json({
+          success: false,
+          error: 'Show ID is required'
+        });
+      }
 
+      const showId = parseInt(id);
       if (isNaN(showId)) {
         return res.status(400).json({
           success: false,
@@ -118,18 +135,17 @@ export class TMDBController {
         });
       }
 
-      const result = await TMDBService.getSimilarShows(showId, pageNumber);
-
+      const similarShows = await TMDBService.getSimilarShows(showId);
+      
       res.json({
         success: true,
-        data: result
+        data: similarShows
       });
     } catch (error) {
-      logger.error('TMDB get similar shows error:', error);
+      logger.error('TMDB similar shows failed:', error);
       res.status(500).json({
         success: false,
-        error: 'Failed to get similar shows',
-        message: error instanceof Error ? error.message : 'Unknown error'
+        error: 'Failed to get similar shows'
       });
     }
   }
@@ -141,20 +157,17 @@ export class TMDBController {
   static async getPopularShows(req: Request, res: Response) {
     try {
       const { page = 1 } = req.query;
-      const pageNumber = parseInt(page as string) || 1;
-
-      const result = await TMDBService.getPopularShows(pageNumber);
-
+      const results = await TMDBService.getPopularShows(parseInt(page as string));
+      
       res.json({
         success: true,
-        data: result
+        data: results
       });
     } catch (error) {
-      logger.error('TMDB get popular shows error:', error);
+      logger.error('TMDB popular shows failed:', error);
       res.status(500).json({
         success: false,
-        error: 'Failed to get popular shows',
-        message: error instanceof Error ? error.message : 'Unknown error'
+        error: 'Failed to get popular shows'
       });
     }
   }
@@ -166,20 +179,17 @@ export class TMDBController {
   static async getOnTheAirShows(req: Request, res: Response) {
     try {
       const { page = 1 } = req.query;
-      const pageNumber = parseInt(page as string) || 1;
-
-      const result = await TMDBService.getOnTheAirShows(pageNumber);
-
+      const results = await TMDBService.getOnTheAirShows(parseInt(page as string));
+      
       res.json({
         success: true,
-        data: result
+        data: results
       });
     } catch (error) {
-      logger.error('TMDB get on the air shows error:', error);
+      logger.error('TMDB on-the-air shows failed:', error);
       res.status(500).json({
         success: false,
-        error: 'Failed to get on the air shows',
-        message: error instanceof Error ? error.message : 'Unknown error'
+        error: 'Failed to get on-the-air shows'
       });
     }
   }
@@ -190,25 +200,19 @@ export class TMDBController {
    */
   static async getStatus(req: Request, res: Response) {
     try {
-      const config = TMDBService.checkConfiguration();
-
+      const status = {
+        configured: !!process.env.TMDB_API_KEY,
+        apiKey: process.env.TMDB_API_KEY ? '***' + process.env.TMDB_API_KEY.slice(-4) : 'not set'
+      };
       res.json({
         success: true,
-        data: {
-          configured: config.isConfigured,
-          hasApiKey: config.hasApiKey,
-          hasAccessToken: config.hasAccessToken,
-          message: config.isConfigured 
-            ? 'TMDB API is properly configured' 
-            : 'TMDB API is not configured. Please set TMDB_API_KEY or TMDB_ACCESS_TOKEN environment variable.'
-        }
+        data: status
       });
     } catch (error) {
-      logger.error('TMDB status check error:', error);
+      logger.error('TMDB status check failed:', error);
       res.status(500).json({
         success: false,
-        error: 'Failed to check TMDB status',
-        message: error instanceof Error ? error.message : 'Unknown error'
+        error: 'Failed to check TMDB status'
       });
     }
   }

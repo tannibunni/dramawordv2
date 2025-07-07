@@ -6,7 +6,7 @@
   "scripts": {
     "start": "node dist/index.js",
     "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
-    "build": "tsc",
+    "build": "tsc --skipLibCheck --noEmitOnError",
     "test": "jest"
   },
   "dependencies": {
@@ -25,7 +25,7 @@
     "openai": "^4.20.1"
   },
   "devDependencies": {
-    "@types/cors": "^2.8.17",
+    "@types/cors": "^2.8.19",
     "@types/express": "^4.17.21",
     "@types/node": "^20.10.0",
     "ts-node-dev": "^2.0.0",
