@@ -20,6 +20,7 @@ import syncRoutes from './routes/sync';
 import wechatRoutes from './routes/wechat';
 import appleRoutes from './routes/apple';
 import tmdbRoutes from './routes/tmdb';
+import debugRoutes from './routes/debug';
 import { logger } from './utils/logger';
 
 const app = express();
@@ -46,6 +47,7 @@ app.use('/api/sync', syncRoutes);
 app.use('/api/wechat', wechatRoutes);
 app.use('/api/apple', appleRoutes);
 app.use('/api/tmdb', tmdbRoutes);
+app.use('/api/debug', debugRoutes);
 
 // 健康检查
 app.get('/health', (req, res) => {
