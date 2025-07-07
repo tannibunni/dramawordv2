@@ -120,11 +120,14 @@ const ShowsScreen: React.FC = () => {
 
     // 按搜索文本过滤（本地过滤，用于状态筛选）
     if (searchText) {
-      filtered = filtered.filter(show =>
-        show.name.toLowerCase().includes(searchText.toLowerCase()) ||
-        show.original_name.toLowerCase().includes(searchText.toLowerCase()) ||
-        show.genres.some(genre => genre.name.toLowerCase().includes(searchText.toLowerCase()))
-      );
+      filtered = filtered.filter(show => {
+        const genreNames = show.genres?.map(genre => genre.name) || 
+                          (show.genre_ids ? TMDBService.getGenreNames(show.genre_ids) : []);
+        
+        return show.name.toLowerCase().includes(searchText.toLowerCase()) ||
+               show.original_name.toLowerCase().includes(searchText.toLowerCase()) ||
+               genreNames.some(name => name.toLowerCase().includes(searchText.toLowerCase()));
+      });
     }
 
     setFilteredShows(filtered);
@@ -185,7 +188,8 @@ const ShowsScreen: React.FC = () => {
         
         <Text style={styles.originalTitle}>{item.original_name}</Text>
         <Text style={styles.genreText}>
-          {item.genres.map(genre => genre.name).join(', ')}
+          {item.genres?.map(genre => genre.name).join(', ') || 
+           (item.genre_ids ? TMDBService.getGenreNames(item.genre_ids).join(', ') : '未知类型')}
         </Text>
         
         <View style={styles.showMeta}>
@@ -339,11 +343,19 @@ const ShowsScreen: React.FC = () => {
                 <Text style={styles.modalOverview}>{selectedShow.overview}</Text>
 
                 <View style={styles.modalGenres}>
-                  {selectedShow.genres.map(genre => (
+                  {selectedShow.genres?.map(genre => (
                     <View key={genre.id} style={styles.genreTag}>
                       <Text style={styles.genreTagText}>{genre.name}</Text>
                     </View>
-                  ))}
+                  )) || 
+                  (selectedShow.genre_ids ? 
+                    selectedShow.genre_ids.map(id => (
+                      <View key={id} style={styles.genreTag}>
+                        <Text style={styles.genreTagText}>{TMDBService.genreMap[id] || '未知类型'}</Text>
+                      </View>
+                    )) : 
+                    <Text style={styles.genreTagText}>未知类型</Text>
+                  )}
                 </View>
 
                 <View style={styles.modalActions}>

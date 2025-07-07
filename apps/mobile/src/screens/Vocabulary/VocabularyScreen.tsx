@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { audioService } from '../../services/audioService';
+import { colors } from '../../constants/colors';
 
 const { width } = Dimensions.get('window');
 

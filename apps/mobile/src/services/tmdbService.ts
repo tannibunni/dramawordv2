@@ -10,12 +10,13 @@ export interface TMDBShow {
   last_air_date: string;
   status: string;
   type: string;
-  genres: Array<{ id: number; name: string }>;
-  networks: Array<{ id: number; name: string }>;
-  production_companies: Array<{ id: number; name: string }>;
-  episode_run_time: number[];
-  number_of_seasons: number;
-  number_of_episodes: number;
+  genres?: Array<{ id: number; name: string }>;
+  genre_ids?: number[];
+  networks?: Array<{ id: number; name: string }>;
+  production_companies?: Array<{ id: number; name: string }>;
+  episode_run_time?: number[];
+  number_of_seasons?: number;
+  number_of_episodes?: number;
   vote_average: number;
   vote_count: number;
   popularity: number;
@@ -23,7 +24,7 @@ export interface TMDBShow {
   backdrop_path: string;
   original_language: string;
   origin_country: string[];
-  created_by: Array<{ id: number; name: string; profile_path: string }>;
+  created_by?: Array<{ id: number; name: string; profile_path: string }>;
 }
 
 export interface TMDBSearchResponse {
@@ -57,6 +58,43 @@ export interface TMDBSeason {
 
 export class TMDBService {
   private static baseUrl = `${API_BASE_URL}/tmdb`;
+
+  // Genre ID 到 Genre Name 的映射
+  private static genreMap: { [key: number]: string } = {
+    10759: '动作冒险',
+    16: '动画',
+    35: '喜剧',
+    80: '犯罪',
+    99: '纪录片',
+    18: '剧情',
+    10751: '家庭',
+    10762: '儿童',
+    9648: '悬疑',
+    10763: '新闻',
+    10764: '真人秀',
+    10765: '科幻奇幻',
+    10766: '肥皂剧',
+    10767: '脱口秀',
+    10768: '战争政治',
+    37: '西部'
+  };
+
+  /**
+   * 根据 genre_ids 获取 genre 名称
+   */
+  static getGenreNames(genreIds: number[]): string[] {
+    return genreIds.map(id => this.genreMap[id] || '未知类型');
+  }
+
+  /**
+   * 根据 genre_ids 获取 genre 对象数组
+   */
+  static getGenresFromIds(genreIds: number[]): Array<{ id: number; name: string }> {
+    return genreIds.map(id => ({
+      id,
+      name: this.genreMap[id] || '未知类型'
+    }));
+  }
 
   /**
    * 搜索剧集
