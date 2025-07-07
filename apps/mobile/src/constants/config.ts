@@ -40,7 +40,7 @@ export const APP_CONFIG = {
   // 第三方登录配置
   THIRD_PARTY_CONFIG: {
     WECHAT: {
-      APP_ID: 'your_wechat_app_id',
+      APP_ID: 'wxa225945508659eb8',
       SCOPE: 'snsapi_userinfo',
     },
     APPLE: {

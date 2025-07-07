@@ -1,9 +1,9 @@
 // 微信登录配置
 export const wechatConfig = {
-  appId: 'wxa225945508659eb8',
-  appSecret: '83265da729625c5cf5a613da6e3dc96b',
-  bundleId: 'com.tanny.dramaword',
-  universalLinks: 'https://dramaword.com/app/',
+  appId: process.env.WECHAT_APP_ID || 'wxa225945508659eb8',
+  appSecret: process.env.WECHAT_APP_SECRET || '83265da729625c5cf5a613da6e3dc96b',
+  bundleId: process.env.WECHAT_BUNDLE_ID || 'com.tanny.dramaword',
+  universalLinks: process.env.WECHAT_UNIVERSAL_LINKS || 'https://dramaword.com/app/',
   
   // API端点
   api: {
