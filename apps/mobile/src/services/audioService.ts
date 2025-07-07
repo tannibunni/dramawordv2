@@ -23,9 +23,7 @@ class AudioService {
         }
       });
 
-      // 加载音频文件
-      // 这里使用 Google TTS API 或其他 TTS 服务
-      // 暂时使用模拟音频 URL
+      // 获取音频 URL
       const audioUrl = this.getAudioUrl(word);
       
       if (audioUrl) {
@@ -80,19 +78,52 @@ class AudioService {
 
   // 获取音频 URL
   private getAudioUrl(word: string): string | null {
-    // 这里可以集成真实的 TTS 服务
-    // 例如：Google TTS、Amazon Polly、Azure Speech Services 等
+    if (!word || word.trim() === '') {
+      return null;
+    }
+
+    // 方案1: Google Translate TTS (免费，推荐)
+    // 参数说明：
+    // - ie=UTF-8: 输入编码
+    // - q=${word}: 要发音的文本
+    // - tl=en: 目标语言 (英语)
+    // - client=tw-ob: 客户端标识
+    const googleTtsUrl = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(word.trim())}&tl=en&client=tw-ob`;
     
-    // 使用配置的 API 基础 URL（实际项目中需要替换为真实的 TTS 服务）
-    const ttsServiceUrl = `${API_BASE_URL}/audio/tts?word=${encodeURIComponent(word)}&lang=en`;
+    // 方案2: 备用 TTS 服务 (如果 Google TTS 有 CORS 问题)
+    // const backupTtsUrl = `https://api.dictionaryapi.dev/media/pronunciations/en/${word.toLowerCase()}.mp3`;
     
-    // 暂时返回 null，表示没有音频
-    return null;
+    return googleTtsUrl;
+  }
+
+  // 使用 Web Speech API 播放发音 (备用方案)
+  async playWithWebSpeech(word: string): Promise<void> {
+    try {
+      if ('speechSynthesis' in window) {
+        const utterance = new SpeechSynthesisUtterance(word);
+        utterance.lang = 'en-US';
+        utterance.rate = 0.8; // 稍微慢一点，便于学习
+        utterance.pitch = 1.0;
+        utterance.volume = 1.0;
+        
+        // 停止当前播放
+        window.speechSynthesis.cancel();
+        
+        // 开始播放
+        window.speechSynthesis.speak(utterance);
+      } else {
+        console.warn('Web Speech API not supported');
+        throw new Error('Web Speech API not supported');
+      }
+    } catch (error) {
+      console.error('Error with Web Speech API:', error);
+      throw error;
+    }
   }
 
   // 检查是否有音频可用
   hasAudio(word: string): boolean {
-    return this.getAudioUrl(word) !== null;
+    return Boolean(word && word.trim() !== '' && this.getAudioUrl(word) !== null);
   }
 
   // 获取播放状态
