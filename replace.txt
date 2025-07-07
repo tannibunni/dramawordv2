@@ -1,1 +1,3 @@
-OPENAI_API_KEY=.*    OPENAI_API_KEY="your-openai-api-key-here" 
+OPENAI_API_KEY=    OPENAI_API_KEY="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"
+sk-                REMOVED_OPENAI_KEY
+sk-proj-           REMOVED_OPENAI_KEY 
