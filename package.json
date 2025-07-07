@@ -23,6 +23,7 @@
     "npm": ">=8.0.0"
   },
   "dependencies": {
-    "mongodb": "^6.17.0"
+    "mongodb": "^6.17.0",
+    "react-native-reanimated": "^3.18.0"
   }
 }
