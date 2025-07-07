@@ -37,8 +37,7 @@ const UserLearningRecordSchema = new Schema<IUserLearningRecord>({
   userId: {
     type: String,
     required: true,
-    unique: true,
-    index: true
+    unique: true
   },
   records: [{
     word: {

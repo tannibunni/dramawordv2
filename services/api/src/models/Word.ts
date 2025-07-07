@@ -28,8 +28,7 @@ const WordSchema = new Schema<IWord>({
     required: true,
     unique: true,
     lowercase: true,
-    trim: true,
-    index: true
+    trim: true
   },
   phonetic: {
     type: String,

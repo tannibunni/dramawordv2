@@ -14,8 +14,7 @@ const SearchHistorySchema = new Schema<ISearchHistory>({
     type: String,
     required: true,
     lowercase: true,
-    trim: true,
-    index: true
+    trim: true
   },
   definition: {
     type: String,
@@ -23,13 +22,11 @@ const SearchHistorySchema = new Schema<ISearchHistory>({
   },
   timestamp: {
     type: Date,
-    default: Date.now,
-    index: true
+    default: Date.now
   },
   userId: {
     type: String,
-    required: false,
-    index: true
+    required: false
   }
 }, {
   timestamps: true
