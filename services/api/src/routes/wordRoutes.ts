@@ -9,9 +9,9 @@ import {
 const router = Router();
 
 // 单词搜索路由
-router.post('/words/search', searchWord);
-router.get('/words/popular', getPopularWords);
-router.get('/words/recent-searches', getRecentSearches);
-router.post('/words/history', saveSearchHistory);
+router.post('/search', searchWord);
+router.get('/popular', getPopularWords);
+router.get('/recent-searches', getRecentSearches);
+router.post('/history', saveSearchHistory);
 
-export { router as wordRoutes }; 
+export default router; 

@@ -14,7 +14,7 @@ console.log('MONGODB_URI exists:', !!process.env.MONGODB_URI);
 import express from 'express';
 import cors from 'cors';
 import { connectDatabase } from './config/database';
-import { wordRoutes } from './routes/wordRoutes';
+import wordRoutes from './routes/wordRoutes';
 import userRoutes from './routes/user';
 import syncRoutes from './routes/sync';
 import wechatRoutes from './routes/wechat';
