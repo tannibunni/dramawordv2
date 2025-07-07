@@ -1,6 +1,7 @@
 // TODO: Migrate to expo-audio when the API is stable
 // Currently using expo-av as expo-audio is still in development
 import { Audio } from 'expo-av';
+import { API_BASE_URL } from '../constants/config';
 
 class AudioService {
   private sound: Audio.Sound | null = null;
@@ -82,8 +83,8 @@ class AudioService {
     // 这里可以集成真实的 TTS 服务
     // 例如：Google TTS、Amazon Polly、Azure Speech Services 等
     
-    // 模拟音频 URL（实际项目中需要替换为真实的 TTS 服务）
-    const ttsServiceUrl = `https://api.example.com/tts?word=${encodeURIComponent(word)}&lang=en`;
+    // 使用配置的 API 基础 URL（实际项目中需要替换为真实的 TTS 服务）
+    const ttsServiceUrl = `${API_BASE_URL}/audio/tts?word=${encodeURIComponent(word)}&lang=en`;
     
     // 暂时返回 null，表示没有音频
     return null;

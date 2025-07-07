@@ -1,7 +1,5 @@
 // API配置
-export const API_BASE_URL = __DEV__ 
-  ? 'http://localhost:3001/api'  // 开发环境
-  : 'https://your-production-api.com/api'; // 生产环境
+export const API_BASE_URL = 'https://dramawordv2.onrender.com/api'; // 统一使用生产环境
 
 // 应用配置
 export const APP_CONFIG = {
