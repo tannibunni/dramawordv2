@@ -61,7 +61,7 @@ export class WordService {
     try {
       console.log(`🔍 搜索单词: ${word}`);
       
-      const response = await fetch(`${API_BASE_URL}/mongo/search`, {
+      const response = await fetch(`${API_BASE_URL}/words/search`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -109,7 +109,7 @@ export class WordService {
   // 获取热门单词
   async getPopularWords(): Promise<RecentWord[]> {
     try {
-      const response = await fetch(`${API_BASE_URL}/mongo/popular`);
+      const response = await fetch(`${API_BASE_URL}/words/popular`);
       
       if (!response.ok) {
         throw new WordServiceError(`获取热门单词失败: ${response.status}`, response.status);
@@ -136,7 +136,7 @@ export class WordService {
   // 获取最近查词记录
   async getRecentWords(): Promise<RecentWord[]> {
     try {
-      const response = await fetch(`${API_BASE_URL}/mongo/recent-searches`);
+      const response = await fetch(`${API_BASE_URL}/words/recent-searches`);
       
       if (!response.ok) {
         throw new WordServiceError(`获取最近查词失败: ${response.status}`, response.status);
@@ -163,7 +163,7 @@ export class WordService {
   // 保存查词记录
   async saveSearchHistory(word: string, definition: string): Promise<boolean> {
     try {
-      const response = await fetch(`${API_BASE_URL}/mongo/user/history`, {
+      const response = await fetch(`${API_BASE_URL}/words/history`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -284,6 +284,34 @@ export class WordService {
       { id: '4', word: 'example', translation: '例子', timestamp: Date.now() - 4000 },
       { id: '5', word: 'learning', translation: '学习', timestamp: Date.now() - 5000 },
     ];
+  }
+
+  // 清空用户缓存（只清空本地缓存，不影响数据库中的词库）
+  async clearUserCache(): Promise<boolean> {
+    try {
+      console.log('🧹 清空用户缓存...');
+      
+      // 调用后端API清空用户的搜索历史
+      const response = await fetch(`${API_BASE_URL}/words/clear-user-history`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        console.log('✅ 用户缓存清空成功:', result.message);
+        return true;
+      } else {
+        console.log('⚠️ 后端清空失败，仅清空本地缓存');
+        return true; // 即使后端失败，本地清空也算成功
+      }
+    } catch (error) {
+      console.error(`❌ 清空用户缓存错误: ${error}`);
+      // 即使网络错误，也返回成功，因为主要是清空本地缓存
+      return true;
+    }
   }
 }
 

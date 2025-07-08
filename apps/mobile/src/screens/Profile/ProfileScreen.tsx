@@ -13,6 +13,9 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { EditProfileModal } from '../../components/profile/EditProfileModal';
 import { UserService } from '../../services/userService';
+import { useVocabulary } from '../../context/VocabularyContext';
+import { useShowList } from '../../context/ShowListContext';
+import { wordService } from '../../services/wordService';
 
 interface UserStats {
   totalWords: number;
@@ -26,7 +29,7 @@ interface UserStats {
 interface ProfileScreenProps {
   onLogout?: () => void;
   onEditProfile?: () => void;
-  navigation: any;
+  navigation?: any;
 }
 
 export const ProfileScreen: React.FC<ProfileScreenProps> = ({
@@ -40,6 +43,9 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [editModalVisible, setEditModalVisible] = useState(false);
+  const [clearingCache, setClearingCache] = useState(false);
+  const { vocabulary, clearVocabulary } = useVocabulary();
+  const { shows, clearShows } = useShowList();
 
   // 模拟用户数据（当真实数据未加载时使用）
   const defaultUserData = {
@@ -241,6 +247,24 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
         </View>
         <Ionicons name="chevron-forward" size={20} color="#A0A0A0" />
       </TouchableOpacity>
+
+      <TouchableOpacity 
+        style={[styles.settingItem, clearingCache && styles.settingItemDisabled]} 
+        onPress={handleClearCache}
+        disabled={clearingCache}
+      >
+        <View style={styles.settingLeft}>
+          <Ionicons name="trash-outline" size={24} color="#F76C6C" />
+          <Text style={[styles.settingLabel, { color: '#F76C6C' }]}>
+            {clearingCache ? '清空中...' : '清空数据'}
+          </Text>
+        </View>
+        {clearingCache ? (
+          <Ionicons name="hourglass-outline" size={20} color="#A0A0A0" />
+        ) : (
+          <Ionicons name="chevron-forward" size={20} color="#A0A0A0" />
+        )}
+      </TouchableOpacity>
     </View>
   );
 
@@ -259,6 +283,53 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
 
   const handleProfileUpdate = (updatedUser: any) => {
     setUser(updatedUser);
+  };
+
+  const handleClearCache = () => {
+    Alert.alert(
+      '清空数据',
+      '确定要清空以下所有数据吗？\n\n• 用户ID下的搜索历史记录\n• 用户单词表里面存的词\n• 用户的剧单\n\n⚠️ 此操作不可恢复！',
+      [
+        {
+          text: '取消',
+          style: 'cancel',
+        },
+        {
+          text: '确定删除',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              setClearingCache(true);
+              
+              // 清空词汇缓存
+              clearVocabulary();
+              
+              // 清空剧单
+              clearShows();
+              
+              // 清空搜索历史缓存
+              await wordService.clearUserCache();
+              
+              // 显示成功消息
+              Alert.alert(
+                '清空完成',
+                '数据已成功清空！\n\n已清空：\n• 用户搜索历史记录\n• 用户单词表\n• 用户剧单\n\n数据库中的词库保持不变。',
+                [{ text: '确定' }]
+              );
+            } catch (error) {
+              console.error('清空数据失败:', error);
+              Alert.alert(
+                '清空失败',
+                '清空数据时出现错误，请稍后重试。',
+                [{ text: '确定' }]
+              );
+            } finally {
+              setClearingCache(false);
+            }
+          },
+        },
+      ]
+    );
   };
 
   return (
@@ -508,5 +579,8 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#F76C6C',
     marginLeft: 8,
+  },
+  settingItemDisabled: {
+    opacity: 0.5,
   },
 }); 

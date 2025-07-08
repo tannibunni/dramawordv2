@@ -117,7 +117,9 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
           name: 'avatar.jpg',
         } as any);
 
-        const uploadResult = await UserService.uploadAvatar(formData);
+        // TODO: 从本地存储或全局状态获取token
+        const token = 'your-token-here';
+        const uploadResult = await UserService.uploadAvatar(token, formData);
         if (uploadResult.success) {
           avatarUrl = uploadResult.data.avatar;
         } else {
@@ -131,7 +133,9 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
         updateData.avatar = avatarUrl;
       }
 
-      const result = await UserService.updateProfile(updateData);
+      // TODO: 从本地存储或全局状态获取token
+      const token = 'your-token-here';
+      const result = await UserService.updateProfile(token, updateData);
       if (result.success) {
         onUpdate(result.data.user);
         onClose();

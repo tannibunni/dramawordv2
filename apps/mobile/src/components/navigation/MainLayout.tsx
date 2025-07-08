@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { BottomTabBar, TabType } from './BottomTabBar';
-import HomeScreen from '../../screens/Home/HomeScreen';
+import { HomeScreen } from '../../screens/Home/HomeScreen';
 import VocabularyScreen from '../../screens/Vocabulary/VocabularyScreen';
 import ReviewScreen from '../../screens/Review/ReviewScreen';
 import ShowsScreen from '../../screens/Shows/ShowsScreen';

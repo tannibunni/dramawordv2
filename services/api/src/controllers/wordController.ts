@@ -181,10 +181,28 @@ export const getRecentSearches = async (req: Request, res: Response) => {
   try {
     logger.info('📝 Getting recent searches from database');
     
-    const recentSearches = await SearchHistory.find({})
-      .sort({ timestamp: -1 })
-      .limit(10)
-      .select('word definition timestamp');
+    // 使用聚合管道进行去重，每个单词只保留最新的一条记录
+    const recentSearches = await SearchHistory.aggregate([
+      // 按单词分组，获取每个单词的最新记录
+      {
+        $sort: { timestamp: -1 }
+      },
+      {
+        $group: {
+          _id: '$word',
+          word: { $first: '$word' },
+          definition: { $first: '$definition' },
+          timestamp: { $first: '$timestamp' }
+        }
+      },
+      // 按时间戳排序，获取最新的10条记录
+      {
+        $sort: { timestamp: -1 }
+      },
+      {
+        $limit: 10
+      }
+    ]);
     
     const formattedSearches = recentSearches.map(search => ({
       word: search.word,
@@ -427,9 +445,73 @@ function getFallbackWordData(word: string) {
   };
 }
 
+// 清空所有单词和搜索历史（管理员功能）
+export const clearAllData = async (req: Request, res: Response): Promise<void> => {
+  try {
+    logger.info('🧹 开始清空所有单词和搜索历史数据');
+
+    // 清空内存缓存
+    wordCache.clear();
+    logger.info('✅ 内存缓存已清空');
+
+    // 删除所有单词数据
+    const wordDeleteResult = await Word.deleteMany({});
+    logger.info(`✅ 删除了 ${wordDeleteResult.deletedCount} 个单词记录`);
+
+    // 删除所有搜索历史
+    const historyDeleteResult = await SearchHistory.deleteMany({});
+    logger.info(`✅ 删除了 ${historyDeleteResult.deletedCount} 条搜索历史记录`);
+
+    res.json({
+      success: true,
+      message: '所有单词和搜索历史已清空',
+      data: {
+        deletedWords: wordDeleteResult.deletedCount,
+        deletedHistory: historyDeleteResult.deletedCount,
+        cacheCleared: true
+      }
+    });
+  } catch (error) {
+    logger.error('❌ 清空数据失败:', error);
+    res.status(500).json({
+      success: false,
+      error: '清空数据失败',
+      message: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+};
+
+// 清空用户历史记录（只清空搜索历史，不影响词库）
+export const clearUserHistory = async (req: Request, res: Response): Promise<void> => {
+  try {
+    logger.info('🧹 开始清空用户搜索历史');
+
+    // 删除所有搜索历史（这里可以根据用户ID进行过滤，如果有用户系统的话）
+    const historyDeleteResult = await SearchHistory.deleteMany({});
+    logger.info(`✅ 删除了 ${historyDeleteResult.deletedCount} 条搜索历史记录`);
+
+    res.json({
+      success: true,
+      message: '用户搜索历史已清空',
+      data: {
+        deletedHistory: historyDeleteResult.deletedCount
+      }
+    });
+  } catch (error) {
+    logger.error('❌ 清空用户历史失败:', error);
+    res.status(500).json({
+      success: false,
+      error: '清空用户历史失败',
+      message: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+};
+
 export const wordController = {
   searchWord,
   getPopularWords,
   getRecentSearches,
-  saveSearchHistory
+  saveSearchHistory,
+  clearAllData,
+  clearUserHistory
 }; 

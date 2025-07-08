@@ -1,19 +1,15 @@
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
-  Animated,
+  ScrollView,
   Dimensions,
-  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../../../../packages/ui/src/tokens';
 
-const { width: screenWidth } = Dimensions.get('window');
-
-// 类型定义
 export interface WordDefinition {
   partOfSpeech: string;
   definition: string;
@@ -40,8 +36,9 @@ interface WordCardProps {
   onPlayAudio?: (word: string) => void;
   showActions?: boolean;
   style?: any;
-  onPress?: () => void;
 }
+
+const CARD_CONTENT_MAX_HEIGHT = 360; // 可根据实际UI调整
 
 const WordCard: React.FC<WordCardProps> = ({
   wordData,
@@ -50,32 +47,14 @@ const WordCard: React.FC<WordCardProps> = ({
   onPlayAudio,
   showActions = true,
   style,
-  onPress,
 }) => {
-  const [isExpanded, setIsExpanded] = useState(false);
-  const cardHeight = useRef(new Animated.Value(200)).current;
-  const cardOpacity = useRef(new Animated.Value(1)).current;
-
-  // 展开/收起卡片
-  const toggleExpanded = () => {
-    if (onPress) {
-      onPress();
-      return;
-    }
-
-    setIsExpanded(!isExpanded);
-    Animated.spring(cardHeight, {
-      toValue: isExpanded ? 200 : 400,
-      useNativeDriver: false,
-    }).start();
-  };
+  const hasMultipleExamples = wordData.definitions.some(def => def.examples && def.examples.length > 1);
+  const [showScrollTip, setShowScrollTip] = useState(hasMultipleExamples);
 
   // 收藏单词
   const handleCollect = () => {
     if (onCollect) {
       onCollect(wordData.word);
-    } else {
-      Alert.alert('收藏成功', `已收藏单词 "${wordData.word}"`);
     }
   };
 
@@ -83,8 +62,6 @@ const WordCard: React.FC<WordCardProps> = ({
   const handleIgnore = () => {
     if (onIgnore) {
       onIgnore(wordData.word);
-    } else {
-      Alert.alert('忽略成功', `已忽略单词 "${wordData.word}"`);
     }
   };
 
@@ -92,258 +69,189 @@ const WordCard: React.FC<WordCardProps> = ({
   const handlePlayAudio = () => {
     if (onPlayAudio) {
       onPlayAudio(wordData.word);
-    } else {
-      Alert.alert('发音', '发音功能开发中...');
     }
   };
 
   return (
-    <Animated.View
-      style={[
-        styles.card,
-        {
-          height: cardHeight,
-          opacity: cardOpacity,
-        },
-        style,
-      ]}
-    >
-      {/* 卡片头部 */}
-      <View style={styles.cardHeader}>
-        <View style={styles.wordInfo}>
+    <View style={[styles.card, style]}>
+      {/* 头部：单词、音标、发音按钮 */}
+      <View style={styles.headerRow}>
+        <View style={{ flex: 1 }}>
           <Text style={styles.word}>{wordData.word}</Text>
           <Text style={styles.phonetic}>{wordData.phonetic}</Text>
         </View>
-        
-        <TouchableOpacity
-          style={styles.audioButton}
-          onPress={handlePlayAudio}
-          activeOpacity={0.7}
-        >
-          <Ionicons name="volume-medium" size={20} color={colors.primary[500]} />
+        <TouchableOpacity style={styles.audioButton} onPress={handlePlayAudio} activeOpacity={0.7}>
+          <Ionicons name="volume-medium" size={22} color={colors.primary[500]} />
         </TouchableOpacity>
       </View>
-
-      {/* 主要释义 */}
-      <View style={styles.mainDefinition}>
-        {wordData.definitions.length > 0 && (
-          <View style={styles.definitionItem}>
-            <Text style={styles.partOfSpeech}>
-              {wordData.definitions[0].partOfSpeech}
-            </Text>
-            <Text style={styles.definition}>
-              {wordData.definitions[0].definition}
-            </Text>
-          </View>
-        )}
-      </View>
-
-      {/* 展开内容 */}
-      {isExpanded && (
-        <Animated.View style={styles.expandedContent}>
-          {/* 所有释义 */}
-          {wordData.definitions.slice(1).map((def, index) => (
-            <View key={index} style={styles.definitionItem}>
+      {/* 主体内容区：可滚动 */}
+      <View style={{ maxHeight: CARD_CONTENT_MAX_HEIGHT, marginBottom: 8 }}>
+        <ScrollView
+          showsVerticalScrollIndicator={true}
+          indicatorStyle="black"
+          persistentScrollbar={true}
+          onScroll={e => {
+            if (showScrollTip && e.nativeEvent.contentOffset.y > 10) {
+              setShowScrollTip(false);
+            }
+          }}
+          scrollEventThrottle={16}
+        >
+          {wordData.definitions.map((def, idx) => (
+            <View key={idx} style={styles.definitionBlock}>
               <Text style={styles.partOfSpeech}>{def.partOfSpeech}</Text>
               <Text style={styles.definition}>{def.definition}</Text>
-              
-              {/* 例句 */}
-              {def.examples.map((example, exampleIndex) => (
-                <View key={exampleIndex} style={styles.exampleContainer}>
-                  <Text style={styles.exampleEnglish}>{example.english}</Text>
-                  <Text style={styles.exampleChinese}>{example.chinese}</Text>
+              {def.examples && def.examples.length > 0 && (
+                <View style={styles.examplesBlock}>
+                  {def.examples.map((ex, exIdx) => (
+                    <View key={exIdx} style={styles.exampleContainer}>
+                      <Text style={styles.exampleEnglish}>{ex.english}</Text>
+                      <Text style={styles.exampleChinese}>{ex.chinese}</Text>
+                    </View>
+                  ))}
                 </View>
-              ))}
+              )}
             </View>
           ))}
-
-          {/* 统计信息 */}
-          <View style={styles.statsContainer}>
-            <Text style={styles.statsText}>
-              搜索次数: {wordData.searchCount || 0}
-            </Text>
-            {wordData.lastSearched && (
-              <Text style={styles.statsText}>
-                最后搜索: {new Date(wordData.lastSearched).toLocaleDateString()}
-              </Text>
-            )}
-          </View>
-        </Animated.View>
+        </ScrollView>
+      </View>
+      {/* 滑动提示，仅初始显示，滑动后消失 */}
+      {showScrollTip && (
+        <View style={styles.arrowTip}>
+          <Text style={styles.arrowTipText}>向下滑动查看更多例句</Text>
+          <Ionicons name="chevron-down" size={22} color={colors.text.tertiary} />
+        </View>
       )}
-
-      {/* 操作按钮 */}
+      {/* 底部按钮区：始终固定在卡片底部 */}
       {showActions && (
         <View style={styles.actionButtons}>
-          <TouchableOpacity
-            style={[styles.actionButton, styles.ignoreButton]}
-            onPress={handleIgnore}
-            activeOpacity={0.7}
-          >
+          <TouchableOpacity style={[styles.actionButton, styles.ignoreButton]} onPress={handleIgnore} activeOpacity={0.7}>
             <Ionicons name="close" size={20} color={colors.error[500]} />
-            <Text style={[styles.actionText, styles.ignoreText]}>忽略</Text>
+            <Text style={styles.ignoreText}>忽略</Text>
           </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.expandButton}
-            onPress={toggleExpanded}
-            activeOpacity={0.7}
-          >
-            <Ionicons
-              name={isExpanded ? "chevron-up" : "chevron-down"}
-              size={20}
-              color={colors.text.secondary}
-            />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.actionButton, styles.collectButton]}
-            onPress={handleCollect}
-            activeOpacity={0.7}
-          >
-            <Ionicons
-              name={wordData.isCollected ? "heart" : "heart-outline"}
-              size={20}
-              color={wordData.isCollected ? colors.error[500] : colors.primary[500]}
-            />
-            <Text style={[styles.actionText, styles.collectText]}>
-              {wordData.isCollected ? '已收藏' : '收藏'}
-            </Text>
+          <TouchableOpacity style={[styles.actionButton, styles.collectButton]} onPress={handleCollect} activeOpacity={0.7}>
+            <Ionicons name={wordData.isCollected ? "heart" : "heart-outline"} size={20} color={wordData.isCollected ? colors.error[500] : colors.primary[500]} />
+            <Text style={styles.collectText}>{wordData.isCollected ? '已收藏' : '收藏'}</Text>
           </TouchableOpacity>
         </View>
       )}
-    </Animated.View>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: colors.background.secondary,
-    borderRadius: 16,
-    padding: 20,
-    marginHorizontal: 16,
-    marginVertical: 8,
-    shadowColor: colors.neutral[200],
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
-    minHeight: 200,
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    padding: 24,
+    marginVertical: 12,
+    width: '92%',
+    maxWidth: 500,
+    alignSelf: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 6,
   },
-  cardHeader: {
+  headerRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 16,
-  },
-  wordInfo: {
-    flex: 1,
+    alignItems: 'center',
+    marginBottom: 8,
   },
   word: {
-    fontSize: 28,
+    fontSize: 32,
     fontWeight: 'bold',
-    color: colors.text.primary,
-    marginBottom: 4,
+    color: '#222',
   },
   phonetic: {
-    fontSize: 16,
-    color: colors.text.secondary,
-    fontFamily: 'monospace',
+    fontSize: 18,
+    color: '#888',
+    fontStyle: 'italic',
+    marginTop: 2,
   },
   audioButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: colors.background.secondary,
+    backgroundColor: '#f5f6fa',
     justifyContent: 'center',
     alignItems: 'center',
+    marginLeft: 8,
   },
-  mainDefinition: {
-    marginBottom: 16,
-  },
-  definitionItem: {
-    marginBottom: 12,
+  definitionBlock: {
+    marginTop: 12,
+    marginBottom: 8,
   },
   partOfSpeech: {
-    fontSize: 14,
-    color: colors.text.secondary,
-    fontStyle: 'italic',
-    marginBottom: 4,
-  },
-  definition: {
-    fontSize: 16,
-    color: colors.text.primary,
-    lineHeight: 24,
-  },
-  expandedContent: {
-    marginTop: 8,
-  },
-  exampleContainer: {
-    marginTop: 8,
-    paddingLeft: 16,
-  },
-  exampleEnglish: {
-    fontSize: 14,
-    color: colors.text.primary,
+    fontSize: 15,
+    color: '#888',
     fontStyle: 'italic',
     marginBottom: 2,
   },
+  definition: {
+    fontSize: 18,
+    color: '#222',
+    marginBottom: 6,
+  },
+  examplesBlock: {
+    marginTop: 4,
+    marginBottom: 2,
+    paddingLeft: 8,
+  },
+  exampleContainer: {
+    marginTop: 4,
+    paddingLeft: 8,
+  },
+  exampleEnglish: {
+    fontSize: 15,
+    color: '#888',
+    fontStyle: 'italic',
+  },
   exampleChinese: {
+    fontSize: 15,
+    color: '#444',
+    marginBottom: 8,
+  },
+  arrowTip: {
+    alignItems: 'center',
+    marginVertical: 8,
+  },
+  arrowTipText: {
     fontSize: 14,
-    color: colors.text.secondary,
-  },
-  statsContainer: {
-    marginTop: 16,
-    paddingTop: 16,
-    borderTopWidth: 1,
-    borderTopColor: colors.border.light,
-  },
-  statsText: {
-    fontSize: 12,
-    color: colors.text.secondary,
-    marginBottom: 4,
+    color: colors.text.tertiary,
+    marginBottom: 2,
   },
   actionButtons: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: 16,
-    paddingTop: 16,
-    borderTopWidth: 1,
-    borderTopColor: colors.border.light,
+    marginTop: 12,
   },
   actionButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
     borderRadius: 20,
+    paddingHorizontal: 18,
+    paddingVertical: 8,
+    backgroundColor: '#f5f6fa',
   },
   ignoreButton: {
-    backgroundColor: colors.error[50],
+    backgroundColor: '#ffeaea',
   },
   collectButton: {
-    backgroundColor: colors.primary[50],
-  },
-  actionText: {
-    fontSize: 14,
-    marginLeft: 4,
+    backgroundColor: '#eaf2ff',
   },
   ignoreText: {
-    color: colors.error[500],
+    color: '#ff4d4f',
+    marginLeft: 4,
+    fontSize: 15,
+    fontWeight: '500',
   },
   collectText: {
-    color: colors.primary[500],
-  },
-  expandButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: colors.background.secondary,
-    justifyContent: 'center',
-    alignItems: 'center',
+    color: '#3478f6',
+    marginLeft: 4,
+    fontSize: 15,
+    fontWeight: '500',
   },
 });
 
