@@ -8,7 +8,8 @@ import {
   clearUserHistory,
   getUserVocabulary,
   addToUserVocabulary,
-  updateWordProgress
+  updateWordProgress,
+  removeFromUserVocabulary
 } from '../controllers/wordController';
 
 const router = Router();
@@ -29,6 +30,7 @@ router.delete('/clear-user-history', clearUserHistory);
 router.get('/user/vocabulary', getUserVocabulary); // ?userId=xxx
 router.post('/user/vocabulary', addToUserVocabulary);
 router.put('/user/progress', updateWordProgress);
+router.delete('/user/vocabulary', removeFromUserVocabulary);
 
 // 测试路由
 router.get('/test', (req, res) => {

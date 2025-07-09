@@ -458,6 +458,55 @@ export const updateWordProgress = async (req: Request, res: Response) => {
   }
 };
 
+// 删除用户单词本中的单词
+export const removeFromUserVocabulary = async (req: Request, res: Response) => {
+  try {
+    const { userId, word } = req.body;
+    
+    if (!userId || !word) {
+      res.status(400).json({
+        success: false,
+        error: 'User ID and word are required'
+      });
+      return;
+    }
+
+    const searchTerm = word.toLowerCase().trim();
+    logger.info(`🗑️ Removing word from user vocabulary: ${searchTerm} for user: ${userId}`);
+
+    // 查找并删除用户单词本记录
+    const deletedWord = await UserVocabulary.findOneAndDelete({
+      userId: userId,
+      word: searchTerm
+    });
+
+    if (!deletedWord) {
+      res.status(404).json({
+        success: false,
+        error: 'Word not found in user vocabulary'
+      });
+      return;
+    }
+
+    logger.info(`✅ Removed word from user vocabulary: ${searchTerm}`);
+
+    res.json({
+      success: true,
+      message: 'Word removed from vocabulary successfully',
+      data: {
+        word: searchTerm
+      }
+    });
+
+  } catch (error) {
+    logger.error('❌ Remove from user vocabulary error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to remove word from vocabulary'
+    });
+  }
+};
+
 // 更新云单词表搜索统计
 async function updateCloudWordSearchStats(word: string): Promise<void> {
   try {
