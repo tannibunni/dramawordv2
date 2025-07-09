@@ -267,7 +267,7 @@ export const saveSearchHistory = async (req: Request, res: Response): Promise<vo
 // 获取用户单词本
 export const getUserVocabulary = async (req: Request, res: Response) => {
   try {
-    const userId = req.params.userId || req.body.userId;
+    const userId = req.params.userId || req.body.userId || req.query.userId;
     
     if (!userId) {
       res.status(400).json({
