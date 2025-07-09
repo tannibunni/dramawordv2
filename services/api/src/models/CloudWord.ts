@@ -6,10 +6,7 @@ export interface ICloudWord extends Document {
   definitions: Array<{
     partOfSpeech: string;
     definition: string;
-    examples?: Array<{
-      english: string;
-      chinese: string;
-    }>;
+    examples?: string[]; // 改为字符串数组，兼容 OpenAI 返回格式
   }>;
   audioUrl?: string;
   searchCount: number;
@@ -40,14 +37,8 @@ const CloudWordSchema = new Schema<ICloudWord>({
       required: true
     },
     examples: [{
-      english: {
-        type: String,
-        required: true
-      },
-      chinese: {
-        type: String,
-        required: true
-      }
+      type: String, // 改为字符串类型，支持 OpenAI 返回的字符串数组
+      default: []
     }]
   }],
   audioUrl: {
