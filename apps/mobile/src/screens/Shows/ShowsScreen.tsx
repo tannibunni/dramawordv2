@@ -122,6 +122,7 @@ const ShowsScreen: React.FC = () => {
   };
 
   const openShowDetail = (show: Show) => {
+    console.log('打开剧集详情:', show);
     setSelectedShow(show);
     setShowDetailModal(true);
   };
@@ -443,6 +444,14 @@ const ShowsScreen: React.FC = () => {
                 </TouchableOpacity>
               </View>
 
+              {/* 调试信息 */}
+              <View style={styles.modalWordsSection}>
+                <Text style={styles.modalWordsTitle}>调试信息</Text>
+                <Text style={styles.debugText}>剧集ID: {selectedShow.id}</Text>
+                <Text style={styles.debugText}>总词汇数: {vocabulary.length}</Text>
+                <Text style={styles.debugText}>匹配词汇数: {getShowWords(selectedShow.id).length}</Text>
+              </View>
+
               {/* 该剧集收藏的单词 */}
               {(() => {
                 const showWords = getShowWords(selectedShow.id);
@@ -468,7 +477,12 @@ const ShowsScreen: React.FC = () => {
                     </View>
                   );
                 }
-                return null;
+                return (
+                  <View style={styles.modalWordsSection}>
+                    <Text style={styles.modalWordsTitle}>收藏的单词 (0)</Text>
+                    <Text style={styles.debugText}>暂无该剧集的收藏单词</Text>
+                  </View>
+                );
               })()}
             </ScrollView>
           </SafeAreaView>
@@ -838,6 +852,11 @@ const styles = StyleSheet.create({
   wordCard: {
     width: '100%',
     maxWidth: 400,
+  },
+  debugText: {
+    fontSize: 12,
+    color: colors.neutral[500],
+    marginBottom: 4,
   },
 });
 

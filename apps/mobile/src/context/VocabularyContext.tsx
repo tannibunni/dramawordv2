@@ -40,7 +40,7 @@ export const VocabularyProvider = ({ children }: { children: ReactNode }) => {
         }
       ],
       sourceShow: {
-        id: 1,
+        id: 1399, // Friends
         name: 'Friends',
         original_name: 'Friends',
         overview: 'A show about friends',
@@ -73,7 +73,7 @@ export const VocabularyProvider = ({ children }: { children: ReactNode }) => {
         }
       ],
       sourceShow: {
-        id: 1,
+        id: 1399, // Friends
         name: 'Friends',
         original_name: 'Friends',
         overview: 'A show about friends',
@@ -83,6 +83,39 @@ export const VocabularyProvider = ({ children }: { children: ReactNode }) => {
         vote_average: 8.9,
         vote_count: 1000,
         popularity: 100,
+        poster_path: '/test.jpg',
+        backdrop_path: '/test.jpg',
+        original_language: 'en',
+        origin_country: ['US'],
+        status: 'watching',
+        wordCount: 0
+      },
+      collectedAt: new Date().toISOString()
+    },
+    {
+      word: 'beautiful',
+      phonetic: '/ˈbjuːtɪfʊl/',
+      definitions: [
+        {
+          partOfSpeech: 'adjective',
+          definition: '美丽的，漂亮的',
+          examples: [
+            { english: 'She is beautiful.', chinese: '她很美丽。' },
+            { english: 'What a beautiful day!', chinese: '多么美好的一天！' }
+          ]
+        }
+      ],
+      sourceShow: {
+        id: 1396, // Breaking Bad
+        name: 'Breaking Bad',
+        original_name: 'Breaking Bad',
+        overview: 'A chemistry teacher turned drug dealer',
+        first_air_date: '2008-01-20',
+        last_air_date: '2013-09-29',
+        type: 'Scripted',
+        vote_average: 9.5,
+        vote_count: 2000,
+        popularity: 200,
         poster_path: '/test.jpg',
         backdrop_path: '/test.jpg',
         original_language: 'en',
