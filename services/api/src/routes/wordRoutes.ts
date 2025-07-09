@@ -1,11 +1,14 @@
 import { Router } from 'express';
-import { 
-  searchWord, 
-  getPopularWords, 
-  getRecentSearches, 
+import {
+  searchWord,
+  getPopularWords,
+  getRecentSearches,
   saveSearchHistory,
   clearAllData,
-  clearUserHistory
+  clearUserHistory,
+  getUserVocabulary,
+  addToUserVocabulary,
+  updateWordProgress
 } from '../controllers/wordController';
 
 const router = Router();
@@ -21,5 +24,19 @@ router.delete('/clear-all', clearAllData);
 
 // 清空用户历史记录
 router.delete('/clear-user-history', clearUserHistory);
+
+// 用户单词本相关API
+router.get('/user/vocabulary', getUserVocabulary); // ?userId=xxx
+router.post('/user/vocabulary', addToUserVocabulary);
+router.put('/user/progress', updateWordProgress);
+
+// 测试路由
+router.get('/test', (req, res) => {
+  res.json({
+    success: true,
+    message: 'Word routes are working!',
+    timestamp: new Date().toISOString()
+  });
+});
 
 export default router; 
