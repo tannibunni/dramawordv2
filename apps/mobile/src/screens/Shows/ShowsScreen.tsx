@@ -128,13 +128,19 @@ const ShowsScreen: React.FC = () => {
 
   // 获取该剧集相关的单词
   const getShowWords = (showId: number): WordWithSource[] => {
-    return vocabulary.filter(word => 
-      word.sourceShow && word.sourceShow.id === showId
-    );
+    console.log('所有词汇:', vocabulary);
+    console.log('当前剧集ID:', showId);
+    const showWords = vocabulary.filter(word => {
+      console.log('检查单词:', word.word, 'sourceShow:', word.sourceShow);
+      return word.sourceShow && word.sourceShow.id === showId;
+    });
+    console.log(`剧集 ${showId} 的单词:`, showWords);
+    return showWords;
   };
 
   // 打开单词卡片
   const openWordCard = (word: WordWithSource) => {
+    console.log('点击单词:', word);
     setSelectedWord(word);
     setShowWordCardModal(true);
   };

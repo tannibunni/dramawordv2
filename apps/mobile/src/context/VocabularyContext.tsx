@@ -24,7 +24,75 @@ export const useVocabulary = () => {
 };
 
 export const VocabularyProvider = ({ children }: { children: ReactNode }) => {
-  const [vocabulary, setVocabulary] = useState<WordWithSource[]>([]);
+  const [vocabulary, setVocabulary] = useState<WordWithSource[]>([
+    // 添加一些测试数据
+    {
+      word: 'hello',
+      phonetic: '/həˈloʊ/',
+      definitions: [
+        {
+          partOfSpeech: 'interjection',
+          definition: '你好，打招呼用语',
+          examples: [
+            { english: 'Hello, how are you?', chinese: '你好，你好吗？' },
+            { english: 'Hello there!', chinese: '你好！' }
+          ]
+        }
+      ],
+      sourceShow: {
+        id: 1,
+        name: 'Friends',
+        original_name: 'Friends',
+        overview: 'A show about friends',
+        first_air_date: '1994-09-22',
+        last_air_date: '2004-05-06',
+        type: 'Scripted',
+        vote_average: 8.9,
+        vote_count: 1000,
+        popularity: 100,
+        poster_path: '/test.jpg',
+        backdrop_path: '/test.jpg',
+        original_language: 'en',
+        origin_country: ['US'],
+        status: 'watching',
+        wordCount: 0
+      },
+      collectedAt: new Date().toISOString()
+    },
+    {
+      word: 'world',
+      phonetic: '/wɜːld/',
+      definitions: [
+        {
+          partOfSpeech: 'noun',
+          definition: '世界，地球',
+          examples: [
+            { english: 'The world is beautiful.', chinese: '世界很美丽。' },
+            { english: 'Around the world', chinese: '环游世界' }
+          ]
+        }
+      ],
+      sourceShow: {
+        id: 1,
+        name: 'Friends',
+        original_name: 'Friends',
+        overview: 'A show about friends',
+        first_air_date: '1994-09-22',
+        last_air_date: '2004-05-06',
+        type: 'Scripted',
+        vote_average: 8.9,
+        vote_count: 1000,
+        popularity: 100,
+        poster_path: '/test.jpg',
+        backdrop_path: '/test.jpg',
+        original_language: 'en',
+        origin_country: ['US'],
+        status: 'watching',
+        wordCount: 0
+      },
+      collectedAt: new Date().toISOString()
+    }
+  ]);
 
   const addWord = (word: WordData, sourceShow?: Show) => {
     setVocabulary(prev => {
