@@ -54,7 +54,7 @@ export async function migrateToCloudWords() {
     const cloudWordMap = new Map<string, mongoose.Types.ObjectId>();
     const savedCloudWords = await CloudWord.find({});
     savedCloudWords.forEach(cloudWord => {
-      cloudWordMap.set(cloudWord.word.toLowerCase(), cloudWord._id);
+      cloudWordMap.set(cloudWord.word.toLowerCase(), cloudWord._id as any);
     });
 
     // 5. 更新用户单词本，添加 wordId 引用
