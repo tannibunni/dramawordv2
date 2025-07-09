@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LoginButton } from './LoginButton';
+import { colors } from '../../constants/colors';
 
 interface PhoneLoginModalProps {
   visible: boolean;
@@ -107,7 +108,7 @@ export const PhoneLoginModal: React.FC<PhoneLoginModalProps> = ({
       >
         <View style={styles.header}>
           <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
-            <Ionicons name="close" size={24} color="#2D2D2D" />
+            <Ionicons name="close" size={24} color={colors.text.primary} />
           </TouchableOpacity>
           <Text style={styles.title}>
             {step === 'phone' ? '手机号登录' : '输入验证码'}
@@ -120,7 +121,7 @@ export const PhoneLoginModal: React.FC<PhoneLoginModalProps> = ({
             <View style={styles.phoneStep}>
               <Text style={styles.label}>手机号</Text>
               <View style={styles.inputContainer}>
-                <Ionicons name="call-outline" size={20} color="#888888" />
+                <Ionicons name="call-outline" size={20} color={colors.text.secondary} />
                 <TextInput
                   style={styles.input}
                   placeholder="请输入手机号"
@@ -146,7 +147,7 @@ export const PhoneLoginModal: React.FC<PhoneLoginModalProps> = ({
                 验证码已发送至 {phone.replace(/(\d{3})\d{4}(\d{4})/, '$1****$2')}
               </Text>
               <View style={styles.inputContainer}>
-                <Ionicons name="key-outline" size={20} color="#888888" />
+                <Ionicons name="key-outline" size={20} color={colors.text.secondary} />
                 <TextInput
                   style={styles.input}
                   placeholder="请输入6位验证码"
@@ -194,7 +195,7 @@ export const PhoneLoginModal: React.FC<PhoneLoginModalProps> = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9F9FB',
+    backgroundColor: colors.background.primary,
   },
   header: {
     flexDirection: 'row',
@@ -203,9 +204,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 60,
     paddingBottom: 20,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.background.secondary,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E5EC',
+    borderBottomColor: colors.border.light,
   },
   closeButton: {
     padding: 8,
@@ -213,7 +214,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#2D2D2D',
+    color: colors.text.primary,
   },
   placeholder: {
     width: 40,
@@ -231,30 +232,30 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#2D2D2D',
+    color: colors.text.primary,
     marginBottom: 12,
   },
   subtitle: {
     fontSize: 14,
-    color: '#888888',
+    color: colors.text.secondary,
     marginBottom: 20,
   },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.background.secondary,
     borderRadius: 10,
     paddingHorizontal: 16,
     paddingVertical: 16,
     marginBottom: 24,
     borderWidth: 1,
-    borderColor: '#E5E5EC',
+    borderColor: colors.border.light,
   },
   input: {
     flex: 1,
     marginLeft: 12,
     fontSize: 16,
-    color: '#2D2D2D',
+    color: colors.text.primary,
   },
   sendButton: {
     marginTop: 'auto',
@@ -266,7 +267,7 @@ const styles = StyleSheet.create({
     marginTop: 'auto',
   },
   verifyButton: {
-    backgroundColor: '#4F6DFF',
+    backgroundColor: colors.primary[500],
     paddingVertical: 16,
     paddingHorizontal: 32,
     borderRadius: 12,
@@ -274,7 +275,7 @@ const styles = StyleSheet.create({
     marginRight: 12,
   },
   verifyButtonText: {
-    color: '#FFFFFF',
+    color: colors.text.inverse,
     fontSize: 16,
     fontWeight: '600',
     textAlign: 'center',
@@ -284,7 +285,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   resendButtonText: {
-    color: '#4F6DFF',
+    color: colors.primary[500],
     fontSize: 14,
     fontWeight: '500',
   },

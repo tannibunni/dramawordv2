@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { colors } from '../../constants/colors';
 
 export type LoginButtonType = 'phone' | 'wechat' | 'apple' | 'guest';
 
@@ -24,36 +25,36 @@ const getButtonConfig = (type: LoginButtonType) => {
   switch (type) {
     case 'phone':
       return {
-        backgroundColor: '#4F6DFF',
-        textColor: '#FFFFFF',
+        backgroundColor: colors.primary[500],
+        textColor: colors.text.inverse,
         icon: 'call-outline' as const,
         text: '使用手机号登录',
       };
     case 'wechat':
       return {
-        backgroundColor: '#6BCF7A',
-        textColor: '#FFFFFF',
+        backgroundColor: colors.success[500],
+        textColor: colors.text.inverse,
         icon: 'chatbubble-outline' as const,
         text: '使用微信登录',
       };
     case 'apple':
       return {
-        backgroundColor: '#000000',
-        textColor: '#FFFFFF',
+        backgroundColor: colors.neutral[900],
+        textColor: colors.text.inverse,
         icon: 'logo-apple' as const,
         text: '使用 Apple 登录',
       };
     case 'guest':
       return {
-        backgroundColor: '#F4B942',
-        textColor: '#FFFFFF',
+        backgroundColor: colors.accent[500],
+        textColor: colors.text.inverse,
         icon: 'eye-outline' as const,
         text: '游客模式立即体验',
       };
     default:
       return {
-        backgroundColor: '#4F6DFF',
-        textColor: '#FFFFFF',
+        backgroundColor: colors.primary[500],
+        textColor: colors.text.inverse,
         icon: 'call-outline' as const,
         text: '登录',
       };

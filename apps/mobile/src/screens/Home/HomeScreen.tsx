@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -13,6 +13,7 @@ import {
   Platform,
   Modal,
   FlatList,
+  Animated,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../../../../packages/ui/src/tokens';
@@ -35,6 +36,9 @@ const HomeScreen: React.FC = () => {
   const [searchShowText, setSearchShowText] = useState('');
   const [searchResults, setSearchResults] = useState<TMDBShow[]>([]);
   const [searchingShow, setSearchingShow] = useState(false);
+  const [showCheckAnimation, setShowCheckAnimation] = useState(false);
+  const checkScale = useRef(new Animated.Value(0)).current;
+  const [searchSuggestions, setSearchSuggestions] = useState<string[]>([]);
 
   useEffect(() => {
     loadRecentWords();
@@ -71,6 +75,7 @@ const HomeScreen: React.FC = () => {
     }
     setIsLoading(true);
     setSearchResult(null);
+    setSearchSuggestions([]);
     try {
       const result = await wordService.searchWord(searchText.trim());
       if (result.success && result.data) {
@@ -95,6 +100,8 @@ const HomeScreen: React.FC = () => {
         });
         setSearchResult(result.data);
         setSearchText('');
+      } else if (result.suggestions && result.suggestions.length > 0) {
+        setSearchSuggestions(result.suggestions);
       } else {
         Alert.alert('查询失败', result.error || '无法找到该单词');
       }
@@ -144,8 +151,21 @@ const HomeScreen: React.FC = () => {
   // 确认收藏
   const handleConfirmCollect = () => {
     if (searchResult) {
-      addWord(searchResult, selectedShow || undefined);
-      setShowCollectModal(false);
+      // 选中“默认词库”时，sourceShow 传 undefined
+      addWord(searchResult, selectedShow && selectedShow.id !== 'default' ? selectedShow : undefined);
+      setShowCheckAnimation(true);
+      Animated.sequence([
+        Animated.timing(checkScale, {
+          toValue: 1,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+        Animated.delay(700),
+      ]).start(() => {
+        setShowCheckAnimation(false);
+        setShowCollectModal(false);
+        checkScale.setValue(0);
+      });
     }
   };
 
@@ -224,11 +244,20 @@ const HomeScreen: React.FC = () => {
           <View style={styles.wordCardWrapper}>
             <WordCard
               wordData={searchResult}
-              style={styles.wordCardCustom}
               onIgnore={() => setSearchResult(null)}
               onCollect={handleCollect}
-              isCollected={isCollected}
             />
+          </View>
+        ) : searchSuggestions.length > 0 ? (
+          <View style={styles.wordCardWrapper}>
+            <View style={[styles.card, { alignItems: 'center', justifyContent: 'center', padding: 32, borderRadius: 20, backgroundColor: colors.background.secondary, shadowColor: colors.neutral[900], shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.15, shadowRadius: 16, elevation: 8, maxWidth: 350, minHeight: 220 }] }>
+              <Text style={{ fontSize: 20, fontWeight: 'bold', color: colors.text.primary, marginBottom: 16 }}>猜你想搜</Text>
+              {searchSuggestions.map(sug => (
+                <TouchableOpacity key={sug} onPress={() => { setSearchText(sug); setSearchSuggestions([]); setTimeout(() => handleSearch(), 0); }} style={{ paddingVertical: 10, paddingHorizontal: 24, borderRadius: 16, backgroundColor: colors.primary[50], marginBottom: 10 }}>
+                  <Text style={{ fontSize: 18, color: colors.primary[700], fontWeight: '500' }}>{sug}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
           </View>
         ) : (
           <ScrollView style={styles.recentContainer} showsVerticalScrollIndicator={false}>
@@ -272,6 +301,14 @@ const HomeScreen: React.FC = () => {
       >
         <View style={styles.modalOverlay}>
           <View style={styles.collectModal}>
+            {/* 打勾动画 */}
+            {showCheckAnimation && (
+              <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 10, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.85)', borderRadius: 16 }}>
+                <Animated.View style={{ transform: [{ scale: checkScale }] }}>
+                  <Ionicons name="checkmark-circle" size={80} color="#2ecc71" />
+                </Animated.View>
+              </View>
+            )}
             <Text style={styles.modalTitle}>标记单词来源</Text>
             <Text style={styles.modalSubtitle}>选择正在看的剧集，或搜索添加新剧</Text>
             {/* 剧集搜索框 */}
@@ -302,15 +339,19 @@ const HomeScreen: React.FC = () => {
             {/* 正在看剧集列表 */}
             <Text style={styles.modalSectionTitle}>正在看</Text>
             <FlatList
-              data={shows.filter(s => s.status === 'watching')}
+              data={[{ id: 'default', name: '默认词库' }, ...shows.filter(s => s.status === 'watching')]}
               keyExtractor={item => item.id.toString()}
               renderItem={({ item }) => (
                 <TouchableOpacity
-                  style={[styles.modalShowItem, selectedShow && selectedShow.id === item.id && styles.modalShowItemSelected]}
+                  style={[
+                    styles.modalShowItem,
+                    selectedShow && selectedShow.id === item.id && styles.modalShowItemSelected,
+                    item.id === 'default' && { borderWidth: 1, borderColor: colors.primary[200] }
+                  ]}
                   onPress={() => setSelectedShow(item)}
                 >
                   <Text style={styles.modalShowName}>{item.name}</Text>
-                  <Text style={styles.modalShowYear}>{item.first_air_date?.slice(0, 4)}</Text>
+                  {item.first_air_date && <Text style={styles.modalShowYear}>{item.first_air_date?.slice(0, 4)}</Text>}
                   {selectedShow && selectedShow.id === item.id && (
                     <Ionicons name="checkmark-circle" size={18} color={colors.primary[500]} style={{ marginLeft: 8 }} />
                   )}

@@ -127,9 +127,9 @@ const VocabularyScreen: React.FC = () => {
         <Text style={styles.badgeNumber}>{badge.count}</Text>
         <View style={styles.badgeIconWrap}>
           {unlocked ? (
-            <Ionicons name="star" size={18} color="#fff" />
+            <Ionicons name="star" size={18} color={colors.text.inverse} />
           ) : (
-            <Ionicons name="lock-closed" size={16} color="#fff" />
+            <Ionicons name="lock-closed" size={16} color={colors.text.inverse} />
           )}
         </View>
       </View>
@@ -151,7 +151,7 @@ const VocabularyScreen: React.FC = () => {
             onPress={() => handleDeleteWord(item)}
             hitSlop={{top:10,right:10,bottom:10,left:10}}
           >
-            <Ionicons name="trash" size={20} color="#F53F3F" />
+            <Ionicons name="trash" size={20} color={colors.error[500]} />
           </TouchableOpacity>
         </View>
         <Text style={styles.wordTranslation}>{item.definitions?.[0]?.definition || '暂无释义'}</Text>
@@ -182,7 +182,7 @@ const VocabularyScreen: React.FC = () => {
           </View>
           <View style={styles.progressRight}>
             {isFull ? (
-              <View style={styles.progressCheck}><Ionicons name="checkmark" size={20} color="#fff" /></View>
+              <View style={styles.progressCheck}><Ionicons name="checkmark" size={20} color={colors.text.inverse} /></View>
             ) : (
               <Text style={styles.progressLeftText}>还差{leftCount}个</Text>
             )}
@@ -199,18 +199,18 @@ const VocabularyScreen: React.FC = () => {
         <View style={styles.detailMain}>
           {/* 顶部可编辑搜索框 */}
           <View style={styles.detailSearchBar}>
-            <Ionicons name="search" size={20} color="#C9CDD4" style={{marginRight: 8}} />
+            <Ionicons name="search" size={20} color={colors.neutral[400]} style={{marginRight: 8}} />
             <TextInput
               style={styles.detailSearchInput}
               value={searchText}
               onChangeText={txt => { setSearchText(txt); setIsEditing(true); }}
               placeholder="搜索单词..."
-              placeholderTextColor="#C9CDD4"
+              placeholderTextColor={colors.neutral[400]}
               autoFocus
               onSubmitEditing={handleSearchSubmit}
             />
             <TouchableOpacity onPress={() => { setSelectedWord(null); setSearchText(''); setIsEditing(false); }} style={styles.detailCloseBtn}>
-              <Ionicons name="close" size={24} color="#888" />
+              <Ionicons name="close" size={24} color={colors.text.secondary} />
             </TouchableOpacity>
           </View>
           {/* 下拉预览 */}
@@ -234,7 +234,7 @@ const VocabularyScreen: React.FC = () => {
               <View style={styles.detailCardHeader}>
                 <Text style={styles.detailWord}>{selectedWord.word}</Text>
                 <TouchableOpacity style={styles.detailAudioBtn} onPress={() => audioService.playWordPronunciation(selectedWord.word)}>
-                  <Ionicons name="volume-high" size={20} color="#246BFD" />
+                  <Ionicons name="volume-high" size={20} color={colors.primary[500]} />
                 </TouchableOpacity>
               </View>
               <View style={styles.detailPhoneticRow}>
@@ -259,11 +259,11 @@ const VocabularyScreen: React.FC = () => {
               {/* 操作按钮 */}
               <View style={styles.detailActionRow}>
                 <TouchableOpacity style={styles.detailDeleteBtn} onPress={() => { setSelectedWord(null); removeWord(selectedWord.word); }}>
-                  <Ionicons name="trash" size={18} color="#F53F3F" />
+                  <Ionicons name="trash" size={18} color={colors.error[500]} />
                   <Text style={styles.detailDeleteText}>删除</Text>
                 </TouchableOpacity>
                 <View style={styles.detailCollectBtnSolid}>
-                  <Ionicons name="heart" size={18} color="#fff" />
+                  <Ionicons name="heart" size={18} color={colors.text.inverse} />
                   <Text style={styles.detailCollectTextSolid}>已收藏</Text>
                 </View>
               </View>
@@ -273,11 +273,11 @@ const VocabularyScreen: React.FC = () => {
       ) : (
         <View style={styles.listSection}>
           <View style={styles.searchContainer}>
-            <Ionicons name="search" size={18} color="#C9CDD4" style={{marginRight:8}} />
+            <Ionicons name="search" size={18} color={colors.neutral[400]} style={{marginRight:8}} />
             <TextInput
               style={styles.searchInput}
               placeholder="搜索单词..."
-              placeholderTextColor="#C9CDD4"
+              placeholderTextColor={colors.neutral[400]}
               value={searchText}
               onChangeText={setSearchText}
               onSubmitEditing={handleSearchSubmit}
@@ -293,7 +293,7 @@ const VocabularyScreen: React.FC = () => {
             />
           ) : (
             <View style={styles.emptyState}>
-              <Ionicons name="book-outline" size={48} color="#888888" />
+              <Ionicons name="book-outline" size={48} color={colors.text.secondary} />
               <Text style={styles.emptyStateText}>
                 {searchText ? '没有找到匹配的单词' : '还没有收藏任何单词'}
               </Text>
@@ -311,7 +311,7 @@ const VocabularyScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9F9FB',
+    backgroundColor: colors.background.primary,
   },
   headerWrap: {
     alignItems: 'center',
@@ -322,11 +322,11 @@ const styles = StyleSheet.create({
   statsTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#2D2D2D',
+    color: colors.text.primary,
   },
   statsCount: {
     fontSize: 14,
-    color: '#888888',
+    color: colors.text.secondary,
   },
   progressRow: {
     flexDirection: 'row',
@@ -337,20 +337,20 @@ const styles = StyleSheet.create({
   },
   progressNumber: {
     fontSize: 22,
-    color: '#246BFD',
+    color: colors.primary[500],
     fontWeight: 'bold',
     marginRight: 14,
   },
   progressBarBg: {
     width: 100,
     height: 12,
-    backgroundColor: '#E5E6EB',
+    backgroundColor: colors.neutral[200],
     borderRadius: 6,
     overflow: 'hidden',
   },
   progressBarFg: {
     height: 12,
-    backgroundColor: '#246BFD',
+    backgroundColor: colors.primary[500],
     borderRadius: 6,
   },
   badgesSection: {
@@ -373,13 +373,13 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   badgeUnlocked: {
-    backgroundColor: '#FFC940',
+    backgroundColor: colors.accent[500],
   },
   badgeLocked: {
-    backgroundColor: '#E5E6EB',
+    backgroundColor: colors.neutral[200],
   },
   badgeNumber: {
-    color: '#fff',
+    color: colors.text.inverse,
     fontWeight: 'bold',
     fontSize: 18,
     marginBottom: 2,
@@ -396,11 +396,11 @@ const styles = StyleSheet.create({
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: colors.background.secondary,
     borderRadius: 16,
     paddingHorizontal: 16,
     paddingVertical: 10,
-    shadowColor: '#000',
+    shadowColor: colors.neutral[900],
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.06,
     shadowRadius: 6,
@@ -411,7 +411,7 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     fontSize: 16,
-    color: '#222',
+    color: colors.text.primary,
     paddingVertical: 0,
   },
   listContainer: {
@@ -465,7 +465,7 @@ const styles = StyleSheet.create({
     padding: 4,
   },
   showTag: {
-    backgroundColor: '#246BFD',
+    backgroundColor: colors.primary[500],
     borderRadius: 8,
     paddingHorizontal: 8,
     paddingVertical: 2,
@@ -473,7 +473,7 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
   },
   showTagText: {
-    color: '#fff',
+    color: colors.text.inverse,
     fontSize: 12,
   },
   emptyState: {
@@ -484,12 +484,12 @@ const styles = StyleSheet.create({
   emptyStateText: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#2D2D2D',
+    color: colors.text.primary,
     marginBottom: 10,
   },
   emptyStateSubtext: {
     fontSize: 14,
-    color: '#888888',
+    color: colors.text.secondary,
   },
   modalOverlay: {
     flex: 1,
@@ -516,13 +516,13 @@ const styles = StyleSheet.create({
   progressCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: colors.background.secondary,
     borderRadius: 20,
     paddingVertical: 12,
     paddingHorizontal: 18,
     marginTop: 8,
     marginBottom: 8,
-    shadowColor: '#000',
+    shadowColor: colors.neutral[900],
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.04,
     shadowRadius: 8,
@@ -532,19 +532,19 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: '#246BFD',
+    backgroundColor: colors.primary[500],
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 16,
     flexDirection: 'row',
   },
   progressCircleText: {
-    color: '#fff',
+    color: colors.text.inverse,
     fontSize: 22,
     fontWeight: 'bold',
   },
   progressCircleSub: {
-    color: '#fff',
+    color: colors.text.inverse,
     fontSize: 16,
     marginLeft: 2,
     fontWeight: '500',
@@ -556,13 +556,13 @@ const styles = StyleSheet.create({
   progressBarBg: {
     width: '100%',
     height: 16,
-    backgroundColor: '#E5E6EB',
+    backgroundColor: colors.neutral[200],
     borderRadius: 8,
     overflow: 'hidden',
   },
   progressBarFg: {
     height: 16,
-    backgroundColor: '#246BFD',
+    backgroundColor: colors.primary[500],
     borderRadius: 8,
   },
   progressRight: {
@@ -571,14 +571,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   progressLeftText: {
-    color: '#888',
+    color: colors.text.secondary,
     fontSize: 15,
   },
   progressCheck: {
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#6BCF7A',
+    backgroundColor: colors.success[500],
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -588,14 +588,14 @@ const styles = StyleSheet.create({
   detailSearchBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: colors.background.secondary,
     borderRadius: 16,
     marginHorizontal: 20,
     marginTop: 20,
     marginBottom: 12,
     paddingHorizontal: 16,
     paddingVertical: 12,
-    shadowColor: '#000',
+    shadowColor: colors.neutral[900],
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.06,
     shadowRadius: 6,
@@ -604,7 +604,7 @@ const styles = StyleSheet.create({
   detailSearchInput: {
     flex: 1,
     fontSize: 18,
-    color: '#222',
+    color: colors.text.primary,
     fontWeight: '500',
   },
   detailCloseBtn: {
@@ -615,11 +615,11 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
   },
   detailCardBox: {
-    backgroundColor: '#fff',
+    backgroundColor: colors.background.secondary,
     borderRadius: 20,
     padding: 24,
     marginTop: 16,
-    shadowColor: '#000',
+    shadowColor: colors.neutral[900],
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.06,
     shadowRadius: 8,
@@ -634,10 +634,10 @@ const styles = StyleSheet.create({
   detailWord: {
     fontSize: 32,
     fontWeight: 'bold',
-    color: '#222',
+    color: colors.text.primary,
   },
   detailAudioBtn: {
-    backgroundColor: '#F4F6FB',
+    backgroundColor: colors.background.tertiary,
     borderRadius: 20,
     padding: 8,
   },
@@ -648,18 +648,18 @@ const styles = StyleSheet.create({
   },
   detailPhonetic: {
     fontSize: 18,
-    color: '#888',
+    color: colors.text.secondary,
     fontStyle: 'italic',
     marginRight: 8,
   },
   detailShowTag: {
-    backgroundColor: '#246BFD',
+    backgroundColor: colors.primary[500],
     borderRadius: 8,
     paddingHorizontal: 8,
     paddingVertical: 2,
   },
   detailShowTagText: {
-    color: '#fff',
+    color: colors.text.inverse,
     fontSize: 13,
   },
   detailDefBlock: {
@@ -667,13 +667,13 @@ const styles = StyleSheet.create({
   },
   detailPartOfSpeech: {
     fontSize: 14,
-    color: '#888',
+    color: colors.text.secondary,
     fontStyle: 'italic',
     marginBottom: 2,
   },
   detailDefinition: {
     fontSize: 17,
-    color: '#222',
+    color: colors.text.primary,
     marginBottom: 4,
   },
   detailExampleBlock: {
@@ -682,12 +682,12 @@ const styles = StyleSheet.create({
   },
   detailExampleEn: {
     fontSize: 14,
-    color: '#888',
+    color: colors.text.secondary,
     fontStyle: 'italic',
   },
   detailExampleZh: {
     fontSize: 14,
-    color: '#888',
+    color: colors.text.secondary,
   },
   detailActionRow: {
     flexDirection: 'row',
@@ -698,13 +698,13 @@ const styles = StyleSheet.create({
   detailDeleteBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FEECEC',
+    backgroundColor: colors.error[50],
     borderRadius: 12,
     paddingHorizontal: 18,
     paddingVertical: 8,
   },
   detailDeleteText: {
-    color: '#F53F3F',
+    color: colors.error[500],
     fontSize: 16,
     fontWeight: '500',
     marginLeft: 6,
@@ -712,13 +712,13 @@ const styles = StyleSheet.create({
   detailCollectBtnSolid: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#246BFD',
+    backgroundColor: colors.primary[500],
     borderRadius: 12,
     paddingHorizontal: 18,
     paddingVertical: 8,
   },
   detailCollectTextSolid: {
-    color: '#fff',
+    color: colors.text.inverse,
     fontSize: 16,
     fontWeight: '500',
     marginLeft: 6,
@@ -728,9 +728,9 @@ const styles = StyleSheet.create({
     left: 20,
     right: 20,
     top: 72,
-    backgroundColor: '#fff',
+    backgroundColor: colors.background.secondary,
     borderRadius: 12,
-    shadowColor: '#000',
+    shadowColor: colors.neutral[900],
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.08,
     shadowRadius: 8,
@@ -742,16 +742,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
+    borderBottomColor: colors.border.light,
   },
   previewWord: {
     fontSize: 16,
-    color: '#222',
+    color: colors.text.primary,
     fontWeight: '600',
   },
   previewTranslation: {
     fontSize: 13,
-    color: '#888',
+    color: colors.text.secondary,
     marginTop: 2,
   },
 });

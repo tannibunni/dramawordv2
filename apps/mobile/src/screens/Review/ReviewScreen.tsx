@@ -8,13 +8,18 @@ import {
   Animated,
   Dimensions,
   Alert,
+  ScrollView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../../../../packages/ui/src/tokens';
-import { SwipeableWordCard, FlipWordCard, WordData } from '../../components/cards';
+import Swiper from 'react-native-deck-swiper';
+import WordCard, { WordData } from '../../components/cards/WordCard';
 import { audioService } from '../../services/audioService';
 import { learningDataService } from '../../services/learningDataService';
 import { LearningRecord } from '../../services/learningAlgorithm';
+import { SwipeableWordCard } from '../../components/cards';
+import { UserService } from '../../services/userService';
+import { useVocabulary } from '../../context/VocabularyContext';
 
 const { width, height } = Dimensions.get('window');
 
@@ -41,100 +46,40 @@ interface ReviewSession {
 
 const ReviewScreen: React.FC = () => {
   const [words, setWords] = useState<ReviewWord[]>([]);
-  const [currentWordIndex, setCurrentWordIndex] = useState(0);
   const [session, setSession] = useState<ReviewSession | null>(null);
   const [showAnswer, setShowAnswer] = useState(false);
   const [isReviewComplete, setIsReviewComplete] = useState(false);
   const [cardMode, setCardMode] = useState<'swipe' | 'flip'>('swipe');
-  
-  const cardOpacity = useRef(new Animated.Value(1)).current;
+  const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
+  const { vocabulary } = useVocabulary();
+
+  // 1. Swiper ref
+  const swiperRef = useRef<any>(null);
 
   useEffect(() => {
     loadReviewWords();
-  }, []);
+  }, [vocabulary]);
 
   const loadReviewWords = async () => {
     try {
-      // 从学习算法获取需要复习的单词
-      const learningRecords = await learningDataService.getWordsForReview(20);
-      
-      if (learningRecords.length === 0) {
-        // 如果没有学习记录，使用模拟数据
-        const mockWords: ReviewWord[] = [
-          {
-            id: '1',
-            word: 'serendipity',
-            translation: '意外发现美好事物的能力',
-            phonetic: '/ˌserənˈdɪpəti/',
-            difficulty: 'hard',
-            show: 'Friends',
-            lastReviewed: '2024-01-15',
-            reviewCount: 3,
-          },
-          {
-            id: '2',
-            word: 'resilient',
-            translation: '有韧性的，适应力强的',
-            phonetic: '/rɪˈzɪliənt/',
-            difficulty: 'medium',
-            show: 'Breaking Bad',
-            lastReviewed: '2024-01-14',
-            reviewCount: 8,
-          },
-          {
-            id: '3',
-            word: 'authentic',
-            translation: '真实的，可信的',
-            phonetic: '/ɔːˈθentɪk/',
-            difficulty: 'medium',
-            show: 'The Office',
-            lastReviewed: '2024-01-13',
-            reviewCount: 5,
-          },
-          {
-            id: '4',
-            word: 'perseverance',
-            translation: '毅力，坚持不懈',
-            phonetic: '/ˌpɜːsɪˈvɪərəns/',
-            difficulty: 'hard',
-            show: 'Game of Thrones',
-            lastReviewed: '2024-01-12',
-            reviewCount: 2,
-          },
-          {
-            id: '5',
-            word: 'eloquent',
-            translation: '雄辩的，有说服力的',
-            phonetic: '/ˈeləkwənt/',
-            difficulty: 'medium',
-            show: 'House of Cards',
-            lastReviewed: '2024-01-11',
-            reviewCount: 10,
-          },
-        ];
-        setWords(mockWords);
-        setSession({
-          totalWords: mockWords.length,
-          currentIndex: 0,
-          correctCount: 0,
-          incorrectCount: 0,
-          skippedCount: 0,
-          collectedCount: 0,
-          startTime: new Date(),
-        });
+      // 从用户的单词表中获取单词
+      if (vocabulary.length === 0) {
+        // 如果用户单词表为空，显示提示
+        setWords([]);
+        setSession(null);
         return;
       }
 
-      // 将学习记录转换为复习单词格式
-      const reviewWords: ReviewWord[] = learningRecords.map((record, index) => ({
-        id: record.wordId,
-        word: record.word,
-        translation: `掌握度: ${record.masteryLevel}%`, // 临时翻译，实际应该从API获取
-        phonetic: '/ˈwɜːd/', // 临时音标，实际应该从API获取
-        difficulty: record.difficulty,
-        show: 'Learning',
-        lastReviewed: record.lastReviewed.toLocaleDateString(),
-        reviewCount: record.reviewCount,
+      // 将用户单词表中的单词转换为复习单词格式
+      const reviewWords: ReviewWord[] = vocabulary.map((word, index) => ({
+        id: `${index}`,
+        word: word.word,
+        translation: word.definitions && word.definitions[0] ? word.definitions[0].definition : '暂无释义',
+        phonetic: word.phonetic || '/ˈwɜːd/',
+        difficulty: 'medium' as const, // 默认难度，可以根据学习进度调整
+        show: word.sourceShow?.name || '我的单词',
+        lastReviewed: word.collectedAt ? new Date(word.collectedAt).toLocaleDateString() : '未复习',
+        reviewCount: 0, // 可以从学习记录中获取
       }));
 
       setWords(reviewWords);
@@ -150,7 +95,68 @@ const ReviewScreen: React.FC = () => {
     } catch (error) {
       console.error('加载复习单词失败:', error);
       // 使用模拟数据作为后备
-      loadReviewWords();
+      const mockWords: ReviewWord[] = [
+        {
+          id: '1',
+          word: 'serendipity',
+          translation: '意外发现美好事物的能力',
+          phonetic: '/ˌserənˈdɪpəti/',
+          difficulty: 'hard',
+          show: 'Friends',
+          lastReviewed: '2024-01-15',
+          reviewCount: 3,
+        },
+        {
+          id: '2',
+          word: 'resilient',
+          translation: '有韧性的，适应力强的',
+          phonetic: '/rɪˈzɪliənt/',
+          difficulty: 'medium',
+          show: 'Breaking Bad',
+          lastReviewed: '2024-01-14',
+          reviewCount: 8,
+        },
+        {
+          id: '3',
+          word: 'authentic',
+          translation: '真实的，可信的',
+          phonetic: '/ɔːˈθentɪk/',
+          difficulty: 'medium',
+          show: 'The Office',
+          lastReviewed: '2024-01-13',
+          reviewCount: 5,
+        },
+        {
+          id: '4',
+          word: 'perseverance',
+          translation: '毅力，坚持不懈',
+          phonetic: '/ˌpɜːsɪˈvɪərəns/',
+          difficulty: 'hard',
+          show: 'Game of Thrones',
+          lastReviewed: '2024-01-12',
+          reviewCount: 2,
+        },
+        {
+          id: '5',
+          word: 'eloquent',
+          translation: '雄辩的，有说服力的',
+          phonetic: '/ˈeləkwənt/',
+          difficulty: 'medium',
+          show: 'House of Cards',
+          lastReviewed: '2024-01-11',
+          reviewCount: 10,
+        },
+      ];
+      setWords(mockWords);
+      setSession({
+        totalWords: mockWords.length,
+        currentIndex: 0,
+        correctCount: 0,
+        incorrectCount: 0,
+        skippedCount: 0,
+        collectedCount: 0,
+        startTime: new Date(),
+      });
     }
   };
 
@@ -197,11 +203,11 @@ const ReviewScreen: React.FC = () => {
 
   // 处理滑动操作
   const handleSwipeLeft = async (word: string) => {
-    // 忘记/不认识
+    // 跳过
     try {
       // 更新学习记录
       await learningDataService.updateLearningRecord(
-        words[currentWordIndex].id,
+        words[swiperIndex].id,
         word,
         false // 不正确
       );
@@ -214,11 +220,11 @@ const ReviewScreen: React.FC = () => {
   };
 
   const handleSwipeRight = async (word: string) => {
-    // 记住/认识
+    // 保存
     try {
       // 更新学习记录
       await learningDataService.updateLearningRecord(
-        words[currentWordIndex].id,
+        words[swiperIndex].id,
         word,
         true // 正确
       );
@@ -231,9 +237,8 @@ const ReviewScreen: React.FC = () => {
   };
 
   const handleSwipeUp = (word: string) => {
-    // 收藏
-    updateSession('collected');
-    Alert.alert('收藏成功', `已收藏单词 "${word}"`);
+    // 展开详情 - 不更新会话统计，因为卡片不会被移除
+    // 展开逻辑由 SwipeableWordCard 内部处理
   };
 
   const handleSwipeDown = async (word: string) => {
@@ -241,7 +246,7 @@ const ReviewScreen: React.FC = () => {
     try {
       // 更新学习记录
       await learningDataService.updateLearningRecord(
-        words[currentWordIndex].id,
+        words[swiperIndex].id,
         word,
         false // 跳过视为不正确
       );
@@ -268,21 +273,13 @@ const ReviewScreen: React.FC = () => {
 
   // 移动到下一个单词
   const moveToNextWord = () => {
-    Animated.timing(cardOpacity, {
-      toValue: 0,
-      duration: 300,
-      useNativeDriver: true,
-    }).start(() => {
-      cardOpacity.setValue(1);
-      
-      if (currentWordIndex < words.length - 1) {
-        setCurrentWordIndex(prev => prev + 1);
-        setShowAnswer(false);
-      } else {
-        // 复习完成
-        setIsReviewComplete(true);
-      }
-    });
+    if (swiperIndex < words.length - 1) {
+      setSwiperIndex(prev => prev + 1);
+      setShowAnswer(false);
+    } else {
+      // 复习完成
+      setIsReviewComplete(true);
+    }
   };
 
   // 处理音频播放
@@ -305,7 +302,7 @@ const ReviewScreen: React.FC = () => {
   };
 
   const startNewSession = () => {
-    setCurrentWordIndex(0);
+    setSwiperIndex(0);
     setShowAnswer(false);
     setIsReviewComplete(false);
     setSession({
@@ -319,188 +316,148 @@ const ReviewScreen: React.FC = () => {
     });
   };
 
-  const renderReviewCard = () => {
-    if (currentWordIndex >= words.length) return null;
-
-    const currentWord = words[currentWordIndex];
-    const wordData = convertToWordData(currentWord);
-
-    return (
-      <Animated.View
-        style={[
-          styles.cardWrapper,
-          {
-            opacity: cardOpacity,
-          },
-        ]}
-      >
-        {/* 难度标签 */}
-        <View style={styles.difficultyContainer}>
-          <View style={[styles.difficultyBadge, { backgroundColor: getDifficultyColor(currentWord.difficulty) }]}>
-            <Text style={styles.difficultyText}>{getDifficultyText(currentWord.difficulty)}</Text>
-          </View>
-          {currentWord.show && (
-            <Text style={styles.showText}>来自: {currentWord.show}</Text>
-          )}
-        </View>
-
-        {/* 根据模式渲染不同的卡片 */}
-        {cardMode === 'swipe' ? (
-          <SwipeableWordCard
-            wordData={wordData}
-            onSwipeLeft={handleSwipeLeft}
-            onSwipeRight={handleSwipeRight}
-            onSwipeUp={handleSwipeUp}
-            onSwipeDown={handleSwipeDown}
-            showAnswer={showAnswer}
-            onToggleAnswer={toggleAnswer}
-          />
-        ) : (
-          <FlipWordCard
-            wordData={wordData}
-            onCollect={(word) => {
-              updateSession('collected');
-              Alert.alert('收藏成功', `已收藏单词 "${word}"`);
-            }}
-            onIgnore={(word) => {
-              updateSession('incorrect');
-              moveToNextWord();
-            }}
-            onPlayAudio={handlePlayAudio}
-          />
-        )}
-
-        {/* 复习信息 */}
-        <View style={styles.reviewInfo}>
-          <Text style={styles.reviewText}>
-            复习 {currentWord.reviewCount} 次 • 最后: {currentWord.lastReviewed}
-          </Text>
-        </View>
-      </Animated.View>
-    );
+  // Swiper 事件处理 - 现在由 SwipeableWordCard 处理手势
+  const handleSwipedLeft = (cardIndex: number) => {
+    // 由 SwipeableWordCard 处理
+  };
+  const handleSwipedRight = (cardIndex: number) => {
+    // 由 SwipeableWordCard 处理
+  };
+  const handleSwipedTop = (cardIndex: number) => {
+    // 由 SwipeableWordCard 处理
+  };
+  const handleSwipedAll = async () => {
+    setIsReviewComplete(true);
+    if (session) {
+      try {
+        await UserService.updateReviewStats({
+          correctCount: session.correctCount,
+          incorrectCount: session.incorrectCount,
+        });
+      } catch (error) {
+        console.error('保存复习统计失败', error);
+      }
+    }
   };
 
-  const renderReviewComplete = () => {
-    if (!session) return null;
+  // Swiper onSwiped 事件
+  const handleSwiped = (cardIndex: number) => {
+    // 由 SwipeableWordCard 处理
+  };
 
-    const accuracy = Math.round((session.correctCount / session.totalWords) * 100);
-    const duration = Math.round((new Date().getTime() - session.startTime.getTime()) / 1000 / 60);
-
-    return (
-      <View style={styles.completeContainer}>
-        <View style={styles.completeHeader}>
-          <Ionicons name="checkmark-circle" size={80} color={colors.success[500]} />
-          <Text style={styles.completeTitle}>复习完成！</Text>
+  // 进度条渲染
+  const renderProgressBar = () => (
+    <View style={{ width: '100%', alignItems: 'center', marginTop: 16, marginBottom: 8 }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', width: '90%' }}>
+        <View style={{ flex: 1, height: 8, backgroundColor: colors.background.tertiary, borderRadius: 4, marginRight: 8 }}>
+          <View style={{
+            height: 8,
+            backgroundColor: colors.primary[500],
+            borderRadius: 4,
+            width: words.length > 0 ? `${((swiperIndex + 1) / words.length) * 100}%` : '0%'
+          }} />
         </View>
-
-        <View style={styles.statsContainer}>
-          <View style={styles.statItem}>
-            <Text style={styles.statNumber}>{session.totalWords}</Text>
-            <Text style={styles.statLabel}>总单词</Text>
-          </View>
-          <View style={styles.statItem}>
-            <Text style={styles.statNumber}>{session.correctCount}</Text>
-            <Text style={styles.statLabel}>记住</Text>
-          </View>
-          <View style={styles.statItem}>
-            <Text style={styles.statNumber}>{session.incorrectCount}</Text>
-            <Text style={styles.statLabel}>忘记</Text>
-          </View>
-          <View style={styles.statItem}>
-            <Text style={styles.statNumber}>{session.skippedCount}</Text>
-            <Text style={styles.statLabel}>跳过</Text>
-          </View>
-        </View>
-
-        <View style={styles.additionalStats}>
-          <View style={styles.statItem}>
-            <Text style={styles.statNumber}>{accuracy}%</Text>
-            <Text style={styles.statLabel}>准确率</Text>
-          </View>
-          <View style={styles.statItem}>
-            <Text style={styles.statNumber}>{session.collectedCount}</Text>
-            <Text style={styles.statLabel}>收藏</Text>
-          </View>
-        </View>
-
-        <View style={styles.sessionInfo}>
-          <Text style={styles.sessionText}>用时: {duration} 分钟</Text>
-        </View>
-
-        <View style={styles.actionButtons}>
-          <TouchableOpacity style={styles.actionButton} onPress={startNewSession}>
-            <Ionicons name="refresh" size={20} color="white" />
-            <Text style={styles.actionButtonText}>重新复习</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={[styles.actionButton, { backgroundColor: colors.accent[500] }]}>
-            <Ionicons name="home" size={20} color="white" />
-            <Text style={styles.actionButtonText}>返回首页</Text>
-          </TouchableOpacity>
-        </View>
+        <Text style={{ fontSize: 16, fontWeight: '600', color: colors.text.primary }}>{words.length > 0 ? `${swiperIndex + 1} / ${words.length}` : ''}</Text>
       </View>
+    </View>
+  );
+
+  // Swiper 当前卡片索引
+  const [swiperIndex, setSwiperIndex] = useState(0);
+
+  // 移除 overlayLabels，因为手势现在由 SwipeableWordCard 处理
+
+  // 移除 panResponder，因为手势现在由 SwipeableWordCard 处理
+
+  // 渲染卡片内容
+  const renderCard = (item: ReviewWord, index: number) => {
+    const wordData = convertToWordData(item);
+    return (
+      <SwipeableWordCard
+        wordData={wordData}
+        isExpanded={expandedIndex === index}
+        onExpandToggle={() => setExpandedIndex(expandedIndex === index ? null : index)}
+      />
     );
   };
 
   if (words.length === 0) {
     return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.loadingContainer}>
-          <Text style={styles.loadingText}>加载复习单词中...</Text>
+      <SafeAreaView style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.background.primary }}>
+        <View style={{ alignItems: 'center', padding: 20 }}>
+          <Ionicons name="book-outline" size={64} color={colors.text.tertiary} style={{ marginBottom: 16 }} />
+          <Text style={{ fontSize: 20, fontWeight: '600', color: colors.text.primary, marginBottom: 8, textAlign: 'center' }}>
+            暂无复习单词
+          </Text>
+          <Text style={{ fontSize: 16, color: colors.text.secondary, textAlign: 'center', lineHeight: 24 }}>
+            去首页搜索并收藏一些单词，然后就可以在这里复习了！
+          </Text>
         </View>
       </SafeAreaView>
     );
   }
 
+  if (isReviewComplete) {
+    return (
+      <SafeAreaView style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.background.primary }}>
+        <Text style={{ fontSize: 28, fontWeight: 'bold', color: colors.text.primary }}>复习完成！</Text>
+        {/* 可添加统计和操作按钮 */}
+      </SafeAreaView>
+    );
+  }
+
   return (
-    <SafeAreaView style={styles.container}>
-      {isReviewComplete ? (
-        renderReviewComplete()
-      ) : (
-        <>
-          {/* 头部控制栏 */}
-          <View style={styles.header}>
-            <View style={styles.progressContainer}>
-              <View style={styles.progressBar}>
-                <View 
-                  style={[
-                    styles.progressFill, 
-                    { width: `${((currentWordIndex + 1) / words.length) * 100}%` }
-                  ]} 
-                />
-              </View>
-              <Text style={styles.progressText}>
-                {currentWordIndex + 1} / {words.length}
-              </Text>
-            </View>
-
-            <TouchableOpacity style={styles.modeButton} onPress={toggleCardMode}>
-              <Ionicons 
-                name={cardMode === 'swipe' ? 'swap-horizontal' : 'swap-vertical'} 
-                size={20} 
-                color={colors.primary[500]} 
-              />
-              <Text style={styles.modeText}>
-                {cardMode === 'swipe' ? '滑动模式' : '翻转模式'}
-              </Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* 复习卡片 */}
-          <View style={styles.cardContainer}>
-            {renderReviewCard()}
-          </View>
-
-          {/* 操作提示 */}
-          <View style={styles.hintContainer}>
-            <Text style={styles.hintTitle}>操作说明：</Text>
-            {cardMode === 'swipe' ? (
-              <Text style={styles.hintText}>• 左滑：忘记 • 右滑：记住 • 上滑：收藏 • 下滑：跳过</Text>
-            ) : (
-              <Text style={styles.hintText}>• 点击眼睛图标翻转卡片 • 点击收藏按钮收藏单词 • 点击忽略按钮跳过</Text>
-            )}
-          </View>
-        </>
-      )}
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background.primary }}>
+      {renderProgressBar()}
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <Swiper
+          ref={swiperRef}
+          cards={words}
+          renderCard={renderCard}
+          cardIndex={swiperIndex}
+          backgroundColor="transparent"
+          stackSize={3}
+          stackSeparation={18}
+          stackScale={8}
+          showSecondCard
+          animateCardOpacity
+          verticalSwipe={false}
+          disableTopSwipe
+          disableBottomSwipe
+          onSwipedLeft={handleSwipedLeft}
+          onSwipedRight={handleSwipedRight}
+          onSwipedTop={handleSwipedTop}
+          onSwipedAll={handleSwipedAll}
+          onSwiped={handleSwiped}
+          cardVerticalMargin={32}
+          cardHorizontalMargin={0}
+          containerStyle={{ flex: 1, width: '100%' }}
+        />
+      </View>
+      {/* 3. Swiper 下方添加操作按钮区 */}
+      {/* 删除 Swiper 组件下方的按钮区 */}
+      {/* <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginTop: 16 }}> */}
+      {/*   <TouchableOpacity */}
+      {/*     style={{ */}
+      {/*       width: 64, height: 64, borderRadius: 32, backgroundColor: '#222', justifyContent: 'center', alignItems: 'center', marginHorizontal: 20, */}
+      {/*       shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.18, shadowRadius: 8, elevation: 6, */}
+      {/*     }} */}
+      {/*     onPress={() => swiperRef.current?.swipeLeft()} */}
+      {/*     activeOpacity={0.8} */}
+      {/*   > */}
+      {/*     <Ionicons name="close" size={32} color="#fff" /> */}
+      {/*   </TouchableOpacity> */}
+      {/*   <TouchableOpacity */}
+      {/*     style={{ */}
+      {/*       width: 64, height: 64, borderRadius: 32, backgroundColor: '#F76C6C', justifyContent: 'center', alignItems: 'center', marginHorizontal: 20, */}
+      {/*       shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.18, shadowRadius: 8, elevation: 6, */}
+      {/*     }} */}
+      {/*     onPress={() => swiperRef.current?.swipeRight()} */}
+      {/*     activeOpacity={0.8} */}
+      {/*   > */}
+      {/*     <Ionicons name="heart" size={32} color="#fff" /> */}
+      {/*   </TouchableOpacity> */}
+      {/* </View> */}
     </SafeAreaView>
   );
 };
@@ -559,11 +516,14 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 16,
+    paddingHorizontal: 20, // 统一左右边距
+    paddingBottom: 80, // 防止被底部导航遮挡
   },
   cardWrapper: {
     width: '100%',
+    maxWidth: 400,
     alignItems: 'center',
+    paddingHorizontal: 0,
   },
   difficultyContainer: {
     flexDirection: 'row',

@@ -14,6 +14,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { UserService } from '../../services/userService';
+import { colors } from '../../constants/colors';
 
 interface EditProfileModalProps {
   visible: boolean;
@@ -144,7 +145,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
         throw new Error(result.message);
       }
     } catch (error) {
-      Alert.alert('更新失败', error.message || '请重试');
+      Alert.alert('更新失败', (error as Error).message || '请重试');
     } finally {
       setLoading(false);
     }
@@ -170,7 +171,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
             disabled={loading}
           >
             {loading ? (
-              <ActivityIndicator size="small" color="#4F6DFF" />
+              <ActivityIndicator size="small" color={colors.primary[500]} />
             ) : (
               <Text style={styles.saveText}>保存</Text>
             )}
@@ -186,11 +187,11 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
                 <Image source={{ uri: avatar }} style={styles.avatar} />
               ) : (
                 <View style={styles.avatarPlaceholder}>
-                  <Ionicons name="person" size={40} color="#999" />
+                  <Ionicons name="person" size={40} color={colors.neutral[500]} />
                 </View>
               )}
               <View style={styles.avatarEditIcon}>
-                <Ionicons name="camera" size={16} color="#fff" />
+                <Ionicons name="camera" size={16} color={colors.text.inverse} />
               </View>
             </TouchableOpacity>
             <Text style={styles.avatarHint}>点击更换头像</Text>
@@ -216,7 +217,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9F9FB',
+    backgroundColor: colors.background.primary,
   },
   header: {
     flexDirection: 'row',
@@ -225,21 +226,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: Platform.OS === 'ios' ? 50 : 20,
     paddingBottom: 20,
-    backgroundColor: '#fff',
+    backgroundColor: colors.background.secondary,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E5E5',
+    borderBottomColor: colors.border.light,
   },
   cancelButton: {
     padding: 10,
   },
   cancelText: {
     fontSize: 16,
-    color: '#666',
+    color: colors.neutral[600],
   },
   title: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#333',
+    color: colors.text.primary,
   },
   saveButton: {
     padding: 10,
@@ -249,7 +250,7 @@ const styles = StyleSheet.create({
   },
   saveText: {
     fontSize: 16,
-    color: '#4F6DFF',
+    color: colors.primary[500],
     fontWeight: '600',
   },
   content: {
@@ -273,7 +274,7 @@ const styles = StyleSheet.create({
     width: 100,
     height: 100,
     borderRadius: 50,
-    backgroundColor: '#E5E5E5',
+    backgroundColor: colors.neutral[200],
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -284,15 +285,15 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#4F6DFF',
+    backgroundColor: colors.primary[500],
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 3,
-    borderColor: '#fff',
+    borderColor: colors.background.secondary,
   },
   avatarHint: {
     fontSize: 14,
-    color: '#999',
+    color: colors.neutral[500],
   },
   inputSection: {
     marginBottom: 20,
@@ -300,16 +301,16 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#333',
+    color: colors.text.primary,
     marginBottom: 8,
   },
   input: {
-    backgroundColor: '#fff',
+    backgroundColor: colors.background.secondary,
     borderRadius: 8,
     paddingHorizontal: 16,
     paddingVertical: 12,
     fontSize: 16,
     borderWidth: 1,
-    borderColor: '#E5E5E5',
+    borderColor: colors.border.light,
   },
 }); 

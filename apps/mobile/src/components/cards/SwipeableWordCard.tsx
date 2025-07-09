@@ -1,303 +1,123 @@
-import React, { useRef, useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  Animated,
-  Dimensions,
-  TouchableOpacity,
-} from 'react-native';
-import { PanGestureHandler, State } from 'react-native-gesture-handler';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors } from '../../../../../packages/ui/src/tokens';
+import { colors } from '../../constants/colors';
 import { WordData } from './WordCard';
-
-const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
-const SWIPE_THRESHOLD = screenWidth * 0.25;
-const CARD_HEIGHT = screenHeight * 0.6;
 
 interface SwipeableWordCardProps {
   wordData: WordData;
-  onSwipeLeft?: (word: string) => void; // 忘记
-  onSwipeRight?: (word: string) => void; // 记住
-  onSwipeUp?: (word: string) => void; // 收藏
-  onSwipeDown?: (word: string) => void; // 跳过
-  showAnswer?: boolean;
-  onToggleAnswer?: () => void;
+  isExpanded?: boolean;
+  onExpandToggle?: () => void;
 }
 
 const SwipeableWordCard: React.FC<SwipeableWordCardProps> = ({
   wordData,
-  onSwipeLeft,
-  onSwipeRight,
-  onSwipeUp,
-  onSwipeDown,
-  showAnswer = false,
-  onToggleAnswer,
+  isExpanded = false,
+  onExpandToggle,
 }) => {
-  const translateX = useRef(new Animated.Value(0)).current;
-  const translateY = useRef(new Animated.Value(0)).current;
-  const scale = useRef(new Animated.Value(1)).current;
-  const rotate = useRef(new Animated.Value(0)).current;
-  const opacity = useRef(new Animated.Value(1)).current;
+  const [localExpanded, setLocalExpanded] = useState(false);
 
-  const [isAnimating, setIsAnimating] = useState(false);
-
-  // 手势处理
-  const onGestureEvent = Animated.event(
-    [
-      {
-        nativeEvent: {
-          translationX: translateX,
-          translationY: translateY,
-        },
-      },
-    ],
-    { useNativeDriver: false }
-  );
-
-  const onHandlerStateChange = (event: any) => {
-    if (event.nativeEvent.state === State.END) {
-      const { translationX, translationY, velocityX, velocityY } = event.nativeEvent;
-      
-      // 判断滑动方向和距离
-      const isSwipeLeft = translationX < -SWIPE_THRESHOLD || velocityX < -500;
-      const isSwipeRight = translationX > SWIPE_THRESHOLD || velocityX > 500;
-      const isSwipeUp = translationY < -SWIPE_THRESHOLD || velocityY < -500;
-      const isSwipeDown = translationY > SWIPE_THRESHOLD || velocityY > 500;
-
-      if (isSwipeLeft) {
-        handleSwipe('left');
-      } else if (isSwipeRight) {
-        handleSwipe('right');
-      } else if (isSwipeUp) {
-        handleSwipe('up');
-      } else if (isSwipeDown) {
-        handleSwipe('down');
-      } else {
-        // 回到原位
-        resetPosition();
-      }
-    }
+  const handleExpand = () => {
+    setLocalExpanded((prev) => !prev);
+    onExpandToggle?.();
   };
 
-  // 处理滑动
-  const handleSwipe = (direction: 'left' | 'right' | 'up' | 'down') => {
-    if (isAnimating) return;
-    setIsAnimating(true);
+  const expanded = isExpanded || localExpanded;
 
-    const animations = [];
-    let targetX = 0;
-    let targetY = 0;
-    let targetRotate = 0;
-
-    switch (direction) {
-      case 'left':
-        targetX = -screenWidth * 1.5;
-        targetRotate = -15;
-        onSwipeLeft?.(wordData.word);
-        break;
-      case 'right':
-        targetX = screenWidth * 1.5;
-        targetRotate = 15;
-        onSwipeRight?.(wordData.word);
-        break;
-      case 'up':
-        targetY = -screenHeight * 1.5;
-        onSwipeUp?.(wordData.word);
-        break;
-      case 'down':
-        targetY = screenHeight * 1.5;
-        onSwipeDown?.(wordData.word);
-        break;
-    }
-
-    animations.push(
-      Animated.parallel([
-        Animated.timing(translateX, {
-          toValue: targetX,
-          duration: 300,
-          useNativeDriver: false,
-        }),
-        Animated.timing(translateY, {
-          toValue: targetY,
-          duration: 300,
-          useNativeDriver: false,
-        }),
-        Animated.timing(scale, {
-          toValue: 0.8,
-          duration: 300,
-          useNativeDriver: false,
-        }),
-        Animated.timing(rotate, {
-          toValue: targetRotate,
-          duration: 300,
-          useNativeDriver: false,
-        }),
-        Animated.timing(opacity, {
-          toValue: 0,
-          duration: 300,
-          useNativeDriver: false,
-        }),
-      ])
-    );
-
-    Animated.sequence(animations).start(() => {
-      setIsAnimating(false);
-    });
+  const handlePlayAudio = () => {
+    // Placeholder for audio playback logic
+    console.log('Play audio for word:', wordData.word);
   };
-
-  // 重置位置
-  const resetPosition = () => {
-    Animated.parallel([
-      Animated.spring(translateX, {
-        toValue: 0,
-        useNativeDriver: false,
-      }),
-      Animated.spring(translateY, {
-        toValue: 0,
-        useNativeDriver: false,
-      }),
-      Animated.spring(scale, {
-        toValue: 1,
-        useNativeDriver: false,
-      }),
-      Animated.spring(rotate, {
-        toValue: 0,
-        useNativeDriver: false,
-      }),
-    ]).start();
-  };
-
-  // 旋转插值
-  const rotateInterpolate = rotate.interpolate({
-    inputRange: [-1, 0, 1],
-    outputRange: ['-15deg', '0deg', '15deg'],
-  });
-
-  // 背景色插值
-  const backgroundColor = translateX.interpolate({
-    inputRange: [-screenWidth, 0, screenWidth],
-    outputRange: [colors.error[100], colors.background.secondary, colors.success[100]],
-  });
 
   return (
-    <PanGestureHandler
-      onGestureEvent={onGestureEvent}
-      onHandlerStateChange={onHandlerStateChange}
-    >
-      <Animated.View
-        style={[
-          styles.container,
-          {
-            transform: [
-              { translateX },
-              { translateY },
-              { scale },
-              { rotate: rotateInterpolate },
-            ],
-            backgroundColor,
-            opacity,
-          },
-        ]}
-      >
-        {/* 卡片内容 */}
-        <View style={styles.card}>
-          {/* 单词 */}
-          <View style={styles.wordSection}>
-            <Text style={styles.word}>{wordData.word}</Text>
-            <Text style={styles.phonetic}>{wordData.phonetic}</Text>
-          </View>
-
-          {/* 答案区域 */}
-          {showAnswer ? (
-            <View style={styles.answerSection}>
+    <View style={styles.container}>
+      <View style={styles.card}>
+        
+        {/* 内容区域 */}
+        <View style={styles.contentSection}>
+          {expanded ? (
+            <ScrollView style={styles.expandedContent} showsVerticalScrollIndicator={false}>
+              <View style={styles.wordSection}>
+                <Text style={styles.word}>{wordData.word}</Text>
+                <Text style={styles.phonetic}>{wordData.phonetic}</Text>
+                <TouchableOpacity style={styles.audioButton} onPress={handlePlayAudio}>
+                  <Ionicons name="volume-high" size={24} color={colors.primary[500]} />
+                </TouchableOpacity>
+              </View>
               {wordData.definitions.map((def, index) => (
                 <View key={index} style={styles.definitionItem}>
                   <Text style={styles.partOfSpeech}>{def.partOfSpeech}</Text>
                   <Text style={styles.definition}>{def.definition}</Text>
-                  {def.examples.length > 0 && (
-                    <View style={styles.exampleContainer}>
-                      <Text style={styles.exampleEnglish}>
-                        {def.examples[0].english}
-                      </Text>
-                      <Text style={styles.exampleChinese}>
-                        {def.examples[0].chinese}
-                      </Text>
+                  {def.examples && def.examples.length > 0 && (
+                    <View style={styles.examplesContainer}>
+                      <Text style={styles.examplesTitle}>例句：</Text>
+                      {def.examples.map((ex, exIdx) => (
+                        <View key={exIdx} style={styles.exampleItem}>
+                          <Text style={styles.exampleEnglish}>{ex.english}</Text>
+                          <Text style={styles.exampleChinese}>{ex.chinese}</Text>
+                        </View>
+                      ))}
                     </View>
                   )}
                 </View>
               ))}
-            </View>
+              {/* 单词来源信息 */}
+              {wordData.lastSearched && (
+                <View style={styles.originSection}>
+                  <Text style={styles.originTitle}>学习记录</Text>
+                  <Text style={styles.originText}>搜索次数: {wordData.searchCount || 0}</Text>
+                  <Text style={styles.originText}>最后学习: {wordData.lastSearched}</Text>
+                </View>
+              )}
+            </ScrollView>
           ) : (
-            <View style={styles.questionSection}>
-              <Text style={styles.questionText}>你知道这个单词的意思吗？</Text>
+            <View style={styles.collapsedContent}>
+              {/* 单词区域 */}
+        <View style={styles.wordSection}>
+          <Text style={styles.word}>{wordData.word}</Text>
+          <Text style={styles.phonetic}>{wordData.phonetic}</Text>
+        </View>
               <TouchableOpacity
                 style={styles.showAnswerButton}
-                onPress={onToggleAnswer}
+                onPress={handleExpand}
               >
                 <Text style={styles.showAnswerText}>显示答案</Text>
               </TouchableOpacity>
             </View>
           )}
-
-          {/* 操作提示 */}
-          <View style={styles.hintSection}>
-            <View style={styles.hintRow}>
-              <View style={styles.hintItem}>
-                <Ionicons name="close-circle" size={24} color={colors.error[500]} />
-                <Text style={styles.hintText}>左滑忘记</Text>
-              </View>
-              <View style={styles.hintItem}>
-                <Ionicons name="checkmark-circle" size={24} color={colors.success[500]} />
-                <Text style={styles.hintText}>右滑记住</Text>
-              </View>
-            </View>
-            <View style={styles.hintRow}>
-              <View style={styles.hintItem}>
-                <Ionicons name="heart" size={24} color={colors.primary[500]} />
-                <Text style={styles.hintText}>上滑收藏</Text>
-              </View>
-              <View style={styles.hintItem}>
-                <Ionicons name="arrow-down" size={24} color={colors.text.secondary} />
-                <Text style={styles.hintText}>下滑跳过</Text>
-              </View>
-            </View>
-          </View>
         </View>
-      </Animated.View>
-    </PanGestureHandler>
+      </View>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    position: 'absolute',
-    width: screenWidth - 32,
-    height: CARD_HEIGHT,
-    alignSelf: 'center',
+    width: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 16,
   },
   card: {
-    flex: 1,
+    width: '100%',
+    maxWidth: 350,
+    minHeight: 600,
     backgroundColor: colors.background.secondary,
     borderRadius: 20,
-    padding: 24,
-    shadowColor: colors.neutral[200],
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
+    padding: 60,
+    shadowColor: colors.neutral[900],
+    shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.15,
-    shadowRadius: 12,
+    shadowRadius: 16,
     elevation: 8,
     justifyContent: 'space-between',
   },
   wordSection: {
     alignItems: 'center',
-    marginBottom: 24,
+    marginBottom: 20,
   },
   word: {
-    fontSize: 36,
+    fontSize: 32,
     fontWeight: 'bold',
     color: colors.text.primary,
     marginBottom: 8,
@@ -307,46 +127,17 @@ const styles = StyleSheet.create({
     color: colors.text.secondary,
     fontFamily: 'monospace',
   },
-  answerSection: {
+  contentSection: {
     flex: 1,
-    marginBottom: 24,
+    marginBottom: 20,
   },
-  definitionItem: {
-    marginBottom: 16,
-  },
-  partOfSpeech: {
-    fontSize: 14,
-    color: colors.text.secondary,
-    fontStyle: 'italic',
-    marginBottom: 4,
-  },
-  definition: {
-    fontSize: 18,
-    color: colors.text.primary,
-    lineHeight: 26,
-    marginBottom: 8,
-  },
-  exampleContainer: {
-    paddingLeft: 16,
-  },
-  exampleEnglish: {
-    fontSize: 16,
-    color: colors.text.primary,
-    fontStyle: 'italic',
-    marginBottom: 4,
-  },
-  exampleChinese: {
-    fontSize: 16,
-    color: colors.text.secondary,
-  },
-  questionSection: {
+  collapsedContent: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 24,
   },
   questionText: {
-    fontSize: 20,
+    fontSize: 18,
     color: colors.text.primary,
     textAlign: 'center',
     marginBottom: 24,
@@ -362,21 +153,68 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
-  hintSection: {
+  expandedContent: {
+    flex: 1,
+  },
+  definitionItem: {
+    marginBottom: 20,
+  },
+  partOfSpeech: {
+    fontSize: 14,
+    color: colors.text.secondary,
+    fontStyle: 'italic',
+    marginBottom: 4,
+  },
+  definition: {
+    fontSize: 16,
+    color: colors.text.primary,
+    lineHeight: 24,
+    marginBottom: 8,
+  },
+  examplesContainer: {
+    marginTop: 8,
+    paddingLeft: 12,
+  },
+  examplesTitle: {
+    fontSize: 14,
+    color: colors.text.secondary,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  exampleItem: {
+    marginBottom: 8,
+    paddingLeft: 8,
+  },
+  exampleEnglish: {
+    fontSize: 14,
+    color: colors.text.primary,
+    fontStyle: 'italic',
+    marginBottom: 2,
+  },
+  exampleChinese: {
+    fontSize: 14,
+    color: colors.text.secondary,
+  },
+  originSection: {
     marginTop: 16,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: colors.border.light,
   },
-  hintRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    marginBottom: 12,
+  originTitle: {
+    fontSize: 14,
+    color: colors.text.secondary,
+    fontWeight: '600',
+    marginBottom: 4,
   },
-  hintItem: {
-    alignItems: 'center',
-  },
-  hintText: {
+  originText: {
     fontSize: 12,
     color: colors.text.secondary,
-    marginTop: 4,
+    marginBottom: 2,
+  },
+  audioButton: {
+    marginTop: 10,
+    padding: 5,
   },
 });
 

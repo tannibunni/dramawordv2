@@ -16,6 +16,8 @@ import { UserService } from '../../services/userService';
 import { useVocabulary } from '../../context/VocabularyContext';
 import { useShowList } from '../../context/ShowListContext';
 import { wordService } from '../../services/wordService';
+import { colors } from '../../constants/colors';
+import { useNavigation } from '../../components/navigation/NavigationContext';
 
 interface UserStats {
   totalWords: number;
@@ -29,13 +31,11 @@ interface UserStats {
 interface ProfileScreenProps {
   onLogout?: () => void;
   onEditProfile?: () => void;
-  navigation?: any;
 }
 
 export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   onLogout,
   onEditProfile,
-  navigation,
 }) => {
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [darkModeEnabled, setDarkModeEnabled] = useState(false);
@@ -46,6 +46,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   const [clearingCache, setClearingCache] = useState(false);
   const { vocabulary, clearVocabulary } = useVocabulary();
   const { shows, clearShows } = useShowList();
+  const { navigate } = useNavigation();
 
   // 模拟用户数据（当真实数据未加载时使用）
   const defaultUserData = {
@@ -101,8 +102,14 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
     accuracy: 87,
   };
 
+  const handleLoginPress = () => {
+    // 使用自定义导航跳转到登录页面
+    navigate('login');
+  };
+
   const renderUserInfo = () => {
     const userData = user || defaultUserData;
+    const isGuest = !user || !user.userId || user.userId === 'guest' || user.username === 'guest';
     
     return (
       <View style={styles.userSection}>
@@ -116,9 +123,20 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
             <Text style={styles.userLevel}>{userData.level}</Text>
             <Text style={styles.userEmail}>{userData.email}</Text>
             <Text style={styles.joinDate}>加入时间: {userData.joinDate}</Text>
+            {/* 登录按钮或用户名 */}
+            {isGuest ? (
+              <TouchableOpacity 
+                style={styles.loginButton} 
+                onPress={handleLoginPress}
+              >
+                <Text style={styles.loginButtonText}>登录</Text>
+              </TouchableOpacity>
+            ) : (
+              <Text style={styles.loggedInText}>已登录：{user.username}</Text>
+            )}
           </View>
           <TouchableOpacity style={styles.editButton} onPress={handleEditProfile}>
-            <Ionicons name="pencil" size={20} color="#4F6DFF" />
+            <Ionicons name="pencil" size={20} color={colors.primary[500]} />
           </TouchableOpacity>
         </View>
       </View>
@@ -130,12 +148,12 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
       <Text style={styles.sectionTitle}>学习统计</Text>
       <View style={styles.statsGrid}>
         <View style={styles.statCard}>
-          <Ionicons name="book-outline" size={24} color="#4F6DFF" />
+          <Ionicons name="book-outline" size={24} color={colors.primary[500]} />
           <Text style={styles.statNumber}>{stats.totalWords}</Text>
           <Text style={styles.statLabel}>总词汇量</Text>
         </View>
         <View style={styles.statCard}>
-          <Ionicons name="checkmark-circle-outline" size={24} color="#6BCF7A" />
+          <Ionicons name="checkmark-circle-outline" size={24} color={colors.success[500]} />
           <Text style={styles.statNumber}>{stats.masteredWords}</Text>
           <Text style={styles.statLabel}>已掌握</Text>
         </View>
@@ -145,7 +163,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
           <Text style={styles.statLabel}>学习天数</Text>
         </View>
         <View style={styles.statCard}>
-          <Ionicons name="flame-outline" size={24} color="#F76C6C" />
+          <Ionicons name="flame-outline" size={24} color={colors.error[500]} />
           <Text style={styles.statNumber}>{stats.currentStreak}</Text>
           <Text style={styles.statLabel}>连续学习</Text>
         </View>
@@ -187,65 +205,65 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
       
       <View style={styles.settingItem}>
         <View style={styles.settingLeft}>
-          <Ionicons name="notifications-outline" size={24} color="#4F6DFF" />
+          <Ionicons name="notifications-outline" size={24} color={colors.primary[500]} />
           <Text style={styles.settingLabel}>推送通知</Text>
         </View>
         <Switch
           value={notificationsEnabled}
           onValueChange={setNotificationsEnabled}
-          trackColor={{ false: '#E0E0E0', true: '#4F6DFF' }}
-          thumbColor={notificationsEnabled ? '#FFFFFF' : '#FFFFFF'}
+          trackColor={{ false: colors.neutral[300], true: colors.primary[500] }}
+          thumbColor={notificationsEnabled ? colors.background.secondary : colors.background.secondary}
         />
       </View>
 
       <View style={styles.settingItem}>
         <View style={styles.settingLeft}>
-          <Ionicons name="moon-outline" size={24} color="#4F6DFF" />
+          <Ionicons name="moon-outline" size={24} color={colors.primary[500]} />
           <Text style={styles.settingLabel}>深色模式</Text>
         </View>
         <Switch
           value={darkModeEnabled}
           onValueChange={setDarkModeEnabled}
-          trackColor={{ false: '#E0E0E0', true: '#4F6DFF' }}
-          thumbColor={darkModeEnabled ? '#FFFFFF' : '#FFFFFF'}
+          trackColor={{ false: colors.neutral[300], true: colors.primary[500] }}
+          thumbColor={darkModeEnabled ? colors.background.secondary : colors.background.secondary}
         />
       </View>
 
       <View style={styles.settingItem}>
         <View style={styles.settingLeft}>
-          <Ionicons name="play-outline" size={24} color="#4F6DFF" />
+          <Ionicons name="play-outline" size={24} color={colors.primary[500]} />
           <Text style={styles.settingLabel}>自动播放音频</Text>
         </View>
         <Switch
           value={autoPlayEnabled}
           onValueChange={setAutoPlayEnabled}
-          trackColor={{ false: '#E0E0E0', true: '#4F6DFF' }}
-          thumbColor={autoPlayEnabled ? '#FFFFFF' : '#FFFFFF'}
+          trackColor={{ false: colors.neutral[300], true: colors.primary[500] }}
+          thumbColor={autoPlayEnabled ? colors.background.secondary : colors.background.secondary}
         />
       </View>
 
       <TouchableOpacity style={styles.settingItem}>
         <View style={styles.settingLeft}>
-          <Ionicons name="language-outline" size={24} color="#4F6DFF" />
+          <Ionicons name="language-outline" size={24} color={colors.primary[500]} />
           <Text style={styles.settingLabel}>语言设置</Text>
         </View>
-        <Ionicons name="chevron-forward" size={20} color="#A0A0A0" />
+        <Ionicons name="chevron-forward" size={20} color={colors.neutral[500]} />
       </TouchableOpacity>
 
       <TouchableOpacity style={styles.settingItem}>
         <View style={styles.settingLeft}>
-          <Ionicons name="help-circle-outline" size={24} color="#4F6DFF" />
+          <Ionicons name="help-circle-outline" size={24} color={colors.primary[500]} />
           <Text style={styles.settingLabel}>帮助与反馈</Text>
         </View>
-        <Ionicons name="chevron-forward" size={20} color="#A0A0A0" />
+        <Ionicons name="chevron-forward" size={20} color={colors.neutral[500]} />
       </TouchableOpacity>
 
       <TouchableOpacity style={styles.settingItem}>
         <View style={styles.settingLeft}>
-          <Ionicons name="information-circle-outline" size={24} color="#4F6DFF" />
+          <Ionicons name="information-circle-outline" size={24} color={colors.primary[500]} />
           <Text style={styles.settingLabel}>关于我们</Text>
         </View>
-        <Ionicons name="chevron-forward" size={20} color="#A0A0A0" />
+        <Ionicons name="chevron-forward" size={20} color={colors.neutral[500]} />
       </TouchableOpacity>
 
       <TouchableOpacity 
@@ -254,15 +272,15 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
         disabled={clearingCache}
       >
         <View style={styles.settingLeft}>
-          <Ionicons name="trash-outline" size={24} color="#F76C6C" />
-          <Text style={[styles.settingLabel, { color: '#F76C6C' }]}>
+          <Ionicons name="trash-outline" size={24} color={colors.error[500]} />
+          <Text style={[styles.settingLabel, { color: colors.error[500] }]}>
             {clearingCache ? '清空中...' : '清空数据'}
           </Text>
         </View>
         {clearingCache ? (
-          <Ionicons name="hourglass-outline" size={20} color="#A0A0A0" />
+          <Ionicons name="hourglass-outline" size={20} color={colors.neutral[500]} />
         ) : (
-          <Ionicons name="chevron-forward" size={20} color="#A0A0A0" />
+          <Ionicons name="chevron-forward" size={20} color={colors.neutral[500]} />
         )}
       </TouchableOpacity>
     </View>
@@ -271,7 +289,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   const renderActions = () => (
     <View style={styles.actionsSection}>
       <TouchableOpacity style={styles.actionButton} onPress={onLogout}>
-        <Ionicons name="log-out-outline" size={20} color="#F76C6C" />
+        <Ionicons name="log-out-outline" size={20} color={colors.error[500]} />
         <Text style={styles.actionButtonText}>退出登录</Text>
       </TouchableOpacity>
     </View>
@@ -360,7 +378,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9F9FB',
+    backgroundColor: colors.background.primary,
   },
   header: {
     padding: 20,
@@ -369,19 +387,19 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: '700',
-    color: '#2D2D2D',
+    color: colors.text.primary,
     marginBottom: 4,
   },
   subtitle: {
     fontSize: 16,
-    color: '#888888',
+    color: colors.text.secondary,
     fontWeight: '500',
   },
   content: {
     flex: 1,
   },
   userSection: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.background.secondary,
     marginHorizontal: 20,
     marginBottom: 20,
     borderRadius: 16,
@@ -408,29 +426,48 @@ const styles = StyleSheet.create({
   userName: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#2D2D2D',
+    color: colors.text.primary,
     marginBottom: 4,
   },
   userLevel: {
     fontSize: 14,
-    color: '#4F6DFF',
+    color: colors.primary[500],
     fontWeight: '600',
     marginBottom: 4,
   },
   userEmail: {
     fontSize: 14,
-    color: '#888888',
+    color: colors.text.secondary,
     marginBottom: 2,
   },
   joinDate: {
     fontSize: 12,
-    color: '#A0A0A0',
+    color: colors.neutral[500],
+  },
+  loginButton: {
+    marginTop: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    backgroundColor: colors.primary[500],
+    borderRadius: 8,
+    alignSelf: 'flex-start',
+  },
+  loginButtonText: {
+    color: colors.background.primary,
+    fontWeight: '600',
+    fontSize: 14,
+  },
+  loggedInText: {
+    color: colors.success[500],
+    marginTop: 8,
+    fontSize: 14,
+    fontWeight: '500',
   },
   editButton: {
     padding: 8,
   },
   statsSection: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.background.secondary,
     marginHorizontal: 20,
     marginBottom: 20,
     borderRadius: 16,
@@ -444,7 +481,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#2D2D2D',
+    color: colors.text.primary,
     marginBottom: 16,
   },
   statsGrid: {
@@ -459,13 +496,13 @@ const styles = StyleSheet.create({
   statNumber: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#2D2D2D',
+    color: colors.text.primary,
     marginTop: 8,
     marginBottom: 4,
   },
   statLabel: {
     fontSize: 12,
-    color: '#888888',
+    color: colors.text.secondary,
     textAlign: 'center',
   },
   progressSection: {
@@ -480,27 +517,27 @@ const styles = StyleSheet.create({
   progressTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#2D2D2D',
+    color: colors.text.primary,
   },
   progressPercentage: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#4F6DFF',
+    color: colors.primary[500],
   },
   progressBar: {
     height: 8,
-    backgroundColor: '#F0F0F0',
+    backgroundColor: colors.neutral[100],
     borderRadius: 4,
     marginBottom: 8,
   },
   progressFill: {
     height: '100%',
-    backgroundColor: '#4F6DFF',
+    backgroundColor: colors.primary[500],
     borderRadius: 4,
   },
   progressText: {
     fontSize: 14,
-    color: '#888888',
+    color: colors.text.secondary,
     textAlign: 'center',
   },
   accuracySection: {
@@ -509,7 +546,7 @@ const styles = StyleSheet.create({
   accuracyTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#2D2D2D',
+    color: colors.text.primary,
     marginBottom: 8,
   },
   accuracyDisplay: {
@@ -518,15 +555,15 @@ const styles = StyleSheet.create({
   accuracyNumber: {
     fontSize: 32,
     fontWeight: '700',
-    color: '#6BCF7A',
+    color: colors.success[500],
     marginBottom: 4,
   },
   accuracyLabel: {
     fontSize: 14,
-    color: '#888888',
+    color: colors.text.secondary,
   },
   settingsSection: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.background.secondary,
     marginHorizontal: 20,
     marginBottom: 20,
     borderRadius: 16,
@@ -543,7 +580,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
+    borderBottomColor: colors.neutral[100],
   },
   settingLeft: {
     flexDirection: 'row',
@@ -551,7 +588,7 @@ const styles = StyleSheet.create({
   },
   settingLabel: {
     fontSize: 16,
-    color: '#2D2D2D',
+    color: colors.text.primary,
     marginLeft: 12,
     fontWeight: '500',
   },
@@ -563,11 +600,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.background.secondary,
     paddingVertical: 16,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#F76C6C',
+    borderColor: colors.error[500],
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
@@ -577,7 +614,7 @@ const styles = StyleSheet.create({
   actionButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#F76C6C',
+    color: colors.error[500],
     marginLeft: 8,
   },
   settingItemDisabled: {

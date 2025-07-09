@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -6,7 +6,10 @@ import {
   TouchableOpacity,
   ScrollView,
   Dimensions,
+  Animated,
+  Alert,
 } from 'react-native';
+import { PanGestureHandler, State } from 'react-native-gesture-handler';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../../../../packages/ui/src/tokens';
 
@@ -39,17 +42,25 @@ interface WordCardProps {
 }
 
 const CARD_CONTENT_MAX_HEIGHT = 360; // 可根据实际UI调整
+const SWIPE_THRESHOLD = 100; // 降低滑动阈值，更容易触发
+const SWIPE_ANIMATION_DURATION = 250; // 更快的动画
+const ROTATION_ANGLE = 10; // 卡片旋转角度
 
 const WordCard: React.FC<WordCardProps> = ({
   wordData,
   onCollect,
   onIgnore,
   onPlayAudio,
-  showActions = true,
+  showActions = false, // 默认不显示按钮，使用滑动操作
   style,
 }) => {
   const hasMultipleExamples = wordData.definitions.some(def => def.examples && def.examples.length > 1);
   const [showScrollTip, setShowScrollTip] = useState(hasMultipleExamples);
+  const translateX = useRef(new Animated.Value(0)).current;
+  const translateY = useRef(new Animated.Value(0)).current;
+  const cardOpacity = useRef(new Animated.Value(1)).current;
+  const cardScale = useRef(new Animated.Value(1)).current;
+  const cardRotation = useRef(new Animated.Value(0)).current;
 
   // 收藏单词
   const handleCollect = () => {
@@ -63,6 +74,7 @@ const WordCard: React.FC<WordCardProps> = ({
     if (onIgnore) {
       onIgnore(wordData.word);
     }
+    // 删除弹窗，不再提示
   };
 
   // 播放发音
@@ -72,87 +84,264 @@ const WordCard: React.FC<WordCardProps> = ({
     }
   };
 
+  // 处理滑动手势
+  const onGestureEvent = Animated.event(
+    [{ nativeEvent: { translationX: translateX, translationY: translateY } }],
+    { useNativeDriver: true }
+  );
+
+  const onHandlerStateChange = (event: any) => {
+    if (event.nativeEvent.state === State.END) {
+      const { translationX, translationY } = event.nativeEvent;
+      const screenWidth = Dimensions.get('window').width;
+      
+      if (translationX > SWIPE_THRESHOLD) {
+        // 右滑 - 收藏
+        Animated.parallel([
+          Animated.timing(translateX, {
+            toValue: screenWidth * 1.5,
+            duration: SWIPE_ANIMATION_DURATION,
+            useNativeDriver: true,
+          }),
+          Animated.timing(translateY, {
+            toValue: translationY * 2,
+            duration: SWIPE_ANIMATION_DURATION,
+            useNativeDriver: true,
+          }),
+          Animated.timing(cardOpacity, {
+            toValue: 0,
+            duration: SWIPE_ANIMATION_DURATION,
+            useNativeDriver: true,
+          }),
+          Animated.timing(cardScale, {
+            toValue: 0.8,
+            duration: SWIPE_ANIMATION_DURATION,
+            useNativeDriver: true,
+          }),
+        ]).start(() => {
+          handleCollect();
+          // 重置动画
+          translateX.setValue(0);
+          translateY.setValue(0);
+          cardOpacity.setValue(1);
+          cardScale.setValue(1);
+          cardRotation.setValue(0);
+        });
+      } else if (translationX < -SWIPE_THRESHOLD) {
+        // 左滑 - 忽略
+        Animated.parallel([
+          Animated.timing(translateX, {
+            toValue: -screenWidth * 1.5,
+            duration: SWIPE_ANIMATION_DURATION,
+            useNativeDriver: true,
+          }),
+          Animated.timing(translateY, {
+            toValue: translationY * 2,
+            duration: SWIPE_ANIMATION_DURATION,
+            useNativeDriver: true,
+          }),
+          Animated.timing(cardOpacity, {
+            toValue: 0,
+            duration: SWIPE_ANIMATION_DURATION,
+            useNativeDriver: true,
+          }),
+          Animated.timing(cardScale, {
+            toValue: 0.8,
+            duration: SWIPE_ANIMATION_DURATION,
+            useNativeDriver: true,
+          }),
+        ]).start(() => {
+          handleIgnore();
+          // 重置动画
+          translateX.setValue(0);
+          translateY.setValue(0);
+          cardOpacity.setValue(1);
+          cardScale.setValue(1);
+          cardRotation.setValue(0);
+        });
+      } else {
+        // 回到原位
+        Animated.parallel([
+          Animated.spring(translateX, {
+            toValue: 0,
+            useNativeDriver: true,
+            tension: 100,
+            friction: 8,
+          }),
+          Animated.spring(translateY, {
+            toValue: 0,
+            useNativeDriver: true,
+            tension: 100,
+            friction: 8,
+          }),
+          Animated.spring(cardScale, {
+            toValue: 1,
+            useNativeDriver: true,
+            tension: 100,
+            friction: 8,
+          }),
+          Animated.spring(cardRotation, {
+            toValue: 0,
+            useNativeDriver: true,
+            tension: 100,
+            friction: 8,
+          }),
+        ]).start();
+      }
+    }
+  };
+
+  // 计算滑动指示器的透明度
+  const leftIndicatorOpacity = translateX.interpolate({
+    inputRange: [-SWIPE_THRESHOLD, 0],
+    outputRange: [1, 0],
+    extrapolate: 'clamp',
+  });
+
+  const rightIndicatorOpacity = translateX.interpolate({
+    inputRange: [0, SWIPE_THRESHOLD],
+    outputRange: [0, 1],
+    extrapolate: 'clamp',
+  });
+
+  // 计算卡片旋转角度
+  const cardRotationInterpolate = translateX.interpolate({
+    inputRange: [-SWIPE_THRESHOLD, 0, SWIPE_THRESHOLD],
+    outputRange: [-ROTATION_ANGLE, 0, ROTATION_ANGLE],
+    extrapolate: 'clamp',
+  });
+
+  // 计算卡片缩放
+  const cardScaleInterpolate = translateX.interpolate({
+    inputRange: [-SWIPE_THRESHOLD, 0, SWIPE_THRESHOLD],
+    outputRange: [0.95, 1, 0.95],
+    extrapolate: 'clamp',
+  });
+
   return (
-    <View style={[styles.card, style]}>
-      {/* 头部：单词、音标、发音按钮 */}
-      <View style={styles.headerRow}>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.word}>{wordData.word}</Text>
-          <Text style={styles.phonetic}>{wordData.phonetic}</Text>
-        </View>
-        <TouchableOpacity style={styles.audioButton} onPress={handlePlayAudio} activeOpacity={0.7}>
-          <Ionicons name="volume-medium" size={22} color={colors.primary[500]} />
-        </TouchableOpacity>
-      </View>
-      {/* 主体内容区：可滚动 */}
-      <View style={{ maxHeight: CARD_CONTENT_MAX_HEIGHT, marginBottom: 8 }}>
-        <ScrollView
-          showsVerticalScrollIndicator={true}
-          indicatorStyle="black"
-          persistentScrollbar={true}
-          onScroll={e => {
-            if (showScrollTip && e.nativeEvent.contentOffset.y > 10) {
-              setShowScrollTip(false);
-            }
-          }}
-          scrollEventThrottle={16}
+    <View style={[styles.container, style]}>
+      <PanGestureHandler
+        onGestureEvent={onGestureEvent}
+        onHandlerStateChange={onHandlerStateChange}
+      >
+        <Animated.View
+          style={[
+            styles.card,
+            {
+              transform: [
+                { translateX },
+                { translateY },
+                { scale: cardScaleInterpolate },
+                { rotate: `${cardRotationInterpolate}deg` },
+              ],
+              opacity: cardOpacity,
+            },
+          ]}
         >
-          {wordData.definitions.map((def, idx) => (
-            <View key={idx} style={styles.definitionBlock}>
-              <Text style={styles.partOfSpeech}>{def.partOfSpeech}</Text>
-              <Text style={styles.definition}>{def.definition}</Text>
-              {def.examples && def.examples.length > 0 && (
-                <View style={styles.examplesBlock}>
-                  {def.examples.map((ex, exIdx) => (
-                    <View key={exIdx} style={styles.exampleContainer}>
-                      <Text style={styles.exampleEnglish}>{ex.english}</Text>
-                      <Text style={styles.exampleChinese}>{ex.chinese}</Text>
-                    </View>
-                  ))}
-                </View>
-              )}
+          {/* 头部：单词、音标、发音按钮 */}
+          <View style={styles.headerRow}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.word}>{wordData.word}</Text>
+              <Text style={styles.phonetic}>{wordData.phonetic}</Text>
             </View>
-          ))}
-        </ScrollView>
-      </View>
-      {/* 滑动提示，仅初始显示，滑动后消失 */}
-      {showScrollTip && (
-        <View style={styles.arrowTip}>
-          <Text style={styles.arrowTipText}>向下滑动查看更多例句</Text>
-          <Ionicons name="chevron-down" size={22} color={colors.text.tertiary} />
+            <TouchableOpacity style={styles.audioButton} onPress={handlePlayAudio} activeOpacity={0.7}>
+              <Ionicons name="volume-medium" size={22} color={colors.primary[500]} />
+            </TouchableOpacity>
+          </View>
+          
+          {/* 主体内容区：可滚动 */}
+          <View style={{ maxHeight: CARD_CONTENT_MAX_HEIGHT, marginBottom: 8 }}>
+            <ScrollView
+              showsVerticalScrollIndicator={true}
+              indicatorStyle="black"
+              persistentScrollbar={true}
+              onScroll={e => {
+                if (showScrollTip && e.nativeEvent.contentOffset.y > 10) {
+                  setShowScrollTip(false);
+                }
+              }}
+              scrollEventThrottle={16}
+            >
+              {wordData.definitions.map((def, idx) => (
+                <View key={idx} style={styles.definitionBlock}>
+                  <Text style={styles.partOfSpeech}>{def.partOfSpeech}</Text>
+                  <Text style={styles.definition}>{def.definition}</Text>
+                  {def.examples && def.examples.length > 0 && (
+                    <View style={styles.examplesBlock}>
+                      {def.examples.map((ex, exIdx) => (
+                        <View key={exIdx} style={styles.exampleContainer}>
+                          <Text style={styles.exampleEnglish}>{ex.english}</Text>
+                          <Text style={styles.exampleChinese}>{ex.chinese}</Text>
+                        </View>
+                      ))}
+                    </View>
+                  )}
+                </View>
+              ))}
+            </ScrollView>
+          </View>
+          
+          {/* 滑动提示，仅初始显示，滑动后消失 */}
+          {showScrollTip && (
+            <View style={styles.arrowTip}>
+              <Text style={styles.arrowTipText}>向下滑动查看更多例句</Text>
+              <Ionicons name="chevron-down" size={22} color={colors.text.tertiary} />
+            </View>
+          )}
+          
+          {/* 滑动操作提示 */}
+          <View style={styles.swipeHint}>
+            <Text style={styles.swipeHintText}>左滑忽略 • 右滑收藏</Text>
+          </View>
+        </Animated.View>
+      </PanGestureHandler>
+
+      {/* 左滑指示器 - 忽略 */}
+      <Animated.View style={[styles.indicator, styles.leftIndicator, { opacity: leftIndicatorOpacity }]}>
+        <View style={styles.indicatorContent}>
+          <Ionicons name="close-circle" size={40} color={colors.error[500]} />
+          <Text style={styles.indicatorText}>忽略</Text>
         </View>
-      )}
-      {/* 底部按钮区：始终固定在卡片底部 */}
-      {showActions && (
-        <View style={styles.actionButtons}>
-          <TouchableOpacity style={[styles.actionButton, styles.ignoreButton]} onPress={handleIgnore} activeOpacity={0.7}>
-            <Ionicons name="close" size={20} color={colors.error[500]} />
-            <Text style={styles.ignoreText}>忽略</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={[styles.actionButton, styles.collectButton]} onPress={handleCollect} activeOpacity={0.7}>
-            <Ionicons name={wordData.isCollected ? "heart" : "heart-outline"} size={20} color={wordData.isCollected ? colors.error[500] : colors.primary[500]} />
-            <Text style={styles.collectText}>{wordData.isCollected ? '已收藏' : '收藏'}</Text>
-          </TouchableOpacity>
+      </Animated.View>
+
+      {/* 右滑指示器 - 收藏 */}
+      <Animated.View style={[styles.indicator, styles.rightIndicator, { opacity: rightIndicatorOpacity }]}>
+        <View style={styles.indicatorContent}>
+          <Ionicons name="heart" size={40} color={colors.primary[500]} />
+          <Text style={styles.indicatorText}>收藏</Text>
         </View>
-      )}
+      </Animated.View>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
+  container: {
+    width: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+    // 完全无视觉样式
+    backgroundColor: 'transparent',
+    borderRadius: 0,
+    shadowColor: 'transparent',
+    elevation: 0,
+    paddingVertical: 0,
+  },
   card: {
-    backgroundColor: '#fff',
+    width: '100%',
+    maxWidth: 350,
+    minHeight: 600,
+    backgroundColor: colors.background.secondary,
     borderRadius: 20,
-    padding: 24,
-    marginVertical: 12,
-    width: '92%',
-    maxWidth: 500,
-    alignSelf: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 6,
+    padding: 32,
+    shadowColor: colors.neutral[900],
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.15,
+    shadowRadius: 16,
+    elevation: 8,
+    justifyContent: 'space-between',
+    zIndex: 1,
   },
   headerRow: {
     flexDirection: 'row',
@@ -222,36 +411,47 @@ const styles = StyleSheet.create({
     color: colors.text.tertiary,
     marginBottom: 2,
   },
-  actionButtons: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 12,
-  },
-  actionButton: {
-    flexDirection: 'row',
+  swipeHint: {
     alignItems: 'center',
-    borderRadius: 20,
-    paddingHorizontal: 18,
+    marginTop: 12,
     paddingVertical: 8,
-    backgroundColor: '#f5f6fa',
   },
-  ignoreButton: {
-    backgroundColor: '#ffeaea',
+  swipeHintText: {
+    fontSize: 14,
+    color: colors.text.tertiary,
+    fontStyle: 'italic',
   },
-  collectButton: {
-    backgroundColor: '#eaf2ff',
+  indicator: {
+    position: 'absolute',
+    top: '50%',
+    transform: [{ translateY: -40 }],
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 10,
+    zIndex: 1000,
   },
-  ignoreText: {
-    color: '#ff4d4f',
-    marginLeft: 4,
-    fontSize: 15,
-    fontWeight: '500',
+  leftIndicator: {
+    left: 30,
   },
-  collectText: {
-    color: '#3478f6',
-    marginLeft: 4,
-    fontSize: 15,
-    fontWeight: '500',
+  rightIndicator: {
+    right: 30,
+  },
+  indicatorContent: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  indicatorText: {
+    fontSize: 12,
+    fontWeight: '600',
+    marginTop: 4,
   },
 });
 

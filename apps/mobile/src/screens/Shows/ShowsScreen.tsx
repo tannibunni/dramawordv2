@@ -15,6 +15,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { TMDBService, TMDBShow } from '../../services/tmdbService';
+import { colors } from '../../constants/colors';
 
 const { width } = Dimensions.get('window');
 
@@ -135,10 +136,10 @@ const ShowsScreen: React.FC = () => {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'watching': return '#4F6DFF';
-      case 'completed': return '#6BCF7A';
-      case 'plan_to_watch': return '#F4B942';
-      default: return '#888888';
+      case 'watching': return colors.primary[500];
+      case 'completed': return colors.success[500];
+      case 'plan_to_watch': return colors.accent[500];
+      default: return colors.text.secondary;
     }
   };
 
@@ -194,7 +195,7 @@ const ShowsScreen: React.FC = () => {
         
         <View style={styles.showMeta}>
           <View style={styles.ratingContainer}>
-            <Ionicons name="star" size={16} color="#F4B942" />
+            <Ionicons name="star" size={16} color={colors.accent[500]} />
             <Text style={styles.ratingText}>{item.vote_average.toFixed(1)}</Text>
           </View>
           <Text style={styles.wordCountText}>{item.wordCount} 个单词</Text>
@@ -236,7 +237,7 @@ const ShowsScreen: React.FC = () => {
     if (loading) {
       return (
         <View style={styles.footer}>
-          <ActivityIndicator size="small" color="#4F6DFF" />
+          <ActivityIndicator size="small" color={colors.primary[500]} />
           <Text style={styles.footerText}>加载中...</Text>
         </View>
       );
@@ -250,7 +251,7 @@ const ShowsScreen: React.FC = () => {
       {/* 搜索栏 */}
       <View style={styles.searchContainer}>
         <View style={styles.searchInputContainer}>
-          <Ionicons name="search" size={20} color="#666" style={styles.searchIcon} />
+                      <Ionicons name="search" size={20} color={colors.neutral[600]} style={styles.searchIcon} />
           <TextInput
             style={styles.searchInput}
             placeholder="搜索剧集..."
@@ -260,7 +261,7 @@ const ShowsScreen: React.FC = () => {
             returnKeyType="search"
           />
           {searchLoading && (
-            <ActivityIndicator size="small" color="#4F6DFF" style={styles.searchLoading} />
+            <ActivityIndicator size="small" color={colors.primary[500]} style={styles.searchLoading} />
           )}
         </View>
       </View>
@@ -286,7 +287,7 @@ const ShowsScreen: React.FC = () => {
         ListEmptyComponent={
           !loading ? (
             <View style={styles.emptyContainer}>
-              <Ionicons name="tv-outline" size={64} color="#CCC" />
+              <Ionicons name="tv-outline" size={64} color={colors.neutral[300]} />
               <Text style={styles.emptyText}>
                 {searchText ? '没有找到相关剧集' : '暂无剧集数据'}
               </Text>
@@ -308,7 +309,7 @@ const ShowsScreen: React.FC = () => {
                 onPress={() => setShowDetailModal(false)}
                 style={styles.closeButton}
               >
-                <Ionicons name="close" size={24} color="#000" />
+                <Ionicons name="close" size={24} color={colors.text.primary} />
               </TouchableOpacity>
               <Text style={styles.modalTitle}>剧集详情</Text>
             </View>
@@ -329,7 +330,7 @@ const ShowsScreen: React.FC = () => {
                 
                 <View style={styles.modalMeta}>
                   <View style={styles.modalRating}>
-                    <Ionicons name="star" size={20} color="#F4B942" />
+                    <Ionicons name="star" size={20} color={colors.accent[500]} />
                     <Text style={styles.modalRatingText}>{selectedShow.vote_average.toFixed(1)}</Text>
                   </View>
                   <Text style={styles.modalYear}>
@@ -397,18 +398,18 @@ const ShowsScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8F9FA',
+    backgroundColor: colors.background.primary,
   },
   searchContainer: {
     padding: 16,
-    backgroundColor: '#FFF',
+    backgroundColor: colors.background.secondary,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E5EA',
+    borderBottomColor: colors.border.light,
   },
   searchInputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F2F2F7',
+    backgroundColor: colors.neutral[100],
     borderRadius: 10,
     paddingHorizontal: 12,
   },
@@ -419,7 +420,7 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 40,
     fontSize: 16,
-    color: '#000',
+    color: colors.text.primary,
   },
   searchLoading: {
     marginLeft: 8,
@@ -427,26 +428,26 @@ const styles = StyleSheet.create({
   filterContainer: {
     flexDirection: 'row',
     padding: 16,
-    backgroundColor: '#FFF',
+    backgroundColor: colors.background.secondary,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E5EA',
+    borderBottomColor: colors.border.light,
   },
   filterButton: {
     paddingHorizontal: 16,
     paddingVertical: 8,
     marginRight: 12,
     borderRadius: 20,
-    backgroundColor: '#F2F2F7',
+    backgroundColor: colors.neutral[100],
   },
   filterButtonActive: {
-    backgroundColor: '#4F6DFF',
+    backgroundColor: colors.primary[500],
   },
   filterButtonText: {
     fontSize: 14,
-    color: '#666',
+    color: colors.neutral[600],
   },
   filterButtonTextActive: {
-    color: '#FFF',
+    color: colors.text.inverse,
   },
   list: {
     flex: 1,
@@ -456,7 +457,7 @@ const styles = StyleSheet.create({
   },
   showItem: {
     flexDirection: 'row',
-    backgroundColor: '#FFF',
+    backgroundColor: colors.background.secondary,
     borderRadius: 12,
     padding: 12,
     marginBottom: 12,
@@ -485,7 +486,7 @@ const styles = StyleSheet.create({
   showTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#000',
+    color: colors.text.primary,
     flex: 1,
     marginRight: 8,
   },
@@ -496,17 +497,17 @@ const styles = StyleSheet.create({
   },
   statusText: {
     fontSize: 12,
-    color: '#FFF',
+    color: colors.text.inverse,
     fontWeight: '500',
   },
   originalTitle: {
     fontSize: 14,
-    color: '#666',
+    color: colors.neutral[600],
     marginBottom: 4,
   },
   genreText: {
     fontSize: 12,
-    color: '#999',
+    color: colors.neutral[500],
     marginBottom: 8,
   },
   showMeta: {
@@ -521,16 +522,16 @@ const styles = StyleSheet.create({
   },
   ratingText: {
     fontSize: 14,
-    color: '#666',
+    color: colors.neutral[600],
     marginLeft: 4,
   },
   wordCountText: {
     fontSize: 12,
-    color: '#999',
+    color: colors.neutral[500],
   },
   lastWatchedText: {
     fontSize: 12,
-    color: '#999',
+    color: colors.neutral[500],
   },
   emptyContainer: {
     alignItems: 'center',
@@ -539,7 +540,7 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 16,
-    color: '#999',
+    color: colors.neutral[500],
     marginTop: 16,
   },
   footer: {
@@ -548,19 +549,19 @@ const styles = StyleSheet.create({
   },
   footerText: {
     fontSize: 14,
-    color: '#999',
+    color: colors.neutral[500],
     marginTop: 8,
   },
   modalContainer: {
     flex: 1,
-    backgroundColor: '#FFF',
+    backgroundColor: colors.background.secondary,
   },
   modalHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E5EA',
+    borderBottomColor: colors.border.light,
   },
   closeButton: {
     padding: 8,
@@ -568,7 +569,7 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#000',
+    color: colors.text.primary,
     marginLeft: 16,
   },
   modalContent: {
@@ -588,12 +589,12 @@ const styles = StyleSheet.create({
   modalShowTitle: {
     fontSize: 24,
     fontWeight: '700',
-    color: '#000',
+    color: colors.text.primary,
     marginBottom: 4,
   },
   modalOriginalTitle: {
     fontSize: 16,
-    color: '#666',
+    color: colors.neutral[600],
     marginBottom: 12,
   },
   modalMeta: {
@@ -608,21 +609,21 @@ const styles = StyleSheet.create({
   },
   modalRatingText: {
     fontSize: 16,
-    color: '#000',
+    color: colors.text.primary,
     marginLeft: 4,
   },
   modalYear: {
     fontSize: 14,
-    color: '#666',
+    color: colors.neutral[600],
     marginRight: 16,
   },
   modalSeasons: {
     fontSize: 14,
-    color: '#666',
+    color: colors.neutral[600],
   },
   modalOverview: {
     fontSize: 16,
-    color: '#333',
+    color: colors.text.primary,
     lineHeight: 24,
     marginBottom: 16,
   },
@@ -632,7 +633,7 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   genreTag: {
-    backgroundColor: '#F2F2F7',
+    backgroundColor: colors.neutral[100],
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 16,
@@ -641,7 +642,7 @@ const styles = StyleSheet.create({
   },
   genreTagText: {
     fontSize: 12,
-    color: '#666',
+    color: colors.neutral[600],
   },
   modalActions: {
     flexDirection: 'row',
@@ -649,18 +650,18 @@ const styles = StyleSheet.create({
   },
   actionButton: {
     flex: 1,
-    backgroundColor: '#F2F2F7',
+    backgroundColor: colors.neutral[100],
     paddingVertical: 12,
     borderRadius: 8,
     alignItems: 'center',
     marginHorizontal: 4,
   },
   actionButtonActive: {
-    backgroundColor: '#4F6DFF',
+    backgroundColor: colors.primary[500],
   },
   actionButtonText: {
     fontSize: 16,
-    color: '#666',
+    color: colors.neutral[600],
     fontWeight: '500',
   },
 });

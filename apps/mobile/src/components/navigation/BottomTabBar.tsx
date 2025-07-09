@@ -7,6 +7,7 @@ import {
   Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { colors } from '../../constants/colors';
 
 export type TabType = 'search' | 'vocabulary' | 'review' | 'shows' | 'profile';
 
@@ -74,13 +75,13 @@ export const BottomTabBar: React.FC<BottomTabBarProps> = ({
               <Ionicons
                 name={isActive ? item.iconActive : item.icon}
                 size={24}
-                color={isActive ? '#4F6DFF' : '#A0A0A0'}
+                color={isActive ? colors.primary[500] : colors.neutral[500]}
                 style={styles.icon}
               />
               <Text
                 style={[
                   styles.tabText,
-                  { color: isActive ? '#4F6DFF' : '#A0A0A0' },
+                  { color: isActive ? colors.primary[500] : colors.neutral[500] },
                 ]}
               >
                 {item.title}
@@ -99,9 +100,9 @@ const styles = StyleSheet.create({
   },
   tabBar: {
     flexDirection: 'row',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.background.secondary,
     borderTopWidth: 1,
-    borderTopColor: '#E5E5EC',
+    borderTopColor: colors.border.light,
     paddingBottom: Platform.OS === 'ios' ? 20 : 10,
     paddingTop: 8,
     shadowColor: '#000',

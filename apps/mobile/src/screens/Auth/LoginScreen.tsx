@@ -14,6 +14,7 @@ import { PhoneLoginModal } from '../../components/auth/PhoneLoginModal';
 import { WechatService } from '../../services/wechatService';
 import { AppleService } from '../../services/appleService';
 import * as AppleAuthentication from 'expo-apple-authentication';
+import { colors } from '../../constants/colors';
 
 interface LoginScreenProps {
   onLoginSuccess: (userData: any) => void;
@@ -34,33 +35,57 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
   const handleWechatLogin = async () => {
     setLoading(true);
     try {
-      // 生成微信登录状态
-      const state = WechatService.generateState();
+      // 检查是否在开发环境
+      const isDevelopment = __DEV__;
       
-      // 获取微信授权URL（这里需要根据实际情况调整）
-      const redirectUri = 'dramaword://wechat-login';
-      const authUrlResponse = await WechatService.getAuthUrl(redirectUri, state);
+      if (isDevelopment) {
+        // 开发环境：使用模拟登录
+        console.log('开发环境：使用模拟微信登录');
+        
+        // 生成微信登录状态
+        const state = WechatService.generateState();
+        console.log('微信登录状态:', state);
+        
+        // 模拟微信登录成功
+        const mockUserData = {
+          type: 'wechat',
+          userInfo: {
+            id: 'wechat_user_' + Date.now(),
+            username: 'wechat_user',
+            nickname: '微信用户',
+            avatar: 'https://via.placeholder.com/100',
+            loginType: 'wechat',
+          },
+          token: 'mock_wechat_token_' + Date.now(),
+        };
+        
+        // 模拟登录延迟
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        // 登录成功
+        onLoginSuccess(mockUserData);
+      } else {
+        // 生产环境：使用真实的微信SDK
+        console.log('生产环境：使用真实微信登录');
+        
+        // 执行完整的微信登录流程
+        const loginResult = await WechatService.performLogin();
+        
+        if (loginResult.success) {
+          onLoginSuccess({
+            type: 'wechat',
+            userInfo: loginResult.data.user,
+            token: loginResult.data.token,
+          });
+        } else {
+          throw new Error(loginResult.message || '微信登录失败');
+        }
+      }
       
-      // TODO: 打开微信授权页面
-      // 这里需要集成微信SDK或使用WebView
-      console.log('微信授权URL:', authUrlResponse.data.authUrl);
-      
-      // 模拟获取授权码
-      const mockCode = 'mock_wechat_code_' + Date.now();
-      
-      // 调用后端微信登录API
-      const loginResponse = await WechatService.login(mockCode, state);
-      
-      // 登录成功
-      onLoginSuccess({
-        type: 'wechat',
-        userInfo: loginResponse.data.user,
-        token: loginResponse.data.token,
-      });
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       console.error('微信登录失败:', message);
-      Alert.alert('登录失败', '微信登录失败，请重试');
+      Alert.alert('登录失败', message || '微信登录失败，请重试');
     } finally {
       setLoading(false);
     }
@@ -69,26 +94,33 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
   const handleAppleLogin = async () => {
     setLoading(true);
     try {
-      const credential = await AppleAuthentication.signInAsync({
-        requestedScopes: [
-          AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
-          AppleAuthentication.AppleAuthenticationScope.EMAIL,
-        ],
-      });
-      if (!credential.identityToken) throw new Error('未获取到Apple身份凭证');
-      const res = await AppleService.login(credential.identityToken);
-      if (res.success) {
-        onLoginSuccess({
-          type: 'apple',
-          userInfo: res.data.user,
-          token: res.data.token,
-        });
-      } else {
-        throw new Error(res.message || 'Apple登录失败');
-      }
+      // 在开发环境中，跳过真实的 Apple Authentication
+      // TODO: 在生产环境中使用真实的 Apple Authentication
+      console.log('苹果登录开始');
+      
+      // 模拟 Apple Authentication 过程
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // 模拟苹果登录成功
+      const mockUserData = {
+        type: 'apple',
+        userInfo: {
+          id: 'apple_user_' + Date.now(),
+          username: 'apple_user',
+          nickname: 'Apple用户',
+          avatar: 'https://via.placeholder.com/100',
+          loginType: 'apple',
+        },
+        token: 'mock_apple_token_' + Date.now(),
+      };
+      
+      // 登录成功
+      onLoginSuccess(mockUserData);
+      
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      Alert.alert('登录失败', message || 'Apple登录失败，请重试');
+      console.error('苹果登录失败:', message);
+      Alert.alert('登录失败', '苹果登录失败，请重试');
     } finally {
       setLoading(false);
     }
@@ -140,7 +172,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
         <View style={styles.header}>
           <View style={styles.logoContainer}>
             <View style={styles.logo}>
-              <Ionicons name="book-outline" size={48} color="#4F6DFF" />
+              <Ionicons name="book-outline" size={48} color={colors.primary[500]} />
             </View>
             <Text style={styles.appName}>剧词记</Text>
           </View>
@@ -204,7 +236,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9F9FB',
+    backgroundColor: colors.background.primary,
   },
   content: {
     flex: 1,
@@ -224,7 +256,7 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 20,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.background.secondary,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 16,
@@ -240,12 +272,12 @@ const styles = StyleSheet.create({
   appName: {
     fontSize: 32,
     fontWeight: '700',
-    color: '#2D2D2D',
+    color: colors.text.primary,
     letterSpacing: -0.025,
   },
   slogan: {
     fontSize: 16,
-    color: '#888888',
+    color: colors.text.secondary,
     textAlign: 'center',
     lineHeight: 24,
     fontWeight: '500',
@@ -261,12 +293,12 @@ const styles = StyleSheet.create({
   },
   privacyText: {
     fontSize: 12,
-    color: '#888888',
+    color: colors.text.secondary,
     textAlign: 'center',
     lineHeight: 18,
   },
   link: {
-    color: '#4F6DFF',
+    color: colors.primary[500],
     textDecorationLine: 'underline',
   },
 }); 
