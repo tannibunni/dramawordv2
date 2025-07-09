@@ -2,6 +2,8 @@ import { Request, Response } from 'express';
 import OpenAI from 'openai';
 import { Word, IWord } from '../models/Word';
 import { SearchHistory, ISearchHistory } from '../models/SearchHistory';
+import CloudWord from '../models/CloudWord';
+import UserVocabulary from '../models/UserVocabulary';
 import { logger } from '../utils/logger';
 
 // 初始化 OpenAI
@@ -16,9 +18,9 @@ const openai = new OpenAI({
 });
 
 // 内存缓存，用于提高性能
-const wordCache = new Map<string, IWord>();
+const wordCache = new Map<string, any>();
 
-// 单词搜索 - 先查数据库，没有再用AI
+// 单词搜索 - 先查云单词表，没有再用AI
 export const searchWord = async (req: Request, res: Response): Promise<void> => {
   try {
     const { word } = req.body;
@@ -39,8 +41,8 @@ export const searchWord = async (req: Request, res: Response): Promise<void> => 
       logger.info(`✅ Found in memory cache: ${searchTerm}`);
       const cachedWord = wordCache.get(searchTerm)!;
       
-      // 更新搜索次数和最后搜索时间
-      await updateWordSearchStats(searchTerm);
+      // 更新云单词表搜索统计
+      await updateCloudWordSearchStats(searchTerm);
       
       // 保存搜索历史
       await saveSearchHistoryToDB(searchTerm, cachedWord.definitions[0]?.definition || '暂无释义');
@@ -53,24 +55,24 @@ export const searchWord = async (req: Request, res: Response): Promise<void> => 
       return;
     }
 
-    // 2. 检查数据库
-    let wordData = await Word.findOne({ word: searchTerm });
-    if (wordData) {
-      logger.info(`✅ Found in database: ${searchTerm}`);
+    // 2. 检查云单词表
+    let cloudWord = await CloudWord.findOne({ word: searchTerm });
+    if (cloudWord) {
+      logger.info(`✅ Found in cloud words: ${searchTerm}`);
       
       // 更新搜索次数和最后搜索时间
-      await updateWordSearchStats(searchTerm);
+      await updateCloudWordSearchStats(searchTerm);
       
       // 保存到内存缓存
-      wordCache.set(searchTerm, wordData);
+      wordCache.set(searchTerm, cloudWord);
       
       // 保存搜索历史
-      await saveSearchHistoryToDB(searchTerm, wordData.definitions[0]?.definition || '暂无释义');
+      await saveSearchHistoryToDB(searchTerm, cloudWord.definitions[0]?.definition || '暂无释义');
       
       res.json({
         success: true,
-        data: wordData,
-        source: 'database'
+        data: cloudWord,
+        source: 'cloud_words'
       });
       return;
     }
@@ -81,27 +83,28 @@ export const searchWord = async (req: Request, res: Response): Promise<void> => 
     try {
       const generatedData = await generateWordData(searchTerm);
       
-      // 4. 保存到数据库
-      wordData = new Word({
+      // 4. 保存到云单词表
+      cloudWord = new CloudWord({
         word: searchTerm,
         phonetic: generatedData.phonetic,
         definitions: generatedData.definitions,
+        audioUrl: generatedData.audioUrl || '',
         searchCount: 1,
         lastSearched: new Date()
       });
       
-      await wordData.save();
-      logger.info(`💾 Saved new word to database: ${searchTerm}`);
+      await cloudWord.save();
+      logger.info(`💾 Saved new word to cloud words: ${searchTerm}`);
       
       // 5. 保存到内存缓存
-      wordCache.set(searchTerm, wordData);
+      wordCache.set(searchTerm, cloudWord);
       
       // 6. 保存搜索历史
-      await saveSearchHistoryToDB(searchTerm, wordData.definitions[0]?.definition || '暂无释义');
+      await saveSearchHistoryToDB(searchTerm, cloudWord.definitions[0]?.definition || '暂无释义');
 
       res.json({
         success: true,
-        data: wordData,
+        data: cloudWord,
         source: 'ai'
       });
     } catch (aiError) {
@@ -110,27 +113,28 @@ export const searchWord = async (req: Request, res: Response): Promise<void> => 
       // 使用模拟数据作为后备方案
       const fallbackData = getFallbackWordData(searchTerm);
       
-      // 保存到数据库
-      wordData = new Word({
+      // 保存到云单词表
+      cloudWord = new CloudWord({
         word: searchTerm,
         phonetic: fallbackData.phonetic,
         definitions: fallbackData.definitions,
+        audioUrl: fallbackData.audioUrl || '',
         searchCount: 1,
         lastSearched: new Date()
       });
       
-      await wordData.save();
-      logger.info(`💾 Saved fallback word to database: ${searchTerm}`);
+      await cloudWord.save();
+      logger.info(`💾 Saved fallback word to cloud words: ${searchTerm}`);
       
       // 保存到内存缓存
-      wordCache.set(searchTerm, wordData);
+      wordCache.set(searchTerm, cloudWord);
       
       // 保存搜索历史
-      await saveSearchHistoryToDB(searchTerm, wordData.definitions[0]?.definition || '暂无释义');
+      await saveSearchHistoryToDB(searchTerm, cloudWord.definitions[0]?.definition || '暂无释义');
 
       res.json({
         success: true,
-        data: wordData,
+        data: cloudWord,
         source: 'fallback',
         message: 'AI service unavailable, using basic definition'
       });
@@ -146,12 +150,12 @@ export const searchWord = async (req: Request, res: Response): Promise<void> => 
   }
 };
 
-// 获取热门单词 - 从数据库获取
+// 获取热门单词 - 从云单词表获取
 export const getPopularWords = async (req: Request, res: Response) => {
   try {
-    logger.info('📊 Getting popular words from database');
+    logger.info('📊 Getting popular words from cloud words');
     
-    const popularWords = await Word.find({})
+    const popularWords = await CloudWord.find({})
       .sort({ searchCount: -1, lastSearched: -1 })
       .limit(10)
       .select('word definitions searchCount');
@@ -176,10 +180,10 @@ export const getPopularWords = async (req: Request, res: Response) => {
   }
 };
 
-// 获取最近搜索 - 从数据库获取
+// 获取最近搜索 - 从搜索历史表获取
 export const getRecentSearches = async (req: Request, res: Response) => {
   try {
-    logger.info('📝 Getting recent searches from database');
+    logger.info('📝 Getting recent searches from search history');
     
     // 使用聚合管道进行去重，每个单词只保留最新的一条记录
     const recentSearches = await SearchHistory.aggregate([
@@ -224,7 +228,7 @@ export const getRecentSearches = async (req: Request, res: Response) => {
   }
 };
 
-// 保存搜索历史到数据库
+// 保存搜索历史
 export const saveSearchHistory = async (req: Request, res: Response): Promise<void> => {
   try {
     const { word, definition, timestamp } = req.body;
@@ -237,13 +241,18 @@ export const saveSearchHistory = async (req: Request, res: Response): Promise<vo
       return;
     }
 
-    await saveSearchHistoryToDB(word, definition, timestamp);
+    const searchHistory = new SearchHistory({
+      word: word.toLowerCase().trim(),
+      definition: definition || '暂无释义',
+      timestamp: timestamp || Date.now()
+    });
     
+    await searchHistory.save();
     logger.info(`💾 Saved search history: ${word}`);
     
     res.json({
       success: true,
-      message: 'Search history saved'
+      message: 'Search history saved successfully'
     });
 
   } catch (error) {
@@ -255,254 +264,358 @@ export const saveSearchHistory = async (req: Request, res: Response): Promise<vo
   }
 };
 
-// 辅助函数：更新单词搜索统计
-async function updateWordSearchStats(word: string): Promise<void> {
+// 获取用户单词本
+export const getUserVocabulary = async (req: Request, res: Response) => {
   try {
-    await Word.updateOne(
-      { word },
+    const userId = req.params.userId || req.body.userId;
+    
+    if (!userId) {
+      res.status(400).json({
+        success: false,
+        error: 'User ID is required'
+      });
+      return;
+    }
+
+    logger.info(`📚 Getting vocabulary for user: ${userId}`);
+    
+    // 联表查询用户单词本和云单词表
+    const userVocabulary = await UserVocabulary.aggregate([
+      {
+        $match: { userId: userId }
+      },
+      {
+        $lookup: {
+          from: 'cloudwords',
+          localField: 'wordId',
+          foreignField: '_id',
+          as: 'cloudWord'
+        }
+      },
+      {
+        $unwind: '$cloudWord'
+      },
+      {
+        $project: {
+          _id: 1,
+          word: '$cloudWord.word',
+          phonetic: '$cloudWord.phonetic',
+          definitions: '$cloudWord.definitions',
+          audioUrl: '$cloudWord.audioUrl',
+          mastery: 1,
+          reviewCount: 1,
+          correctCount: 1,
+          incorrectCount: 1,
+          lastReviewDate: 1,
+          nextReviewDate: 1,
+          notes: 1,
+          tags: 1,
+          sourceShow: 1,
+          collectedAt: 1
+        }
+      }
+    ]);
+    
+    res.json({
+      success: true,
+      data: userVocabulary
+    });
+
+  } catch (error) {
+    logger.error('❌ Get user vocabulary error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to get user vocabulary'
+    });
+  }
+};
+
+// 添加单词到用户单词本
+export const addToUserVocabulary = async (req: Request, res: Response) => {
+  try {
+    const { userId, word, sourceShow } = req.body;
+    
+    if (!userId || !word) {
+      res.status(400).json({
+        success: false,
+        error: 'User ID and word are required'
+      });
+      return;
+    }
+
+    const searchTerm = word.toLowerCase().trim();
+    logger.info(`📝 Adding word to user vocabulary: ${searchTerm} for user: ${userId}`);
+
+    // 1. 查找或创建云单词
+    let cloudWord = await CloudWord.findOne({ word: searchTerm });
+    if (!cloudWord) {
+      // 如果云单词不存在，创建它
+      const generatedData = await generateWordData(searchTerm);
+      cloudWord = new CloudWord({
+        word: searchTerm,
+        phonetic: generatedData.phonetic,
+        definitions: generatedData.definitions,
+        audioUrl: generatedData.audioUrl || '',
+        searchCount: 1,
+        lastSearched: new Date()
+      });
+      await cloudWord.save();
+    }
+
+    // 2. 检查用户是否已有此单词
+    const existingUserWord = await UserVocabulary.findOne({
+      userId: userId,
+      wordId: cloudWord._id
+    });
+
+    if (existingUserWord) {
+      res.status(400).json({
+        success: false,
+        error: 'Word already exists in user vocabulary'
+      });
+      return;
+    }
+
+    // 3. 创建用户单词本记录
+    const userVocabulary = new UserVocabulary({
+      userId: userId,
+      wordId: cloudWord._id,
+      word: searchTerm,
+      sourceShow: sourceShow || null,
+      collectedAt: new Date()
+    });
+
+    await userVocabulary.save();
+    logger.info(`✅ Added word to user vocabulary: ${searchTerm}`);
+
+    res.json({
+      success: true,
+      message: 'Word added to vocabulary successfully',
+      data: {
+        word: searchTerm,
+        definitions: cloudWord.definitions
+      }
+    });
+
+  } catch (error) {
+    logger.error('❌ Add to user vocabulary error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to add word to vocabulary'
+    });
+  }
+};
+
+// 更新单词学习进度
+export const updateWordProgress = async (req: Request, res: Response) => {
+  try {
+    const { userId, word, progress } = req.body;
+    
+    if (!userId || !word || !progress) {
+      res.status(400).json({
+        success: false,
+        error: 'User ID, word, and progress are required'
+      });
+      return;
+    }
+
+    const searchTerm = word.toLowerCase().trim();
+    logger.info(`📊 Updating progress for word: ${searchTerm}`);
+
+    // 查找用户单词本记录
+    const userWord = await UserVocabulary.findOne({
+      userId: userId,
+      word: searchTerm
+    });
+
+    if (!userWord) {
+      res.status(404).json({
+        success: false,
+        error: 'Word not found in user vocabulary'
+      });
+      return;
+    }
+
+    // 更新学习进度
+    Object.assign(userWord, progress);
+    userWord.lastReviewDate = new Date();
+    
+    await userWord.save();
+    logger.info(`✅ Updated progress for word: ${searchTerm}`);
+
+    res.json({
+      success: true,
+      message: 'Word progress updated successfully'
+    });
+
+  } catch (error) {
+    logger.error('❌ Update word progress error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to update word progress'
+    });
+  }
+};
+
+// 更新云单词表搜索统计
+async function updateCloudWordSearchStats(word: string): Promise<void> {
+  try {
+    await CloudWord.updateOne(
+      { word: word.toLowerCase() },
       { 
         $inc: { searchCount: 1 },
         $set: { lastSearched: new Date() }
       }
     );
   } catch (error) {
-    logger.error(`❌ Error updating word stats for ${word}:`, error);
+    logger.error(`❌ Failed to update search stats for ${word}:`, error);
   }
 }
 
-// 辅助函数：保存搜索历史到数据库
+// 保存搜索历史到数据库
 async function saveSearchHistoryToDB(word: string, definition?: string, timestamp?: number): Promise<void> {
   try {
     const searchHistory = new SearchHistory({
       word: word.toLowerCase().trim(),
       definition: definition || '暂无释义',
-      timestamp: timestamp ? new Date(timestamp) : new Date()
+      timestamp: timestamp || Date.now()
     });
     
     await searchHistory.save();
   } catch (error) {
-    logger.error(`❌ Error saving search history for ${word}:`, error);
+    logger.error(`❌ Failed to save search history for ${word}:`, error);
   }
 }
 
 // 使用 OpenAI 生成单词数据
 async function generateWordData(word: string) {
-  try {
-    const prompt = `
-请为英文单词 "${word}" 生成详细的学习信息，包括：
-
-1. 音标（IPA格式）
-2. 词性和中文释义
-3. 英文例句和中文翻译
-4. 相关用法说明
-
-请以JSON格式返回，格式如下：
+  const prompt = `请为英文单词 "${word}" 提供以下信息，以JSON格式返回：
 {
-  "word": "${word}",
-  "phonetic": "/音标/",
+  "phonetic": "音标",
   "definitions": [
     {
       "partOfSpeech": "词性",
       "definition": "中文释义",
-      "examples": [
-        {
-          "english": "英文例句",
-          "chinese": "中文翻译"
-        }
-      ]
+      "examples": ["例句1", "例句2"]
     }
-  ]
+  ],
+  "audioUrl": "发音URL（如果有的话）"
 }
 
-请确保返回的是有效的JSON格式，不要包含其他文字说明。
-`;
+请确保：
+1. 音标使用国际音标
+2. 释义准确且通俗易懂
+3. 例句简单实用
+4. 只返回JSON，不要其他文字`;
 
-    const completion = await openai.chat.completions.create({
-      model: "gpt-3.5-turbo",
-      messages: [
-        {
-          role: "system",
-          content: "你是一个专业的英语学习助手，专门为学习者提供准确的单词释义和例句。请只返回JSON格式的数据，不要包含任何其他文字。"
-        },
-        {
-          role: "user",
-          content: prompt
-        }
-      ],
-      temperature: 0.3,
-      max_tokens: 1000
-    });
-
-    const response = completion.choices[0]?.message?.content;
-    if (!response) {
-      throw new Error('No response from OpenAI');
-    }
-
-    // 尝试解析JSON响应
-    try {
-      const wordData = JSON.parse(response);
-      
-      // 验证必要字段
-      if (!wordData.word || !wordData.phonetic || !wordData.definitions) {
-        throw new Error('Invalid word data structure');
+  const completion = await openai.chat.completions.create({
+    model: "gpt-3.5-turbo",
+    messages: [
+      {
+        role: "system",
+        content: "你是一个专业的英语词典助手，提供准确的单词释义和例句。"
+      },
+      {
+        role: "user",
+        content: prompt
       }
-      
-      return wordData;
-    } catch (parseError) {
-      logger.error('❌ Failed to parse OpenAI response:', response);
-      throw new Error('Invalid JSON response from OpenAI');
-    }
+    ],
+    temperature: 0.3,
+    max_tokens: 500
+  });
 
-  } catch (error) {
-    logger.error('❌ OpenAI API error:', error);
-    throw error;
+  const responseText = completion.choices[0]?.message?.content;
+  if (!responseText) {
+    throw new Error('No response from OpenAI');
+  }
+
+  try {
+    const parsedData = JSON.parse(responseText);
+    return {
+      phonetic: parsedData.phonetic || '',
+      definitions: parsedData.definitions || [],
+      audioUrl: parsedData.audioUrl || ''
+    };
+  } catch (parseError) {
+    logger.error('❌ Failed to parse OpenAI response:', parseError);
+    throw new Error('Invalid response format from OpenAI');
   }
 }
 
-// 获取后备单词数据（当 OpenAI 不可用时使用）
+// 获取后备单词数据
 function getFallbackWordData(word: string) {
-  const commonWords: { [key: string]: any } = {
-    'hello': {
-      phonetic: '/həˈloʊ/',
-      definitions: [
-        {
-          partOfSpeech: 'int.',
-          definition: '喂，你好',
-          examples: [
-            { english: 'Hello, how are you?', chinese: '你好，你好吗？' },
-            { english: 'Hello there!', chinese: '你好！' }
-          ]
-        }
-      ]
-    },
-    'world': {
-      phonetic: '/wɜːrld/',
-      definitions: [
-        {
-          partOfSpeech: 'n.',
-          definition: '世界，地球',
-          examples: [
-            { english: 'The world is beautiful.', chinese: '这个世界很美丽。' },
-            { english: 'People around the world.', chinese: '世界各地的人们。' }
-          ]
-        }
-      ]
-    },
-    'learn': {
-      phonetic: '/lɜːrn/',
-      definitions: [
-        {
-          partOfSpeech: 'v.',
-          definition: '学习，学会',
-          examples: [
-            { english: 'I want to learn English.', chinese: '我想学习英语。' },
-            { english: 'She learns quickly.', chinese: '她学得很快。' }
-          ]
-        }
-      ]
-    },
-    'study': {
-      phonetic: '/ˈstʌdi/',
-      definitions: [
-        {
-          partOfSpeech: 'v.',
-          definition: '学习，研究',
-          examples: [
-            { english: 'I study every day.', chinese: '我每天学习。' },
-            { english: 'He studies medicine.', chinese: '他学医。' }
-          ]
-        },
-        {
-          partOfSpeech: 'n.',
-          definition: '学习，研究',
-          examples: [
-            { english: 'This is my study room.', chinese: '这是我的书房。' },
-            { english: 'A study of history.', chinese: '历史研究。' }
-          ]
-        }
-      ]
-    }
-  };
-
-  // 如果单词在常见词列表中，返回预定义数据
-  if (commonWords[word.toLowerCase()]) {
-    return commonWords[word.toLowerCase()];
-  }
-
-  // 否则返回通用模板
   return {
     phonetic: `/${word}/`,
     definitions: [
       {
-        partOfSpeech: 'n.',
+        partOfSpeech: 'noun',
         definition: `${word} 的基本含义`,
-        examples: [
-          { english: `This is ${word}.`, chinese: `这是 ${word}。` },
-          { english: `I like ${word}.`, chinese: `我喜欢 ${word}。` }
-        ]
+        examples: [`This is a ${word}.`, `I like ${word}.`]
       }
-    ]
+    ],
+    audioUrl: ''
   };
 }
 
-// 清空所有单词和搜索历史（管理员功能）
+// 清空所有数据（调试用）
 export const clearAllData = async (req: Request, res: Response): Promise<void> => {
   try {
-    logger.info('🧹 开始清空所有单词和搜索历史数据');
-
+    logger.warn('🗑️ Clearing all data...');
+    
+    // 清空所有相关表
+    await CloudWord.deleteMany({});
+    await UserVocabulary.deleteMany({});
+    await SearchHistory.deleteMany({});
+    await Word.deleteMany({});
+    
     // 清空内存缓存
     wordCache.clear();
-    logger.info('✅ 内存缓存已清空');
-
-    // 删除所有单词数据
-    const wordDeleteResult = await Word.deleteMany({});
-    logger.info(`✅ 删除了 ${wordDeleteResult.deletedCount} 个单词记录`);
-
-    // 删除所有搜索历史
-    const historyDeleteResult = await SearchHistory.deleteMany({});
-    logger.info(`✅ 删除了 ${historyDeleteResult.deletedCount} 条搜索历史记录`);
-
+    
+    logger.info('✅ All data cleared successfully');
+    
     res.json({
       success: true,
-      message: '所有单词和搜索历史已清空',
-      data: {
-        deletedWords: wordDeleteResult.deletedCount,
-        deletedHistory: historyDeleteResult.deletedCount,
-        cacheCleared: true
-      }
+      message: 'All data cleared successfully'
     });
+
   } catch (error) {
-    logger.error('❌ 清空数据失败:', error);
+    logger.error('❌ Clear all data error:', error);
     res.status(500).json({
       success: false,
-      error: '清空数据失败',
-      message: error instanceof Error ? error.message : 'Unknown error'
+      error: 'Failed to clear all data'
     });
   }
 };
 
-// 清空用户历史记录（只清空搜索历史，不影响词库）
+// 清空用户搜索历史（调试用）
 export const clearUserHistory = async (req: Request, res: Response): Promise<void> => {
   try {
-    logger.info('🧹 开始清空用户搜索历史');
+    const { userId } = req.params;
+    
+    if (!userId) {
+      res.status(400).json({
+        success: false,
+        error: 'User ID is required'
+      });
+      return;
+    }
 
-    // 删除所有搜索历史（这里可以根据用户ID进行过滤，如果有用户系统的话）
-    const historyDeleteResult = await SearchHistory.deleteMany({});
-    logger.info(`✅ 删除了 ${historyDeleteResult.deletedCount} 条搜索历史记录`);
-
+    logger.warn(`🗑️ Clearing search history for user: ${userId}`);
+    
+    await SearchHistory.deleteMany({ userId: userId });
+    
+    logger.info(`✅ Search history cleared for user: ${userId}`);
+    
     res.json({
       success: true,
-      message: '用户搜索历史已清空',
-      data: {
-        deletedHistory: historyDeleteResult.deletedCount
-      }
+      message: 'User search history cleared successfully'
     });
+
   } catch (error) {
-    logger.error('❌ 清空用户历史失败:', error);
+    logger.error('❌ Clear user history error:', error);
     res.status(500).json({
       success: false,
-      error: '清空用户历史失败',
-      message: error instanceof Error ? error.message : 'Unknown error'
+      error: 'Failed to clear user history'
     });
   }
 };
@@ -512,6 +625,9 @@ export const wordController = {
   getPopularWords,
   getRecentSearches,
   saveSearchHistory,
+  getUserVocabulary,
+  addToUserVocabulary,
+  updateWordProgress,
   clearAllData,
   clearUserHistory
 }; 
