@@ -18,11 +18,14 @@ import { Ionicons } from '@expo/vector-icons';
 import { TMDBService, TMDBShow } from '../../services/tmdbService';
 import { colors } from '../../constants/colors';
 import { useShowList, Show } from '../../context/ShowListContext';
+import { useVocabulary, WordWithSource } from '../../context/VocabularyContext';
+import WordCard, { WordData } from '../../components/cards/WordCard';
 
 const { width } = Dimensions.get('window');
 
 const ShowsScreen: React.FC = () => {
   const { shows, addShow, changeShowStatus } = useShowList(); // 使用 ShowListContext
+  const { vocabulary } = useVocabulary(); // 使用 VocabularyContext
   const [filteredShows, setFilteredShows] = useState<Show[]>([]);
   const [searchText, setSearchText] = useState('');
   const [searchResults, setSearchResults] = useState<TMDBShow[]>([]); // 搜索结果
@@ -31,6 +34,8 @@ const ShowsScreen: React.FC = () => {
   const [filter, setFilter] = useState<'all' | 'plan_to_watch' | 'watching' | 'completed'>('all');
   const [searchLoading, setSearchLoading] = useState(false);
   const [isOverviewExpanded, setIsOverviewExpanded] = useState(false);
+  const [selectedWord, setSelectedWord] = useState<WordWithSource | null>(null);
+  const [showWordCardModal, setShowWordCardModal] = useState(false);
 
   useEffect(() => {
     filterShows();
@@ -119,6 +124,19 @@ const ShowsScreen: React.FC = () => {
   const openShowDetail = (show: Show) => {
     setSelectedShow(show);
     setShowDetailModal(true);
+  };
+
+  // 获取该剧集相关的单词
+  const getShowWords = (showId: number): WordWithSource[] => {
+    return vocabulary.filter(word => 
+      word.sourceShow && word.sourceShow.id === showId
+    );
+  };
+
+  // 打开单词卡片
+  const openWordCard = (word: WordWithSource) => {
+    setSelectedWord(word);
+    setShowWordCardModal(true);
   };
 
   const renderShowItem = ({ item }: { item: Show }) => (
@@ -418,7 +436,63 @@ const ShowsScreen: React.FC = () => {
                   ]}>已完成</Text>
                 </TouchableOpacity>
               </View>
+
+              {/* 该剧集收藏的单词 */}
+              {(() => {
+                const showWords = getShowWords(selectedShow.id);
+                if (showWords.length > 0) {
+                  return (
+                    <View style={styles.modalWordsSection}>
+                      <Text style={styles.modalWordsTitle}>收藏的单词 ({showWords.length})</Text>
+                      <ScrollView 
+                        horizontal 
+                        showsHorizontalScrollIndicator={false}
+                        contentContainerStyle={styles.modalWordsContainer}
+                      >
+                        {showWords.map((word, index) => (
+                          <TouchableOpacity
+                            key={`${word.word}-${index}`}
+                            style={styles.modalWordTag}
+                            onPress={() => openWordCard(word)}
+                          >
+                            <Text style={styles.modalWordText}>{word.word}</Text>
+                          </TouchableOpacity>
+                        ))}
+                      </ScrollView>
+                    </View>
+                  );
+                }
+                return null;
+              })()}
             </ScrollView>
+          </SafeAreaView>
+        )}
+      </Modal>
+
+      {/* 单词卡片模态框 */}
+      <Modal
+        visible={showWordCardModal}
+        animationType="slide"
+        presentationStyle="pageSheet"
+      >
+        {selectedWord && (
+          <SafeAreaView style={styles.modalContainer}>
+            <View style={styles.modalHeader}>
+              <TouchableOpacity
+                onPress={() => setShowWordCardModal(false)}
+                style={styles.closeButton}
+              >
+                <Ionicons name="close" size={24} color={colors.text.primary} />
+              </TouchableOpacity>
+              <Text style={styles.modalTitle}>单词详情</Text>
+            </View>
+            <View style={styles.wordCardContainer}>
+              <WordCard
+                wordData={selectedWord}
+                showActions={false}
+                style={styles.wordCard}
+              />
+            </View>
           </SafeAreaView>
         )}
       </Modal>
@@ -723,6 +797,41 @@ const styles = StyleSheet.create({
   },
   actionButtonTextActive: {
     color: colors.text.inverse,
+  },
+  modalWordsSection: {
+    marginBottom: 20,
+  },
+  modalWordsTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: colors.text.primary,
+    marginBottom: 12,
+  },
+  modalWordsContainer: {
+    paddingRight: 16,
+  },
+  modalWordTag: {
+    backgroundColor: colors.primary[500],
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 16,
+    marginRight: 8,
+    marginBottom: 4,
+  },
+  modalWordText: {
+    fontSize: 14,
+    color: colors.text.inverse,
+    fontWeight: '500',
+  },
+  wordCardContainer: {
+    flex: 1,
+    padding: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  wordCard: {
+    width: '100%',
+    maxWidth: 400,
   },
 });
 
