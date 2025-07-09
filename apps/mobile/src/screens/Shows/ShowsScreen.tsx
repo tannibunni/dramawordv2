@@ -12,85 +12,39 @@ import {
   Dimensions,
   ActivityIndicator,
   Alert,
+  ScrollView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { TMDBService, TMDBShow } from '../../services/tmdbService';
 import { colors } from '../../constants/colors';
+import { useShowList, Show } from '../../context/ShowListContext';
 
 const { width } = Dimensions.get('window');
 
-interface Show extends TMDBShow {
-  status: 'watching' | 'completed' | 'plan_to_watch';
-  wordCount: number;
-  lastWatched?: string;
-}
-
 const ShowsScreen: React.FC = () => {
-  const [shows, setShows] = useState<Show[]>([]);
+  const { shows, addShow, changeShowStatus } = useShowList(); // 使用 ShowListContext
   const [filteredShows, setFilteredShows] = useState<Show[]>([]);
   const [searchText, setSearchText] = useState('');
+  const [searchResults, setSearchResults] = useState<TMDBShow[]>([]); // 搜索结果
   const [selectedShow, setSelectedShow] = useState<Show | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
-  const [filter, setFilter] = useState<'all' | 'watching' | 'completed' | 'plan_to_watch'>('all');
-  const [loading, setLoading] = useState(false);
+  const [filter, setFilter] = useState<'all' | 'plan_to_watch' | 'watching' | 'completed'>('all');
   const [searchLoading, setSearchLoading] = useState(false);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [hasMoreData, setHasMoreData] = useState(true);
-
-  useEffect(() => {
-    loadPopularShows();
-  }, []);
+  const [isOverviewExpanded, setIsOverviewExpanded] = useState(false);
 
   useEffect(() => {
     filterShows();
-  }, [shows, searchText, filter]);
-
-  const loadPopularShows = async (page: number = 1) => {
-    try {
-      setLoading(true);
-      const response = await TMDBService.getPopularShows(page);
-      
-      const showsWithStatus: Show[] = response.results.map(show => ({
-        ...show,
-        status: 'plan_to_watch' as const,
-        wordCount: 0,
-      }));
-
-      if (page === 1) {
-        setShows(showsWithStatus);
-      } else {
-        setShows(prev => [...prev, ...showsWithStatus]);
-      }
-      
-      setCurrentPage(page);
-      setHasMoreData(page < response.total_pages);
-    } catch (error) {
-      console.error('Failed to load popular shows:', error);
-      Alert.alert('错误', '加载热门剧集失败，请稍后重试');
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, [shows, filter]);
 
   const searchShows = async (query: string) => {
     if (!query.trim()) {
-      loadPopularShows();
+      setSearchResults([]);
       return;
     }
-
     try {
       setSearchLoading(true);
       const response = await TMDBService.searchShows(query);
-      
-      const showsWithStatus: Show[] = response.results.map(show => ({
-        ...show,
-        status: 'plan_to_watch' as const,
-        wordCount: 0,
-      }));
-
-      setShows(showsWithStatus);
-      setCurrentPage(1);
-      setHasMoreData(response.page < response.total_pages);
+      setSearchResults(response.results);
     } catch (error) {
       console.error('Failed to search shows:', error);
       Alert.alert('错误', '搜索剧集失败，请稍后重试');
@@ -99,38 +53,25 @@ const ShowsScreen: React.FC = () => {
     }
   };
 
-  const loadMoreShows = () => {
-    if (!hasMoreData || loading) return;
-    
-    if (searchText) {
-      // 搜索模式下加载更多搜索结果
-      searchShows(searchText);
-    } else {
-      // 热门剧集模式下加载更多
-      loadPopularShows(currentPage + 1);
-    }
+  const addShowToWatching = (show: TMDBShow) => {
+    // 避免重复添加
+    if (shows.some(s => s.id === show.id)) return;
+    const newShow: Show = {
+      ...show,
+      status: 'watching', // 直接添加到"观看中"
+      wordCount: 0,
+    };
+    addShow(newShow); // 使用 ShowListContext 的 addShow
+    setSearchText('');
+    setSearchResults([]);
+    setFilter('watching'); // 添加后切换到"观看中"
   };
 
   const filterShows = () => {
     let filtered = shows;
-
-    // 按状态过滤
     if (filter !== 'all') {
       filtered = filtered.filter(show => show.status === filter);
     }
-
-    // 按搜索文本过滤（本地过滤，用于状态筛选）
-    if (searchText) {
-      filtered = filtered.filter(show => {
-        const genreNames = show.genres?.map(genre => genre.name) || 
-                          (show.genre_ids ? TMDBService.getGenreNames(show.genre_ids) : []);
-        
-        return show.name.toLowerCase().includes(searchText.toLowerCase()) ||
-               show.original_name.toLowerCase().includes(searchText.toLowerCase()) ||
-               genreNames.some(name => name.toLowerCase().includes(searchText.toLowerCase()));
-      });
-    }
-
     setFilteredShows(filtered);
   };
 
@@ -147,17 +88,32 @@ const ShowsScreen: React.FC = () => {
     switch (status) {
       case 'watching': return '观看中';
       case 'completed': return '已完成';
-      case 'plan_to_watch': return '计划观看';
+      case 'plan_to_watch': return '想看';
       default: return '未知';
     }
   };
 
-  const changeShowStatus = (showId: number, newStatus: Show['status']) => {
-    setShows(prevShows =>
-      prevShows.map(show =>
-        show.id === showId ? { ...show, status: newStatus } : show
-      )
-    );
+  const toggleShowStatus = (showId: number) => {
+    // 使用 ShowListContext 的 changeShowStatus
+    const currentShow = shows.find(s => s.id === showId);
+    if (!currentShow) return;
+    
+    // 循环切换状态：想看 -> 观看中 -> 已完成 -> 想看
+    let newStatus: Show['status'];
+    switch (currentShow.status) {
+      case 'plan_to_watch':
+        newStatus = 'watching';
+        break;
+      case 'watching':
+        newStatus = 'completed';
+        break;
+      case 'completed':
+        newStatus = 'plan_to_watch';
+        break;
+      default:
+        newStatus = 'plan_to_watch';
+    }
+    changeShowStatus(showId, newStatus);
   };
 
   const openShowDetail = (show: Show) => {
@@ -178,21 +134,24 @@ const ShowsScreen: React.FC = () => {
         }} 
         style={styles.poster} 
       />
-      
       <View style={styles.showInfo}>
         <View style={styles.showHeader}>
           <Text style={styles.showTitle}>{item.name}</Text>
-          <View style={[styles.statusBadge, { backgroundColor: getStatusColor(item.status) }]}>
+          <TouchableOpacity
+            style={[styles.statusBadge, { backgroundColor: getStatusColor(item.status) }]}
+            onPress={(e) => {
+              e.stopPropagation(); // 阻止触发父级的 onPress
+              toggleShowStatus(item.id);
+            }}
+          >
             <Text style={styles.statusText}>{getStatusText(item.status)}</Text>
-          </View>
+          </TouchableOpacity>
         </View>
-        
         <Text style={styles.originalTitle}>{item.original_name}</Text>
         <Text style={styles.genreText}>
           {item.genres?.map(genre => genre.name).join(', ') || 
            (item.genre_ids ? TMDBService.getGenreNames(item.genre_ids).join(', ') : '未知类型')}
         </Text>
-        
         <View style={styles.showMeta}>
           <View style={styles.ratingContainer}>
             <Ionicons name="star" size={16} color={colors.accent[500]} />
@@ -200,7 +159,6 @@ const ShowsScreen: React.FC = () => {
           </View>
           <Text style={styles.wordCountText}>{item.wordCount} 个单词</Text>
         </View>
-        
         {item.lastWatched && (
           <Text style={styles.lastWatchedText}>最后观看: {item.lastWatched}</Text>
         )}
@@ -225,25 +183,51 @@ const ShowsScreen: React.FC = () => {
     </TouchableOpacity>
   );
 
-  const renderFooter = () => {
-    if (!hasMoreData) {
-      return (
-        <View style={styles.footer}>
-          <Text style={styles.footerText}>没有更多数据了</Text>
+  const renderFooter = () => null; // 不需要分页
+
+  // 搜索结果渲染
+  const renderSearchResultItem = ({ item }: { item: TMDBShow }) => {
+    const alreadyAdded = shows.some(s => s.id === item.id);
+    return (
+      <View style={styles.showItem}>
+        <Image
+          source={{
+            uri: item.poster_path
+              ? TMDBService.getImageUrl(item.poster_path, 'w185')
+              : 'https://via.placeholder.com/150x225/CCCCCC/FFFFFF?text=No+Image'
+          }}
+          style={styles.poster}
+        />
+        <View style={styles.showInfo}>
+          <View style={styles.showHeader}>
+            <Text style={styles.showTitle}>{item.name}</Text>
+            {alreadyAdded ? (
+              <View style={[styles.statusBadge, { backgroundColor: colors.accent[500] }]}> 
+                <Text style={styles.statusText}>已添加</Text>
+              </View>
+            ) : (
+              <TouchableOpacity
+                style={[styles.statusBadge, { backgroundColor: colors.primary[500] }]}
+                onPress={() => addShowToWatching(item)}
+              >
+                <Text style={styles.statusText}>添加</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+          <Text style={styles.originalTitle}>{item.original_name}</Text>
+          <Text style={styles.genreText}>
+            {item.genres?.map(genre => genre.name).join(', ') || 
+             (item.genre_ids ? TMDBService.getGenreNames(item.genre_ids).join(', ') : '未知类型')}
+          </Text>
+          <View style={styles.showMeta}>
+            <View style={styles.ratingContainer}>
+              <Ionicons name="star" size={16} color={colors.accent[500]} />
+              <Text style={styles.ratingText}>{item.vote_average.toFixed(1)}</Text>
+            </View>
+          </View>
         </View>
-      );
-    }
-    
-    if (loading) {
-      return (
-        <View style={styles.footer}>
-          <ActivityIndicator size="small" color={colors.primary[500]} />
-          <Text style={styles.footerText}>加载中...</Text>
-        </View>
-      );
-    }
-    
-    return null;
+      </View>
+    );
   };
 
   return (
@@ -251,12 +235,15 @@ const ShowsScreen: React.FC = () => {
       {/* 搜索栏 */}
       <View style={styles.searchContainer}>
         <View style={styles.searchInputContainer}>
-                      <Ionicons name="search" size={20} color={colors.neutral[600]} style={styles.searchIcon} />
+          <Ionicons name="search" size={20} color={colors.neutral[600]} style={styles.searchIcon} />
           <TextInput
             style={styles.searchInput}
             placeholder="搜索剧集..."
             value={searchText}
-            onChangeText={setSearchText}
+            onChangeText={text => {
+              setSearchText(text);
+              if (!text) setSearchResults([]);
+            }}
             onSubmitEditing={() => searchShows(searchText)}
             returnKeyType="search"
           />
@@ -269,32 +256,47 @@ const ShowsScreen: React.FC = () => {
       {/* 筛选按钮 */}
       <View style={styles.filterContainer}>
         {renderFilterButton('all', '全部')}
+        {renderFilterButton('plan_to_watch', '想看')}
         {renderFilterButton('watching', '观看中')}
         {renderFilterButton('completed', '已完成')}
-        {renderFilterButton('plan_to_watch', '计划观看')}
       </View>
 
-      {/* 剧集列表 */}
-      <FlatList
-        data={filteredShows}
-        renderItem={renderShowItem}
-        keyExtractor={(item) => item.id.toString()}
-        style={styles.list}
-        contentContainerStyle={styles.listContent}
-        onEndReached={loadMoreShows}
-        onEndReachedThreshold={0.1}
-        ListFooterComponent={renderFooter}
-        ListEmptyComponent={
-          !loading ? (
+      {/* 搜索结果列表 */}
+      {searchResults.length > 0 && (
+        <FlatList
+          data={searchResults}
+          renderItem={renderSearchResultItem}
+          keyExtractor={item => item.id.toString()}
+          style={styles.list}
+          contentContainerStyle={styles.listContent}
+          ListEmptyComponent={
+            !searchLoading ? (
+              <View style={styles.emptyContainer}>
+                <Ionicons name="tv-outline" size={64} color={colors.neutral[300]} />
+                <Text style={styles.emptyText}>没有找到相关剧集</Text>
+              </View>
+            ) : null
+          }
+        />
+      )}
+
+      {/* 用户剧单列表 */}
+      {searchResults.length === 0 && (
+        <FlatList
+          data={filteredShows}
+          renderItem={renderShowItem}
+          keyExtractor={item => item.id.toString()}
+          style={styles.list}
+          contentContainerStyle={styles.listContent}
+          ListFooterComponent={renderFooter}
+          ListEmptyComponent={
             <View style={styles.emptyContainer}>
               <Ionicons name="tv-outline" size={64} color={colors.neutral[300]} />
-              <Text style={styles.emptyText}>
-                {searchText ? '没有找到相关剧集' : '暂无剧集数据'}
-              </Text>
+              <Text style={styles.emptyText}>暂无剧集数据，请搜索添加</Text>
             </View>
-          ) : null
-        }
-      />
+          }
+        />
+      )}
 
       {/* 剧集详情模态框 */}
       <Modal
@@ -313,81 +315,110 @@ const ShowsScreen: React.FC = () => {
               </TouchableOpacity>
               <Text style={styles.modalTitle}>剧集详情</Text>
             </View>
-
-            <View style={styles.modalContent}>
-              <Image
-                source={{
-                  uri: selectedShow.poster_path
-                    ? TMDBService.getImageUrl(selectedShow.poster_path, 'w500')
-                    : 'https://via.placeholder.com/300x450/CCCCCC/FFFFFF?text=No+Image'
-                }}
-                style={styles.modalPoster}
-              />
-
-              <View style={styles.modalInfo}>
-                <Text style={styles.modalShowTitle}>{selectedShow.name}</Text>
-                <Text style={styles.modalOriginalTitle}>{selectedShow.original_name}</Text>
-                
-                <View style={styles.modalMeta}>
-                  <View style={styles.modalRating}>
-                    <Ionicons name="star" size={20} color={colors.accent[500]} />
-                    <Text style={styles.modalRatingText}>{selectedShow.vote_average.toFixed(1)}</Text>
-                  </View>
-                  <Text style={styles.modalYear}>
-                    {new Date(selectedShow.first_air_date).getFullYear()}
-                  </Text>
-                  <Text style={styles.modalSeasons}>
-                    {selectedShow.number_of_seasons} 季
-                  </Text>
-                </View>
-
-                <Text style={styles.modalOverview}>{selectedShow.overview}</Text>
-
-                <View style={styles.modalGenres}>
-                  {selectedShow.genres?.map(genre => (
-                    <View key={genre.id} style={styles.genreTag}>
-                      <Text style={styles.genreTagText}>{genre.name}</Text>
+            <ScrollView style={styles.modalContent} showsVerticalScrollIndicator={false}>
+              {/* 海报和基本信息左右分布 */}
+              <View style={styles.modalHeaderSection}>
+                                  <Image
+                    source={{
+                      uri: selectedShow.poster_path
+                        ? TMDBService.getImageUrl(selectedShow.poster_path, 'w185')
+                        : 'https://via.placeholder.com/200x300/CCCCCC/FFFFFF?text=No+Image'
+                    }}
+                    style={styles.modalPoster}
+                  />
+                <View style={styles.modalBasicInfo}>
+                  <Text style={styles.modalShowTitle}>{selectedShow.name}</Text>
+                  <Text style={styles.modalOriginalTitle}>{selectedShow.original_name}</Text>
+                  <View style={styles.modalMeta}>
+                    <View style={styles.modalRating}>
+                      <Ionicons name="star" size={18} color={colors.accent[500]} />
+                      <Text style={styles.modalRatingText}>{selectedShow.vote_average.toFixed(1)}</Text>
                     </View>
-                  )) || 
-                  (selectedShow.genre_ids ? 
-                    selectedShow.genre_ids.map(id => (
-                      <View key={id} style={styles.genreTag}>
-                        <Text style={styles.genreTagText}>{TMDBService.genreMap[id] || '未知类型'}</Text>
+                    <Text style={styles.modalYear}>
+                      {new Date(selectedShow.first_air_date).getFullYear()}
+                    </Text>
+                    <Text style={styles.modalSeasons}>
+                      {selectedShow.number_of_seasons} 季
+                    </Text>
+                  </View>
+                  <View style={styles.modalGenres}>
+                    {selectedShow.genres?.slice(0, 3).map(genre => (
+                      <View key={genre.id} style={styles.genreTag}>
+                        <Text style={styles.genreTagText}>{genre.name}</Text>
                       </View>
-                    )) : 
-                    <Text style={styles.genreTagText}>未知类型</Text>
-                  )}
-                </View>
-
-                <View style={styles.modalActions}>
-                  <TouchableOpacity
-                    style={[
-                      styles.actionButton,
-                      selectedShow.status === 'watching' && styles.actionButtonActive
-                    ]}
-                    onPress={() => {
-                      changeShowStatus(selectedShow.id, 'watching');
-                      setShowDetailModal(false);
-                    }}
-                  >
-                    <Text style={styles.actionButtonText}>开始观看</Text>
-                  </TouchableOpacity>
-                  
-                  <TouchableOpacity
-                    style={[
-                      styles.actionButton,
-                      selectedShow.status === 'completed' && styles.actionButtonActive
-                    ]}
-                    onPress={() => {
-                      changeShowStatus(selectedShow.id, 'completed');
-                      setShowDetailModal(false);
-                    }}
-                  >
-                    <Text style={styles.actionButtonText}>标记完成</Text>
-                  </TouchableOpacity>
+                    )) || 
+                    (selectedShow.genre_ids ? 
+                      selectedShow.genre_ids.slice(0, 3).map(id => (
+                        <View key={id} style={styles.genreTag}>
+                          <Text style={styles.genreTagText}>{TMDBService.getGenreNames([id])[0] || '未知类型'}</Text>
+                        </View>
+                      )) : 
+                      <Text style={styles.genreTagText}>未知类型</Text>
+                    )}
+                  </View>
                 </View>
               </View>
-            </View>
+
+              {/* 剧情介绍 */}
+              <View style={styles.modalOverviewSection}>
+                <Text style={styles.modalOverviewTitle}>剧情简介</Text>
+                <Text 
+                  style={styles.modalOverview}
+                  numberOfLines={isOverviewExpanded ? undefined : 3}
+                >
+                  {selectedShow.overview || '暂无剧情简介'}
+                </Text>
+                {selectedShow.overview && selectedShow.overview.length > 100 && (
+                  <TouchableOpacity 
+                    style={styles.expandButton}
+                    onPress={() => setIsOverviewExpanded(!isOverviewExpanded)}
+                  >
+                    <Text style={styles.expandButtonText}>
+                      {isOverviewExpanded ? '收起' : '展开查看更多'}
+                    </Text>
+                    <Ionicons 
+                      name={isOverviewExpanded ? "chevron-up" : "chevron-down"} 
+                      size={16} 
+                      color={colors.primary[500]} 
+                    />
+                  </TouchableOpacity>
+                )}
+              </View>
+
+              {/* 操作按钮 */}
+              <View style={styles.modalActions}>
+                <TouchableOpacity
+                  style={[
+                    styles.actionButton,
+                    selectedShow.status === 'watching' && styles.actionButtonActive
+                  ]}
+                  onPress={() => {
+                    changeShowStatus(selectedShow.id, 'watching');
+                    setShowDetailModal(false);
+                  }}
+                >
+                  <Text style={[
+                    styles.actionButtonText,
+                    selectedShow.status === 'watching' && styles.actionButtonTextActive
+                  ]}>观看中</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[
+                    styles.actionButton,
+                    selectedShow.status === 'completed' && styles.actionButtonActive
+                  ]}
+                  onPress={() => {
+                    changeShowStatus(selectedShow.id, 'completed');
+                    setShowDetailModal(false);
+                  }}
+                >
+                  <Text style={[
+                    styles.actionButtonText,
+                    selectedShow.status === 'completed' && styles.actionButtonTextActive
+                  ]}>已完成</Text>
+                </TouchableOpacity>
+              </View>
+            </ScrollView>
           </SafeAreaView>
         )}
       </Modal>
@@ -573,15 +604,21 @@ const styles = StyleSheet.create({
     marginLeft: 16,
   },
   modalContent: {
-    flex: 1,
     padding: 16,
   },
-  modalPoster: {
-    width: width - 32,
-    height: (width - 32) * 1.5,
-    borderRadius: 12,
-    alignSelf: 'center',
+  modalHeaderSection: {
+    flexDirection: 'row',
     marginBottom: 20,
+  },
+  modalPoster: {
+    width: 120,
+    height: 180,
+    borderRadius: 12,
+    marginRight: 16,
+  },
+  modalBasicInfo: {
+    flex: 1,
+    justifyContent: 'space-between',
   },
   modalInfo: {
     flex: 1,
@@ -621,11 +658,31 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: colors.neutral[600],
   },
+  modalOverviewSection: {
+    marginBottom: 20,
+  },
+  modalOverviewTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: colors.text.primary,
+    marginBottom: 12,
+  },
   modalOverview: {
     fontSize: 16,
     color: colors.text.primary,
     lineHeight: 24,
-    marginBottom: 16,
+    marginBottom: 12,
+  },
+  expandButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+  },
+  expandButtonText: {
+    fontSize: 14,
+    color: colors.primary[500],
+    marginRight: 4,
+    fontWeight: '500',
   },
   modalGenres: {
     flexDirection: 'row',
@@ -663,6 +720,9 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: colors.neutral[600],
     fontWeight: '500',
+  },
+  actionButtonTextActive: {
+    color: colors.text.inverse,
   },
 });
 
