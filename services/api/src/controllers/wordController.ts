@@ -401,7 +401,8 @@ export const addToUserVocabulary = async (req: Request, res: Response) => {
     logger.error('❌ Add to user vocabulary error:', error);
     res.status(500).json({
       success: false,
-      error: 'Failed to add word to vocabulary'
+      error: 'Failed to add word to vocabulary',
+      details: error instanceof Error ? error.message : 'Unknown error'
     });
   }
 };
