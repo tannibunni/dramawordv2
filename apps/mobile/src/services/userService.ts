@@ -37,4 +37,27 @@ export const UserService = {
       return { success: false, message: '获取用户信息失败' };
     }
   },
+  uploadAvatar: async (token: string, formData: FormData) => {
+    try {
+      const res = await axios.post('/api/user/avatar', formData, {
+        headers: { 
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+      return { success: true, data: res.data };
+    } catch (error) {
+      return { success: false, message: '上传头像失败' };
+    }
+  },
+  updateProfile: async (token: string, updateData: any) => {
+    try {
+      const res = await axios.put('/api/user/profile', updateData, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      return { success: true, data: res.data };
+    } catch (error) {
+      return { success: false, message: '更新用户信息失败' };
+    }
+  },
 }; 

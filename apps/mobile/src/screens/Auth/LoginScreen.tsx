@@ -42,8 +42,8 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
         // 开发环境：使用模拟登录
         console.log('开发环境：使用模拟微信登录');
         
-        // 生成微信登录状态
-        const state = WechatService.generateState();
+      // 生成微信登录状态
+      const state = WechatService.generateState();
         console.log('微信登录状态:', state);
         
         // 模拟微信登录成功
@@ -58,11 +58,11 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
           },
           token: 'mock_wechat_token_' + Date.now(),
         };
-        
+      
         // 模拟登录延迟
         await new Promise(resolve => setTimeout(resolve, 1000));
-        
-        // 登录成功
+      
+      // 登录成功
         onLoginSuccess(mockUserData);
       } else {
         // 生产环境：使用真实的微信SDK
@@ -72,11 +72,11 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
         const loginResult = await WechatService.performLogin();
         
         if (loginResult.success) {
-          onLoginSuccess({
-            type: 'wechat',
+      onLoginSuccess({
+        type: 'wechat',
             userInfo: loginResult.data.user,
             token: loginResult.data.token,
-          });
+      });
         } else {
           throw new Error(loginResult.message || '微信登录失败');
         }
@@ -103,7 +103,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
       
       // 模拟苹果登录成功
       const mockUserData = {
-        type: 'apple',
+          type: 'apple',
         userInfo: {
           id: 'apple_user_' + Date.now(),
           username: 'apple_user',

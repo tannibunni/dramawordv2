@@ -30,7 +30,7 @@ const HomeScreen: React.FC = () => {
   const [isLoadingRecent, setIsLoadingRecent] = useState(true);
   const [searchResult, setSearchResult] = useState<any>(null);
   const { shows, addShow } = useShowList();
-  const { vocabulary, addWord } = useVocabulary();
+  const { vocabulary, addWord, isWordInShow } = useVocabulary();
   const [showCollectModal, setShowCollectModal] = useState(false);
   const [selectedShow, setSelectedShow] = useState<any>(null);
   const [searchShowText, setSearchShowText] = useState('');
@@ -39,6 +39,9 @@ const HomeScreen: React.FC = () => {
   const [showCheckAnimation, setShowCheckAnimation] = useState(false);
   const checkScale = useRef(new Animated.Value(0)).current;
   const [searchSuggestions, setSearchSuggestions] = useState<string[]>([]);
+  const [showCreateWordbook, setShowCreateWordbook] = useState(false);
+  const [newWordbookName, setNewWordbookName] = useState('');
+  const [isCreatingWordbook, setIsCreatingWordbook] = useState(false);
 
   useEffect(() => {
     loadRecentWords();
@@ -87,12 +90,12 @@ const HomeScreen: React.FC = () => {
         // 更新最近查词列表 - 去重并保持最新
         setRecentWords(prev => {
           // 过滤掉重复的单词，保留最新的
-          const filtered = prev.filter(w => w.word.toLowerCase() !== result.data.word.toLowerCase());
+          const filtered = prev.filter(w => w.word.toLowerCase() !== result.data!.word.toLowerCase());
           return [
             {
               id: Date.now().toString(),
-              word: result.data.word,
-              translation: result.data.definitions && result.data.definitions[0]?.definition ? result.data.definitions[0].definition : '暂无释义',
+              word: result.data!.word,
+              translation: result.data!.definitions && result.data!.definitions[0]?.definition ? result.data!.definitions[0].definition : '暂无释义',
               timestamp: Date.now(),
             },
             ...filtered.slice(0, 4) // 只保留前5个（包括新添加的）
@@ -100,8 +103,8 @@ const HomeScreen: React.FC = () => {
         });
         setSearchResult(result.data);
         setSearchText('');
-      } else if (result.suggestions && result.suggestions.length > 0) {
-        setSearchSuggestions(result.suggestions);
+      } else if ((result as any).suggestions && (result as any).suggestions.length > 0) {
+        setSearchSuggestions((result as any).suggestions);
       } else {
         Alert.alert('查询失败', result.error || '无法找到该单词');
       }
@@ -151,8 +154,60 @@ const HomeScreen: React.FC = () => {
   // 确认收藏
   const handleConfirmCollect = () => {
     if (searchResult) {
-      // 选中“默认词库”时，sourceShow 传 undefined
-      addWord(searchResult, selectedShow && selectedShow.id !== 'default' ? selectedShow : undefined);
+      console.log('🔍 调试信息 - 准备添加单词:', searchResult.word);
+      console.log('🔍 调试信息 - selectedShow:', selectedShow);
+      console.log('🔍 调试信息 - selectedShow.id:', selectedShow?.id);
+      console.log('🔍 调试信息 - selectedShow.type:', selectedShow?.type);
+      console.log('🔍 调试信息 - 所有用户剧集:', shows);
+      
+      // 如果没有选择剧集，自动选择第一个添加的剧集
+      let sourceShow = selectedShow && selectedShow.id !== 'default' ? selectedShow : undefined;
+      
+      // 如果没有选择任何剧集，但有用户添加的剧集，自动选择第一个
+      if (!sourceShow && shows.length > 0) {
+        const firstShow = shows[0];
+        sourceShow = firstShow;
+        console.log('🔍 调试信息 - 自动选择第一个剧集:', firstShow.name, 'ID:', firstShow.id);
+        Alert.alert(
+          '自动选择剧集',
+          `您没有选择剧集，已自动选择"${firstShow.name}"作为单词来源。`,
+          [{ text: '确定', style: 'default' }]
+        );
+      }
+      
+      // 检查单词是否已经存在于该剧集中
+      if (sourceShow && isWordInShow(searchResult.word, sourceShow.id)) {
+        Alert.alert(
+          '单词已存在',
+          `单词 "${searchResult.word}" 已经存在于剧集 "${sourceShow.name}" 中。`,
+          [{ text: '知道了', style: 'default' }]
+        );
+        return;
+      }
+      
+      // 如果 selectedShow 是单词本类型，确保正确传递
+      if (sourceShow && 'type' in sourceShow && sourceShow.type === 'wordbook') {
+        console.log('✅ 确认：单词将添加到单词本:', sourceShow.name);
+        console.log('✅ 确认：单词本ID:', sourceShow.id);
+        console.log('✅ 确认：单词本类型:', sourceShow.type);
+      } else if (sourceShow) {
+        console.log('✅ 确认：单词将添加到剧集:', sourceShow.name);
+        console.log('✅ 确认：剧集ID:', sourceShow.id);
+        console.log('✅ 确认：剧集类型:', sourceShow.type || 'tv_show');
+      } else {
+        console.log('✅ 确认：单词将添加到默认词库');
+      }
+      
+      console.log('🔍 调试信息 - 最终 sourceShow:', sourceShow);
+      
+      // 确保 addWord 被正确调用
+      console.log('🔍 调试信息 - 调用 addWord 前');
+      addWord(searchResult, sourceShow);
+      console.log('🔍 调试信息 - 调用 addWord 后');
+      
+      // 关闭模态框
+      setShowCollectModal(false);
+      
       setShowCheckAnimation(true);
       Animated.sequence([
         Animated.timing(checkScale, {
@@ -163,7 +218,6 @@ const HomeScreen: React.FC = () => {
         Animated.delay(700),
       ]).start(() => {
         setShowCheckAnimation(false);
-        setShowCollectModal(false);
         checkScale.setValue(0);
       });
     }
@@ -189,11 +243,87 @@ const HomeScreen: React.FC = () => {
 
   // 添加新剧到"正在看"
   const handleAddShow = (show: TMDBShow) => {
-    const newShow = { ...show, status: 'watching', wordCount: 0 };
+    const newShow = { ...show, status: 'watching' as const, wordCount: 0 };
     addShow(newShow);
     setSelectedShow(newShow);
     setSearchShowText('');
     setSearchResults([]);
+  };
+
+  // 新建单词本逻辑
+  const handleCreateWordbook = () => {
+    if (!newWordbookName.trim()) {
+      Alert.alert('请输入单词本名称');
+      return;
+    }
+    // 生成一个本地唯一 id（数字）
+    const newId = Date.now();
+    const newWordbook = {
+      id: newId,
+      name: newWordbookName,
+      original_name: newWordbookName,
+      overview: '',
+      first_air_date: '',
+      last_air_date: '',
+      status: 'plan_to_watch' as 'plan_to_watch',
+      type: 'wordbook',
+      vote_average: 0,
+      vote_count: 0,
+      popularity: 0,
+      poster_path: '',
+      backdrop_path: '',
+      original_language: '',
+      origin_country: [],
+      wordCount: 0,
+      icon: 'book', // 默认图标
+    };
+    console.log('🔍 调试信息 - 新建单词本:', newWordbook);
+    
+    // 追加到 shows 列表
+    addShow(newWordbook);
+    
+    // 立即设置 selectedShow 为新的单词本
+    setSelectedShow(newWordbook);
+    console.log('🔍 调试信息 - 设置 selectedShow:', newWordbook);
+    
+    // 立即关闭输入框并清空名称
+    setIsCreatingWordbook(false);
+    setNewWordbookName('');
+    
+    // 如果有搜索结果，立即添加单词到新单词本
+    if (searchResult) {
+      console.log('🔍 调试信息 - 立即添加单词到新单词本:', searchResult.word);
+      console.log('🔍 调试信息 - 使用单词本ID:', newWordbook.id);
+      console.log('🔍 调试信息 - 新单词本完整数据:', newWordbook);
+      addWord(searchResult, newWordbook);
+      
+      // 立即关闭模态框并显示成功动画
+      setShowCollectModal(false);
+      setShowCheckAnimation(true);
+      Animated.sequence([
+        Animated.timing(checkScale, {
+          toValue: 1,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+        Animated.delay(700),
+      ]).start(() => {
+        setShowCheckAnimation(false);
+        checkScale.setValue(0);
+      });
+    }
+  };
+
+  // 显示新建单词本输入框
+  const showCreateWordbookInput = () => {
+    setIsCreatingWordbook(true);
+    setNewWordbookName('');
+  };
+
+  // 取消新建单词本
+  const cancelCreateWordbook = () => {
+    setIsCreatingWordbook(false);
+    setNewWordbookName('');
   };
 
   return (
@@ -250,7 +380,7 @@ const HomeScreen: React.FC = () => {
           </View>
         ) : searchSuggestions.length > 0 ? (
           <View style={styles.wordCardWrapper}>
-            <View style={[styles.card, { alignItems: 'center', justifyContent: 'center', padding: 32, borderRadius: 20, backgroundColor: colors.background.secondary, shadowColor: colors.neutral[900], shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.15, shadowRadius: 16, elevation: 8, maxWidth: 350, minHeight: 220 }] }>
+            <View style={[styles.wordCardCustom, { alignItems: 'center', justifyContent: 'center', padding: 32, borderRadius: 20, backgroundColor: colors.background.secondary, shadowColor: colors.neutral[900], shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.15, shadowRadius: 16, elevation: 8, maxWidth: 350, minHeight: 220 }] }>
               <Text style={{ fontSize: 20, fontWeight: 'bold', color: colors.text.primary, marginBottom: 16 }}>猜你想搜</Text>
               {searchSuggestions.map(sug => (
                 <TouchableOpacity key={sug} onPress={() => { setSearchText(sug); setSearchSuggestions([]); setTimeout(() => handleSearch(), 0); }} style={{ paddingVertical: 10, paddingHorizontal: 24, borderRadius: 16, backgroundColor: colors.primary[50], marginBottom: 10 }}>
@@ -337,29 +467,215 @@ const HomeScreen: React.FC = () => {
               />
             )}
             {/* 正在看剧集列表 */}
-            <Text style={styles.modalSectionTitle}>正在看</Text>
-            <FlatList
-              data={[{ id: 'default', name: '默认词库' }, ...shows.filter(s => s.status === 'watching')]}
-              keyExtractor={item => item.id.toString()}
-              renderItem={({ item }) => (
-                <TouchableOpacity
-                  style={[
-                    styles.modalShowItem,
-                    selectedShow && selectedShow.id === item.id && styles.modalShowItemSelected,
-                    item.id === 'default' && { borderWidth: 1, borderColor: colors.primary[200] }
-                  ]}
-                  onPress={() => setSelectedShow(item)}
-                >
-                  <Text style={styles.modalShowName}>{item.name}</Text>
-                  {item.first_air_date && <Text style={styles.modalShowYear}>{item.first_air_date?.slice(0, 4)}</Text>}
-                  {selectedShow && selectedShow.id === item.id && (
-                    <Ionicons name="checkmark-circle" size={18} color={colors.primary[500]} style={{ marginLeft: 8 }} />
+            <Text style={styles.modalSectionTitle}>我的剧集</Text>
+            {(() => {
+              const wordbooks = shows.filter(s => s.type === 'wordbook');
+              const allShows = shows.filter(s => s.type !== 'wordbook');
+              const data = [
+                { id: 'default', name: '默认词库' }, 
+                ...wordbooks,
+                ...allShows
+              ];
+              console.log('🔍 调试信息 - 所有 shows:', shows);
+              console.log('🔍 调试信息 - 单词本列表:', wordbooks);
+              console.log('🔍 调试信息 - 所有剧集列表:', allShows);
+              console.log('🔍 调试信息 - 最终数据源:', data);
+              return (
+                <FlatList
+                  data={data}
+                  keyExtractor={item => item.id.toString()}
+                  renderItem={({ item }) => (
+                    <TouchableOpacity
+                      style={[
+                        styles.modalShowItem,
+                        selectedShow && selectedShow.id === item.id && styles.modalShowItemSelected,
+                        item.id === 'default' && { borderWidth: 1, borderColor: colors.primary[200] },
+                        'type' in item && item.type === 'wordbook' && { borderWidth: 1, borderColor: colors.success[300] }
+                      ]}
+                      onPress={() => setSelectedShow(item)}
+                    >
+                      <Text style={styles.modalShowName}>{item.name}</Text>
+                      {'first_air_date' in item && item.first_air_date && <Text style={styles.modalShowYear}>{item.first_air_date?.slice(0, 4)}</Text>}
+                      {'type' in item && item.type === 'wordbook' && <Text style={styles.wordbookTag}>单词本</Text>}
+                      {'status' in item && item.status && <Text style={styles.statusTag}>{item.status === 'watching' ? '观看中' : item.status === 'completed' ? '已完成' : '想看'}</Text>}
+                      {selectedShow && selectedShow.id === item.id && (
+                        <Ionicons name="checkmark-circle" size={18} color={colors.primary[500]} style={{ marginLeft: 8 }} />
+                      )}
+                    </TouchableOpacity>
                   )}
-                </TouchableOpacity>
-              )}
-              style={{ maxHeight: 160, marginBottom: 8 }}
-              ListEmptyComponent={<Text style={styles.modalEmptyText}>暂无正在看的剧集</Text>}
-            />
+                  style={{ maxHeight: 160, marginBottom: 8 }}
+                  ListEmptyComponent={<Text style={styles.modalEmptyText}>暂无剧集，请先添加剧集</Text>}
+                />
+              );
+            })()}
+            {/* 新建单词本按钮或输入框 */}
+            {isCreatingWordbook ? (
+              <View style={styles.createWordbookContainer}>
+                <View style={styles.createWordbookInputRow}>
+                  <TextInput
+                    style={styles.createWordbookInput}
+                    placeholder="输入单词本名称"
+                    value={newWordbookName}
+                    onChangeText={setNewWordbookName}
+                    autoFocus={true}
+                  />
+                  <TouchableOpacity
+                    style={styles.createWordbookConfirmButton}
+                    onPress={handleCreateWordbook}
+                  >
+                    <Text style={styles.createWordbookConfirmText}>确定</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.createWordbookCancelButton}
+                    onPress={cancelCreateWordbook}
+                  >
+                    <Text style={styles.createWordbookCancelText}>取消</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            ) : (
+              <TouchableOpacity
+                style={{
+                  backgroundColor: colors.primary[50],
+                  borderRadius: 8,
+                  paddingVertical: 10,
+                  alignItems: 'center',
+                  marginBottom: 8,
+                }}
+                onPress={showCreateWordbookInput}
+              >
+                <Ionicons name="add-circle-outline" size={20} color={colors.primary[500]} />
+                <Text style={{ color: colors.primary[700], fontSize: 15, marginTop: 2 }}>新建单词本</Text>
+              </TouchableOpacity>
+            )}
+
+            {/* 调试按钮 */}
+            <TouchableOpacity
+              style={{
+                backgroundColor: colors.accent[50],
+                borderRadius: 8,
+                paddingVertical: 8,
+                alignItems: 'center',
+                marginBottom: 8,
+              }}
+              onPress={() => {
+                console.log('🔍 调试信息 - 当前 shows 状态:', shows);
+                console.log('🔍 调试信息 - 当前 selectedShow:', selectedShow);
+                console.log('🔍 调试信息 - 当前 vocabulary:', vocabulary);
+                
+                // 显示用户当前添加的所有剧集
+                Alert.alert(
+                  '调试信息',
+                  `当前添加的剧集数量: ${shows.length}\n` +
+                  `剧集列表:\n${shows.map(s => `- ${s.name} (ID: ${s.id}, 状态: ${s.status})`).join('\n')}\n\n` +
+                  `当前选择的剧集: ${selectedShow?.name || '无'}\n` +
+                  `选择的剧集ID: ${selectedShow?.id || '无'}\n\n` +
+                  `词汇总数: ${vocabulary.length}\n` +
+                  `词汇列表:\n${vocabulary.map(w => `- ${w.word} (来源: ${w.sourceShow?.name || '默认词库'}, ID: ${w.sourceShow?.id || '无'})`).join('\n')}`
+                );
+              }}
+            >
+              <Text style={{ color: colors.accent[700], fontSize: 12 }}>调试状态</Text>
+            </TouchableOpacity>
+
+            {/* 帮助按钮 */}
+            <TouchableOpacity
+              style={{
+                backgroundColor: colors.primary[50],
+                borderRadius: 8,
+                paddingVertical: 8,
+                alignItems: 'center',
+                marginBottom: 8,
+              }}
+              onPress={() => {
+                Alert.alert(
+                  '为什么单词添加失败？',
+                  '可能的原因：\n\n' +
+                  '1. 剧集ID不匹配：您添加的剧集和收藏单词时选择的剧集不是同一个\n' +
+                  '2. 剧集状态问题：剧集可能不在"观看中"状态\n' +
+                  '3. 数据同步问题：本地数据可能没有正确保存\n\n' +
+                  '解决方案：\n\n' +
+                  '1. 确保在收藏单词时选择正确的剧集\n' +
+                  '2. 检查剧集状态是否正确\n' +
+                  '3. 重新添加剧集或单词\n' +
+                  '4. 使用调试按钮查看详细信息',
+                  [
+                    { text: '知道了', style: 'default' },
+                    { text: '查看调试信息', onPress: () => {
+                      console.log('🔍 调试信息 - 当前 shows 状态:', shows);
+                      console.log('🔍 调试信息 - 当前 selectedShow:', selectedShow);
+                      console.log('🔍 调试信息 - 当前 vocabulary:', vocabulary);
+                      
+                      Alert.alert(
+                        '调试信息',
+                        `当前添加的剧集数量: ${shows.length}\n` +
+                        `剧集列表:\n${shows.map(s => `- ${s.name} (ID: ${s.id}, 状态: ${s.status})`).join('\n')}\n\n` +
+                        `当前选择的剧集: ${selectedShow?.name || '无'}\n` +
+                        `选择的剧集ID: ${selectedShow?.id || '无'}\n\n` +
+                        `词汇总数: ${vocabulary.length}\n` +
+                        `词汇列表:\n${vocabulary.map(w => `- ${w.word} (来源: ${w.sourceShow?.name || '默认词库'}, ID: ${w.sourceShow?.id || '无'})`).join('\n')}`
+                      );
+                    }}
+                  ]
+                );
+              }}
+            >
+              <Text style={{ color: colors.primary[700], fontSize: 12 }}>为什么添加失败？</Text>
+            </TouchableOpacity>
+
+            {/* 快速修复按钮 */}
+            <TouchableOpacity
+              style={{
+                backgroundColor: colors.error[50],
+                borderRadius: 8,
+                paddingVertical: 8,
+                alignItems: 'center',
+                marginBottom: 8,
+              }}
+              onPress={() => {
+                Alert.alert(
+                  '快速修复',
+                  '检测到剧集ID不匹配问题。请选择修复方式：',
+                  [
+                    { text: '取消', style: 'cancel' },
+                    { 
+                      text: '重新添加剧集', 
+                      onPress: () => {
+                        Alert.alert(
+                          '重新添加剧集',
+                          '请先删除当前剧集，然后重新搜索添加。这样可以确保剧集ID一致。',
+                          [{ text: '知道了', style: 'default' }]
+                        );
+                      }
+                    },
+                    { 
+                      text: '清空所有数据', 
+                      style: 'destructive',
+                      onPress: () => {
+                        Alert.alert(
+                          '确认清空',
+                          '这将清空所有剧集和单词数据，确定要继续吗？',
+                          [
+                            { text: '取消', style: 'cancel' },
+                            { 
+                              text: '确定清空', 
+                              style: 'destructive',
+                              onPress: () => {
+                                // 这里需要调用清空函数
+                                Alert.alert('提示', '请在剧集页面使用清空功能');
+                              }
+                            }
+                          ]
+                        );
+                      }
+                    }
+                  ]
+                );
+              }}
+            >
+              <Text style={{ color: colors.error[700], fontSize: 12 }}>快速修复</Text>
+            </TouchableOpacity>
+
             {/* 按钮区 */}
             <View style={styles.modalButtonRow}>
               <TouchableOpacity style={styles.modalCancelButton} onPress={() => setShowCollectModal(false)}>
@@ -376,6 +692,7 @@ const HomeScreen: React.FC = () => {
           </View>
         </View>
       </Modal>
+      {/* 删除新建单词本弹窗，改为内联输入框 */}
     </SafeAreaView>
   );
 };
@@ -619,6 +936,63 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#fff',
     fontWeight: 'bold',
+  },
+  createWordbookContainer: {
+    marginBottom: 8,
+  },
+  createWordbookInputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.background.secondary,
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  createWordbookInput: {
+    flex: 1,
+    fontSize: 15,
+    color: colors.text.primary,
+    paddingVertical: 8,
+    paddingHorizontal: 8,
+  },
+  createWordbookConfirmButton: {
+    backgroundColor: colors.primary[500],
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+    marginLeft: 8,
+  },
+  createWordbookConfirmText: {
+    color: colors.text.inverse,
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  createWordbookCancelButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    marginLeft: 4,
+  },
+  createWordbookCancelText: {
+    color: colors.text.secondary,
+    fontSize: 14,
+  },
+  wordbookTag: {
+    backgroundColor: colors.success[100],
+    color: colors.success[800],
+    fontSize: 12,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    marginLeft: 8,
+  },
+  statusTag: {
+    backgroundColor: colors.accent[100],
+    color: colors.accent[700],
+    fontSize: 12,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    marginLeft: 8,
   },
 });
 

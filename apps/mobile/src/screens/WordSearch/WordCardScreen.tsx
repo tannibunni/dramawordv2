@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -6,15 +6,17 @@ import {
   SafeAreaView,
   TouchableOpacity,
   Animated,
-  Dimensions,
   Alert,
   ActivityIndicator,
+  Dimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../../../../packages/ui/src/tokens';
-import { useNavigation } from '../../components/navigation/NavigationContext';
 import { wordService, WordData } from '../../services/wordService';
 import { audioService } from '../../services/audioService';
+import { useShowList } from '../../context/ShowListContext';
+import { useVocabulary } from '../../context/VocabularyContext';
+import { useNavigation } from '../../components/navigation/NavigationContext';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -43,16 +45,19 @@ const WordCardScreen: React.FC<WordCardScreenProps> = ({ navigation = {}, route 
   const word = route?.params?.word || 'hello';
   const initialWordData = route?.params?.wordData;
   
-  // 状态
   const [wordData, setWordData] = useState<WordData | null>(initialWordData || null);
   const [isLoading, setIsLoading] = useState(!initialWordData);
-  const [isExpanded, setIsExpanded] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  // 动画值
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [showCollectModal, setShowCollectModal] = useState(false);
+  const [selectedShow, setSelectedShow] = useState<any>(null);
+  
   const cardHeight = useRef(new Animated.Value(400)).current;
   const cardOpacity = useRef(new Animated.Value(1)).current;
-
+  
+  const { shows } = useShowList();
+  const { addWord } = useVocabulary();
+  
   // 加载单词数据
   useEffect(() => {
     if (!initialWordData) {
@@ -94,23 +99,36 @@ const WordCardScreen: React.FC<WordCardScreenProps> = ({ navigation = {}, route 
 
   // 收藏单词
   const handleCollect = () => {
+    if (!wordData) return;
+    
+    // 构建动态的剧集选项
+    const showOptions = [
+      { text: '取消', style: 'cancel' as const },
+      { text: '默认词库', onPress: () => confirmCollect(undefined) },
+    ];
+    
+    // 添加用户添加的剧集
+    shows.forEach(show => {
+      showOptions.push({
+        text: show.name,
+        onPress: () => confirmCollect(show)
+      });
+    });
+    
     // 显示选择剧集Modal
     Alert.alert(
       '选择收藏到哪个剧集？',
       '请选择要收藏到的剧集',
-      [
-        { text: '取消', style: 'cancel' },
-        { text: 'Friends 老友记', onPress: () => confirmCollect('Friends') },
-        { text: 'Breaking Bad 绝命毒师', onPress: () => confirmCollect('Breaking Bad') },
-        { text: '新建剧集', onPress: () => confirmCollect('new') },
-      ]
+      showOptions
     );
   };
 
   // 确认收藏
-  const confirmCollect = (showName: string) => {
+  const confirmCollect = (sourceShow?: any) => {
     if (wordData) {
+      addWord(wordData, sourceShow);
       setWordData(prev => prev ? { ...prev, isCollected: true } : null);
+      const showName = sourceShow ? sourceShow.name : '默认词库';
       Alert.alert('收藏成功', `已收藏到 ${showName}`);
     }
   };

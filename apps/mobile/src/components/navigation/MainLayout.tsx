@@ -77,7 +77,7 @@ const MainContent: React.FC<MainLayoutProps> = ({ initialTab = 'search' }) => {
 
   return (
     <View style={styles.container}>
-      {renderCurrentPage()}
+        {renderCurrentPage()}
     </View>
   );
 };

@@ -31,19 +31,19 @@ const SwipeableWordCard: React.FC<SwipeableWordCardProps> = ({
 
   return (
     <View style={styles.container}>
-      <View style={styles.card}>
+        <View style={styles.card}>
         
         {/* 内容区域 */}
         <View style={styles.contentSection}>
           {expanded ? (
             <ScrollView style={styles.expandedContent} showsVerticalScrollIndicator={false}>
-              <View style={styles.wordSection}>
-                <Text style={styles.word}>{wordData.word}</Text>
-                <Text style={styles.phonetic}>{wordData.phonetic}</Text>
+          <View style={styles.wordSection}>
+            <Text style={styles.word}>{wordData.word}</Text>
+            <Text style={styles.phonetic}>{wordData.phonetic}</Text>
                 <TouchableOpacity style={styles.audioButton} onPress={handlePlayAudio}>
                   <Ionicons name="volume-high" size={24} color={colors.primary[500]} />
                 </TouchableOpacity>
-              </View>
+          </View>
               {wordData.definitions.map((def, index) => (
                 <View key={index} style={styles.definitionItem}>
                   <Text style={styles.partOfSpeech}>{def.partOfSpeech}</Text>
@@ -67,7 +67,7 @@ const SwipeableWordCard: React.FC<SwipeableWordCardProps> = ({
                   <Text style={styles.originTitle}>学习记录</Text>
                   <Text style={styles.originText}>搜索次数: {wordData.searchCount || 0}</Text>
                   <Text style={styles.originText}>最后学习: {wordData.lastSearched}</Text>
-                </View>
+            </View>
               )}
             </ScrollView>
           ) : (
@@ -85,9 +85,9 @@ const SwipeableWordCard: React.FC<SwipeableWordCardProps> = ({
               </TouchableOpacity>
             </View>
           )}
+            </View>
+          </View>
         </View>
-      </View>
-    </View>
   );
 };
 

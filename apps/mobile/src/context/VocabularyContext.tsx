@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { WordData } from '../components/cards/WordCard';
 import { Show } from './ShowListContext';
 
@@ -13,6 +14,7 @@ interface VocabularyContextType {
   removeWord: (word: string) => void;
   updateWord: (word: string, data: Partial<WordWithSource>) => void;
   clearVocabulary: () => void;
+  isWordInShow: (word: string, showId?: number) => boolean;
 }
 
 const VocabularyContext = createContext<VocabularyContextType | undefined>(undefined);
@@ -23,119 +25,79 @@ export const useVocabulary = () => {
   return ctx;
 };
 
+const VOCABULARY_STORAGE_KEY = 'user_vocabulary';
+
 export const VocabularyProvider = ({ children }: { children: ReactNode }) => {
-  const [vocabulary, setVocabulary] = useState<WordWithSource[]>([
-    // 添加一些测试数据
-    {
-      word: 'hello',
-      phonetic: '/həˈloʊ/',
-      definitions: [
-        {
-          partOfSpeech: 'interjection',
-          definition: '你好，打招呼用语',
-          examples: [
-            { english: 'Hello, how are you?', chinese: '你好，你好吗？' },
-            { english: 'Hello there!', chinese: '你好！' }
-          ]
-        }
-      ],
-      sourceShow: {
-        id: 1399, // Friends
-        name: 'Friends',
-        original_name: 'Friends',
-        overview: 'A show about friends',
-        first_air_date: '1994-09-22',
-        last_air_date: '2004-05-06',
-        type: 'Scripted',
-        vote_average: 8.9,
-        vote_count: 1000,
-        popularity: 100,
-        poster_path: '/test.jpg',
-        backdrop_path: '/test.jpg',
-        original_language: 'en',
-        origin_country: ['US'],
-        status: 'watching',
-        wordCount: 0
-      },
-      collectedAt: new Date().toISOString()
-    },
-    {
-      word: 'world',
-      phonetic: '/wɜːld/',
-      definitions: [
-        {
-          partOfSpeech: 'noun',
-          definition: '世界，地球',
-          examples: [
-            { english: 'The world is beautiful.', chinese: '世界很美丽。' },
-            { english: 'Around the world', chinese: '环游世界' }
-          ]
-        }
-      ],
-      sourceShow: {
-        id: 1399, // Friends
-        name: 'Friends',
-        original_name: 'Friends',
-        overview: 'A show about friends',
-        first_air_date: '1994-09-22',
-        last_air_date: '2004-05-06',
-        type: 'Scripted',
-        vote_average: 8.9,
-        vote_count: 1000,
-        popularity: 100,
-        poster_path: '/test.jpg',
-        backdrop_path: '/test.jpg',
-        original_language: 'en',
-        origin_country: ['US'],
-        status: 'watching',
-        wordCount: 0
-      },
-      collectedAt: new Date().toISOString()
-    },
-    {
-      word: 'beautiful',
-      phonetic: '/ˈbjuːtɪfʊl/',
-      definitions: [
-        {
-          partOfSpeech: 'adjective',
-          definition: '美丽的，漂亮的',
-          examples: [
-            { english: 'She is beautiful.', chinese: '她很美丽。' },
-            { english: 'What a beautiful day!', chinese: '多么美好的一天！' }
-          ]
-        }
-      ],
-      sourceShow: {
-        id: 1396, // Breaking Bad
-        name: 'Breaking Bad',
-        original_name: 'Breaking Bad',
-        overview: 'A chemistry teacher turned drug dealer',
-        first_air_date: '2008-01-20',
-        last_air_date: '2013-09-29',
-        type: 'Scripted',
-        vote_average: 9.5,
-        vote_count: 2000,
-        popularity: 200,
-        poster_path: '/test.jpg',
-        backdrop_path: '/test.jpg',
-        original_language: 'en',
-        origin_country: ['US'],
-        status: 'watching',
-        wordCount: 0
-      },
-      collectedAt: new Date().toISOString()
+  const [vocabulary, setVocabulary] = useState<WordWithSource[]>([]);
+  const [isLoaded, setIsLoaded] = useState(false);
+
+  // 加载本地存储的词汇数据
+  useEffect(() => {
+    loadVocabularyFromStorage();
+  }, []);
+
+  // 当词汇数据变化时保存到本地存储
+  useEffect(() => {
+    if (isLoaded) {
+      saveVocabularyToStorage();
     }
-  ]);
+  }, [vocabulary, isLoaded]);
+
+  const loadVocabularyFromStorage = async () => {
+    try {
+      const storedData = await AsyncStorage.getItem(VOCABULARY_STORAGE_KEY);
+      if (storedData) {
+        const parsedData = JSON.parse(storedData);
+        setVocabulary(parsedData);
+        console.log('📚 从本地存储加载词汇数据:', parsedData.length, '个单词');
+      } else {
+        // 如果没有本地数据，初始化为空数组
+        console.log('📚 本地存储中没有词汇数据，初始化为空列表');
+        setVocabulary([]);
+      }
+    } catch (error) {
+      console.error('❌ 加载词汇数据失败:', error);
+      setVocabulary([]);
+    } finally {
+      setIsLoaded(true);
+    }
+  };
+
+  const saveVocabularyToStorage = async () => {
+    try {
+      await AsyncStorage.setItem(VOCABULARY_STORAGE_KEY, JSON.stringify(vocabulary));
+      console.log('💾 保存词汇数据到本地存储:', vocabulary.length, '个单词');
+    } catch (error) {
+      console.error('❌ 保存词汇数据失败:', error);
+    }
+  };
 
   const addWord = (word: WordData, sourceShow?: Show) => {
     setVocabulary(prev => {
-      if (prev.some(w => w.word === word.word)) return prev;
-      return [...prev, { ...word, sourceShow, collectedAt: new Date().toISOString() }];
+      // 检查是否已经存在相同的单词和剧集组合
+      const existingWord = prev.find(w => 
+        w.word === word.word && 
+        w.sourceShow?.id === sourceShow?.id
+      );
+      
+      if (existingWord) {
+        console.log('⚠️ 单词已存在于该剧集中:', word.word, '剧集:', sourceShow?.name);
+        return prev;
+      }
+      
+      const newWord = { ...word, sourceShow, collectedAt: new Date().toISOString() };
+      console.log('➕ 添加新单词:', newWord.word, '来源剧集:', sourceShow?.name, '来源ID:', sourceShow?.id);
+      console.log('➕ 新单词完整数据:', newWord);
+      return [...prev, newWord];
     });
   };
 
   const removeWord = (word: string) => {
-    setVocabulary(prev => prev.filter(w => w.word !== word));
+    setVocabulary(prev => {
+      const filtered = prev.filter(w => w.word !== word);
+      console.log('➖ 删除单词:', word, '剩余单词数:', filtered.length);
+      return filtered;
+    });
   };
 
   const updateWord = (word: string, data: Partial<WordWithSource>) => {
@@ -144,12 +106,15 @@ export const VocabularyProvider = ({ children }: { children: ReactNode }) => {
 
   const clearVocabulary = () => {
     setVocabulary([]);
+    console.log('🗑️ 清空所有词汇数据');
   };
 
-  // TODO: 可在此处与后端同步
+  const isWordInShow = (word: string, showId?: number) => {
+    return vocabulary.some(w => w.word === word && w.sourceShow?.id === showId);
+  };
 
   return (
-    <VocabularyContext.Provider value={{ vocabulary, addWord, removeWord, updateWord, clearVocabulary }}>
+    <VocabularyContext.Provider value={{ vocabulary, addWord, removeWord, updateWord, clearVocabulary, isWordInShow }}>
       {children}
     </VocabularyContext.Provider>
   );

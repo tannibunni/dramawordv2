@@ -110,6 +110,8 @@ export const LearningProgressChart: React.FC<LearningProgressChartProps> = ({
             fromZero
             showBarTops
             showValuesOnTopOfBars
+            yAxisLabel=""
+            yAxisSuffix=""
           />
         );
 

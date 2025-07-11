@@ -52,7 +52,7 @@ const ReviewScreen: React.FC = () => {
   const [cardMode, setCardMode] = useState<'swipe' | 'flip'>('swipe');
   const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
   const { vocabulary } = useVocabulary();
-
+  
   // 1. Swiper ref
   const swiperRef = useRef<any>(null);
 
@@ -95,68 +95,68 @@ const ReviewScreen: React.FC = () => {
     } catch (error) {
       console.error('加载复习单词失败:', error);
       // 使用模拟数据作为后备
-      const mockWords: ReviewWord[] = [
-        {
-          id: '1',
-          word: 'serendipity',
-          translation: '意外发现美好事物的能力',
-          phonetic: '/ˌserənˈdɪpəti/',
-          difficulty: 'hard',
-          show: 'Friends',
-          lastReviewed: '2024-01-15',
-          reviewCount: 3,
-        },
-        {
-          id: '2',
-          word: 'resilient',
-          translation: '有韧性的，适应力强的',
-          phonetic: '/rɪˈzɪliənt/',
-          difficulty: 'medium',
-          show: 'Breaking Bad',
-          lastReviewed: '2024-01-14',
-          reviewCount: 8,
-        },
-        {
-          id: '3',
-          word: 'authentic',
-          translation: '真实的，可信的',
-          phonetic: '/ɔːˈθentɪk/',
-          difficulty: 'medium',
-          show: 'The Office',
-          lastReviewed: '2024-01-13',
-          reviewCount: 5,
-        },
-        {
-          id: '4',
-          word: 'perseverance',
-          translation: '毅力，坚持不懈',
-          phonetic: '/ˌpɜːsɪˈvɪərəns/',
-          difficulty: 'hard',
-          show: 'Game of Thrones',
-          lastReviewed: '2024-01-12',
-          reviewCount: 2,
-        },
-        {
-          id: '5',
-          word: 'eloquent',
-          translation: '雄辩的，有说服力的',
-          phonetic: '/ˈeləkwənt/',
-          difficulty: 'medium',
-          show: 'House of Cards',
-          lastReviewed: '2024-01-11',
-          reviewCount: 10,
-        },
-      ];
-      setWords(mockWords);
-      setSession({
-        totalWords: mockWords.length,
-        currentIndex: 0,
-        correctCount: 0,
-        incorrectCount: 0,
-        skippedCount: 0,
-        collectedCount: 0,
-        startTime: new Date(),
-      });
+        const mockWords: ReviewWord[] = [
+          {
+            id: '1',
+            word: 'serendipity',
+            translation: '意外发现美好事物的能力',
+            phonetic: '/ˌserənˈdɪpəti/',
+            difficulty: 'hard',
+            show: '我的单词',
+            lastReviewed: '2024-01-15',
+            reviewCount: 3,
+          },
+          {
+            id: '2',
+            word: 'resilient',
+            translation: '有韧性的，适应力强的',
+            phonetic: '/rɪˈzɪliənt/',
+            difficulty: 'medium',
+            show: '我的单词',
+            lastReviewed: '2024-01-14',
+            reviewCount: 8,
+          },
+          {
+            id: '3',
+            word: 'authentic',
+            translation: '真实的，可信的',
+            phonetic: '/ɔːˈθentɪk/',
+            difficulty: 'medium',
+            show: '我的单词',
+            lastReviewed: '2024-01-13',
+            reviewCount: 5,
+          },
+          {
+            id: '4',
+            word: 'perseverance',
+            translation: '毅力，坚持不懈',
+            phonetic: '/ˌpɜːsɪˈvɪərəns/',
+            difficulty: 'hard',
+            show: '我的单词',
+            lastReviewed: '2024-01-12',
+            reviewCount: 2,
+          },
+          {
+            id: '5',
+            word: 'eloquent',
+            translation: '雄辩的，有说服力的',
+            phonetic: '/ˈeləkwənt/',
+            difficulty: 'medium',
+            show: '我的单词',
+            lastReviewed: '2024-01-11',
+            reviewCount: 10,
+          },
+        ];
+        setWords(mockWords);
+        setSession({
+          totalWords: mockWords.length,
+          currentIndex: 0,
+          correctCount: 0,
+          incorrectCount: 0,
+          skippedCount: 0,
+          collectedCount: 0,
+          startTime: new Date(),
+        });
     }
   };
 
@@ -275,11 +275,11 @@ const ReviewScreen: React.FC = () => {
   const moveToNextWord = () => {
     if (swiperIndex < words.length - 1) {
       setSwiperIndex(prev => prev + 1);
-      setShowAnswer(false);
-    } else {
-      // 复习完成
-      setIsReviewComplete(true);
-    }
+        setShowAnswer(false);
+      } else {
+        // 复习完成
+        setIsReviewComplete(true);
+      }
   };
 
   // 处理音频播放

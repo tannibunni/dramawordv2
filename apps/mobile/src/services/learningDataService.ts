@@ -63,6 +63,9 @@ class LearningDataService {
           intervalDays: 1,
           consecutiveCorrect: 0,
           consecutiveIncorrect: 0,
+          learningEfficiency: 0,
+          timeSpent: 0,
+          confidenceLevel: 0,
         };
         records.push(record);
       }
@@ -91,20 +94,23 @@ class LearningDataService {
         let record = records.find(r => r.wordId === update.wordId);
 
         if (!record) {
-          record = {
-            wordId: update.wordId,
-            word: update.word,
-            reviewCount: 0,
-            correctCount: 0,
-            incorrectCount: 0,
-            lastReviewed: new Date(),
-            nextReviewDate: new Date(),
-            masteryLevel: 0,
-            difficulty: 'medium',
-            intervalDays: 1,
-            consecutiveCorrect: 0,
-            consecutiveIncorrect: 0,
-          };
+                  record = {
+          wordId: update.wordId,
+          word: update.word,
+          reviewCount: 0,
+          correctCount: 0,
+          incorrectCount: 0,
+          lastReviewed: new Date(),
+          nextReviewDate: new Date(),
+          masteryLevel: 0,
+          difficulty: 'medium',
+          intervalDays: 1,
+          consecutiveCorrect: 0,
+          consecutiveIncorrect: 0,
+          learningEfficiency: 0,
+          timeSpent: 0,
+          confidenceLevel: 0,
+        };
           records.push(record);
         }
 
@@ -146,6 +152,10 @@ class LearningDataService {
         totalReviewTime: 0,
         streakDays: 0,
         lastStudyDate: new Date(),
+        learningEfficiency: 0,
+        averageConfidence: 0,
+        weeklyProgress: 0,
+        monthlyProgress: 0,
       };
     }
   }
@@ -261,6 +271,10 @@ class LearningDataService {
           totalReviewTime: 0,
           streakDays: 0,
           lastStudyDate: new Date(),
+          learningEfficiency: 0,
+          averageConfidence: 0,
+          weeklyProgress: 0,
+          monthlyProgress: 0,
         },
       };
     }

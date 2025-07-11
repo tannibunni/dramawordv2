@@ -238,56 +238,56 @@ const WordCard: React.FC<WordCardProps> = ({
             },
           ]}
         >
-          {/* 头部：单词、音标、发音按钮 */}
-          <View style={styles.headerRow}>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.word}>{wordData.word}</Text>
-              <Text style={styles.phonetic}>{wordData.phonetic}</Text>
-            </View>
-            <TouchableOpacity style={styles.audioButton} onPress={handlePlayAudio} activeOpacity={0.7}>
-              <Ionicons name="volume-medium" size={22} color={colors.primary[500]} />
-            </TouchableOpacity>
-          </View>
+      {/* 头部：单词、音标、发音按钮 */}
+      <View style={styles.headerRow}>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.word}>{wordData.word}</Text>
+          <Text style={styles.phonetic}>{wordData.phonetic}</Text>
+        </View>
+        <TouchableOpacity style={styles.audioButton} onPress={handlePlayAudio} activeOpacity={0.7}>
+          <Ionicons name="volume-medium" size={22} color={colors.primary[500]} />
+        </TouchableOpacity>
+      </View>
           
-          {/* 主体内容区：可滚动 */}
-          <View style={{ maxHeight: CARD_CONTENT_MAX_HEIGHT, marginBottom: 8 }}>
-            <ScrollView
-              showsVerticalScrollIndicator={true}
-              indicatorStyle="black"
-              persistentScrollbar={true}
-              onScroll={e => {
-                if (showScrollTip && e.nativeEvent.contentOffset.y > 10) {
-                  setShowScrollTip(false);
-                }
-              }}
-              scrollEventThrottle={16}
-            >
-              {wordData.definitions.map((def, idx) => (
-                <View key={idx} style={styles.definitionBlock}>
-                  <Text style={styles.partOfSpeech}>{def.partOfSpeech}</Text>
-                  <Text style={styles.definition}>{def.definition}</Text>
-                  {def.examples && def.examples.length > 0 && (
-                    <View style={styles.examplesBlock}>
-                      {def.examples.map((ex, exIdx) => (
-                        <View key={exIdx} style={styles.exampleContainer}>
-                          <Text style={styles.exampleEnglish}>{ex.english}</Text>
-                          <Text style={styles.exampleChinese}>{ex.chinese}</Text>
-                        </View>
-                      ))}
+      {/* 主体内容区：可滚动 */}
+      <View style={{ maxHeight: CARD_CONTENT_MAX_HEIGHT, marginBottom: 8 }}>
+        <ScrollView
+          showsVerticalScrollIndicator={true}
+          indicatorStyle="black"
+          persistentScrollbar={true}
+          onScroll={e => {
+            if (showScrollTip && e.nativeEvent.contentOffset.y > 10) {
+              setShowScrollTip(false);
+            }
+          }}
+          scrollEventThrottle={16}
+        >
+          {wordData.definitions.map((def, idx) => (
+            <View key={idx} style={styles.definitionBlock}>
+              <Text style={styles.partOfSpeech}>{def.partOfSpeech}</Text>
+              <Text style={styles.definition}>{def.definition}</Text>
+              {def.examples && def.examples.length > 0 && (
+                <View style={styles.examplesBlock}>
+                  {def.examples.map((ex, exIdx) => (
+                    <View key={exIdx} style={styles.exampleContainer}>
+                      <Text style={styles.exampleEnglish}>{ex.english}</Text>
+                      <Text style={styles.exampleChinese}>{ex.chinese}</Text>
                     </View>
-                  )}
+                  ))}
                 </View>
-              ))}
-            </ScrollView>
-          </View>
-          
-          {/* 滑动提示，仅初始显示，滑动后消失 */}
-          {showScrollTip && (
-            <View style={styles.arrowTip}>
-              <Text style={styles.arrowTipText}>向下滑动查看更多例句</Text>
-              <Ionicons name="chevron-down" size={22} color={colors.text.tertiary} />
+              )}
             </View>
-          )}
+          ))}
+        </ScrollView>
+      </View>
+          
+      {/* 滑动提示，仅初始显示，滑动后消失 */}
+      {showScrollTip && (
+        <View style={styles.arrowTip}>
+          <Text style={styles.arrowTipText}>向下滑动查看更多例句</Text>
+          <Ionicons name="chevron-down" size={22} color={colors.text.tertiary} />
+        </View>
+      )}
           
           {/* 滑动操作提示 */}
           <View style={styles.swipeHint}>

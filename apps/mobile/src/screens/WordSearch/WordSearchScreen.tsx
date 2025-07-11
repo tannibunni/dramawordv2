@@ -59,11 +59,11 @@ const WordSearchScreen: React.FC = () => {
         setRecentWords(prev => [
           {
             id: Date.now().toString(),
-            word: result.data.word,
-            translation: result.data.definitions && result.data.definitions[0]?.definition ? result.data.definitions[0].definition : '暂无释义',
+            word: result.data?.word || '',
+            translation: result.data?.definitions && result.data.definitions[0]?.definition ? result.data.definitions[0].definition : '暂无释义',
             timestamp: Date.now(),
           },
-          ...prev.filter(w => w.word !== result.data.word).slice(0, 4)
+          ...prev.filter(w => w.word !== (result.data?.word || '')).slice(0, 4)
         ]);
         setSearchResult(result.data);
         setSearchText('');
