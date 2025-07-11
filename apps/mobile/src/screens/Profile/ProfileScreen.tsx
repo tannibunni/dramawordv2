@@ -306,7 +306,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   const handleClearCache = () => {
     Alert.alert(
       '清空数据',
-      '确定要清空以下所有数据吗？\n\n• 用户ID下的搜索历史记录\n• 用户单词表里面存的词\n• 用户的剧单\n\n⚠️ 此操作不可恢复！',
+      '确定要清空以下所有数据吗？\n\n• 用户ID下的搜索历史记录\n• 用户单词表里面存的词\n• 用户的剧单\n• 最近查词记录\n\n⚠️ 此操作不可恢复！',
       [
         {
           text: '取消',
@@ -325,13 +325,13 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
               // 清空剧单
               clearShows();
               
-              // 清空搜索历史缓存
+              // 清空搜索历史缓存（包括最近查词）
               await wordService.clearUserCache();
               
               // 显示成功消息
               Alert.alert(
                 '清空完成',
-                '数据已成功清空！\n\n已清空：\n• 用户搜索历史记录\n• 用户单词表\n• 用户剧单\n\n数据库中的词库保持不变。',
+                '数据已成功清空！\n\n已清空：\n• 用户搜索历史记录\n• 用户单词表\n• 用户剧单\n• 最近查词记录\n\n数据库中的词库保持不变。',
                 [{ text: '确定' }]
               );
             } catch (error) {

@@ -558,35 +558,35 @@ async function generateWordData(word: string) {
 3. 例句简单实用
 4. 只返回JSON，不要其他文字`;
 
-  const completion = await openai.chat.completions.create({
-    model: "gpt-3.5-turbo",
-    messages: [
-      {
-        role: "system",
+    const completion = await openai.chat.completions.create({
+      model: "gpt-3.5-turbo",
+      messages: [
+        {
+          role: "system",
         content: "你是一个专业的英语词典助手，提供准确的单词释义和例句。"
-      },
-      {
-        role: "user",
-        content: prompt
-      }
-    ],
-    temperature: 0.3,
+        },
+        {
+          role: "user",
+          content: prompt
+        }
+      ],
+      temperature: 0.3,
     max_tokens: 500
-  });
+    });
 
   const responseText = completion.choices[0]?.message?.content;
   if (!responseText) {
-    throw new Error('No response from OpenAI');
-  }
+      throw new Error('No response from OpenAI');
+    }
 
-  try {
+    try {
     const parsedData = JSON.parse(responseText);
     return {
       phonetic: parsedData.phonetic || '',
       definitions: parsedData.definitions || [],
       audioUrl: parsedData.audioUrl || ''
     };
-  } catch (parseError) {
+    } catch (parseError) {
     logger.error('❌ Failed to parse OpenAI response:', parseError);
     throw new Error('Invalid response format from OpenAI');
   }
@@ -617,12 +617,12 @@ export const clearAllData = async (req: Request, res: Response): Promise<void> =
     await UserVocabulary.deleteMany({});
     await SearchHistory.deleteMany({});
     await Word.deleteMany({});
-    
+
     // 清空内存缓存
     wordCache.clear();
     
     logger.info('✅ All data cleared successfully');
-    
+
     res.json({
       success: true,
       message: 'All data cleared successfully'
@@ -637,35 +637,26 @@ export const clearAllData = async (req: Request, res: Response): Promise<void> =
   }
 };
 
-// 清空用户搜索历史（调试用）
+// 清空用户搜索历史（包括最近查词）
 export const clearUserHistory = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { userId } = req.params;
+    logger.warn('🗑️ Clearing all search history (including recent searches)...');
     
-    if (!userId) {
-      res.status(400).json({
-        success: false,
-        error: 'User ID is required'
-      });
-      return;
-    }
+    // 清空所有搜索历史记录，包括最近查词
+    await SearchHistory.deleteMany({});
+    
+    logger.info('✅ All search history cleared successfully');
 
-    logger.warn(`🗑️ Clearing search history for user: ${userId}`);
-    
-    await SearchHistory.deleteMany({ userId: userId });
-    
-    logger.info(`✅ Search history cleared for user: ${userId}`);
-    
     res.json({
       success: true,
-      message: 'User search history cleared successfully'
+      message: 'All search history and recent searches cleared successfully'
     });
 
   } catch (error) {
     logger.error('❌ Clear user history error:', error);
     res.status(500).json({
       success: false,
-      error: 'Failed to clear user history'
+      error: 'Failed to clear search history'
     });
   }
 };
