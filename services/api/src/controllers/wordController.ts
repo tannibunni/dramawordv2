@@ -2,7 +2,7 @@ import { Request, Response } from 'express';
 import OpenAI from 'openai';
 import { Word, IWord } from '../models/Word';
 import { SearchHistory, ISearchHistory } from '../models/SearchHistory';
-import CloudWord from '../models/CloudWord';
+import { CloudWord } from '../models/CloudWord';
 import UserVocabulary from '../models/UserVocabulary';
 import { logger } from '../utils/logger';
 

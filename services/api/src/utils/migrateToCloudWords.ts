@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
 import { Word } from '../models/Word';
-import CloudWord from '../models/CloudWord';
+import { CloudWord } from '../models/CloudWord';
 import UserVocabulary from '../models/UserVocabulary';
 import { logger } from './logger';
 
