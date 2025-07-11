@@ -647,10 +647,10 @@ function getFallbackWordData(word: string) {
         partOfSpeech: isEnglish ? 'noun' : 'n.',
         definition: `${word} 的基本含义`,
         examples: isEnglish ? [
-          `This is a ${word}. - 这是一个${word}。`,
-          `I like ${word}. - 我喜欢${word}。`
+          { english: `This is a ${word}.`, chinese: `这是一个${word}。` },
+          { english: `I like ${word}.`, chinese: `我喜欢${word}。` }
         ] : [
-          `${word} - ${word} 的含义`
+          { english: `${word}`, chinese: `${word} 的含义` }
         ]
       }
     ],
