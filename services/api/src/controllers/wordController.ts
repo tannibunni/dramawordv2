@@ -592,10 +592,14 @@ async function generateWordData(word: string) {
       const definitions = Array.isArray(parsedData.definitions) ? parsedData.definitions.map((def: any) => ({
         partOfSpeech: def.partOfSpeech || 'n.',
         definition: def.definition || '暂无释义',
-        examples: Array.isArray(def.examples) ? def.examples.map((ex: any) => ({
-          english: ex.english || ex.toString() || 'Example sentence',
-          chinese: ex.chinese || '例句翻译'
-        })) : []
+        examples: Array.isArray(def.examples) ? def.examples.map((ex: any) => {
+          // 如果 examples 是对象数组，转换为字符串
+          if (typeof ex === 'object' && ex.english && ex.chinese) {
+            return `${ex.english} - ${ex.chinese}`;
+          }
+          // 如果已经是字符串，直接返回
+          return typeof ex === 'string' ? ex : ex.toString();
+        }) : []
       })) : [];
 
       return {
@@ -622,19 +626,10 @@ function getFallbackWordData(word: string) {
         partOfSpeech: isEnglish ? 'noun' : 'n.',
         definition: `${word} 的基本含义`,
         examples: isEnglish ? [
-          {
-            english: `This is a ${word}.`,
-            chinese: `这是一个${word}。`
-          },
-          {
-            english: `I like ${word}.`,
-            chinese: `我喜欢${word}。`
-          }
+          `This is a ${word}. - 这是一个${word}。`,
+          `I like ${word}. - 我喜欢${word}。`
         ] : [
-          {
-            english: word,
-            chinese: `${word} 的含义`
-          }
+          `${word} - ${word} 的含义`
         ]
       }
     ],
