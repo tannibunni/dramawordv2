@@ -542,6 +542,11 @@ async function saveSearchHistoryToDB(word: string, definition?: string, timestam
   }
 }
 
+// 获取有道 TTS 发音链接（美音，免费，无需鉴权）
+function getYoudaoTTSUrl(word: string) {
+  return `https://dict.youdao.com/dictvoice?audio=${encodeURIComponent(word)}&type=2`;
+}
+
 // 使用 OpenAI 生成单词数据
 async function generateWordData(word: string) {
   const prompt = `为单词或短语 "${word}" 生成词典信息，返回JSON格式：\n\n{
@@ -601,7 +606,7 @@ async function generateWordData(word: string) {
       return {
         phonetic: parsedData.phonetic || `/${word}/`,
         definitions: definitions,
-        audioUrl: parsedData.audioUrl || ''
+        audioUrl: getYoudaoTTSUrl(word)
       };
     } catch (parseError) {
       logger.error('❌ Failed to parse OpenAI response:', parseError);
@@ -629,7 +634,7 @@ function getFallbackWordData(word: string) {
         ]
       }
     ],
-    audioUrl: ''
+    audioUrl: getYoudaoTTSUrl(word)
   };
 }
 
