@@ -1,8 +1,8 @@
 import { Router } from 'express';
-import {
-  searchWord,
-  getPopularWords,
-  getRecentSearches,
+import { 
+  searchWord, 
+  getPopularWords, 
+  getRecentSearches, 
   saveSearchHistory,
   clearAllData,
   clearUserHistory,
