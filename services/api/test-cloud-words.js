@@ -1,6 +1,6 @@
 const axios = require('axios');
 
-const API_BASE_URL = 'http://localhost:3001';
+const API_BASE_URL = 'https://dramawordv2.onrender.com/api';
 
 // 测试云单词表架构
 async function testCloudWordsArchitecture() {
@@ -30,7 +30,7 @@ async function testCloudWordsArchitecture() {
       console.log('✅ 获取热门单词成功');
       console.log(`   热门单词数量: ${popularResponse.data.data.length}`);
       popularResponse.data.data.slice(0, 3).forEach((word, index) => {
-        console.log(`   ${index + 1}. ${word.word} (搜索 ${word.searchCount} 次)`);
+        console.log(`   ${index + 1}. ${word.word} (搜索 ${word.count} 次)`);
       });
     } else {
       console.log('❌ 获取热门单词失败:', popularResponse.data.error);
@@ -88,13 +88,108 @@ async function testCloudWordsArchitecture() {
   }
 }
 
+// 测试用户单词本相关API
+async function testUserVocabularyAPI() {
+  console.log('\n📚 开始测试用户单词本API...\n');
+
+  const testUserId = 'test-user-123';
+
+  try {
+    // 1. 测试获取用户单词本
+    console.log('1️⃣ 测试获取用户单词本...');
+    const vocabResponse = await axios.get(`${API_BASE_URL}/words/user/vocabulary?userId=${testUserId}`);
+    
+    if (vocabResponse.data.success) {
+      console.log('✅ 获取用户单词本成功');
+      console.log(`   单词本数量: ${vocabResponse.data.data.length}`);
+      vocabResponse.data.data.slice(0, 3).forEach((word, index) => {
+        console.log(`   ${index + 1}. ${word.word} - 掌握度: ${word.mastery || 0}%`);
+      });
+    } else {
+      console.log('❌ 获取用户单词本失败:', vocabResponse.data.error);
+    }
+
+    // 2. 测试添加单词到用户单词本
+    console.log('\n2️⃣ 测试添加单词到用户单词本...');
+    const addWordResponse = await axios.post(`${API_BASE_URL}/words/user/vocabulary`, {
+      userId: testUserId,
+      word: 'beautiful',
+      sourceShow: {
+        id: 123,
+        name: 'Friends',
+        status: 'watching'
+      }
+    });
+    
+    if (addWordResponse.data.success) {
+      console.log('✅ 添加单词到用户单词本成功');
+      console.log(`   添加的单词: ${addWordResponse.data.data.word}`);
+    } else {
+      console.log('❌ 添加单词到用户单词本失败:', addWordResponse.data.error);
+    }
+
+    // 3. 测试更新单词学习进度
+    console.log('\n3️⃣ 测试更新单词学习进度...');
+    const progressResponse = await axios.put(`${API_BASE_URL}/words/user/progress`, {
+      userId: testUserId,
+      word: 'beautiful',
+      progress: {
+        mastery: 75,
+        reviewCount: 3,
+        correctCount: 2,
+        incorrectCount: 1,
+        confidence: 4,
+        notes: '这个单词很美'
+      }
+    });
+    
+    if (progressResponse.data.success) {
+      console.log('✅ 更新单词学习进度成功');
+    } else {
+      console.log('❌ 更新单词学习进度失败:', progressResponse.data.error);
+    }
+
+    // 4. 再次获取用户单词本，验证更新
+    console.log('\n4️⃣ 验证更新后的用户单词本...');
+    const updatedVocabResponse = await axios.get(`${API_BASE_URL}/words/user/vocabulary?userId=${testUserId}`);
+    
+    if (updatedVocabResponse.data.success) {
+      console.log('✅ 验证用户单词本更新成功');
+      const beautifulWord = updatedVocabResponse.data.data.find(w => w.word === 'beautiful');
+      if (beautifulWord) {
+        console.log(`   beautiful 单词掌握度: ${beautifulWord.mastery}%`);
+        console.log(`   复习次数: ${beautifulWord.reviewCount}`);
+        console.log(`   用户笔记: ${beautifulWord.notes}`);
+      }
+    } else {
+      console.log('❌ 验证用户单词本更新失败:', updatedVocabResponse.data.error);
+    }
+
+    console.log('\n🎉 用户单词本API测试完成！');
+
+  } catch (error) {
+    console.error('❌ 用户单词本API测试过程中出现错误:', error.message);
+    if (error.response) {
+      console.error('   响应状态:', error.response.status);
+      console.error('   响应数据:', error.response.data);
+    }
+  }
+}
+
 // 测试数据迁移（如果直接运行此脚本）
 if (require.main === module) {
   // 检查服务器是否运行
   axios.get(`${API_BASE_URL}/health`)
     .then(() => {
       console.log('🚀 服务器运行正常，开始测试...\n');
-      testCloudWordsArchitecture();
+      testCloudWordsArchitecture()
+        .then(() => testUserVocabularyAPI())
+        .then(() => {
+          console.log('\n🎉 所有测试完成！');
+        })
+        .catch((error) => {
+          console.error('❌ 测试执行失败:', error.message);
+        });
     })
     .catch(() => {
       console.error('❌ 服务器未运行，请先启动服务器');
@@ -102,4 +197,4 @@ if (require.main === module) {
     });
 }
 
-module.exports = { testCloudWordsArchitecture }; 
+module.exports = { testCloudWordsArchitecture, testUserVocabularyAPI }; 
