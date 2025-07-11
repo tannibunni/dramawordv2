@@ -580,7 +580,22 @@ function getYoudaoTTSUrl(word: string) {
 
 // 使用 OpenAI 生成单词数据
 async function generateWordData(word: string) {
-  const prompt = `为单词或短语 "${word}" 生成词典信息，返回JSON格式：\n\n{
+  const prompt = `你是专业的英语词典助手和拼写纠错专家。
+
+任务：为单词或短语 "${word}" 生成词典信息，并检查拼写是否正确。
+
+重要：请仔细检查用户输入的单词是否有拼写错误。常见的拼写错误包括：
+- "freind" → "friend" (i 和 e 顺序错误)
+- "beautifull" → "beautiful" (多了一个 l)
+- "recieve" → "receive" (i 和 e 顺序错误)
+- "occured" → "occurred" (少了一个 r)
+- "seperate" → "separate" (a 和 e 顺序错误)
+- "definately" → "definitely" (a 和 e 顺序错误)
+- "accomodate" → "accommodate" (少了一个 m)
+- "neccessary" → "necessary" (多了一个 c)
+
+返回JSON格式：
+{
   "phonetic": "/音标/",
   "definitions": [
     {
@@ -594,8 +609,14 @@ async function generateWordData(word: string) {
       ]
     }
   ],
-  "correctedWord": "【如果用户输入的单词拼写正确，则返回原词；如果拼写错误，则返回正确的拼写。例如：用户输入'freind'，应返回'friend'；用户输入'beautifull'，应返回'beautiful'；用户输入'hello'，应返回'hello'】"
-}\n\n要求：\n- 无论查询什么语言，释义（definition）和例句的中文（chinese）字段都必须是中文。\n- 如果查到的释义或例句不是中文，请用"暂无中文释义"或"暂无中文例句"代替。\n- correctedWord 字段：如果用户输入的单词拼写正确，返回原词；如果拼写错误，返回正确的拼写。\n- 只返回JSON，不要其他内容。`;
+  "correctedWord": "【如果用户输入的单词拼写正确，返回原词；如果拼写错误，返回正确的拼写。请仔细检查并修正拼写错误】"
+}
+
+要求：
+- 无论查询什么语言，释义（definition）和例句的中文（chinese）字段都必须是中文。
+- 如果查到的释义或例句不是中文，请用"暂无中文释义"或"暂无中文例句"代替。
+- correctedWord 字段：必须仔细检查拼写，如果用户输入的单词拼写正确，返回原词；如果拼写错误，返回正确的拼写。
+- 只返回JSON，不要其他内容。`;
 
     const completion = await openai.chat.completions.create({
       model: "gpt-3.5-turbo",
