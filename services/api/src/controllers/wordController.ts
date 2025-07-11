@@ -145,22 +145,22 @@ export const searchWord = async (req: Request, res: Response): Promise<void> => 
       });
     }
 
-    // === 新增：查不到时推荐相似词 ===
+    // 删除 didyoumean2 相关建议词逻辑
     // 只有缓存、云表、AI、fallback都查不到时才会走到这里
     // 引入 didyoumean2
-    const didYouMean = require('didyoumean2').default;
+    // const didYouMean = require('didyoumean2').default;
     // 获取所有云单词
-    const allCloudWords = await CloudWord.find({}).select('word -_id');
-    const wordList = allCloudWords.map((w: any) => w.word);
+    // const allCloudWords = await CloudWord.find({}).select('word -_id');
+    // const wordList = allCloudWords.map((w: any) => w.word);
     // 查找相似词，阈值可调整
-    const suggestions = didYouMean(searchTerm, wordList, { returnType: 'all-matches', threshold: 0.6 });
-    logger.info(`🔎 No result for ${searchTerm}, suggestions: ${suggestions}`);
-    res.status(404).json({
-      success: false,
-      error: 'Word not found',
-      suggestions
-    });
-    return;
+    // const suggestions = didYouMean(searchTerm, wordList, { returnType: 'all-matches', threshold: 0.6 });
+    // logger.info(`🔎 No result for ${searchTerm}, suggestions: ${suggestions}`);
+    // res.status(404).json({
+    //   success: false,
+    //   error: 'Word not found',
+    //   suggestions
+    // });
+    // return;
 
   } catch (error) {
     logger.error('❌ Search word error:', error);
@@ -579,7 +579,8 @@ async function generateWordData(word: string) {
         }
       ]
     }
-  ]
+  ],
+  "correctedWord": "${word}"
 }\n\n要求：\n- 无论查询什么语言，释义（definition）和例句的中文（chinese）字段都必须是中文。\n- 如果查到的释义或例句不是中文，请用"暂无中文释义"或"暂无中文例句"代替。\n- 只返回JSON，不要其他内容。`;
 
     const completion = await openai.chat.completions.create({
@@ -643,7 +644,8 @@ async function generateWordData(word: string) {
       return {
         phonetic: parsedData.phonetic || `/${word}/`,
         definitions: definitions,
-        audioUrl: getYoudaoTTSUrl(word)
+        audioUrl: getYoudaoTTSUrl(word),
+        correctedWord: parsedData.correctedWord || word
       };
     } catch (parseError) {
       logger.error('❌ Failed to parse OpenAI response:', parseError);
