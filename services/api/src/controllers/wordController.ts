@@ -544,43 +544,36 @@ async function saveSearchHistoryToDB(word: string, definition?: string, timestam
 
 // 使用 OpenAI 生成单词数据
 async function generateWordData(word: string) {
-  const prompt = `请为英文单词 "${word}" 提供详细的词典信息，以JSON格式返回：
+  const prompt = `为英文单词 "${word}" 生成词典信息，严格按照以下JSON格式返回：
 
 {
-  "phonetic": "音标（使用国际音标）",
+  "phonetic": "/音标/",
   "definitions": [
     {
-      "partOfSpeech": "词性（如：n. v. adj. adv. int. prep. conj.）",
-      "definition": "中文释义（准确且通俗易懂）",
+      "partOfSpeech": "词性",
+      "definition": "中文释义",
       "examples": [
         {
-          "english": "英文例句1",
-          "chinese": "中文翻译1"
-        },
-        {
-          "english": "英文例句2", 
-          "chinese": "中文翻译2"
+          "english": "英文例句",
+          "chinese": "中文翻译"
         }
       ]
     }
-  ],
-  "audioUrl": ""
+  ]
 }
 
 要求：
-1. 音标必须使用国际音标格式
-2. 释义要准确、通俗易懂
-3. 每个词性至少提供2个例句，英文+中文对照
-4. 例句要简单实用，适合学习
-5. 只返回JSON格式，不要其他文字
-6. 如果单词有多种词性，请分别列出`;
+1. 音标使用国际音标格式，如 /ˈwɜːd/
+2. 释义准确易懂
+3. 每个词性提供1-2个例句
+4. 只返回JSON，不要其他内容`;
 
     const completion = await openai.chat.completions.create({
       model: "gpt-3.5-turbo",
       messages: [
         {
           role: "system",
-          content: "你是一个专业的英语词典助手，提供准确的单词释义和例句。请严格按照要求的JSON格式返回，确保examples字段是包含english和chinese字段的对象数组。"
+          content: "你是英语词典助手。请严格按照用户要求的JSON格式返回，不要添加任何其他内容。"
         },
         {
           role: "user",
