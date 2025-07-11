@@ -17,6 +17,7 @@ import { audioService } from '../../services/audioService';
 import { colors } from '../../constants/colors';
 import { useVocabulary } from '../../context/VocabularyContext';
 import WordCard from '../../components/cards/WordCard';
+import WordList from '../../components/vocabulary/WordList';
 
 const { width } = Dimensions.get('window');
 
@@ -36,8 +37,8 @@ const VocabularyScreen: React.FC = () => {
   const [previewList, setPreviewList] = useState<any[]>([]);
   const [isEditing, setIsEditing] = useState(false);
 
-  // 徽章配置
-  const badges: Badge[] = [
+  // 徽章配置 - 使用 state 来保持状态
+  const [badges, setBadges] = useState<Badge[]>([
     { id: 1, count: 10, unlocked: false },
     { id: 2, count: 20, unlocked: false },
     { id: 3, count: 50, unlocked: false },
@@ -45,7 +46,7 @@ const VocabularyScreen: React.FC = () => {
     { id: 5, count: 200, unlocked: false },
     { id: 6, count: 500, unlocked: false },
     { id: 7, count: 1000, unlocked: false },
-  ];
+  ]);
 
   useEffect(() => {
     filterWords();
@@ -77,9 +78,34 @@ const VocabularyScreen: React.FC = () => {
 
   const updateBadges = () => {
     const wordCount = vocabulary.length;
-    badges.forEach(badge => {
-      badge.unlocked = wordCount >= badge.count;
+    console.log('🔄 更新徽章状态，当前单词数量:', wordCount);
+    
+    setBadges(prevBadges => {
+      const newBadges = prevBadges.map(badge => {
+        const wasUnlocked = badge.unlocked;
+        const newUnlocked = wordCount >= badge.count;
+        
+        if (!wasUnlocked && newUnlocked) {
+          console.log(`🎉 解锁徽章: ${badge.count}个单词`);
+        }
+        
+        return {
+          ...badge,
+          unlocked: newUnlocked
+        };
+      });
+      
+      console.log('📊 徽章状态:', newBadges.map(b => `${b.count}(${b.unlocked ? '已解锁' : '未解锁'})`));
+      return newBadges;
     });
+  };
+
+  // 获取单词的所有相关剧集
+  const getWordShows = (wordText: string) => {
+    return vocabulary
+      .filter(w => w.word === wordText)
+      .map(w => w.sourceShow)
+      .filter(Boolean);
   };
 
   // 1. 点击单词卡后，搜索框自动填入该单词
@@ -136,55 +162,54 @@ const VocabularyScreen: React.FC = () => {
     );
   };
 
-  const renderWordItem = ({ item }: { item: any }) => (
-    <View style={styles.wordCardBox}>
-      <TouchableOpacity
-        style={styles.wordCard}
-        activeOpacity={0.8}
-        onPress={() => { setSelectedWord(item); setSearchText(item.word); setIsEditing(false); }}
-      >
-        <View style={styles.wordCardHeader}>
-          <Text style={styles.wordText}>{item.word}</Text>
-          {item.phonetic && <Text style={styles.phoneticText}>{item.phonetic}</Text>}
-          <TouchableOpacity
-            style={styles.deleteButton}
-            onPress={() => handleDeleteWord(item)}
-            hitSlop={{top:10,right:10,bottom:10,left:10}}
-          >
-            <Ionicons name="trash" size={20} color={colors.error[500]} />
-          </TouchableOpacity>
-        </View>
-        <Text style={styles.wordTranslation}>{item.definitions?.[0]?.definition || '暂无释义'}</Text>
-        {item.sourceShow && (
-          <View style={styles.showTag}><Text style={styles.showTagText}>{item.sourceShow.name}</Text></View>
-        )}
-      </TouchableOpacity>
-    </View>
-  );
+  // 获取当前进度和目标
+  const getCurrentProgress = () => {
+    const wordCount = vocabulary.length;
+    
+    // 找到下一个未解锁的徽章作为目标
+    const nextBadge = badges.find(badge => !badge.unlocked);
+    
+    if (!nextBadge) {
+      // 所有徽章都已解锁，显示最高级别
+      return {
+        current: wordCount,
+        target: badges[badges.length - 1].count,
+        progress: 100,
+        isFull: true
+      };
+    }
+    
+    // 计算当前进度 - 从0开始到下一个徽章
+    const progress = Math.min((wordCount / nextBadge.count) * 100, 100);
+    
+    return {
+      current: wordCount,
+      target: nextBadge.count,
+      progress,
+      isFull: wordCount >= nextBadge.count
+    };
+  };
 
-  const maxProgress = 10;
-  const progress = Math.min(vocabulary.length, maxProgress);
-  const isFull = vocabulary.length >= maxProgress;
-  const leftCount = Math.max(0, maxProgress - vocabulary.length);
+  const progressInfo = getCurrentProgress();
 
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.headerWrap}>
         <View style={styles.progressCard}>
           <View style={styles.progressCircle}>
-            <Text style={styles.progressCircleText}>{progress}</Text>
-            <Text style={styles.progressCircleSub}>/10</Text>
+            <Text style={styles.progressCircleText}>{progressInfo.current}</Text>
+            <Text style={styles.progressCircleSub}>/{progressInfo.target}</Text>
           </View>
           <View style={styles.progressBarContainer}>
             <View style={styles.progressBarBg}>
-              <View style={[styles.progressBarFg, { width: `${(progress / maxProgress) * 100}%` }]} />
+              <View style={[styles.progressBarFg, { width: `${progressInfo.progress}%` }]} />
             </View>
           </View>
           <View style={styles.progressRight}>
-            {isFull ? (
+            {progressInfo.isFull ? (
               <View style={styles.progressCheck}><Ionicons name="checkmark" size={20} color={colors.text.inverse} /></View>
             ) : (
-              <Text style={styles.progressLeftText}>还差{leftCount}个</Text>
+              <Text style={styles.progressLeftText}>还差{progressInfo.target - progressInfo.current}个</Text>
             )}
           </View>
         </View>
@@ -239,9 +264,19 @@ const VocabularyScreen: React.FC = () => {
               </View>
               <View style={styles.detailPhoneticRow}>
                 <Text style={styles.detailPhonetic}>{selectedWord.phonetic}</Text>
-                {selectedWord.sourceShow && (
-                  <View style={styles.detailShowTag}><Text style={styles.detailShowTagText}>来源于{selectedWord.sourceShow.name}</Text></View>
-                )}
+                {/* 显示多个剧集标签 */}
+                {(() => {
+                  const allShows = getWordShows(selectedWord.word);
+                  return allShows.length > 0 && (
+                    <View style={styles.detailShowTagsContainer}>
+                      {allShows.map((show, index) => (
+                        <View key={`${show?.id}-${index}`} style={styles.detailShowTag}>
+                          <Text style={styles.detailShowTagText}>来源于{show?.name}</Text>
+                        </View>
+                      ))}
+                    </View>
+                  );
+                })()}
               </View>
               {/* 释义和例句 */}
               {selectedWord.definitions && selectedWord.definitions.map((def: any, idx: number) => (
@@ -283,25 +318,12 @@ const VocabularyScreen: React.FC = () => {
               onSubmitEditing={handleSearchSubmit}
             />
           </View>
-          {filteredWords.length > 0 ? (
-            <FlatList
-              data={filteredWords}
-              renderItem={renderWordItem}
-              keyExtractor={(item) => item.word}
-              showsVerticalScrollIndicator={false}
-              contentContainerStyle={styles.listContainer}
-            />
-          ) : (
-            <View style={styles.emptyState}>
-              <Ionicons name="book-outline" size={48} color={colors.text.secondary} />
-              <Text style={styles.emptyStateText}>
-                {searchText ? '没有找到匹配的单词' : '还没有收藏任何单词'}
-              </Text>
-              <Text style={styles.emptyStateSubtext}>
-                {searchText ? '尝试搜索其他单词' : '去首页搜索并收藏单词吧'}
-              </Text>
-            </View>
-          )}
+          <WordList
+            words={filteredWords}
+            onWordPress={(word) => { setSelectedWord(word); setSearchText(word.word); setIsEditing(false); }}
+            onDeleteWord={handleDeleteWord}
+            showDeleteButton={true}
+          />
         </View>
       )}
     </SafeAreaView>
@@ -389,6 +411,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   listSection: {
+    flex: 1,
     paddingTop: 0,
     paddingBottom: 0,
     paddingHorizontal: 20,
@@ -553,18 +576,7 @@ const styles = StyleSheet.create({
     flex: 1,
     marginRight: 16,
   },
-  progressBarBg: {
-    width: '100%',
-    height: 16,
-    backgroundColor: colors.neutral[200],
-    borderRadius: 8,
-    overflow: 'hidden',
-  },
-  progressBarFg: {
-    height: 16,
-    backgroundColor: colors.primary[500],
-    borderRadius: 8,
-  },
+
   progressRight: {
     minWidth: 48,
     alignItems: 'center',
@@ -657,10 +669,17 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     paddingHorizontal: 8,
     paddingVertical: 2,
+    marginBottom: 4,
   },
   detailShowTagText: {
     color: colors.text.inverse,
     fontSize: 13,
+  },
+  detailShowTagsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginTop: 4,
+    gap: 6,
   },
   detailDefBlock: {
     marginBottom: 18,
