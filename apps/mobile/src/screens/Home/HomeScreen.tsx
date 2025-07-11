@@ -22,6 +22,7 @@ import WordCard from '../../components/cards/WordCard';
 import { useShowList } from '../../context/ShowListContext';
 import { useVocabulary } from '../../context/VocabularyContext';
 import { TMDBService, TMDBShow } from '../../services/tmdbService';
+import { Audio } from 'expo-av';
 
 const HomeScreen: React.FC = () => {
   const [searchText, setSearchText] = useState('');
@@ -326,6 +327,19 @@ const HomeScreen: React.FC = () => {
     setNewWordbookName('');
   };
 
+  const handlePlayAudio = async (word: string) => {
+    try {
+      if (!searchResult?.audioUrl) {
+        Alert.alert('没有发音', '该单词暂无发音资源');
+        return;
+      }
+      const { sound } = await Audio.Sound.createAsync({ uri: searchResult.audioUrl });
+      await sound.playAsync();
+    } catch (error) {
+      Alert.alert('播放失败', '无法播放发音');
+    }
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <KeyboardAvoidingView
@@ -376,6 +390,7 @@ const HomeScreen: React.FC = () => {
               wordData={searchResult}
               onIgnore={() => setSearchResult(null)}
               onCollect={handleCollect}
+              onPlayAudio={handlePlayAudio}
             />
           </View>
         ) : searchSuggestions.length > 0 ? (
