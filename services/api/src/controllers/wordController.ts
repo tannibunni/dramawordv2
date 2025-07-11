@@ -594,8 +594,8 @@ async function generateWordData(word: string) {
       ]
     }
   ],
-  "correctedWord": "${word}"
-}\n\n要求：\n- 无论查询什么语言，释义（definition）和例句的中文（chinese）字段都必须是中文。\n- 如果查到的释义或例句不是中文，请用"暂无中文释义"或"暂无中文例句"代替。\n- 只返回JSON，不要其他内容。`;
+  "correctedWord": "【如果用户输入的单词拼写正确，则返回原词；如果拼写错误，则返回正确的拼写。例如：用户输入'freind'，应返回'friend'；用户输入'beautifull'，应返回'beautiful'；用户输入'hello'，应返回'hello'】"
+}\n\n要求：\n- 无论查询什么语言，释义（definition）和例句的中文（chinese）字段都必须是中文。\n- 如果查到的释义或例句不是中文，请用"暂无中文释义"或"暂无中文例句"代替。\n- correctedWord 字段：如果用户输入的单词拼写正确，返回原词；如果拼写错误，返回正确的拼写。\n- 只返回JSON，不要其他内容。`;
 
     const completion = await openai.chat.completions.create({
       model: "gpt-3.5-turbo",
