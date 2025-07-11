@@ -10,7 +10,8 @@ import {
   addToUserVocabulary,
   updateWordProgress,
   removeFromUserVocabulary,
-  checkEnvironment
+  checkEnvironment,
+  testOpenAI
 } from '../controllers/wordController';
 
 const router = Router();
@@ -44,5 +45,8 @@ router.get('/test', (req, res) => {
 
 // 调试路由 - 检查环境变量
 router.get('/debug/environment', checkEnvironment);
+
+// 测试 Open AI 连接
+router.get('/debug/openai', testOpenAI);
 
 export default router; 

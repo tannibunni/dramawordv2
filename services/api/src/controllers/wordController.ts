@@ -109,6 +109,11 @@ export const searchWord = async (req: Request, res: Response): Promise<void> => 
       });
     } catch (aiError) {
       logger.warn(`⚠️ AI generation failed for ${searchTerm}, using fallback data:`, aiError);
+      logger.error(`❌ OpenAI API Error details:`, {
+        message: aiError instanceof Error ? aiError.message : 'Unknown error',
+        stack: aiError instanceof Error ? aiError.stack : undefined,
+        word: searchTerm
+      });
       
       // 使用模拟数据作为后备方案
       const fallbackData = getFallbackWordData(searchTerm);
@@ -709,6 +714,48 @@ export const checkEnvironment = async (req: Request, res: Response): Promise<voi
   }
 };
 
+// 测试 Open AI 连接
+export const testOpenAI = async (req: Request, res: Response): Promise<void> => {
+  try {
+    if (!process.env.OPENAI_API_KEY) {
+      res.json({
+        success: false,
+        error: 'OPENAI_API_KEY not found'
+      });
+      return;
+    }
+
+    const completion = await openai.chat.completions.create({
+      model: "gpt-3.5-turbo",
+      messages: [
+        {
+          role: "user",
+          content: "Hello, please respond with 'OpenAI connection successful'"
+        }
+      ],
+      max_tokens: 50
+    });
+
+    const response = completion.choices[0]?.message?.content;
+    
+    res.json({
+      success: true,
+      data: {
+        response,
+        model: completion.model,
+        usage: completion.usage
+      }
+    });
+  } catch (error) {
+    logger.error('❌ OpenAI test error:', error);
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+      details: error instanceof Error ? error.stack : undefined
+    });
+  }
+};
+
 export const wordController = {
   searchWord,
   getPopularWords,
@@ -719,5 +766,6 @@ export const wordController = {
   updateWordProgress,
   clearAllData,
   clearUserHistory,
-  checkEnvironment
+  checkEnvironment,
+  testOpenAI
 }; 
