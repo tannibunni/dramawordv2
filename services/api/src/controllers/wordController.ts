@@ -544,25 +544,21 @@ async function saveSearchHistoryToDB(word: string, definition?: string, timestam
 
 // 使用 OpenAI 生成单词数据
 async function generateWordData(word: string) {
-  const prompt = `为单词或短语 "${word}" 生成词典信息，返回JSON格式：
-
-{
+  const prompt = `为单词或短语 "${word}" 生成词典信息，返回JSON格式：\n\n{
   "phonetic": "/音标/",
   "definitions": [
     {
       "partOfSpeech": "词性",
-      "definition": "中文释义",
+      "definition": "【必须是中文释义，不能是英文或其他语言】",
       "examples": [
         {
-          "english": "例句原文",
-          "chinese": "中文翻译"
+          "english": "英文例句",
+          "chinese": "【必须是该例句的中文翻译，不能是英文或其他语言】"
         }
       ]
     }
   ]
-}
-
-只返回JSON，不要其他内容。`;
+}\n\n要求：\n- 无论查询什么语言，释义（definition）和例句的中文（chinese）字段都必须是中文。\n- 如果查到的释义或例句不是中文，请用“暂无中文释义”或“暂无中文例句”代替。\n- 只返回JSON，不要其他内容。`;
 
     const completion = await openai.chat.completions.create({
       model: "gpt-3.5-turbo",
