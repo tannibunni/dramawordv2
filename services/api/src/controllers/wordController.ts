@@ -49,7 +49,10 @@ export const searchWord = async (req: Request, res: Response): Promise<void> => 
       
       res.json({
         success: true,
-        data: cachedWord,
+        data: {
+          ...cachedWord,
+          correctedWord: cachedWord.correctedWord || searchTerm
+        },
         source: 'cache'
       });
       return;
@@ -71,7 +74,10 @@ export const searchWord = async (req: Request, res: Response): Promise<void> => 
       
       res.json({
         success: true,
-        data: cloudWord,
+        data: {
+          ...cloudWord.toObject(),
+          correctedWord: cloudWord.correctedWord || searchTerm
+        },
         source: 'cloud_words'
       });
       return;
@@ -89,6 +95,7 @@ export const searchWord = async (req: Request, res: Response): Promise<void> => 
         phonetic: generatedData.phonetic,
         definitions: generatedData.definitions,
         audioUrl: generatedData.audioUrl || '',
+        correctedWord: generatedData.correctedWord || searchTerm,
         searchCount: 1,
         lastSearched: new Date()
       });
@@ -104,7 +111,10 @@ export const searchWord = async (req: Request, res: Response): Promise<void> => 
 
       res.json({
         success: true,
-        data: cloudWord,
+        data: {
+          ...cloudWord.toObject(),
+          correctedWord: cloudWord.correctedWord || searchTerm
+        },
         source: 'ai'
       });
     } catch (aiError) {
@@ -124,6 +134,7 @@ export const searchWord = async (req: Request, res: Response): Promise<void> => 
         phonetic: fallbackData.phonetic,
         definitions: fallbackData.definitions,
         audioUrl: fallbackData.audioUrl || '',
+        correctedWord: searchTerm, // fallback 时使用原词作为 correctedWord
         searchCount: 1,
         lastSearched: new Date()
       });
@@ -139,7 +150,10 @@ export const searchWord = async (req: Request, res: Response): Promise<void> => 
 
       res.json({
         success: true,
-        data: cloudWord,
+        data: {
+          ...cloudWord.toObject(),
+          correctedWord: cloudWord.correctedWord || searchTerm
+        },
         source: 'fallback',
         message: 'AI service unavailable, using basic definition'
       });

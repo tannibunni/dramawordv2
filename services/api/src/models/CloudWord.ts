@@ -12,6 +12,7 @@ export interface ICloudWord extends Document {
     }>;
   }>;
   audioUrl?: string;
+  correctedWord?: string; // 新增：标准单词
   searchCount: number;
   lastSearched: Date;
   createdAt: Date;
@@ -51,6 +52,10 @@ const CloudWordSchema = new Schema<ICloudWord>({
     }]
   }],
   audioUrl: {
+    type: String,
+    default: ''
+  },
+  correctedWord: {
     type: String,
     default: ''
   },
