@@ -544,7 +544,7 @@ async function saveSearchHistoryToDB(word: string, definition?: string, timestam
 
 // 使用 OpenAI 生成单词数据
 async function generateWordData(word: string) {
-  const prompt = `为单词或短语 "${word}" 生成词典信息，支持多语言（英文、中文、日文、韩文等），严格按照以下JSON格式返回：
+  const prompt = `为单词或短语 "${word}" 生成词典信息，返回JSON格式：
 
 {
   "phonetic": "/音标/",
@@ -554,7 +554,7 @@ async function generateWordData(word: string) {
       "definition": "中文释义",
       "examples": [
         {
-          "english": "例句（原文）",
+          "english": "例句原文",
           "chinese": "中文翻译"
         }
       ]
@@ -562,20 +562,14 @@ async function generateWordData(word: string) {
   ]
 }
 
-要求：
-1. 如果是英文单词，使用国际音标，如 /ˈwɜːd/
-2. 如果是其他语言，可以省略音标或使用该语言的注音
-3. 释义要准确易懂
-4. 例句使用原文+中文翻译
-5. 支持单词和短语
-6. 只返回JSON，不要其他内容`;
+只返回JSON，不要其他内容。`;
 
     const completion = await openai.chat.completions.create({
       model: "gpt-3.5-turbo",
       messages: [
         {
           role: "system",
-          content: "你是多语言词典助手，支持英文、中文、日文、韩文等多种语言的单词和短语查询。请严格按照用户要求的JSON格式返回，不要添加任何其他内容。"
+          content: "你是词典助手。只返回JSON格式，不要其他内容。"
         },
         {
           role: "user",
