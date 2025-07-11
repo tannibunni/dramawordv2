@@ -67,7 +67,7 @@ const WordSchema = new Schema<IWord>({
 });
 
 // 创建索引
-WordSchema.index({ word: 1 });
+// 注意：word 字段的 unique: true 已经创建了唯一索引，不需要重复添加
 WordSchema.index({ searchCount: -1 });
 WordSchema.index({ lastSearched: -1 });
 

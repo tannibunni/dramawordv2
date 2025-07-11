@@ -563,7 +563,7 @@ async function generateWordData(word: string) {
       ]
     }
   ]
-}\n\n要求：\n- 无论查询什么语言，释义（definition）和例句的中文（chinese）字段都必须是中文。\n- 如果查到的释义或例句不是中文，请用“暂无中文释义”或“暂无中文例句”代替。\n- 只返回JSON，不要其他内容。`;
+}\n\n要求：\n- 无论查询什么语言，释义（definition）和例句的中文（chinese）字段都必须是中文。\n- 如果查到的释义或例句不是中文，请用"暂无中文释义"或"暂无中文例句"代替。\n- 只返回JSON，不要其他内容。`;
 
     const completion = await openai.chat.completions.create({
       model: "gpt-3.5-turbo",
@@ -594,12 +594,32 @@ async function generateWordData(word: string) {
         partOfSpeech: def.partOfSpeech || 'n.',
         definition: def.definition || '暂无释义',
         examples: Array.isArray(def.examples) ? def.examples.map((ex: any) => {
-          // 如果 examples 是对象数组，转换为字符串
+          // 保持对象格式，不要转换为字符串
           if (typeof ex === 'object' && ex.english && ex.chinese) {
-            return `${ex.english} - ${ex.chinese}`;
+            return {
+              english: ex.english,
+              chinese: ex.chinese
+            };
           }
-          // 如果已经是字符串，直接返回
-          return typeof ex === 'string' ? ex : ex.toString();
+          // 如果是字符串格式，尝试解析为对象
+          if (typeof ex === 'string') {
+            const parts = ex.split(' - ');
+            if (parts.length >= 2) {
+              return {
+                english: parts[0].trim(),
+                chinese: parts[1].trim()
+              };
+            }
+            return {
+              english: ex,
+              chinese: '暂无中文翻译'
+            };
+          }
+          // 默认返回空对象
+          return {
+            english: '',
+            chinese: ''
+          };
         }) : []
       })) : [];
 

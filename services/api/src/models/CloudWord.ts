@@ -6,7 +6,10 @@ export interface ICloudWord extends Document {
   definitions: Array<{
     partOfSpeech: string;
     definition: string;
-    examples?: string[]; // 改为字符串数组，兼容 OpenAI 返回格式
+    examples?: Array<{
+      english: string;
+      chinese: string;
+    }>;
   }>;
   audioUrl?: string;
   searchCount: number;
@@ -37,8 +40,14 @@ const CloudWordSchema = new Schema<ICloudWord>({
       required: true
     },
     examples: [{
-      type: String, // 改为字符串类型，支持 OpenAI 返回的字符串数组
-      default: []
+      english: {
+        type: String,
+        required: true
+      },
+      chinese: {
+        type: String,
+        required: true
+      }
     }]
   }],
   audioUrl: {
@@ -58,8 +67,8 @@ const CloudWordSchema = new Schema<ICloudWord>({
 });
 
 // 创建索引以提高查询性能
-CloudWordSchema.index({ word: 1 });
+// 注意：word 字段的 unique: true 已经创建了唯一索引，不需要重复添加
 CloudWordSchema.index({ searchCount: -1 });
 CloudWordSchema.index({ lastSearched: -1 });
 
-export default mongoose.model<ICloudWord>('CloudWord', CloudWordSchema); 
+export const CloudWord = mongoose.model<ICloudWord>('CloudWord', CloudWordSchema); 

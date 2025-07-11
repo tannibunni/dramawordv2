@@ -265,13 +265,8 @@ const UserSchema = new Schema<IUser>({
 });
 
 // 创建索引
-UserSchema.index({ username: 1 });
-UserSchema.index({ 'auth.phoneNumber': 1 });
-UserSchema.index({ 'auth.wechatId': 1 });
-UserSchema.index({ 'auth.wechatOpenId': 1 });
-UserSchema.index({ 'auth.wechatUnionId': 1 });
-UserSchema.index({ 'auth.appleId': 1 });
-UserSchema.index({ 'auth.guestId': 1 });
+// 注意：username 字段的 unique: true 已经创建了唯一索引，不需要重复添加
+// 注意：auth 中的各个字段的 unique: true 已经创建了唯一索引，不需要重复添加
 UserSchema.index({ 'learningStats.level': -1 });
 UserSchema.index({ 'learningStats.experience': -1 });
 UserSchema.index({ 'learningStats.currentStreak': -1 });
