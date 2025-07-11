@@ -91,8 +91,6 @@ const ShowsScreen: React.FC = () => {
 
   useEffect(() => {
     filterShows();
-    // 测试单词匹配逻辑
-    testWordMatching();
   }, [shows, filter]);
 
   // 防抖搜索函数
@@ -203,12 +201,6 @@ const ShowsScreen: React.FC = () => {
       } else if (filter === 'completed') {
         filtered = shows.filter(show => show.status === 'completed');
       }
-      console.log('🔍 筛选条件:', filter);
-      console.log('🔍 筛选前剧集数量:', shows.length);
-      console.log('🔍 筛选后剧集数量:', filtered.length);
-      console.log('🔍 筛选结果:', filtered.map(s => `${s.name}(${s.status})`));
-    } else {
-      console.log('🔍 显示全部剧集，数量:', shows.length);
     }
     setFilteredShows(filtered);
   };
@@ -255,46 +247,25 @@ const ShowsScreen: React.FC = () => {
   };
 
   const openShowDetail = (show: Show) => {
-    console.log('打开剧集详情:', show);
     setSelectedShow(show);
     setShowDetailModal(true);
   };
 
   // 获取该剧集相关的单词
   const getShowWords = (showId: number): WordWithSource[] => {
-    console.log('所有词汇:', vocabulary);
-    console.log('当前剧集ID:', showId);
     const showWords = vocabulary.filter(word => {
-      console.log('检查单词:', word.word, 'sourceShow:', word.sourceShow);
       // 确保类型匹配：将两个ID都转换为数字进行比较
       const sourceShowId = word.sourceShow?.id;
       const isMatch = word.sourceShow && Number(sourceShowId) === Number(showId);
-      console.log(`单词 ${word.word} 匹配结果:`, isMatch, 'sourceShow.id:', sourceShowId, 'showId:', showId);
-      if (isMatch) {
-        console.log(`✅ 单词 ${word.word} 匹配成功，添加到剧集 ${showId}`);
-      }
       return isMatch;
     });
-    console.log(`剧集 ${showId} 的单词:`, showWords);
     return showWords;
   };
 
-  // 测试函数：验证单词匹配逻辑
-  const testWordMatching = () => {
-    console.log('🧪 开始测试单词匹配逻辑...');
-    
-    // 测试当前存在的剧集
-    shows.forEach(show => {
-      const showWords = getShowWords(show.id);
-      console.log(`🧪 剧集 ${show.name}(${show.id}) 的单词数量:`, showWords.length);
-    });
-    
-    console.log('🧪 单词匹配测试完成');
-  };
+
 
   // 打开单词卡片
   const openWordCard = (word: WordWithSource) => {
-    console.log('点击单词:', word);
     setSelectedWord(word);
     setShowWordCardModal(true);
   };
