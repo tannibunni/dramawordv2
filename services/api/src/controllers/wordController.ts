@@ -10,7 +10,7 @@ import { logger } from '../utils/logger';
 const apiKey = process.env.OPENAI_API_KEY;
 if (!apiKey) {
   logger.error('❌ OPENAI_API_KEY environment variable is missing!');
-  process.exit(1);
+  // 不要退出进程，让应用继续运行，但记录错误
 }
 
 const openai = new OpenAI({
@@ -539,31 +539,43 @@ async function saveSearchHistoryToDB(word: string, definition?: string, timestam
 
 // 使用 OpenAI 生成单词数据
 async function generateWordData(word: string) {
-  const prompt = `请为英文单词 "${word}" 提供以下信息，以JSON格式返回：
+  const prompt = `请为英文单词 "${word}" 提供详细的词典信息，以JSON格式返回：
+
 {
-  "phonetic": "音标",
+  "phonetic": "音标（使用国际音标）",
   "definitions": [
     {
-      "partOfSpeech": "词性",
-      "definition": "中文释义",
-      "examples": ["例句1", "例句2"]
+      "partOfSpeech": "词性（如：n. v. adj. adv. int. prep. conj.）",
+      "definition": "中文释义（准确且通俗易懂）",
+      "examples": [
+        {
+          "english": "英文例句1",
+          "chinese": "中文翻译1"
+        },
+        {
+          "english": "英文例句2", 
+          "chinese": "中文翻译2"
+        }
+      ]
     }
   ],
-  "audioUrl": "发音URL（如果有的话）"
+  "audioUrl": ""
 }
 
-请确保：
-1. 音标使用国际音标
-2. 释义准确且通俗易懂
-3. 例句简单实用
-4. 只返回JSON，不要其他文字`;
+要求：
+1. 音标必须使用国际音标格式
+2. 释义要准确、通俗易懂
+3. 每个词性至少提供2个例句，英文+中文对照
+4. 例句要简单实用，适合学习
+5. 只返回JSON格式，不要其他文字
+6. 如果单词有多种词性，请分别列出`;
 
     const completion = await openai.chat.completions.create({
       model: "gpt-3.5-turbo",
       messages: [
         {
           role: "system",
-        content: "你是一个专业的英语词典助手，提供准确的单词释义和例句。"
+          content: "你是一个专业的英语词典助手，提供准确的单词释义和例句。请严格按照要求的JSON格式返回，确保examples字段是包含english和chinese字段的对象数组。"
         },
         {
           role: "user",
@@ -571,26 +583,38 @@ async function generateWordData(word: string) {
         }
       ],
       temperature: 0.3,
-    max_tokens: 500
+      max_tokens: 1000
     });
 
-  const responseText = completion.choices[0]?.message?.content;
-  if (!responseText) {
+    const responseText = completion.choices[0]?.message?.content;
+    if (!responseText) {
       throw new Error('No response from OpenAI');
     }
 
     try {
-    const parsedData = JSON.parse(responseText);
-    return {
-      phonetic: parsedData.phonetic || '',
-      definitions: parsedData.definitions || [],
-      audioUrl: parsedData.audioUrl || ''
-    };
+      const parsedData = JSON.parse(responseText);
+      
+      // 验证和修复数据格式
+      const definitions = Array.isArray(parsedData.definitions) ? parsedData.definitions.map((def: any) => ({
+        partOfSpeech: def.partOfSpeech || 'n.',
+        definition: def.definition || '暂无释义',
+        examples: Array.isArray(def.examples) ? def.examples.map((ex: any) => ({
+          english: ex.english || ex.toString() || 'Example sentence',
+          chinese: ex.chinese || '例句翻译'
+        })) : []
+      })) : [];
+
+      return {
+        phonetic: parsedData.phonetic || `/${word}/`,
+        definitions: definitions,
+        audioUrl: parsedData.audioUrl || ''
+      };
     } catch (parseError) {
-    logger.error('❌ Failed to parse OpenAI response:', parseError);
-    throw new Error('Invalid response format from OpenAI');
+      logger.error('❌ Failed to parse OpenAI response:', parseError);
+      logger.error('Raw response:', responseText);
+      throw new Error('Invalid response format from OpenAI');
+    }
   }
-}
 
 // 获取后备单词数据
 function getFallbackWordData(word: string) {
@@ -661,6 +685,30 @@ export const clearUserHistory = async (req: Request, res: Response): Promise<voi
   }
 };
 
+// 调试接口 - 检查环境变量状态
+export const checkEnvironment = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const hasOpenAIKey = !!process.env.OPENAI_API_KEY;
+    const openAIKeyLength = process.env.OPENAI_API_KEY ? process.env.OPENAI_API_KEY.length : 0;
+    
+    res.json({
+      success: true,
+      data: {
+        hasOpenAIKey,
+        openAIKeyLength,
+        environment: process.env.NODE_ENV || 'development',
+        timestamp: new Date().toISOString()
+      }
+    });
+  } catch (error) {
+    logger.error('❌ Check environment error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to check environment'
+    });
+  }
+};
+
 export const wordController = {
   searchWord,
   getPopularWords,
@@ -670,5 +718,6 @@ export const wordController = {
   addToUserVocabulary,
   updateWordProgress,
   clearAllData,
-  clearUserHistory
+  clearUserHistory,
+  checkEnvironment
 }; 

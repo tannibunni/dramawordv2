@@ -9,7 +9,8 @@ import {
   getUserVocabulary,
   addToUserVocabulary,
   updateWordProgress,
-  removeFromUserVocabulary
+  removeFromUserVocabulary,
+  checkEnvironment
 } from '../controllers/wordController';
 
 const router = Router();
@@ -40,5 +41,8 @@ router.get('/test', (req, res) => {
     timestamp: new Date().toISOString()
   });
 });
+
+// 调试路由 - 检查环境变量
+router.get('/debug/environment', checkEnvironment);
 
 export default router; 
