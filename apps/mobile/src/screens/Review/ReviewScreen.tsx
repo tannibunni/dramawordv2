@@ -63,6 +63,22 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
   
   // 1. Swiper ref
   const swiperRef = useRef<any>(null);
+  
+  // Swiper 当前卡片索引 - 移到这里，确保在 renderProgressBar 之前定义
+  const [swiperIndex, setSwiperIndex] = useState(0);
+  
+  // 监控 swiperIndex 变化
+  useEffect(() => {
+    console.log('ReviewScreen: swiperIndex changed to:', swiperIndex);
+  }, [swiperIndex]);
+  
+  // 监控 words 数组变化
+  useEffect(() => {
+    console.log('ReviewScreen: words array changed, length:', words.length);
+    if (words.length > 0) {
+      console.log('ReviewScreen: First word:', words[0]);
+    }
+  }, [words]);
 
   // 获取筛选参数
   // const { type, id } = (route.params || {}) as { type?: string; id?: number };
@@ -79,19 +95,44 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
   }, [isReviewComplete, navigate]);
 
   useEffect(() => {
+    console.log('ReviewScreen: useEffect triggered - vocabulary length:', vocabulary.length, 'type:', type, 'id:', id);
     loadReviewWords();
   }, [vocabulary, type, id]);
+  
+  // 当 words 数组加载完成后，确保 swiperIndex 正确初始化
+  useEffect(() => {
+    if (words.length > 0) {
+      console.log('ReviewScreen: Words loaded, initializing swiperIndex to 0');
+      setSwiperIndex(0);
+      // 延迟一点时间，确保 Swiper 组件完全初始化
+      setTimeout(() => {
+        console.log('ReviewScreen: Swiper should be initialized now');
+      }, 100);
+    } else {
+      console.log('ReviewScreen: Words array is empty, resetting swiperIndex to 0');
+      setSwiperIndex(0);
+    }
+  }, [words]);
 
   const loadReviewWords = async () => {
+    console.log('ReviewScreen: loadReviewWords called with type:', type, 'id:', id);
+    console.log('ReviewScreen: vocabulary length:', vocabulary.length);
+    
     try {
       // 根据参数筛选单词
       let filtered = vocabulary;
       if (type === 'show' && id !== undefined) {
         filtered = vocabulary.filter(word => word.sourceShow && word.sourceShow.type !== 'wordbook' && Number(word.sourceShow.id) === Number(id));
+        console.log('ReviewScreen: Filtered by show, filtered length:', filtered.length);
       } else if (type === 'wordbook' && id !== undefined) {
         filtered = vocabulary.filter(word => word.sourceShow && word.sourceShow.type === 'wordbook' && Number(word.sourceShow.id) === Number(id));
+        console.log('ReviewScreen: Filtered by wordbook, filtered length:', filtered.length);
+      } else {
+        console.log('ReviewScreen: No filtering applied, using all vocabulary');
       }
+      
       if (filtered.length === 0) {
+        console.log('ReviewScreen: No words found after filtering, using mock data');
         setWords([]);
         setSession(null);
         return;
@@ -300,13 +341,17 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
 
   // 移动到下一个单词
   const moveToNextWord = () => {
+    console.log('ReviewScreen: moveToNextWord called - current swiperIndex:', swiperIndex, 'words.length:', words.length);
     if (swiperIndex < words.length - 1) {
-      setSwiperIndex(prev => prev + 1);
-        setShowAnswer(false);
-      } else {
-        // 复习完成
-        setIsReviewComplete(true);
-      }
+      const newIndex = swiperIndex + 1;
+      console.log('ReviewScreen: Moving to next word, new index:', newIndex);
+      setSwiperIndex(newIndex);
+      setShowAnswer(false);
+    } else {
+      console.log('ReviewScreen: Review complete, setting isReviewComplete to true');
+      // 复习完成
+      setIsReviewComplete(true);
+    }
   };
 
   // 处理音频播放
@@ -345,58 +390,74 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
 
   // Swiper 事件处理 - 现在由 SwipeableWordCard 处理手势
   const handleSwipedLeft = (cardIndex: number) => {
-    // 由 SwipeableWordCard 处理
+    console.log('ReviewScreen: handleSwipedLeft called with cardIndex:', cardIndex);
+    // 更新当前卡片索引
+    const nextIndex = Math.min(cardIndex + 1, words.length - 1);
+    console.log('ReviewScreen: handleSwipedLeft - setting swiperIndex to:', nextIndex);
+    setSwiperIndex(nextIndex);
   };
   const handleSwipedRight = (cardIndex: number) => {
-    // 由 SwipeableWordCard 处理
+    console.log('ReviewScreen: handleSwipedRight called with cardIndex:', cardIndex);
+    // 更新当前卡片索引
+    const nextIndex = Math.min(cardIndex + 1, words.length - 1);
+    console.log('ReviewScreen: handleSwipedRight - setting swiperIndex to:', nextIndex);
+    setSwiperIndex(nextIndex);
   };
   const handleSwipedTop = (cardIndex: number) => {
-    // 由 SwipeableWordCard 处理
-  };
-  const handleSwipedAll = async () => {
-    setIsReviewComplete(true);
-    if (session) {
-      try {
-        // await UserService.updateReviewStats({
-        //   correctCount: session.correctCount,
-        //   incorrectCount: session.incorrectCount,
-        // });
-      } catch (error) {
-        console.error('保存复习统计失败', error);
-      }
-    }
+    console.log('ReviewScreen: handleSwipedTop called with cardIndex:', cardIndex);
+    // 更新当前卡片索引
+    const nextIndex = Math.min(cardIndex + 1, words.length - 1);
+    console.log('ReviewScreen: handleSwipedTop - setting swiperIndex to:', nextIndex);
+    setSwiperIndex(nextIndex);
   };
 
-  // Swiper onSwiped 事件
+
+  // Swiper onSwiped 事件 - 作为备用处理
   const handleSwiped = (cardIndex: number) => {
-    // 由 SwipeableWordCard 处理
+    console.log('ReviewScreen: handleSwiped called with cardIndex:', cardIndex);
+    // 这个回调作为备用，主要依赖 handleSwipedLeft/Right/Top 来处理
+    // 如果其他回调没有被触发，这里确保索引被更新
+    const nextIndex = Math.min(cardIndex + 1, words.length - 1);
+    console.log('ReviewScreen: handleSwiped - setting swiperIndex to:', nextIndex);
+    setSwiperIndex(nextIndex);
   };
 
   // 进度条渲染
-  const renderProgressBar = () => (
-    <View style={{ width: '100%', alignItems: 'center', marginTop: 16, marginBottom: 8 }}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', width: '90%' }}>
-        <TouchableOpacity 
-          style={{ padding: 8, marginRight: 12 }}
-          onPress={() => navigate('main', { tab: 'review' })}
-        >
-          <Ionicons name="arrow-back" size={24} color={colors.text.primary} />
-        </TouchableOpacity>
-        <View style={{ flex: 1, height: 8, backgroundColor: colors.background.tertiary, borderRadius: 4, marginRight: 8 }}>
-          <View style={{
-            height: 8,
-            backgroundColor: colors.primary[500],
-            borderRadius: 4,
-            width: words.length > 0 ? `${((swiperIndex + 1) / words.length) * 100}%` : '0%'
-          }} />
+  const renderProgressBar = () => {
+    console.log('ReviewScreen: renderProgressBar - swiperIndex:', swiperIndex, 'words.length:', words.length);
+    // 确保 swiperIndex 在有效范围内
+    const currentIndex = Math.min(Math.max(0, swiperIndex), words.length - 1);
+    // 进度条应该显示当前正在查看的卡片位置，而不是已完成的卡片数量
+    // 所以当 swiperIndex 是 0 时，显示 "1 / 总数"
+    const progressPercentage = words.length > 0 ? ((currentIndex + 1) / words.length) * 100 : 0;
+    const progressText = words.length > 0 ? `${currentIndex + 1} / ${words.length}` : '';
+    
+    console.log('ReviewScreen: Progress calculation - currentIndex:', currentIndex, 'percentage:', progressPercentage, 'text:', progressText);
+    
+    return (
+      <View style={{ width: '100%', alignItems: 'center', marginTop: 16, marginBottom: 8 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', width: '90%' }}>
+          <TouchableOpacity 
+            style={{ padding: 8, marginRight: 12 }}
+            onPress={() => navigate('main', { tab: 'review' })}
+          >
+            <Ionicons name="arrow-back" size={24} color={colors.text.primary} />
+          </TouchableOpacity>
+          <View style={{ flex: 1, height: 8, backgroundColor: colors.background.tertiary, borderRadius: 4, marginRight: 8 }}>
+            <View style={{
+              height: 8,
+              backgroundColor: colors.primary[500],
+              borderRadius: 4,
+              width: `${progressPercentage}%`
+            }} />
+          </View>
+          <Text style={{ fontSize: 16, fontWeight: '600', color: colors.text.primary }}>{progressText}</Text>
         </View>
-        <Text style={{ fontSize: 16, fontWeight: '600', color: colors.text.primary }}>{words.length > 0 ? `${swiperIndex + 1} / ${words.length}` : ''}</Text>
       </View>
-    </View>
-  );
+    );
+  };
 
-  // Swiper 当前卡片索引
-  const [swiperIndex, setSwiperIndex] = useState(0);
+
 
   // 移除 overlayLabels，因为手势现在由 SwipeableWordCard 处理
 
@@ -404,6 +465,7 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
 
   // 渲染卡片内容
   const renderCard = (item: ReviewWord, index: number) => {
+    console.log('ReviewScreen: renderCard called for index:', index, 'word:', item.word);
     const wordData = convertToWordData(item);
     return (
       <SwipeableWordCard
@@ -444,6 +506,8 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
     );
   }
 
+  console.log('ReviewScreen: Rendering Swiper with words length:', words.length, 'swiperIndex:', swiperIndex);
+  
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background.primary }}>
       {renderProgressBar()}
@@ -465,8 +529,14 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
           onSwipedLeft={handleSwipedLeft}
           onSwipedRight={handleSwipedRight}
           onSwipedTop={handleSwipedTop}
-          onSwipedAll={handleSwipedAll}
-          onSwiped={handleSwiped}
+          onSwipedAll={() => {
+            console.log('ReviewScreen: All cards swiped, completing review');
+            setIsReviewComplete(true);
+          }}
+          onSwiped={(cardIndex) => {
+            console.log('ReviewScreen: onSwiped callback triggered with cardIndex:', cardIndex);
+            handleSwiped(cardIndex);
+          }}
           cardVerticalMargin={32}
           cardHorizontalMargin={0}
           containerStyle={{ flex: 1, width: '100%' }}
