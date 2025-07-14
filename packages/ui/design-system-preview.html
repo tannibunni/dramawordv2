@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>剧词记设计系统预览 - 优化版</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: #F9F9FB;
+            color: #2D2D2D;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 1rem;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #4F6DFF 0%, #3D5AEF 100%);
+            color: white;
+            padding: 2.5rem 1.5rem;
+            text-align: center;
+            border-radius: 1rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 12px rgba(79, 109, 255, 0.3);
+        }
+
+        .header h1 {
+            font-size: 2.25rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            letter-spacing: -0.025em;
+        }
+
+        .header p {
+            font-size: 1.125rem;
+            opacity: 0.9;
+            font-weight: 500;
+        }
+
+        .section {
+            background: white;
+            border-radius: 1rem;
+            padding: 2rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 2px 8px rgba(229, 229, 236, 0.3);
+            transition: box-shadow 0.2s ease;
+        }
+
+        .section:hover {
+            box-shadow: 0 4px 12px rgba(229, 229, 236, 0.4);
+        }
+
+        .section h2 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+            color: #2D2D2D;
+            letter-spacing: -0.025em;
+        }
+
+        .color-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .color-item {
+            text-align: center;
+        }
+
+        .color-swatch {
+            width: 80px;
+            height: 80px;
+            border-radius: 0.75rem;
+            margin: 0 auto 0.75rem;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            transition: transform 0.2s ease;
+        }
+
+        .color-swatch:hover {
+            transform: scale(1.05);
+        }
+
+        .color-label {
+            font-weight: 500;
+            margin-bottom: 0.25rem;
+            font-size: 0.875rem;
+        }
+
+        .color-value {
+            font-size: 0.75rem;
+            color: #888888;
+            font-family: 'SF Mono', Monaco, monospace;
+        }
+
+        .typography-demo {
+            margin-bottom: 1rem;
+        }
+
+        .typography-demo h1 { 
+            font-size: 2.25rem; 
+            font-weight: 600; 
+            margin-bottom: 0.5rem; 
+            letter-spacing: -0.025em;
+        }
+        .typography-demo h2 { 
+            font-size: 1.875rem; 
+            font-weight: 600; 
+            margin-bottom: 0.5rem; 
+            letter-spacing: -0.025em;
+        }
+        .typography-demo h3 { 
+            font-size: 1.5rem; 
+            font-weight: 600; 
+            margin-bottom: 0.5rem; 
+            letter-spacing: -0.025em;
+        }
+        .typography-demo h4 { 
+            font-size: 1.25rem; 
+            font-weight: 500; 
+            margin-bottom: 0.5rem; 
+            letter-spacing: -0.025em;
+        }
+        .typography-demo .body-large { 
+            font-size: 1.125rem; 
+            font-weight: 500;
+            margin-bottom: 0.5rem; 
+            line-height: 1.6;
+        }
+        .typography-demo .body { 
+            font-size: 1rem; 
+            font-weight: 500;
+            margin-bottom: 0.5rem; 
+            line-height: 1.5;
+        }
+        .typography-demo .body-small { 
+            font-size: 0.875rem; 
+            font-weight: 500;
+            margin-bottom: 0.5rem; 
+            line-height: 1.5;
+        }
+        .typography-demo .caption { 
+            font-size: 0.75rem; 
+            font-weight: 400;
+            margin-bottom: 0.5rem; 
+            line-height: 1.8;
+            color: #888888;
+            letter-spacing: 0.025em;
+        }
+
+        .numeric-demo {
+            background: linear-gradient(135deg, #F0F4FF 0%, #E1E9FF 100%);
+            padding: 1.5rem;
+            border-radius: 0.75rem;
+            margin-top: 1rem;
+        }
+
+        .numeric-demo .numeric-large {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #4F6DFF;
+            margin-bottom: 0.5rem;
+        }
+
+        .numeric-demo .numeric {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: #4F6DFF;
+            margin-bottom: 0.5rem;
+        }
+
+        .button-demo {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.75rem;
+            border: none;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-family: 'Inter', sans-serif;
+            letter-spacing: 0.025em;
+        }
+
+        .btn:hover {
+            transform: translateY(-1px);
+        }
+
+        .btn-primary {
+            background-color: #4F6DFF;
+            color: white;
+            box-shadow: 0 2px 4px rgba(79, 109, 255, 0.2);
+        }
+
+        .btn-primary:hover {
+            box-shadow: 0 4px 8px rgba(79, 109, 255, 0.3);
+        }
+
+        .btn-secondary {
+            background-color: white;
+            color: #4F6DFF;
+            border: 1px solid #4F6DFF;
+        }
+
+        .btn-secondary:hover {
+            background-color: #F0F4FF;
+        }
+
+        .btn-success {
+            background-color: #6BCF7A;
+            color: white;
+        }
+
+        .btn-danger {
+            background-color: #F76C6C;
+            color: white;
+        }
+
+        .btn-ghost {
+            background-color: transparent;
+            color: #4F6DFF;
+        }
+
+        .btn-ghost:hover {
+            background-color: #F0F4FF;
+        }
+
+        .spacing-demo {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .spacing-item {
+            background-color: #E1E9FF;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            text-align: center;
+            color: #4F6DFF;
+            font-weight: 500;
+        }
+
+        .spacing-8 { margin-bottom: 0.5rem; }
+        .spacing-16 { margin-bottom: 1rem; }
+        .spacing-24 { margin-bottom: 1.5rem; }
+        .spacing-32 { margin-bottom: 2rem; }
+
+        .component-demo {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin-top: 1.5rem;
+        }
+
+        .input-demo {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .input {
+            padding: 0.75rem 1rem;
+            border: 1px solid #E5E5EC;
+            border-radius: 0.625rem;
+            font-size: 1rem;
+            font-family: 'Inter', sans-serif;
+            transition: all 0.2s ease;
+        }
+
+        .input:focus {
+            outline: none;
+            border-color: #4F6DFF;
+            box-shadow: 0 0 0 3px rgba(79, 109, 255, 0.1);
+        }
+
+        .card-demo {
+            background: white;
+            border-radius: 1rem;
+            padding: 1rem;
+            box-shadow: 0 2px 8px rgba(229, 229, 236, 0.3);
+            border: 1px solid #E5E5EC;
+        }
+
+        .card-demo h3 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 0.75rem;
+            color: #2D2D2D;
+        }
+
+        .card-demo p {
+            font-size: 0.875rem;
+            color: #888888;
+            line-height: 1.5;
+        }
+
+        .semantic-colors {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+        }
+
+        .semantic-item {
+            text-align: center;
+            padding: 1rem;
+            border-radius: 0.75rem;
+            color: white;
+            font-weight: 500;
+            font-size: 0.875rem;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 0.75rem;
+            }
+            
+            .section {
+                padding: 1.5rem;
+            }
+            
+            .color-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .semantic-colors {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>剧词记设计系统</h1>
+            <p>现代 · 卡通活力 · 学习成就感 · 轻社交</p>
+        </div>
+
+        <!-- 颜色系统 -->
+        <div class="section">
+            <h2>🎨 颜色系统</h2>
+            <div class="color-grid">
+                <div class="color-item">
+                    <div class="color-swatch" style="background-color: #4F6DFF;"></div>
+                    <div class="color-label">主色</div>
+                    <div class="color-value">#4F6DFF</div>
+                </div>
+                <div class="color-item">
+                    <div class="color-swatch" style="background-color: #F4B942;"></div>
+                    <div class="color-label">辅助色</div>
+                    <div class="color-value">#F4B942</div>
+                </div>
+                <div class="color-item">
+                    <div class="color-swatch" style="background-color: #6BCF7A;"></div>
+                    <div class="color-label">成功色</div>
+                    <div class="color-value">#6BCF7A</div>
+                </div>
+                <div class="color-item">
+                    <div class="color-swatch" style="background-color: #F76C6C;"></div>
+                    <div class="color-label">错误色</div>
+                    <div class="color-value">#F76C6C</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 语义化色彩 -->
+        <div class="section">
+            <h2>🎯 语义化色彩</h2>
+            <div class="semantic-colors">
+                <div class="semantic-item" style="background-color: #4F6DFF;">学习中</div>
+                <div class="semantic-item" style="background-color: #6BCF7A;">已掌握</div>
+                <div class="semantic-item" style="background-color: #F76C6C;">已遗忘</div>
+                <div class="semantic-item" style="background-color: #F4B942;">复习中</div>
+                <div class="semantic-item" style="background-color: #FF8A65;">成就解锁</div>
+                <div class="semantic-item" style="background-color: #FFD54F;">连续学习</div>
+            </div>
+        </div>
+
+        <!-- 字体系统 -->
+        <div class="section">
+            <h2>📝 字体系统</h2>
+            <div class="typography-demo">
+                <h1>标题 H1 - 36px Semibold</h1>
+                <h2>标题 H2 - 30px Semibold</h2>
+                <h3>标题 H3 - 24px Semibold</h3>
+                <h4>标题 H4 - 20px Medium</h4>
+                <div class="body-large">正文大 - 18px Medium</div>
+                <div class="body">正文 - 16px Medium</div>
+                <div class="body-small">正文小 - 14px Medium</div>
+                <div class="caption">说明文字 - 12px Regular</div>
+            </div>
+            
+            <div class="numeric-demo">
+                <h3 style="margin-bottom: 1rem; color: #2D2D2D;">数字数据 - 突出成就感</h3>
+                <div class="numeric-large">学习时长: 2小时30分钟</div>
+                <div class="numeric">今日记忆: 25个单词</div>
+                <div class="numeric">连续天数: 7天</div>
+            </div>
+        </div>
+
+        <!-- 按钮组件 -->
+        <div class="section">
+            <h2>🔘 按钮组件</h2>
+            <div class="button-demo">
+                <button class="btn btn-primary">主按钮</button>
+                <button class="btn btn-secondary">次按钮</button>
+                <button class="btn btn-success">记住</button>
+                <button class="btn btn-danger">忘记</button>
+                <button class="btn btn-ghost">幽灵按钮</button>
+            </div>
+            <div class="button-demo">
+                <button class="btn btn-primary" style="padding: 0.5rem 1rem; font-size: 0.875rem;">小按钮</button>
+                <button class="btn btn-primary">中按钮</button>
+                <button class="btn btn-primary" style="padding: 1rem 2rem; font-size: 1.125rem;">大按钮</button>
+            </div>
+        </div>
+
+        <!-- 组件展示 -->
+        <div class="section">
+            <h2>🧩 组件展示</h2>
+            <div class="component-demo">
+                <div>
+                    <h3 style="margin-bottom: 1rem;">输入框</h3>
+                    <div class="input-demo">
+                        <input type="text" class="input" placeholder="搜索单词...">
+                        <input type="text" class="input" placeholder="输入例句..." style="border-color: #4F6DFF; box-shadow: 0 0 0 3px rgba(79, 109, 255, 0.1);">
+                    </div>
+                </div>
+                <div>
+                    <h3 style="margin-bottom: 1rem;">卡片</h3>
+                    <div class="card-demo">
+                        <h3>单词卡片</h3>
+                        <p>这是一个示例单词卡片，展示卡片的设计风格。</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 间距系统 -->
+        <div class="section">
+            <h2>📏 间距系统</h2>
+            <div class="spacing-demo">
+                <div class="spacing-item spacing-8">间距 8px (0.5rem)</div>
+                <div class="spacing-item spacing-16">间距 16px (1rem)</div>
+                <div class="spacing-item spacing-24">间距 24px (1.5rem)</div>
+                <div class="spacing-item spacing-32">间距 32px (2rem)</div>
+            </div>
+        </div>
+
+        <!-- 设计理念 -->
+        <div class="section">
+            <h2>💡 设计理念</h2>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem;">
+                <div>
+                    <h3 style="color: #4F6DFF; margin-bottom: 0.75rem;">现代简约</h3>
+                    <p style="font-size: 0.875rem; line-height: 1.5;">蓝色主色调传达专业学习感，简洁的界面设计让用户专注于学习内容。</p>
+                </div>
+                <div>
+                    <h3 style="color: #4F6DFF; margin-bottom: 0.75rem;">卡通活力</h3>
+                    <p style="font-size: 0.875rem; line-height: 1.5;">圆角设计和柔和色彩营造温暖的学习氛围，增强用户的使用体验。</p>
+                </div>
+                <div>
+                    <h3 style="color: #4F6DFF; margin-bottom: 0.75rem;">学习成就感</h3>
+                    <p style="font-size: 0.875rem; line-height: 1.5;">数字数据突出显示，成就系统色彩丰富，让学习过程更有成就感。</p>
+                </div>
+                <div>
+                    <h3 style="color: #4F6DFF; margin-bottom: 0.75rem;">轻社交</h3>
+                    <p style="font-size: 0.875rem; line-height: 1.5;">社交元素色彩温和，不干扰主要学习流程，保持界面清爽。</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html> 

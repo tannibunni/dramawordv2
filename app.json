@@ -1,0 +1,21 @@
+{
+  "expo": {
+    "extra": {
+      "eas": {
+        "projectId": "5f61a9dc-c36a-45b7-b484-21e8a340ee3f"
+      }
+    },
+    "android": {
+      "package": "com.tannibunni.dramawordv2"
+    },
+    "ios": {
+      "bundleIdentifier": "com.tannibunni.dramawordv2",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
+    },
+    "plugins": [
+      "expo-wechat"
+    ]
+  }
+}
