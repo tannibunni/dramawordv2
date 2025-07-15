@@ -2,6 +2,8 @@ import React, { createContext, useContext, useState, ReactNode, useEffect } from
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { WordData } from '../components/cards/WordCard';
 import { Show } from './ShowListContext';
+import { wordService } from '../services/wordService';
+import { API_BASE_URL } from '../constants/config';
 
 export interface WordWithSource extends WordData {
   sourceShow?: Show;
@@ -24,6 +26,24 @@ export const useVocabulary = () => {
   if (!ctx) throw new Error('useVocabulary must be used within VocabularyProvider');
   return ctx;
 };
+
+async function getUserToken() {
+  try {
+    return await AsyncStorage.getItem('authToken');
+  } catch {
+    return null;
+  }
+}
+
+async function getUserId() {
+  try {
+    const userData = await AsyncStorage.getItem('userData');
+    if (userData) return JSON.parse(userData).id;
+    return null;
+  } catch {
+    return null;
+  }
+}
 
 const VOCABULARY_STORAGE_KEY = 'user_vocabulary';
 
@@ -86,6 +106,26 @@ export const VocabularyProvider = ({ children }: { children: ReactNode }) => {
       }
       
       const newWord = { ...word, sourceShow, collectedAt: new Date().toISOString() };
+      // 云端同步
+      (async () => {
+        const token = await getUserToken();
+        const userId = await getUserId();
+        if (token && userId) {
+          try {
+            await fetch(`${API_BASE_URL}/words/user/vocabulary`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${token}`,
+              },
+              body: JSON.stringify({ userId, word: word.word, sourceShow }),
+            });
+            console.log('✅ 云端词汇本已同步');
+          } catch (e) {
+            console.error('❌ 云端词汇本同步失败:', e);
+          }
+        }
+      })();
       console.log('➕ 添加新单词:', newWord.word, '来源剧集:', sourceShow?.name, '来源ID:', sourceShow?.id);
       console.log('➕ 新单词完整数据:', newWord);
       return [...prev, newWord];
@@ -102,6 +142,26 @@ export const VocabularyProvider = ({ children }: { children: ReactNode }) => {
         // 否则删除所有相同单词的记录（保持向后兼容）
         return w.word !== word;
       });
+      // 云端同步
+      (async () => {
+        const token = await getUserToken();
+        const userId = await getUserId();
+        if (token && userId) {
+          try {
+            await fetch(`${API_BASE_URL}/words/user/vocabulary`, {
+              method: 'DELETE',
+              headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${token}`,
+              },
+              body: JSON.stringify({ userId, word }),
+            });
+            console.log('✅ 云端词汇本删除同步');
+          } catch (e) {
+            console.error('❌ 云端词汇本删除同步失败:', e);
+          }
+        }
+      })();
       console.log('➖ 删除单词:', word, sourceShowId ? `来源ID: ${sourceShowId}` : '', '剩余单词数:', filtered.length);
       return filtered;
     });

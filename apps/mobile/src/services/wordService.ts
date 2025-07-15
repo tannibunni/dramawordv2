@@ -1,5 +1,6 @@
 // 单词服务 - 处理查词相关的API调用
 import { colors } from '../../../../packages/ui/src/tokens';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_BASE_URL } from '../constants/config';
 
 // 类型定义
@@ -41,6 +42,16 @@ class WordServiceError extends Error {
   constructor(message: string, public status?: number) {
     super(message);
     this.name = 'WordServiceError';
+  }
+}
+
+const SEARCH_HISTORY_KEY = 'search_history';
+
+async function getUserToken(): Promise<string | null> {
+  try {
+    return await AsyncStorage.getItem('authToken');
+  } catch {
+    return null;
   }
 }
 
@@ -157,17 +168,29 @@ export class WordService {
     }
   }
 
-  // 获取最近查词记录
+  // 获取最近查词记录（支持本地/云端）
   async getRecentWords(): Promise<RecentWord[]> {
-    try {
-      const response = await fetch(`${API_BASE_URL}/words/recent-searches`);
-      
-      if (!response.ok) {
-        throw new WordServiceError(`获取最近查词失败: ${response.status}`, response.status);
+    const token = await getUserToken();
+    if (!token) {
+      // 游客：本地获取
+      try {
+        const local = await AsyncStorage.getItem(SEARCH_HISTORY_KEY);
+        if (local) {
+          return JSON.parse(local);
+        }
+        return [];
+      } catch (e) {
+        console.error('读取本地搜索历史失败:', e);
+        return [];
       }
-
+    }
+    // 登录用户：云端
+    try {
+      const response = await fetch(`${API_BASE_URL}/words/recent-searches`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!response.ok) throw new WordServiceError(`获取最近查词失败: ${response.status}`, response.status);
       const result = await response.json();
-      
       if (result.success) {
         return result.data.map((word: any, index: number) => ({
           id: `recent-${index}`,
@@ -180,17 +203,39 @@ export class WordService {
       }
     } catch (error) {
       console.error(`❌ 获取最近查词错误: ${error}`);
-      return this.getMockRecentWords();
+      return [];
     }
   }
 
-  // 保存查词记录
+  // 保存查词记录（支持本地/云端）
   async saveSearchHistory(word: string, definition: string): Promise<boolean> {
+    const token = await getUserToken();
+    if (!token) {
+      // 游客：本地保存
+      try {
+        const local = await AsyncStorage.getItem(SEARCH_HISTORY_KEY);
+        let history: RecentWord[] = local ? JSON.parse(local) : [];
+        // 去重，最多5条
+        history = [{
+          id: Date.now().toString(),
+          word,
+          translation: definition,
+          timestamp: Date.now(),
+        }, ...history.filter(w => w.word !== word)].slice(0, 5);
+        await AsyncStorage.setItem(SEARCH_HISTORY_KEY, JSON.stringify(history));
+        return true;
+      } catch (e) {
+        console.error('保存本地搜索历史失败:', e);
+        return false;
+      }
+    }
+    // 登录用户：云端
     try {
       const response = await fetch(`${API_BASE_URL}/words/history`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           word: word.toLowerCase().trim(),
@@ -198,7 +243,6 @@ export class WordService {
           timestamp: Date.now(),
         }),
       });
-
       return response.ok;
     } catch (error) {
       console.error(`❌ 保存查词记录错误: ${error}`);
@@ -206,26 +250,26 @@ export class WordService {
     }
   }
 
-  // 清除搜索历史
+  // 清除搜索历史（支持本地/云端）
   async clearSearchHistory(): Promise<boolean> {
-    try {
-      console.log('🗑️ 清除搜索历史...');
-      
-      const response = await fetch(`${API_BASE_URL}/words/clear-user-history`, {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (response.ok) {
-        const result = await response.json();
-        console.log('✅ 搜索历史清除成功:', result.message);
+    const token = await getUserToken();
+    if (!token) {
+      // 游客：本地清除
+      try {
+        await AsyncStorage.removeItem(SEARCH_HISTORY_KEY);
         return true;
-      } else {
-        console.error('❌ 清除搜索历史失败:', response.status);
+      } catch (e) {
+        console.error('清除本地搜索历史失败:', e);
         return false;
       }
+    }
+    // 登录用户：云端
+    try {
+      const response = await fetch(`${API_BASE_URL}/words/clear-user-history`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      return response.ok;
     } catch (error) {
       console.error(`❌ 清除搜索历史错误: ${error}`);
       return false;

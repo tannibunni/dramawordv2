@@ -27,176 +27,62 @@ interface ReviewStats {
   totalWords: number;
   rememberedWords: number;
   forgottenWords: number;
-  skippedWords: number;
-  score: number;
+  experience: number;
   accuracy: number;
 }
 
 // 复习完成页面组件
 const ReviewCompleteScreen: React.FC<{
   stats: ReviewStats;
+  actions: { word: string; remembered: boolean }[];
   onBack: () => void;
-}> = ({ stats, onBack }) => {
-  const [animationValues] = useState({
-    scale: new Animated.Value(0),
-    opacity: new Animated.Value(0),
-    scoreScale: new Animated.Value(0),
-    statsOpacity: new Animated.Value(0),
-  });
-
-  useEffect(() => {
-    // 启动动画序列
-    Animated.sequence([
-      // 1. 主容器淡入
-      Animated.timing(animationValues.opacity, {
-        toValue: 1,
-        duration: 800,
-        useNativeDriver: true,
-      }),
-      // 2. 主容器缩放
-      Animated.spring(animationValues.scale, {
-        toValue: 1,
-        tension: 50,
-        friction: 7,
-        useNativeDriver: true,
-      }),
-      // 3. 得分动画
-      Animated.spring(animationValues.scoreScale, {
-        toValue: 1,
-        tension: 100,
-        friction: 8,
-        useNativeDriver: true,
-      }),
-      // 4. 统计信息淡入
-      Animated.timing(animationValues.statsOpacity, {
-        toValue: 1,
-        duration: 1200,
-        useNativeDriver: true,
-      }),
-    ]).start();
-  }, []);
-
-  const getScoreColor = (score: number) => {
-    if (score >= 80) return colors.success[500];
-    if (score >= 60) return colors.accent[500];
-    return colors.error[500];
-  };
-
-  const getScoreMessage = (score: number) => {
-    if (score >= 80) return '太棒了！';
-    if (score >= 60) return '不错哦！';
-    return '继续加油！';
-  };
-
+}> = ({ stats, actions, onBack }) => {
   return (
-    <View style={styles.completeContainer}>
-      <Animated.View 
-        style={[
-          styles.completeContent,
-          {
-            opacity: animationValues.opacity,
-            transform: [{ scale: animationValues.scale }],
-          }
-        ]}
-      >
-        {/* 标题和图标 */}
-        <View style={styles.headerSection}>
-          <Animated.View style={{ transform: [{ scale: animationValues.scale }] }}>
-            <Ionicons name="checkmark-circle" size={80} color={colors.success[500]} />
-          </Animated.View>
-          <Text style={styles.completeTitle}>复习完成！</Text>
-          <Text style={styles.completeSubtitle}>你真是太棒了！</Text>
-          <Text style={styles.completeHint}>点击确定按钮继续</Text>
-        </View>
-
-        {/* 得分展示 */}
-        <Animated.View 
-          style={[
-            styles.scoreSection,
-            {
-              opacity: animationValues.statsOpacity,
-              transform: [{ scale: animationValues.scoreScale }],
-            }
-          ]}
+    <View style={{ flex: 1, padding: 24, justifyContent: 'flex-start', backgroundColor: colors.background.primary }}>
+      {/* 记住统计 */}
+      <View style={{ alignItems: 'center', marginBottom: 16 }}>
+        <Text style={{ fontSize: 22, fontWeight: 'bold', color: colors.text.primary, marginBottom: 8 }}>你记住：</Text>
+        <Text style={{ fontSize: 32, fontWeight: 'bold', color: colors.success[500] }}>{stats.rememberedWords} / {stats.totalWords}</Text>
+      </View>
+      {/* 记住率 */}
+      <View style={{ alignItems: 'center', marginBottom: 24 }}>
+        <Text style={{ fontSize: 18, color: colors.text.primary, marginBottom: 4 }}>记住率</Text>
+        <Text style={{ fontSize: 28, fontWeight: 'bold', color: colors.primary[500] }}>{stats.accuracy}%</Text>
+      </View>
+      {/* 单词列表 */}
+      <View style={{ flex: 1, marginBottom: 24 }}>
+        <ScrollView style={{ maxHeight: 260 }}>
+          {actions.map((item, idx) => (
+            <View key={item.word + idx} style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: colors.background.tertiary }}>
+              <Text style={{ fontSize: 18, color: colors.text.primary, flex: 1 }}>{item.word}</Text>
+              {item.remembered ? (
+                <Ionicons name="checkmark-circle" size={24} color={colors.success[500]} />
+              ) : (
+                <Ionicons name="close-circle" size={24} color={colors.error[500]} />
+              )}
+            </View>
+          ))}
+        </ScrollView>
+      </View>
+      {/* 确定按钮 */}
+      <View style={{ alignItems: 'center', marginBottom: 16 }}>
+        <TouchableOpacity
+          style={{
+            backgroundColor: colors.primary[500],
+            paddingHorizontal: 48,
+            paddingVertical: 16,
+            borderRadius: 25,
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.1,
+            shadowRadius: 4,
+            elevation: 3,
+          }}
+          onPress={onBack}
         >
-          <View style={styles.scoreCard}>
-            <Text style={styles.scoreLabel}>本次得分</Text>
-            <Text style={[styles.scoreValue, { color: getScoreColor(stats.score) }]}>
-              {stats.score}
-            </Text>
-            <Text style={styles.scoreMessage}>{getScoreMessage(stats.score)}</Text>
-          </View>
-        </Animated.View>
-
-        {/* 统计信息 */}
-        <Animated.View 
-          style={[
-            styles.statsSection,
-            { opacity: animationValues.statsOpacity }
-          ]}
-        >
-          <View style={styles.statsGrid}>
-            <View style={styles.statItem}>
-              <Text style={styles.statNumber}>{stats.totalWords}</Text>
-              <Text style={styles.statLabel}>复习单词</Text>
-            </View>
-            <View style={styles.statItem}>
-              <Text style={[styles.statNumber, { color: colors.success[500] }]}>
-                {stats.rememberedWords}
-              </Text>
-              <Text style={styles.statLabel}>记住单词</Text>
-            </View>
-            <View style={styles.statItem}>
-              <Text style={[styles.statNumber, { color: colors.error[500] }]}>
-                {stats.forgottenWords}
-              </Text>
-              <Text style={styles.statLabel}>忘记单词</Text>
-            </View>
-            <View style={styles.statItem}>
-              <Text style={[styles.statNumber, { color: colors.accent[500] }]}>
-                {stats.skippedWords}
-              </Text>
-              <Text style={styles.statLabel}>跳过单词</Text>
-            </View>
-          </View>
-
-          {/* 准确率 */}
-          <View style={styles.accuracySection}>
-            <Text style={styles.accuracyLabel}>准确率</Text>
-            <View style={styles.accuracyBar}>
-              <View 
-                style={[
-                  styles.accuracyFill, 
-                  { 
-                    width: `${stats.accuracy}%`,
-                    backgroundColor: getScoreColor(stats.score)
-                  }
-                ]} 
-              />
-            </View>
-            <Text style={styles.accuracyText}>{stats.accuracy}%</Text>
-          </View>
-        </Animated.View>
-
-        {/* 操作按钮 */}
-        <Animated.View 
-          style={[
-            styles.actionSection,
-            { opacity: animationValues.statsOpacity }
-          ]}
-        >
-          <View style={styles.buttonContainer}>
-            <TouchableOpacity style={styles.confirmButton} onPress={onBack}>
-              <Ionicons name="checkmark" size={20} color="white" />
-              <Text style={styles.confirmButtonText}>确定</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.backButton} onPress={onBack}>
-              <Ionicons name="arrow-back" size={20} color={colors.primary[500]} />
-              <Text style={styles.backButtonText}>返回复习</Text>
-            </TouchableOpacity>
-          </View>
-        </Animated.View>
-      </Animated.View>
+          <Text style={{ color: 'white', fontSize: 18, fontWeight: 'bold' }}>确定</Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 };
@@ -231,6 +117,7 @@ interface ReviewScreenProps {
 }
 
 const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
+  // 所有 hooks 必须在顶层声明
   const [words, setWords] = useState<ReviewWord[]>([]);
   const [session, setSession] = useState<ReviewSession | null>(null);
   const [showAnswer, setShowAnswer] = useState(false);
@@ -241,18 +128,17 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
     totalWords: 0,
     rememberedWords: 0,
     forgottenWords: 0,
-    skippedWords: 0,
-    score: 0,
+    experience: 0,
     accuracy: 0,
   });
+  const [finalStats, setFinalStats] = useState<ReviewStats | null>(null);
+  const [reviewActions, setReviewActions] = useState<{ word: string; remembered: boolean }[]>([]);
   const { vocabulary } = useVocabulary();
   const { navigate } = useNavigation();
-  
-  // 1. Swiper ref
   const swiperRef = useRef<any>(null);
-  
-  // Swiper 当前卡片索引 - 移到这里，确保在 renderProgressBar 之前定义
   const [swiperIndex, setSwiperIndex] = useState(0);
+  const rememberedRef = useRef(0);
+  const forgottenRef = useRef(0);
   
   // 监控 swiperIndex 变化
   useEffect(() => {
@@ -266,20 +152,16 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
       console.log('ReviewScreen: First word:', words[0]);
     }
   }, [words]);
+  
+  // 监控复习统计变化
+  useEffect(() => {
+    console.log('ReviewScreen: reviewStats changed:', reviewStats);
+  }, [reviewStats]);
 
   // 获取筛选参数
   // const { type, id } = (route.params || {}) as { type?: string; id?: number };
 
-  // 复习完成后自动跳转
-  useEffect(() => {
-    if (isReviewComplete) {
-      const timer = setTimeout(() => {
-        navigate('main', { tab: 'review' });
-      }, 3000);
-      
-      return () => clearTimeout(timer);
-    }
-  }, [isReviewComplete, navigate]);
+
 
   useEffect(() => {
     console.log('ReviewScreen: useEffect triggered - vocabulary length:', vocabulary.length, 'type:', type, 'id:', id);
@@ -352,8 +234,7 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
         totalWords: reviewWords.length,
         rememberedWords: 0,
         forgottenWords: 0,
-        skippedWords: 0,
-        score: 0,
+        experience: 0,
         accuracy: 0,
       });
     } catch (error) {
@@ -426,8 +307,7 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
           totalWords: mockWords.length,
           rememberedWords: 0,
           forgottenWords: 0,
-          skippedWords: 0,
-          score: 0,
+          experience: 0,
           accuracy: 0,
         });
     }
@@ -474,6 +354,11 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
     }
   };
 
+  // 统一封装添加 action 的逻辑，避免遗漏
+  const addReviewAction = (word: string, remembered: boolean) => {
+    setReviewActions(prev => ([...prev, { word, remembered }]));
+  };
+
   // 处理滑动操作
   const handleSwipeLeft = async (word: string) => {
     // 跳过
@@ -488,6 +373,21 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
       console.error('更新学习记录失败:', error);
     }
     
+    forgottenRef.current += 1;
+    setReviewStats(prev => {
+      const forgotten = prev.forgottenWords + 1;
+      const remembered = prev.rememberedWords;
+      const total = prev.totalWords;
+      const experience = remembered * 15;
+      const accuracy = total > 0 ? Math.round((remembered / total) * 100) : 0;
+      return {
+        ...prev,
+        forgottenWords: forgotten,
+        experience,
+        accuracy,
+      };
+    });
+    addReviewAction(word, false);
     updateSession('incorrect');
     moveToNextWord();
   };
@@ -505,6 +405,20 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
       console.error('更新学习记录失败:', error);
     }
     
+    rememberedRef.current += 1;
+    setReviewStats(prev => {
+      const remembered = prev.rememberedWords + 1;
+      const total = prev.totalWords;
+      const experience = remembered * 15;
+      const accuracy = total > 0 ? Math.round((remembered / total) * 100) : 0;
+      return {
+        ...prev,
+        rememberedWords: remembered,
+        experience,
+        accuracy,
+      };
+    });
+    addReviewAction(word, true);
     updateSession('correct');
     moveToNextWord();
   };
@@ -597,10 +511,14 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
   const handleSwipedLeft = (cardIndex: number) => {
     console.log('ReviewScreen: handleSwipedLeft called with cardIndex:', cardIndex);
     // 向左滑动 = 忘记了这个词
-    setReviewStats(prev => ({
-      ...prev,
-      forgottenWords: prev.forgottenWords + 1,
-    }));
+    setReviewStats(prev => {
+      const newStats = {
+        ...prev,
+        forgottenWords: prev.forgottenWords + 1,
+      };
+      console.log('ReviewScreen: Updated stats after left swipe:', newStats);
+      return newStats;
+    });
     // 更新当前卡片索引
     const nextIndex = Math.min(cardIndex + 1, words.length - 1);
     console.log('ReviewScreen: handleSwipedLeft - setting swiperIndex to:', nextIndex);
@@ -609,27 +527,20 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
   const handleSwipedRight = (cardIndex: number) => {
     console.log('ReviewScreen: handleSwipedRight called with cardIndex:', cardIndex);
     // 向右滑动 = 记住了这个词
-    setReviewStats(prev => ({
-      ...prev,
-      rememberedWords: prev.rememberedWords + 1,
-    }));
+    setReviewStats(prev => {
+      const newStats = {
+        ...prev,
+        rememberedWords: prev.rememberedWords + 1,
+      };
+      console.log('ReviewScreen: Updated stats after right swipe:', newStats);
+      return newStats;
+    });
     // 更新当前卡片索引
     const nextIndex = Math.min(cardIndex + 1, words.length - 1);
     console.log('ReviewScreen: handleSwipedRight - setting swiperIndex to:', nextIndex);
     setSwiperIndex(nextIndex);
   };
-  const handleSwipedTop = (cardIndex: number) => {
-    console.log('ReviewScreen: handleSwipedTop called with cardIndex:', cardIndex);
-    // 向上滑动 = 跳过这个词
-    setReviewStats(prev => ({
-      ...prev,
-      skippedWords: prev.skippedWords + 1,
-    }));
-    // 更新当前卡片索引
-    const nextIndex = Math.min(cardIndex + 1, words.length - 1);
-    console.log('ReviewScreen: handleSwipedTop - setting swiperIndex to:', nextIndex);
-    setSwiperIndex(nextIndex);
-  };
+
 
 
   // Swiper onSwiped 事件 - 作为备用处理
@@ -712,11 +623,41 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
     );
   }
 
+  // onSwipedAll 统计时传 actions
+  const handleSwipedAll = () => {
+    console.log('ReviewScreen: All cards swiped, completing review');
+    const totalWords = words.length;
+    const rememberedWords = rememberedRef.current;
+    const forgottenWords = forgottenRef.current;
+    const totalActions = rememberedWords + forgottenWords;
+    console.log('ReviewScreen: Data validation - total actions:', totalActions, 'total words:', totalWords);
+    if (totalActions !== totalWords) {
+      console.warn('ReviewScreen: Data mismatch detected! Actions:', totalActions, 'Words:', totalWords);
+      const missingActions = totalWords - totalActions;
+      console.log('ReviewScreen: Missing actions:', missingActions);
+    }
+    const experience = rememberedWords * 15;
+    const accuracy = totalWords > 0 ? Math.round((rememberedWords / totalWords) * 100) : 0;
+    const finalStats = {
+      totalWords,
+      rememberedWords,
+      forgottenWords,
+      experience,
+      accuracy,
+    };
+    console.log('ReviewScreen: Final stats:', finalStats);
+    setReviewStats(finalStats);
+    setFinalStats(finalStats);
+    setIsReviewComplete(true);
+  };
+
+  // ReviewCompleteScreen 传入 actions
   if (isReviewComplete) {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: colors.background.primary }}>
         <ReviewCompleteScreen 
-          stats={reviewStats}
+          stats={finalStats || reviewStats}
+          actions={reviewActions}
           onBack={() => navigate('main', { tab: 'review' })}
         />
       </SafeAreaView>
@@ -725,6 +666,7 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
 
   console.log('ReviewScreen: Rendering Swiper with words length:', words.length, 'swiperIndex:', swiperIndex);
   
+
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background.primary }}>
       {renderProgressBar()}
@@ -743,69 +685,85 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
           verticalSwipe={false}
           disableTopSwipe
           disableBottomSwipe
-          onSwipedLeft={handleSwipedLeft}
-          onSwipedRight={handleSwipedRight}
-          onSwipedTop={handleSwipedTop}
-          onSwipedAll={() => {
-            console.log('ReviewScreen: All cards swiped, completing review');
-            // 计算最终统计信息
-            const totalWords = words.length;
-            const rememberedWords = reviewStats.rememberedWords;
-            const forgottenWords = reviewStats.forgottenWords;
-            const skippedWords = reviewStats.skippedWords;
-            
-            // 计算得分 (记住的词 * 10 + 跳过的词 * 5)
-            const score = rememberedWords * 10 + skippedWords * 5;
-            
-            // 计算准确率 (记住的词 / 总词数 * 100)
-            const accuracy = totalWords > 0 ? Math.round((rememberedWords / totalWords) * 100) : 0;
-            
-            const finalStats = {
-              totalWords,
-              rememberedWords,
-              forgottenWords,
-              skippedWords,
-              score,
-              accuracy,
-            };
-            
-            console.log('ReviewScreen: Final stats:', finalStats);
-            setReviewStats(finalStats);
-            setIsReviewComplete(true);
+          onSwipedLeft={async (cardIndex) => {
+            const word = words[cardIndex]?.word;
+            if (word) {
+              await handleSwipeLeft(word);
+            }
           }}
+          onSwipedRight={async (cardIndex) => {
+            const word = words[cardIndex]?.word;
+            if (word) {
+              await handleSwipeRight(word);
+            }
+          }}
+          onSwipedAll={handleSwipedAll}
           onSwiped={(cardIndex) => {
-            console.log('ReviewScreen: onSwiped callback triggered with cardIndex:', cardIndex);
+            // 兜底，不做统计
             handleSwiped(cardIndex);
           }}
           cardVerticalMargin={32}
           cardHorizontalMargin={0}
           containerStyle={{ flex: 1, width: '100%' }}
         />
+        {/* 操作按钮区固定在底部 */}
+        {!isReviewComplete && words.length > 0 && (
+          <View style={{
+            position: 'absolute',
+            left: 0,
+            right: 0,
+            bottom: 32,
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            width: '80%',
+            alignSelf: 'center',
+          }}>
+            <TouchableOpacity
+              style={{
+                flex: 1,
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundColor: colors.error[500],
+                paddingVertical: 16,
+                borderRadius: 25,
+                marginRight: 12,
+                opacity: swiperIndex >= words.length ? 0.5 : 1,
+              }}
+              disabled={swiperIndex >= words.length}
+              onPress={async () => {
+                const word = words[swiperIndex]?.word;
+                if (word) await handleSwipeLeft(word);
+              }}
+            >
+              <Ionicons name="arrow-back" size={20} color="white" />
+              <Text style={{ color: 'white', fontSize: 18, fontWeight: '600', marginLeft: 8 }}>忘记</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={{
+                flex: 1,
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundColor: colors.success[500],
+                paddingVertical: 16,
+                borderRadius: 25,
+                marginLeft: 12,
+                opacity: swiperIndex >= words.length ? 0.5 : 1,
+              }}
+              disabled={swiperIndex >= words.length}
+              onPress={async () => {
+                const word = words[swiperIndex]?.word;
+                if (word) await handleSwipeRight(word);
+              }}
+            >
+              <Text style={{ color: 'white', fontSize: 18, fontWeight: '600', marginRight: 8 }}>记住</Text>
+              <Ionicons name="arrow-forward" size={20} color="white" />
+            </TouchableOpacity>
+          </View>
+        )}
       </View>
-      {/* 3. Swiper 下方添加操作按钮区 */}
-      {/* 删除 Swiper 组件下方的按钮区 */}
-      {/* <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginTop: 16 }}> */}
-      {/*   <TouchableOpacity */}
-      {/*     style={{ */}
-      {/*       width: 64, height: 64, borderRadius: 32, backgroundColor: '#222', justifyContent: 'center', alignItems: 'center', marginHorizontal: 20, */}
-      {/*       shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.18, shadowRadius: 8, elevation: 6, */}
-      {/*     }} */}
-      {/*     onPress={() => swiperRef.current?.swipeLeft()} */}
-      {/*     activeOpacity={0.8} */}
-      {/*   > */}
-      {/*     <Ionicons name="close" size={32} color="#fff" /> */}
-      {/*   </TouchableOpacity> */}
-      {/*   <TouchableOpacity */}
-      {/*     style={{ */}
-      {/*       width: 64, height: 64, borderRadius: 32, backgroundColor: '#F76C6C', justifyContent: 'center', alignItems: 'center', marginHorizontal: 20, */}
-      {/*       shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.18, shadowRadius: 8, elevation: 6, */}
-      {/*     }} */}
-      {/*     onPress={() => swiperRef.current?.swipeRight()} */}
-      {/*     activeOpacity={0.8} */}
-      {/*   > */}
-      {/*     <Ionicons name="heart" size={32} color="#fff" /> */}
-      {/*   </TouchableOpacity> */}
-      {/* </View> */}
     </SafeAreaView>
   );
 };
@@ -1018,58 +976,121 @@ const styles = StyleSheet.create({
   },
   completeHint: {
     fontSize: 14,
-    color: colors.text.tertiary,
+    color: colors.text.secondary,
     marginTop: 12,
-    fontStyle: 'italic',
+    opacity: 0.8,
   },
   scoreSection: {
-    marginBottom: 40,
+    marginBottom: 30,
     alignItems: 'center',
   },
   scoreCard: {
     backgroundColor: colors.background.secondary,
-    borderRadius: 20,
-    padding: 24,
+    borderRadius: 16,
+    padding: 20,
     alignItems: 'center',
-    minWidth: 200,
+    minWidth: 180,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    elevation: 2,
   },
   scoreLabel: {
-    fontSize: 14,
-    color: colors.text.secondary,
-    marginBottom: 8,
-  },
-  scoreValue: {
-    fontSize: 48,
-    fontWeight: 'bold',
-    marginBottom: 8,
-  },
-  scoreMessage: {
     fontSize: 16,
     color: colors.text.primary,
+    marginBottom: 8,
     fontWeight: '600',
+  },
+  scoreValue: {
+    fontSize: 32,
+    fontWeight: 'bold',
+    marginBottom: 6,
+  },
+  scoreMessage: {
+    fontSize: 14,
+    color: colors.text.secondary,
+    fontWeight: '500',
   },
   statsSection: {
     width: '100%',
     marginBottom: 40,
+  },
+  statsList: {
+    width: '100%',
+    marginBottom: 30,
   },
   statsGrid: {
     flexDirection: 'row',
     justifyContent: 'space-around',
     marginBottom: 30,
   },
+  statRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    backgroundColor: colors.background.secondary,
+    borderRadius: 12,
+    marginBottom: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
   accuracySection: {
     alignItems: 'center',
+    marginTop: 20,
   },
   accuracyLabel: {
     fontSize: 16,
     color: colors.text.primary,
-    marginBottom: 12,
+    marginBottom: 16,
     fontWeight: '600',
+  },
+  accuracyGauge: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  accuracyCircle: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: colors.background.secondary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  accuracyPercentage: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: colors.text.primary,
+    zIndex: 2,
+  },
+  accuracyRing: {
+    position: 'absolute',
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    borderWidth: 8,
+    borderColor: colors.background.tertiary,
+  },
+  accuracyProgress: {
+    position: 'absolute',
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    borderWidth: 8,
+    borderColor: 'transparent',
+    borderTopColor: colors.primary[500],
+    borderRightColor: colors.primary[500],
   },
   accuracyBar: {
     width: '100%',
@@ -1090,6 +1111,29 @@ const styles = StyleSheet.create({
   },
   actionSection: {
     alignItems: 'center',
+    marginTop: 20,
+  },
+  suggestionSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.background.secondary,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 12,
+    marginHorizontal: 20,
+    marginTop: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  suggestionText: {
+    fontSize: 14,
+    color: colors.text.secondary,
+    marginLeft: 8,
+    flex: 1,
+    lineHeight: 20,
   },
   backButton: {
     flexDirection: 'row',
@@ -1112,6 +1156,42 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     width: '100%',
     paddingHorizontal: 20,
+  },
+  primaryButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.primary[500],
+    paddingHorizontal: 32,
+    paddingVertical: 16,
+    borderRadius: 25,
+    marginRight: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  primaryButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+    marginLeft: 8,
+  },
+  secondaryButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'transparent',
+    paddingHorizontal: 24,
+    paddingVertical: 16,
+    borderRadius: 25,
+    borderWidth: 1,
+    borderColor: colors.text.tertiary,
+  },
+  secondaryButtonText: {
+    color: colors.text.secondary,
+    fontSize: 16,
+    fontWeight: '600',
+    marginLeft: 8,
   },
   confirmButton: {
     flexDirection: 'row',

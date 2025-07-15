@@ -41,29 +41,30 @@ const WordSearchScreen: React.FC = () => {
 
   // 搜索处理
   const handleSearch = async () => {
-    if (!searchText.trim()) {
+    const word = searchText.trim().toLowerCase();
+    if (!word) {
       Alert.alert('提示', '请输入要查询的单词');
       return;
     }
     setIsLoading(true);
     setSearchResult(null);
     try {
-      const result = await wordService.searchWord(searchText.trim());
+      const result = await wordService.searchWord(word);
       if (result.success && result.data) {
         // 保存查词记录
         await wordService.saveSearchHistory(
-          result.data.word,
+          (result.data.word || '').trim().toLowerCase(),
           result.data.definitions && result.data.definitions[0]?.definition ? result.data.definitions[0].definition : '暂无释义'
         );
         // 更新最近查词列表
         setRecentWords(prev => [
           {
             id: Date.now().toString(),
-            word: result.data?.word || '',
+            word: (result.data?.word || '').trim().toLowerCase(),
             translation: result.data?.definitions && result.data.definitions[0]?.definition ? result.data.definitions[0].definition : '暂无释义',
             timestamp: Date.now(),
           },
-          ...prev.filter(w => w.word !== (result.data?.word || '')).slice(0, 4)
+          ...prev.filter(w => w.word.trim().toLowerCase() !== (result.data?.word || '').trim().toLowerCase()).slice(0, 4)
         ]);
         setSearchResult(result.data);
         setSearchText('');
@@ -80,10 +81,11 @@ const WordSearchScreen: React.FC = () => {
 
   // 点击历史词
   const handleRecentWordPress = async (word: RecentWord) => {
+    const searchWord = word.word.trim().toLowerCase();
     setIsLoading(true);
     setSearchResult(null);
     try {
-      const result = await wordService.searchWord(word.word);
+      const result = await wordService.searchWord(searchWord);
       if (result.success && result.data) {
         setSearchResult(result.data);
       } else {

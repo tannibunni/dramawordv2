@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { UserService } from '../services/userService';
+import { DataSyncService } from '../services/dataSyncService';
 
 interface UserInfo {
   id: string;
@@ -72,6 +73,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         loginType: type, 
         isAuthenticated: true 
       });
+      // 新增：登录后同步本地历史到云端
+      const dataSyncService = DataSyncService.getInstance();
+      await dataSyncService.syncLocalSearchHistoryToCloud();
     } catch (error) {
       console.error('❌ AuthContext login 失败:', error);
       throw error;

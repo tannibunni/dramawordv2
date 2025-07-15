@@ -226,6 +226,28 @@ export class DataSyncService {
     }
   }
 
+  // 同步本地搜索历史到云端
+  async syncLocalSearchHistoryToCloud(): Promise<void> {
+    try {
+      const local = await AsyncStorage.getItem('search_history');
+      if (!local) return;
+      const history = JSON.parse(local);
+      if (!Array.isArray(history) || history.length === 0) return;
+      let successCount = 0;
+      for (const item of history) {
+        // 逐条上传到云端
+        const ok = await wordService.saveSearchHistory(item.word, item.translation);
+        if (ok) successCount++;
+      }
+      // 上传成功后清空本地历史
+      if (successCount > 0) {
+        await AsyncStorage.removeItem('search_history');
+        console.log(`✅ 本地历史已同步到云端并清空（共${successCount}条）`);
+      }
+    } catch (e) {
+      console.error('❌ 同步本地历史到云端失败:', e);
+    }
+  }
 
   // 获取同步状态
   async getSyncStatus(): Promise<{

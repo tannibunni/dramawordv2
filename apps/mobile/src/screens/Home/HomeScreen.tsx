@@ -91,7 +91,8 @@ const HomeScreen: React.FC = () => {
 
   // 搜索处理
   const handleSearch = async () => {
-    if (!searchText.trim()) {
+    const word = searchText.trim().toLowerCase();
+    if (!word) {
       Alert.alert('提示', '请输入要查询的单词');
       return;
     }
@@ -99,7 +100,7 @@ const HomeScreen: React.FC = () => {
     setSearchResult(null);
     setSearchSuggestions([]);
     try {
-      const result = await wordService.searchWord(searchText.trim());
+      const result = await wordService.searchWord(word);
       if (result.success && result.data) {
         // 日志：输出 definitions 和例句
         if (result.data.definitions) {
@@ -118,17 +119,17 @@ const HomeScreen: React.FC = () => {
         }
         // 保存查词记录
         await wordService.saveSearchHistory(
-          result.data.correctedWord || result.data.word,
+          (result.data.correctedWord || result.data.word).trim().toLowerCase(),
           result.data.definitions && result.data.definitions[0]?.definition ? result.data.definitions[0].definition : '暂无释义'
         );
         // 更新最近查词列表 - 去重并保持最新
         setRecentWords(prev => {
           // 过滤掉重复的单词，保留最新的
-          const filtered = prev.filter(w => (w.word.toLowerCase() !== (result.data!.correctedWord || result.data!.word).toLowerCase()));
+          const filtered = prev.filter(w => (w.word.trim().toLowerCase() !== (result.data!.correctedWord || result.data!.word).trim().toLowerCase()));
           return [
             {
               id: Date.now().toString(),
-              word: result.data!.correctedWord || result.data!.word,
+              word: (result.data!.correctedWord || result.data!.word).trim().toLowerCase(),
               translation: result.data!.definitions && result.data!.definitions[0]?.definition ? result.data!.definitions[0].definition : '暂无释义',
               timestamp: Date.now(),
             },
@@ -152,11 +153,12 @@ const HomeScreen: React.FC = () => {
 
   // 点击历史词
   const handleRecentWordPress = async (word: RecentWord) => {
-    console.log('🔍 点击历史词:', word);
+    const searchWord = word.word.trim().toLowerCase();
+    console.log('🔍 点击历史词:', searchWord);
     setIsLoading(true);
     setSearchResult(null);
     try {
-      const result = await wordService.searchWord(word.word);
+      const result = await wordService.searchWord(searchWord);
       console.log('🔍 搜索结果:', result);
       if (result.success && result.data) {
         console.log('🔍 设置 searchResult:', result.data);
@@ -182,7 +184,7 @@ const HomeScreen: React.FC = () => {
   };
 
   // 收藏按钮高亮逻辑
-  const isCollected = searchResult && vocabulary.some(w => w.word === searchResult.word);
+  const isCollected = searchResult && vocabulary.some(w => w.word.trim().toLowerCase() === searchResult.word.trim().toLowerCase());
 
   // 收藏按钮点击
   const handleCollect = () => {
@@ -224,7 +226,10 @@ const HomeScreen: React.FC = () => {
   // 修改 handleConfirmCollect：添加单词并显示打勾动画
   const handleConfirmCollect = () => {
     if (searchResult && selectedShow) {
-      addWord(searchResult, selectedShow);
+      // 统一处理单词为小写+trim
+      const normalizedWord = searchResult.word.trim().toLowerCase();
+      const normalizedResult = { ...searchResult, word: normalizedWord };
+      addWord(normalizedResult, selectedShow);
       setShowCollectModal(false);
       setShowCheckAnimation(true);
       Animated.sequence([

@@ -3,6 +3,7 @@ import { UserController } from '../controllers/userController';
 import { authenticateToken } from '../middleware/auth';
 import { validateRequest } from '../middleware/validateRequest';
 import { uploadAvatar } from '../middleware/upload';
+import { UserShowListController } from '../controllers/userShowListController';
 
 const router = express.Router();
 
@@ -84,5 +85,11 @@ router.post('/avatar',
   uploadAvatar.single('avatar'),
   UserController.uploadAvatar
 );
+
+// 用户剧集清单 API
+router.get('/showlist', authenticateToken, UserShowListController.getShowList);
+router.post('/showlist', authenticateToken, UserShowListController.addShow);
+router.delete('/showlist', authenticateToken, UserShowListController.removeShow);
+router.put('/showlist', authenticateToken, UserShowListController.updateShow);
 
 export default router; 

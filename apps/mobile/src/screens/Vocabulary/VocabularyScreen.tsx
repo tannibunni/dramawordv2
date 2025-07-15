@@ -58,24 +58,24 @@ const VocabularyScreen: React.FC = () => {
 
   useEffect(() => {
     if (isEditing && searchText.trim()) {
-      const preview = vocabulary.filter(w => (w.word || '').toLowerCase().includes((searchText || '').trim().toLowerCase()));
+      const searchKey = (searchText || '').trim().toLowerCase();
+      const preview = vocabulary.filter(w => (w.word || '').trim().toLowerCase().includes(searchKey));
       setPreviewList(preview.slice(0, 5));
     } else {
       setPreviewList([]);
     }
   }, [searchText, vocabulary, isEditing]);
 
+  // 搜索和过滤时也统一小写和trim
   const filterWords = () => {
     let filtered = vocabulary;
-
-    // 按搜索文本过滤
     if (searchText) {
+      const searchKey = (searchText || '').trim().toLowerCase();
       filtered = filtered.filter(word =>
-        (word.word || '').toLowerCase().includes((searchText || '').toLowerCase()) ||
-        (word.definitions?.[0]?.definition || '').toLowerCase().includes((searchText || '').toLowerCase())
+        (word.word || '').trim().toLowerCase().includes(searchKey) ||
+        (word.definitions?.[0]?.definition || '').toLowerCase().includes(searchKey)
       );
     }
-
     setFilteredWords(filtered);
   };
 
@@ -121,14 +121,15 @@ const VocabularyScreen: React.FC = () => {
 
   // 1. 点击单词卡后，搜索框自动填入该单词
   const handleWordPress = (word: any) => {
-    setSearchText(word.word);
+    setSearchText((word.word || '').trim().toLowerCase());
     setSelectedWord(word);
   };
 
   // 2. 搜索框支持回车/提交时查找单词
   const handleSearchSubmit = () => {
     setIsEditing(false);
-    const found = vocabulary.find(w => (w.word || '').toLowerCase() === (searchText || '').trim().toLowerCase());
+    const searchKey = (searchText || '').trim().toLowerCase();
+    const found = vocabulary.find(w => (w.word || '').trim().toLowerCase() === searchKey);
     if (found) {
       setSelectedWord(found);
     } else {
@@ -137,7 +138,7 @@ const VocabularyScreen: React.FC = () => {
   };
 
   const handleDeleteWord = (word: any) => {
-    removeWord(word.word, word.sourceShow?.id);
+    removeWord((word.word || '').trim().toLowerCase(), word.sourceShow?.id);
   };
 
   // 徽章icon渲染

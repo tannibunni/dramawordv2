@@ -5,6 +5,15 @@ import {
   LearningStats,
   learningAlgorithm 
 } from './learningAlgorithm';
+import { API_BASE_URL } from '../constants/config';
+
+async function getUserToken() {
+  try {
+    return await AsyncStorage.getItem('authToken');
+  } catch {
+    return null;
+  }
+}
 
 class LearningDataService {
   private readonly STORAGE_KEYS = {
@@ -76,6 +85,23 @@ class LearningDataService {
       records[index] = updatedRecord;
 
       await this.saveLearningRecords(records);
+      // 云端同步
+      const token = await getUserToken();
+      if (token) {
+        try {
+          await fetch(`${API_BASE_URL}/sync/upload`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({ learningRecords: records }),
+          });
+          console.log('✅ 学习记录已同步到云端');
+        } catch (e) {
+          console.error('❌ 学习记录同步云端失败:', e);
+        }
+      }
     } catch (error) {
       console.error('更新学习记录失败:', error);
     }
@@ -120,6 +146,23 @@ class LearningDataService {
       }
 
       await this.saveLearningRecords(records);
+      // 云端同步
+      const token = await getUserToken();
+      if (token) {
+        try {
+          await fetch(`${API_BASE_URL}/sync/upload`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({ learningRecords: records }),
+          });
+          console.log('✅ 批量学习记录已同步到云端');
+        } catch (e) {
+          console.error('❌ 批量学习记录同步云端失败:', e);
+        }
+      }
     } catch (error) {
       console.error('批量更新学习记录失败:', error);
     }
