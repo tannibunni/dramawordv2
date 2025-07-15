@@ -40,17 +40,11 @@ export const searchWord = async (req: Request, res: Response): Promise<void> => 
     if (wordCache.has(searchTerm)) {
       logger.info(`✅ Found in memory cache: ${searchTerm}`);
       const cachedWord = wordCache.get(searchTerm)!;
-      
-      // 更新云单词表搜索统计
-      await updateCloudWordSearchStats(searchTerm);
-      
-      // 保存搜索历史
-      await saveSearchHistoryToDB(searchTerm, cachedWord.definitions[0]?.definition || '暂无释义');
-      
+      // 修复：缓存里存的是普通对象，不能再 .toObject()
       res.json({
         success: true,
         data: {
-          ...cachedWord.toObject(),
+          ...cachedWord,
           correctedWord: cachedWord.correctedWord || searchTerm
         },
         source: 'cache'
