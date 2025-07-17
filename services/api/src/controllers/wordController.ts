@@ -4,6 +4,7 @@ import { Word, IWord } from '../models/Word';
 import { SearchHistory, ISearchHistory } from '../models/SearchHistory';
 import { CloudWord } from '../models/CloudWord';
 import UserVocabulary from '../models/UserVocabulary';
+import { ChineseTranslation } from '../models/ChineseTranslation';
 import { logger } from '../utils/logger';
 
 // 初始化 OpenAI
@@ -19,6 +20,7 @@ const openai = new OpenAI({
 
 // 内存缓存，用于提高性能
 const wordCache = new Map<string, any>();
+const chineseTranslationCache = new Map<string, string[]>();
 
 // 单词搜索 - 先查云单词表，没有再用AI
 export const searchWord = async (req: Request, res: Response): Promise<void> => {
@@ -552,6 +554,21 @@ async function updateCloudWordSearchStats(word: string): Promise<void> {
   }
 }
 
+// 更新中译英映射的搜索统计
+async function updateChineseTranslationSearchStats(chineseWord: string): Promise<void> {
+  try {
+    await ChineseTranslation.updateOne(
+      { chineseWord },
+      { 
+        $inc: { searchCount: 1 },
+        $set: { lastSearched: new Date() }
+      }
+    );
+  } catch (error) {
+    logger.error(`❌ Failed to update Chinese translation search stats for ${chineseWord}:`, error);
+  }
+}
+
 // 保存搜索历史到数据库
 async function saveSearchHistoryToDB(word: string, definition?: string, timestamp?: number): Promise<void> {
   try {
@@ -836,7 +853,28 @@ export const translateChineseToEnglish = async (req: Request, res: Response) => 
     }
     const searchTerm = word.trim();
     logger.info(`🌏 Translating Chinese to English: ${searchTerm}`);
-    // 优化 prompt
+
+    // 1. 检查内存缓存
+    if (chineseTranslationCache.has(searchTerm)) {
+      logger.info(`✅ Found in memory cache: ${searchTerm}`);
+      const candidates = chineseTranslationCache.get(searchTerm)!;
+      await updateChineseTranslationSearchStats(searchTerm);
+      res.json({ success: true, query: searchTerm, candidates, source: 'memory_cache' });
+      return;
+    }
+
+    // 2. 检查数据库缓存
+    let translation = await ChineseTranslation.findOne({ chineseWord: searchTerm });
+    if (translation) {
+      logger.info(`✅ Found in database cache: ${searchTerm}`);
+      await updateChineseTranslationSearchStats(searchTerm);
+      chineseTranslationCache.set(searchTerm, translation.englishCandidates);
+      res.json({ success: true, query: searchTerm, candidates: translation.englishCandidates, source: 'database_cache' });
+      return;
+    }
+
+    // 3. 使用 OpenAI 生成新的翻译
+    logger.info(`🤖 Generating new translation with AI: ${searchTerm}`);
     const prompt = `你是专业的中英词典助手。请将中文词语“${searchTerm}”翻译为1-3个常用英文单词，按相关性降序排列，严格只返回一个 JSON 数组，如 ["sky","heaven"]，不要其他内容。如果是常见名词（如“天空”、“城市”、“苹果”），务必给出最常用英文单词。如果没有合适的英文单词，才返回空数组 []。`;
     let candidates: string[] = [];
     let responseText = '';
@@ -857,7 +895,8 @@ export const translateChineseToEnglish = async (req: Request, res: Response) => 
       logger.error('❌ 解析 OpenAI 返回失败:', e, responseText);
       candidates = [];
     }
-    // fallback: 常见词典
+
+    // 4. fallback: 常见词典
     if (!candidates || candidates.length === 0) {
       const fallbackDict: Record<string, string[]> = {
         '天空': ['sky', 'heaven'],
@@ -898,7 +937,21 @@ export const translateChineseToEnglish = async (req: Request, res: Response) => 
         logger.info(`🔄 使用 fallback 词典补充: ${searchTerm} -> ${candidates}`);
       }
     }
-    res.json({ success: true, query: searchTerm, candidates });
+
+    // 5. 保存到数据库缓存
+    if (candidates && candidates.length > 0) {
+      translation = new ChineseTranslation({
+        chineseWord: searchTerm,
+        englishCandidates: candidates,
+        searchCount: 1,
+        lastSearched: new Date()
+      });
+      await translation.save();
+      logger.info(`💾 Saved new translation to database: ${searchTerm} -> ${candidates}`);
+      chineseTranslationCache.set(searchTerm, candidates);
+    }
+
+    res.json({ success: true, query: searchTerm, candidates, source: candidates.length > 0 ? 'ai' : 'fallback' });
   } catch (error) {
     logger.error('❌ translateChineseToEnglish error:', error);
     res.status(500).json({ success: false, error: 'Failed to translate', message: error instanceof Error ? error.message : 'Unknown error' });
