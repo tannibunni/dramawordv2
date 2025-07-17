@@ -112,10 +112,25 @@ const HomeScreen: React.FC = () => {
         if (result.success && result.candidates.length > 0) {
           setChToEnCandidates(result.candidates);
           setChToEnQuery(word);
+          // 新增：将中文查词结果加入历史
+          const translation = result.candidates.join(', ');
+          await wordService.saveSearchHistory(word, translation);
+          setRecentWords(prev => {
+            const filtered = prev.filter(w => w.word !== word);
+            return [
+              {
+                id: Date.now().toString(),
+                word,
+                translation,
+                timestamp: Date.now(),
+              },
+              ...filtered.slice(0, 4)
+            ];
+          });
           setIsLoading(false);
           return;
         } else {
-          Alert.alert('未找到英文释义', result.error || '未找到合适的英文释义');
+          Alert.alert('未找到合适的英文释义', '请尝试输入其他中文词语，或稍后再试。');
           setIsLoading(false);
           return;
         }
@@ -174,8 +189,24 @@ const HomeScreen: React.FC = () => {
 
   // 点击历史词
   const handleRecentWordPress = async (word: RecentWord) => {
+    // 新增：如果 translation 里有逗号，说明是中文查词，自动查第一个英文
+    if (isChinese(word.word) && word.translation) {
+      const firstEn = word.translation.split(',')[0].trim();
+      if (firstEn) {
+        setIsLoading(true);
+        setSearchResult(null);
+        const result = await wordService.searchWord(firstEn.toLowerCase());
+        if (result.success && result.data) {
+          setSearchResult(result.data);
+        } else {
+          Alert.alert('查询失败', result.error || '无法获取单词详情');
+        }
+        setIsLoading(false);
+        return;
+      }
+    }
+    // 原有英文查词逻辑
     const searchWord = word.word.trim().toLowerCase();
-    console.log('🔍 点击历史词:', searchWord);
     setIsLoading(true);
     setSearchResult(null);
     try {

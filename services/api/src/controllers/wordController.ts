@@ -836,25 +836,67 @@ export const translateChineseToEnglish = async (req: Request, res: Response) => 
     }
     const searchTerm = word.trim();
     logger.info(`🌏 Translating Chinese to English: ${searchTerm}`);
-    // prompt 设计
-    const prompt = `你是专业的中英词典助手。请将中文词语“${searchTerm}”翻译为1-3个常用英文单词，按相关性降序排列，结果只返回英文单词数组，不要其他内容。例如：['big', 'huge', 'massive']。如果没有合适的英文单词，返回空数组。`;
-    const completion = await openai.chat.completions.create({
-      model: 'gpt-3.5-turbo',
-      messages: [
-        { role: 'system', content: '你是中英词典助手，只返回JSON数组，不要其他内容。' },
-        { role: 'user', content: prompt }
-      ],
-      temperature: 0.2,
-      max_tokens: 100
-    });
-    const responseText = completion.choices[0]?.message?.content;
+    // 优化 prompt
+    const prompt = `你是专业的中英词典助手。请将中文词语“${searchTerm}”翻译为1-3个常用英文单词，按相关性降序排列，严格只返回一个 JSON 数组，如 ["sky","heaven"]，不要其他内容。如果是常见名词（如“天空”、“城市”、“苹果”），务必给出最常用英文单词。如果没有合适的英文单词，才返回空数组 []。`;
     let candidates: string[] = [];
+    let responseText = '';
     try {
+      const completion = await openai.chat.completions.create({
+        model: 'gpt-3.5-turbo',
+        messages: [
+          { role: 'system', content: '你是中英词典助手，只返回JSON数组，不要其他内容。' },
+          { role: 'user', content: prompt }
+        ],
+        temperature: 0.2,
+        max_tokens: 100
+      });
+      responseText = completion.choices[0]?.message?.content;
       candidates = JSON.parse(responseText || '[]');
       if (!Array.isArray(candidates)) candidates = [];
     } catch (e) {
       logger.error('❌ 解析 OpenAI 返回失败:', e, responseText);
       candidates = [];
+    }
+    // fallback: 常见词典
+    if (!candidates || candidates.length === 0) {
+      const fallbackDict: Record<string, string[]> = {
+        '天空': ['sky', 'heaven'],
+        '城市': ['city', 'urban'],
+        '苹果': ['apple'],
+        '水': ['water'],
+        '太阳': ['sun'],
+        '月亮': ['moon'],
+        '山': ['mountain'],
+        '河': ['river'],
+        '树': ['tree'],
+        '花': ['flower'],
+        '书': ['book'],
+        '电脑': ['computer'],
+        '手机': ['phone'],
+        '桌子': ['table'],
+        '椅子': ['chair'],
+        '狗': ['dog'],
+        '猫': ['cat'],
+        '鸟': ['bird'],
+        '鱼': ['fish'],
+        '汽车': ['car'],
+        '飞机': ['plane'],
+        '火车': ['train'],
+        '学校': ['school'],
+        '老师': ['teacher'],
+        '学生': ['student'],
+        '朋友': ['friend'],
+        '家': ['home', 'house'],
+        '工作': ['work', 'job'],
+        '学习': ['study', 'learn'],
+        '快乐': ['happy', 'joyful'],
+        '悲伤': ['sad', 'sorrow'],
+        // ...可扩展
+      };
+      if (fallbackDict[searchTerm]) {
+        candidates = fallbackDict[searchTerm];
+        logger.info(`🔄 使用 fallback 词典补充: ${searchTerm} -> ${candidates}`);
+      }
     }
     res.json({ success: true, query: searchTerm, candidates });
   } catch (error) {
