@@ -11,13 +11,15 @@ import {
   updateWordProgress,
   removeFromUserVocabulary,
   checkEnvironment,
-  testOpenAI
+  testOpenAI,
+  translateChineseToEnglish // 新增
 } from '../controllers/wordController';
 
 const router = Router();
 
 // 单词搜索路由
 router.post('/search', searchWord);
+router.post('/translate', translateChineseToEnglish); // 新增
 router.get('/popular', getPopularWords);
 router.get('/recent-searches', getRecentSearches);
 router.post('/history', saveSearchHistory);

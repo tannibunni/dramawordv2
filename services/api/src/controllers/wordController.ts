@@ -826,6 +826,43 @@ export const testOpenAI = async (req: Request, res: Response): Promise<void> => 
   }
 };
 
+// 中文查英文 - 返回 1-3 个英文释义
+export const translateChineseToEnglish = async (req: Request, res: Response) => {
+  try {
+    const { word } = req.body;
+    if (!word) {
+      res.status(400).json({ success: false, error: 'Word parameter is required' });
+      return;
+    }
+    const searchTerm = word.trim();
+    logger.info(`🌏 Translating Chinese to English: ${searchTerm}`);
+    // prompt 设计
+    const prompt = `你是专业的中英词典助手。请将中文词语“${searchTerm}”翻译为1-3个常用英文单词，按相关性降序排列，结果只返回英文单词数组，不要其他内容。例如：['big', 'huge', 'massive']。如果没有合适的英文单词，返回空数组。`;
+    const completion = await openai.chat.completions.create({
+      model: 'gpt-3.5-turbo',
+      messages: [
+        { role: 'system', content: '你是中英词典助手，只返回JSON数组，不要其他内容。' },
+        { role: 'user', content: prompt }
+      ],
+      temperature: 0.2,
+      max_tokens: 100
+    });
+    const responseText = completion.choices[0]?.message?.content;
+    let candidates: string[] = [];
+    try {
+      candidates = JSON.parse(responseText || '[]');
+      if (!Array.isArray(candidates)) candidates = [];
+    } catch (e) {
+      logger.error('❌ 解析 OpenAI 返回失败:', e, responseText);
+      candidates = [];
+    }
+    res.json({ success: true, query: searchTerm, candidates });
+  } catch (error) {
+    logger.error('❌ translateChineseToEnglish error:', error);
+    res.status(500).json({ success: false, error: 'Failed to translate', message: error instanceof Error ? error.message : 'Unknown error' });
+  }
+};
+
 export const wordController = {
   searchWord,
   getPopularWords,
@@ -837,5 +874,6 @@ export const wordController = {
   clearAllData,
   clearUserHistory,
   checkEnvironment,
-  testOpenAI
+  testOpenAI,
+  translateChineseToEnglish
 }; 

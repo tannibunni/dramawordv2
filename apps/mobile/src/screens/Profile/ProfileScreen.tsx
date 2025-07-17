@@ -183,13 +183,13 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
     );
   };
 
-  const renderStats = () => (
-    <LearningStatsSection
-      onBadgePress={(badge) => {
-        console.log('奖章被点击:', badge);
-      }}
-    />
-  );
+  // const renderStats = () => (
+  //   <LearningStatsSection
+  //     onBadgePress={(badge) => {
+  //       console.log('奖章被点击:', badge);
+  //     }}
+  //   />
+  // );
 
   const renderSettings = () => (
     <View style={styles.settingsSection}>
@@ -208,7 +208,8 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
         />
       </View>
 
-      <View style={styles.settingItem}>
+      {/* 深色模式按钮和菜单项已隐藏 */}
+      {/* <View style={styles.settingItem}>
         <View style={styles.settingLeft}>
           <Ionicons name="moon-outline" size={24} color={colors.primary[500]} />
           <Text style={styles.settingLabel}>深色模式</Text>
@@ -219,7 +220,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
           trackColor={{ false: colors.neutral[300], true: colors.primary[500] }}
           thumbColor={darkModeEnabled ? colors.background.secondary : colors.background.secondary}
         />
-      </View>
+      </View> */}
 
       <View style={styles.settingItem}>
         <View style={styles.settingLeft}>
@@ -426,7 +427,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {renderUserInfo()}
         {renderSubscriptionEntry()}
-        {renderStats()}
+        {/* {renderStats()} 学习统计板块已删除 */}
         {renderSettings()}
       </ScrollView>
       

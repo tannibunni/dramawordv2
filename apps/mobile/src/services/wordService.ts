@@ -173,7 +173,7 @@ export class WordService {
     const token = await getUserToken();
     if (!token) {
       // 游客：本地获取
-      try {
+    try {
         const local = await AsyncStorage.getItem(SEARCH_HISTORY_KEY);
         if (local) {
           return JSON.parse(local);
@@ -405,6 +405,29 @@ export class WordService {
       console.error(`❌ 清空用户缓存错误: ${error}`);
       // 即使网络错误，也返回成功，因为主要是清空本地缓存
       return true;
+    }
+  }
+
+  // 中文查英文，返回 1-3 个英文释义
+  async translateChineseToEnglish(word: string): Promise<{ success: boolean; candidates: string[]; error?: string }> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/words/translate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ word: word.trim() })
+      });
+      if (!response.ok) {
+        throw new WordServiceError(`翻译失败: ${response.status}`, response.status);
+      }
+      const result = await response.json();
+      if (result.success) {
+        return { success: true, candidates: result.candidates || [] };
+      } else {
+        return { success: false, candidates: [], error: result.error || '翻译失败' };
+      }
+    } catch (error) {
+      console.error('❌ 中文查英文错误:', error);
+      return { success: false, candidates: [], error: error instanceof Error ? error.message : '未知错误' };
     }
   }
 }

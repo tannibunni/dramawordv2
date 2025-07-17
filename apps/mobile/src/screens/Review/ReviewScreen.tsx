@@ -44,9 +44,9 @@ const ReviewCompleteScreen: React.FC<{
         <Text style={{ fontSize: 22, fontWeight: 'bold', color: colors.text.primary, marginBottom: 8 }}>你记住：</Text>
         <Text style={{ fontSize: 32, fontWeight: 'bold', color: colors.success[500] }}>{stats.rememberedWords} / {stats.totalWords}</Text>
       </View>
-      {/* 记住率 */}
+      {/* 成功率 */}
       <View style={{ alignItems: 'center', marginBottom: 24 }}>
-        <Text style={{ fontSize: 18, color: colors.text.primary, marginBottom: 4 }}>记住率</Text>
+        <Text style={{ fontSize: 18, color: colors.text.primary, marginBottom: 4 }}>成功率</Text>
         <Text style={{ fontSize: 28, fontWeight: 'bold', color: colors.primary[500] }}>{stats.accuracy}%</Text>
       </View>
       {/* 单词列表 */}
@@ -555,16 +555,9 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
 
   // 进度条渲染
   const renderProgressBar = () => {
-    console.log('ReviewScreen: renderProgressBar - swiperIndex:', swiperIndex, 'words.length:', words.length);
-    // 确保 swiperIndex 在有效范围内
-    const currentIndex = Math.min(Math.max(0, swiperIndex), words.length - 1);
-    // 进度条应该显示当前正在查看的卡片位置，而不是已完成的卡片数量
-    // 所以当 swiperIndex 是 0 时，显示 "1 / 总数"
-    const progressPercentage = words.length > 0 ? ((currentIndex + 1) / words.length) * 100 : 0;
-    const progressText = words.length > 0 ? `${currentIndex + 1} / ${words.length}` : '';
-    
-    console.log('ReviewScreen: Progress calculation - currentIndex:', currentIndex, 'percentage:', progressPercentage, 'text:', progressText);
-    
+    // swiperIndex 现在表示“已完成的卡片数”
+    const progressPercentage = words.length > 0 ? (swiperIndex / words.length) * 100 : 0;
+    const progressText = words.length > 0 ? `${swiperIndex} / ${words.length}` : '';
     return (
       <View style={{ width: '100%', alignItems: 'center', marginTop: 16, marginBottom: 8 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', width: '90%' }}>

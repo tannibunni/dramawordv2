@@ -48,6 +48,8 @@ const HomeScreen: React.FC = () => {
   const [celebrateBadge, setCelebrateBadge] = useState<null | number>(null);
   const badgeTargets = [10, 20, 50, 100, 200, 500, 1000];
   const prevVocabCount = useRef(vocabulary.length);
+  const [chToEnCandidates, setChToEnCandidates] = useState<string[]>([]); // 新增：中文查英文候选词
+  const [chToEnQuery, setChToEnQuery] = useState<string>('');
 
   useEffect(() => {
     loadRecentWords();
@@ -89,9 +91,11 @@ const HomeScreen: React.FC = () => {
     }
   };
 
+  const isChinese = (text: string) => /[\u4e00-\u9fa5]/.test(text);
+
   // 搜索处理
   const handleSearch = async () => {
-    const word = searchText.trim().toLowerCase();
+    const word = searchText.trim();
     if (!word) {
       Alert.alert('提示', '请输入要查询的单词');
       return;
@@ -99,8 +103,25 @@ const HomeScreen: React.FC = () => {
     setIsLoading(true);
     setSearchResult(null);
     setSearchSuggestions([]);
+    setChToEnCandidates([]);
+    setChToEnQuery('');
     try {
-      const result = await wordService.searchWord(word);
+      if (isChinese(word)) {
+        // 中文查英文
+        const result = await wordService.translateChineseToEnglish(word);
+        if (result.success && result.candidates.length > 0) {
+          setChToEnCandidates(result.candidates);
+          setChToEnQuery(word);
+          setIsLoading(false);
+          return;
+        } else {
+          Alert.alert('未找到英文释义', result.error || '未找到合适的英文释义');
+          setIsLoading(false);
+          return;
+        }
+      }
+      // 英文查词
+      const result = await wordService.searchWord(word.toLowerCase());
       if (result.success && result.data) {
         // 日志：输出 definitions 和例句
         if (result.data.definitions) {
@@ -448,7 +469,32 @@ const HomeScreen: React.FC = () => {
           </View>
         </View>
         {/* 内容区：有查词结果时只显示卡片，否则显示最近查词 */}
-        {searchResult ? (
+        {chToEnCandidates.length > 0 ? (
+          <View style={styles.wordCardWrapper}>
+            <View style={[styles.wordCardCustom, { alignItems: 'center', justifyContent: 'center', padding: 32, borderRadius: 20, backgroundColor: colors.background.secondary, shadowColor: colors.neutral[900], shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.15, shadowRadius: 16, elevation: 8, maxWidth: 350, minHeight: 220 }] }>
+              <Text style={{ fontSize: 20, fontWeight: 'bold', color: colors.text.primary, marginBottom: 16 }}>“{chToEnQuery}”的英文释义</Text>
+              {chToEnCandidates.map((en, idx) => (
+                <TouchableOpacity key={en} onPress={async () => {
+                  setIsLoading(true);
+                  setChToEnCandidates([]);
+                  setChToEnQuery('');
+                  setSearchText(en);
+                  // 直接查英文释义
+                  const result = await wordService.searchWord(en.toLowerCase());
+                  if (result.success && result.data) {
+                    setSearchResult(result.data);
+                    setSearchText('');
+                  } else {
+                    Alert.alert('查询失败', result.error || '无法找到该单词');
+                  }
+                  setIsLoading(false);
+                }} style={{ paddingVertical: 10, paddingHorizontal: 24, borderRadius: 16, backgroundColor: colors.primary[50], marginBottom: 10 }}>
+                  <Text style={{ fontSize: 18, color: colors.primary[700], fontWeight: '500' }}>{en}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+        ) : searchResult ? (
           <View style={styles.wordCardWrapper}>
             <WordCard
               wordData={searchResult}

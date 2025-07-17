@@ -23,13 +23,14 @@
     "npm": ">=8.0.0"
   },
   "dependencies": {
+    "@expo/metro-runtime": "~5.0.4",
+    "expo-audio": "^0.4.8",
     "expo-wechat": "^0.1.1",
     "mongodb": "^6.17.0",
     "mongoose": "^8.16.3",
+    "react-dom": "19.0.0",
     "react-native-gesture-handler": "^2.27.1",
     "react-native-reanimated": "^3.18.0",
-    "react-dom": "19.0.0",
-    "react-native-web": "^0.20.0",
-    "@expo/metro-runtime": "~5.0.4"
+    "react-native-web": "^0.20.0"
   }
 }
