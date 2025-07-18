@@ -114,7 +114,7 @@ const HomeScreen: React.FC = () => {
           setChToEnQuery(word);
           // 新增：将中文查词结果加入历史
           const translation = result.candidates.join(', ');
-          await wordService.saveSearchHistory(word, translation);
+          await wordService.saveSearchHistory(word, translation, result.candidates);
           setRecentWords(prev => {
             const filtered = prev.filter(w => w.word !== word);
             return [
@@ -123,6 +123,7 @@ const HomeScreen: React.FC = () => {
                 word,
                 translation,
                 timestamp: Date.now(),
+                candidates: result.candidates
               },
               ...filtered.slice(0, 4)
             ];
@@ -189,21 +190,13 @@ const HomeScreen: React.FC = () => {
 
   // 点击历史词
   const handleRecentWordPress = async (word: RecentWord) => {
-    // 新增：如果 translation 里有逗号，说明是中文查词，自动查第一个英文
-    if (isChinese(word.word) && word.translation) {
-      const firstEn = word.translation.split(',')[0].trim();
-      if (firstEn) {
-        setIsLoading(true);
-        setSearchResult(null);
-        const result = await wordService.searchWord(firstEn.toLowerCase());
-        if (result.success && result.data) {
-          setSearchResult(result.data);
-        } else {
-          Alert.alert('查询失败', result.error || '无法获取单词详情');
-        }
-        setIsLoading(false);
-        return;
-      }
+    // 新增：如果有 candidates，弹出候选词卡片
+    if (word.candidates && word.candidates.length > 0) {
+      setChToEnCandidates(word.candidates);
+      setChToEnQuery(word.word);
+      setSearchResult(null);
+      setSearchText('');
+      return;
     }
     // 原有英文查词逻辑
     const searchWord = word.word.trim().toLowerCase();
@@ -502,8 +495,12 @@ const HomeScreen: React.FC = () => {
         {/* 内容区：有查词结果时只显示卡片，否则显示最近查词 */}
         {chToEnCandidates.length > 0 ? (
           <View style={styles.wordCardWrapper}>
-            <View style={[styles.wordCardCustom, { alignItems: 'center', justifyContent: 'center', padding: 32, borderRadius: 20, backgroundColor: colors.background.secondary, shadowColor: colors.neutral[900], shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.15, shadowRadius: 16, elevation: 8, maxWidth: 350, minHeight: 220 }] }>
-              <Text style={{ fontSize: 20, fontWeight: 'bold', color: colors.text.primary, marginBottom: 16 }}>“{chToEnQuery}”的英文释义</Text>
+            <View style={[styles.wordCardCustom, styles.fixedCandidateCard] }>
+              {/* 关闭按钮 */}
+              <TouchableOpacity style={styles.closeButton} onPress={() => { setChToEnCandidates([]); setChToEnQuery(''); }}>
+                <Ionicons name="close" size={26} color={colors.text.secondary} />
+              </TouchableOpacity>
+              <Text style={{ fontSize: 20, fontWeight: 'bold', color: colors.text.primary, marginBottom: 16, marginTop: 8 }}>“{chToEnQuery}”的英文释义</Text>
               {chToEnCandidates.map((en, idx) => (
                 <TouchableOpacity key={en} onPress={async () => {
                   setIsLoading(true);
@@ -515,6 +512,21 @@ const HomeScreen: React.FC = () => {
                   if (result.success && result.data) {
                     setSearchResult(result.data);
                     setSearchText('');
+                    // 新增：将英文查词也加入最近查词历史
+                    const definition = result.data.definitions && result.data.definitions[0]?.definition ? result.data.definitions[0].definition : '暂无释义';
+                    await wordService.saveSearchHistory(en, definition);
+                    setRecentWords(prev => {
+                      const filtered = prev.filter(w => w.word !== en);
+                      return [
+                        {
+                          id: Date.now().toString(),
+                          word: en,
+                          translation: definition,
+                          timestamp: Date.now(),
+                        },
+                        ...filtered.slice(0, 4)
+                      ];
+                    });
                   } else {
                     Alert.alert('查询失败', result.error || '无法找到该单词');
                   }
@@ -1092,6 +1104,22 @@ const styles = StyleSheet.create({
     color: colors.text.secondary,
     flexShrink: 1,
     maxWidth: '65%',
+  },
+  fixedCandidateCard: {
+    width: 340,
+    minHeight: 260,
+    maxWidth: 360,
+    alignSelf: 'center',
+    paddingTop: 18,
+    paddingBottom: 32,
+    position: 'relative',
+  },
+  closeButton: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    zIndex: 10,
+    padding: 4,
   },
 });
 

@@ -33,6 +33,7 @@ export interface RecentWord {
   word: string;
   translation: string;
   timestamp: number;
+  candidates?: string[]; // 新增
 }
 
 // API配置
@@ -173,7 +174,7 @@ export class WordService {
     const token = await getUserToken();
     if (!token) {
       // 游客：本地获取
-    try {
+      try {
         const local = await AsyncStorage.getItem(SEARCH_HISTORY_KEY);
         if (local) {
           return JSON.parse(local);
@@ -208,7 +209,7 @@ export class WordService {
   }
 
   // 保存查词记录（支持本地/云端）
-  async saveSearchHistory(word: string, definition: string): Promise<boolean> {
+  async saveSearchHistory(word: string, definition: string, candidates?: string[]): Promise<boolean> {
     const token = await getUserToken();
     if (!token) {
       // 游客：本地保存
@@ -221,6 +222,7 @@ export class WordService {
           word,
           translation: definition,
           timestamp: Date.now(),
+          ...(candidates ? { candidates } : {})
         }, ...history.filter(w => w.word !== word)].slice(0, 5);
         await AsyncStorage.setItem(SEARCH_HISTORY_KEY, JSON.stringify(history));
         return true;
@@ -229,7 +231,7 @@ export class WordService {
         return false;
       }
     }
-    // 登录用户：云端
+    // 登录用户：云端（暂不支持 candidates）
     try {
       const response = await fetch(`${API_BASE_URL}/words/history`, {
         method: 'POST',

@@ -70,6 +70,59 @@ const userAvatars = [
   require('../../../assets/images/avatar3.png'),
 ];
 
+const featureTable = [
+  { label: '实时查词', free: true, vip: true },
+  { label: '存入词表', free: false, vip: true },
+  { label: '复习卡片', free: false, vip: true },
+  { label: '剧集标注来源', free: false, vip: true },
+  { label: '无广告体验', free: false, vip: true, freeText: '含广告', vipText: '无广告' },
+  { label: '自定义例句/笔记', free: false, vip: true },
+];
+
+const renderFeatureTable = () => (
+  <View style={styles.featureTableWrap}>
+    <View style={styles.featureTableHeader}>
+      <Text style={[styles.featureTableHeaderCell, styles.featureTableHeaderCellFirst]}>功能</Text>
+      <Text style={styles.featureTableHeaderCell}>免费用户</Text>
+      <Text style={styles.featureTableHeaderCell}>高级会员</Text>
+    </View>
+    {featureTable.map((row, idx) => (
+      <View key={row.label} style={[styles.featureTableRow, idx === featureTable.length - 1 && { borderBottomWidth: 0 }]}> 
+        <Text style={[styles.featureTableCell, styles.featureTableCellFirst]}>{row.label}</Text>
+        <View style={styles.featureTableCellMid}>
+          {row.free ? (
+            <FontAwesome name="check-square" size={18} color="#43C463" />
+          ) : (
+            <FontAwesome name="close" size={18} color="#FF3B30" />
+          )}
+          <Text style={styles.featureTableCellText}>
+            {row.freeText ? row.freeText : row.free ? '支持' : '不支持'}
+          </Text>
+        </View>
+        <View style={styles.featureTableCellMid}>
+          {row.vip ? (
+            <FontAwesome name="check-square" size={18} color="#43C463" />
+          ) : (
+            <FontAwesome name="close" size={18} color="#FF3B30" />
+          )}
+          <Text style={styles.featureTableCellText}>
+            {row.vipText ? row.vipText : row.vip ? '支持' : '不支持'}
+          </Text>
+        </View>
+      </View>
+    ))}
+  </View>
+);
+
+// mock: 首月优惠是否可见（后续可用 context/props/后端控制）
+const showFirstMonthTab = true;
+
+const tabPlans = [
+  { key: 'first', name: '首月优惠', price: '¥6', desc: '仅限首次订阅，享受全部会员权益', tag: '限时', cta: '立即享首月优惠', onlyShowOnFirst: true },
+  { key: 'monthly', name: '月订阅', price: '¥12/月', desc: '一杯奶茶钱，按月付费，随时可取消', cta: '订阅月度会员' },
+  { key: 'yearly', name: '年订阅', price: '¥88/年', desc: '两杯咖啡钱用一年，最划算，坚持长期学习', tag: '最划算', save: '省下¥56', cta: '订阅年度会员' },
+];
+
 const SubscriptionScreen = () => {
   const [selectedPlan, setSelectedPlan] = useState('yearly');
   const [selectedPay, setSelectedPay] = useState('wechat');
@@ -78,6 +131,13 @@ const SubscriptionScreen = () => {
   const [paySectionY, setPaySectionY] = useState(0);
   const { goBack, navigate } = useNavigation();
   const scrollViewRef = useRef<ScrollView>(null);
+
+  // tab 切换状态
+  const [selectedTab, setSelectedTab] = useState(showFirstMonthTab ? 'first' : 'yearly');
+
+  // 过滤可见 tab
+  const visibleTabs = tabPlans.filter(tab => !tab.onlyShowOnFirst || showFirstMonthTab);
+  const selectedPlanFromTabs = tabPlans.find(tab => tab.key === selectedTab) || visibleTabs[0];
 
   useEffect(() => {
     let interval: any;
@@ -123,89 +183,35 @@ const SubscriptionScreen = () => {
         contentContainerStyle={{ paddingBottom: 180 }}
         keyboardShouldPersistTaps="handled"
       >
-        {/* 纵向大卡片方案选择区 */}
-        <View style={styles.verticalPlanList}>
-          {plans.map(plan => (
+        {/* 套餐 tab 区 */}
+        <View style={styles.tabBarWrap}>
+          {visibleTabs.map(tab => (
             <TouchableOpacity
-              key={plan.key}
-              style={[
-                styles.verticalPlanCard,
-                selectedPlan === plan.key && styles.verticalPlanCardSelected,
-              ]}
-              activeOpacity={0.92}
-              onPress={() => setSelectedPlan(plan.key)}
+              key={tab.key}
+              style={[styles.tabBarItem, selectedTab === tab.key && styles.tabBarItemActive]}
+              onPress={() => setSelectedTab(tab.key)}
+              activeOpacity={0.85}
             >
-              {/* 选中对勾 */}
-              {selectedPlan === plan.key && (
-                <View style={styles.verticalPlanCheck}>
-                  <Ionicons name="checkmark-circle" size={28} color="#3A8DFF" />
-                </View>
-              )}
-              {/* 名称+标签 */}
-              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
-                <Text style={styles.verticalPlanName}>{plan.name}</Text>
-                {!!plan.tag && (
-                  <View style={[styles.inlinePlanTag, { backgroundColor: plan.tagColor }]}> 
-                    <Text style={styles.inlinePlanTagText}>{plan.tag}</Text>
-                  </View>
-                )}
-              </View>
-              {/* 节省/限时倒计时 */}
-              {plan.save ? <Text style={styles.verticalPlanSave}>{plan.save}</Text> : null}
-              {plan.timer ? (
-                <Text style={styles.verticalPlanTimer}>限时价 剩余 {formatTimer(timer)}</Text>
-              ) : null}
-              {/* 权益列表 */}
-              <View style={styles.verticalPlanFeatures}>
-                {plan.features.map((f, i) => (
-                  <View key={i} style={styles.verticalPlanFeatureItem}>
-                    <FontAwesome name="check-circle" size={16} color="#3A8DFF" style={{ marginRight: 6 }} />
-                    <Text style={styles.verticalPlanFeatureText}>{f}</Text>
-                  </View>
-                ))}
-              </View>
-              {/* 推荐语 */}
-              {plan.recommend ? <Text style={styles.verticalPlanRecommend}>{plan.recommend}</Text> : null}
-              {/* 价格区块（右下角绝对定位） */}
-              <View style={styles.verticalPlanPriceBox}>
-                {plan.originalPrice ? (
-                  <Text style={styles.verticalPlanOriginalPrice}>{plan.originalPrice}</Text>
-                ) : null}
-                <Text style={styles.verticalPlanPrice}>{plan.price}</Text>
-              </View>
+              <Text style={[styles.tabBarText, selectedTab === tab.key && styles.tabBarTextActive]}>{tab.name}</Text>
+              {!!tab.tag && <Text style={styles.tabBarTag}>{tab.tag}</Text>}
             </TouchableOpacity>
           ))}
         </View>
-        {/* 支付方式与安全提示 */}
-        <View
-          style={styles.paySection}
-          onLayout={e => setPaySectionY(e.nativeEvent.layout.y)}
-        >
-          <Text style={styles.payTitle}>支付方式：</Text>
-          <View style={styles.payRow}>
-            {paymentMethods.map(pm => (
-              <TouchableOpacity
-                key={pm.key}
-                style={[styles.payIconBox, selectedPay === pm.key && styles.payIconBoxSelected]}
-                onPress={() => setSelectedPay(pm.key)}
-              >
-                <Image source={pm.icon} style={styles.payIcon} />
-                <Text style={styles.payName}>{pm.name}</Text>
-                {selectedPay === pm.key && <Ionicons name="checkmark-circle" size={18} color="#3A8DFF" style={{ marginLeft: 4 }} />}
-              </TouchableOpacity>
-            ))}
-          </View>
-          <Text style={styles.safeTip}>已接入微信/支付宝官方支付，安全无忧，支持7天无理由退款</Text>
+        {/* 选中套餐详情 */}
+        <View style={styles.planDetailWrap}>
+          <Text style={styles.planPrice}>{selectedPlanFromTabs.price}</Text>
+          {selectedPlanFromTabs.save && (
+            <Text style={styles.planSave}>{selectedPlanFromTabs.save}</Text>
+          )}
+          <Text style={styles.planDesc}>{selectedPlanFromTabs.desc}</Text>
+          <TouchableOpacity style={styles.planCtaBtn} activeOpacity={0.9}>
+            <Text style={styles.planCtaText}>{selectedPlanFromTabs.cta}</Text>
+          </TouchableOpacity>
         </View>
+        {/* 权益对比表格 */}
+        {renderFeatureTable()}
       </ScrollView>
-      {/* 主按钮吸底 */}
-      <View style={styles.ctaFixedWrapNew}>
-        <TouchableOpacity activeOpacity={0.9} style={styles.ctaWrapNew} onPress={handleCtaPress}>
-          <LinearGradient colors={["#FF9800", "#FF3B30"]} style={styles.ctaBtnNew}>
-            <Text style={styles.ctaTextNew}>{ctaStep === 'select' ? '🔓 立即解锁全部功能' : '立即支付'}</Text>
-          </LinearGradient>
-        </TouchableOpacity>
-      </View>
+      {/* 主按钮吸底已移至 tab 内容区 */}
     </SafeAreaView>
   );
 };
@@ -242,6 +248,146 @@ const styles = StyleSheet.create({
   ctaWrapNew: { width: '90%' },
   ctaBtnNew: { borderRadius: 30, paddingVertical: 18, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', shadowColor: '#FF9800', shadowOpacity: 0.18, shadowRadius: 12, elevation: 3 },
   ctaTextNew: { fontSize: 20, fontWeight: '700', color: '#fff', fontFamily: 'System' },
+  featureTableWrap: {
+    marginHorizontal: 12,
+    marginBottom: 24,
+    borderRadius: 20,
+    backgroundColor: '#F7F8FA',
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#E5E6EB',
+  },
+  featureTableHeader: {
+    flexDirection: 'row',
+    backgroundColor: '#F0F2F5',
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E6EB',
+  },
+  featureTableHeaderCell: {
+    flex: 1,
+    fontWeight: '700',
+    fontSize: 16,
+    color: '#23223A',
+    textAlign: 'center',
+  },
+  featureTableHeaderCellFirst: {
+    textAlign: 'left',
+    paddingLeft: 18,
+  },
+  featureTableRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 18,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E6EB',
+    backgroundColor: 'transparent',
+  },
+  featureTableCell: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    // 第一列左对齐
+  },
+  featureTableCellFirst: {
+    justifyContent: 'flex-start',
+    paddingLeft: 18,
+  },
+  featureTableCellMid: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  featureTableCellText: {
+    marginLeft: 6,
+    fontSize: 15,
+    color: '#23223A',
+  },
+  tabBarWrap: {
+    flexDirection: 'row',
+    marginTop: 60,
+    marginHorizontal: 18,
+    marginBottom: 0,
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+  },
+  tabBarItem: {
+    flex: 1,
+    paddingVertical: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#fff',
+  },
+  tabBarItemActive: {
+    backgroundColor: '#3A8DFF11',
+  },
+  tabBarText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#23223A',
+  },
+  tabBarTextActive: {
+    color: '#3A8DFF',
+  },
+  tabBarTag: {
+    marginTop: 4,
+    fontSize: 12,
+    color: '#FF9800',
+    fontWeight: '700',
+    backgroundColor: '#FFF3E0',
+    borderRadius: 6,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    overflow: 'hidden',
+  },
+  planDetailWrap: {
+    marginHorizontal: 18,
+    marginTop: 24,
+    marginBottom: 18,
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 24,
+    alignItems: 'center',
+    shadowColor: '#23223A',
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  planPrice: {
+    fontSize: 32,
+    fontWeight: '900',
+    color: '#3A8DFF',
+    marginBottom: 8,
+  },
+  planSave: {
+    color: '#FF9800',
+    fontSize: 13,
+    fontWeight: '700',
+    marginBottom: 2,
+  },
+  planDesc: {
+    fontSize: 15,
+    color: '#23223A',
+    marginBottom: 18,
+    textAlign: 'center',
+  },
+  planCtaBtn: {
+    backgroundColor: '#3A8DFF',
+    borderRadius: 24,
+    paddingVertical: 12,
+    paddingHorizontal: 36,
+    marginTop: 6,
+  },
+  planCtaText: {
+    color: '#fff',
+    fontSize: 17,
+    fontWeight: '700',
+    letterSpacing: 1,
+  },
 });
 
 export default SubscriptionScreen; 
