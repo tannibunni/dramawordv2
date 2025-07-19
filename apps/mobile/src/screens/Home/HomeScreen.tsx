@@ -465,7 +465,6 @@ const HomeScreen: React.FC = () => {
             <LanguagePicker />
             {/* 搜索输入框 */}
             <View style={styles.searchInputContainer}>
-              <Ionicons name="search" size={20} color={colors.text.secondary} style={styles.searchIcon} />
               {searchResult ? (
                 <>
                   <Text style={styles.searchResultWord}>{searchResult.correctedWord || searchResult.word}</Text>
@@ -475,18 +474,18 @@ const HomeScreen: React.FC = () => {
                 </>
               ) : (
                 <>
-                                  <TextInput
-                  style={styles.searchInput}
-                  placeholder={`输入${getCurrentLanguageConfig().name}单词或中文词语...`}
-                  placeholderTextColor={colors.text.tertiary}
-                  value={searchText}
-                  onChangeText={handleInputChange}
-                  onSubmitEditing={handleSearch}
-                  returnKeyType="search"
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  editable={!isLoading}
-                />
+                  <TextInput
+                    style={styles.searchInput}
+                    placeholder={`输入${getCurrentLanguageConfig().name}单词或中文词语...`}
+                    placeholderTextColor={colors.text.tertiary}
+                    value={searchText}
+                    onChangeText={handleInputChange}
+                    onSubmitEditing={handleSearch}
+                    returnKeyType="search"
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    editable={!isLoading}
+                  />
                   {searchText.length > 0 && (
                     <TouchableOpacity onPress={() => handleInputChange('')} style={styles.clearButton}>
                       <Ionicons name="close-circle" size={20} color={colors.text.secondary} />
@@ -497,6 +496,8 @@ const HomeScreen: React.FC = () => {
               {isLoading && (
                 <ActivityIndicator size="small" color={colors.primary[500]} style={styles.loadingIndicator} />
               )}
+              {/* 搜索图标移到最右边 */}
+              <Ionicons name="search" size={20} color={colors.text.secondary} style={styles.searchIcon} />
             </View>
           </View>
         </View>
@@ -792,7 +793,7 @@ const styles = StyleSheet.create({
     marginLeft: 12,
   },
   searchIcon: {
-    marginRight: 12,
+    marginLeft: 12,
   },
   searchInput: {
     flex: 1,
