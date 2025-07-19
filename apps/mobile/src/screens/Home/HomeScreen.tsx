@@ -24,7 +24,7 @@ import { useShowList } from '../../context/ShowListContext';
 import { useVocabulary } from '../../context/VocabularyContext';
 import { TMDBService, TMDBShow } from '../../services/tmdbService';
 import { Audio } from 'expo-av';
-import LanguageSelector from '../../components/common/LanguageSelector';
+import LanguagePicker from '../../components/common/LanguagePicker';
 import { useLanguage } from '../../context/LanguageContext';
 
 const HomeScreen: React.FC = () => {
@@ -461,43 +461,45 @@ const HomeScreen: React.FC = () => {
         {/* 搜索栏 */}
         <View style={styles.searchContainer}>
           <View style={styles.searchBox}>
-            <Ionicons name="search" size={20} color={colors.text.secondary} style={styles.searchIcon} />
-            {searchResult ? (
-              <>
-                <Text style={styles.searchResultWord}>{searchResult.correctedWord || searchResult.word}</Text>
-                <TouchableOpacity onPress={() => setSearchResult(null)} style={styles.clearButton}>
-                  <Ionicons name="close" size={22} color={colors.text.secondary} />
-                </TouchableOpacity>
-              </>
-            ) : (
-              <>
-                <TextInput
-                  style={styles.searchInput}
-                  placeholder={`输入${getCurrentLanguageConfig().name}单词...`}
-                  placeholderTextColor={colors.text.tertiary}
-                  value={searchText}
-                  onChangeText={handleInputChange}
-                  onSubmitEditing={handleSearch}
-                  returnKeyType="search"
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  editable={!isLoading}
-                />
-                {searchText.length > 0 && (
-                  <TouchableOpacity onPress={() => handleInputChange('')} style={styles.clearButton}>
-                    <Ionicons name="close-circle" size={20} color={colors.text.secondary} />
+            {/* 语言选择器 */}
+            <LanguagePicker />
+            {/* 搜索输入框 */}
+            <View style={styles.searchInputContainer}>
+              <Ionicons name="search" size={20} color={colors.text.secondary} style={styles.searchIcon} />
+              {searchResult ? (
+                <>
+                  <Text style={styles.searchResultWord}>{searchResult.correctedWord || searchResult.word}</Text>
+                  <TouchableOpacity onPress={() => setSearchResult(null)} style={styles.clearButton}>
+                    <Ionicons name="close" size={22} color={colors.text.secondary} />
                   </TouchableOpacity>
-                )}
-              </>
-            )}
-            {isLoading && (
-              <ActivityIndicator size="small" color={colors.primary[500]} style={styles.loadingIndicator} />
-            )}
+                </>
+              ) : (
+                <>
+                  <TextInput
+                    style={styles.searchInput}
+                    placeholder={`输入${getCurrentLanguageConfig().name}单词...`}
+                    placeholderTextColor={colors.text.tertiary}
+                    value={searchText}
+                    onChangeText={handleInputChange}
+                    onSubmitEditing={handleSearch}
+                    returnKeyType="search"
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    editable={!isLoading}
+                  />
+                  {searchText.length > 0 && (
+                    <TouchableOpacity onPress={() => handleInputChange('')} style={styles.clearButton}>
+                      <Ionicons name="close-circle" size={20} color={colors.text.secondary} />
+                    </TouchableOpacity>
+                  )}
+                </>
+              )}
+              {isLoading && (
+                <ActivityIndicator size="small" color={colors.primary[500]} style={styles.loadingIndicator} />
+              )}
+            </View>
           </View>
         </View>
-        
-        {/* 语言选择器 */}
-        <LanguageSelector compact={true} />
         {/* 内容区：有查词结果时只显示卡片，否则显示最近查词 */}
         {chToEnCandidates.length > 0 ? (
           <View style={styles.wordCardWrapper}>
@@ -782,6 +784,12 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 8,
     elevation: 3,
+  },
+  searchInputContainer: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginLeft: 12,
   },
   searchIcon: {
     marginRight: 12,
