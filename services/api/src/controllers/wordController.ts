@@ -83,12 +83,25 @@ export const searchWord = async (req: Request, res: Response): Promise<void> => 
 
     // 3. 尝试使用 OpenAI 生成新单词信息
     logger.info(`🤖 Attempting to generate new word data with AI: ${searchTerm}`);
+    logger.info(`🔍 Debug: About to call generateWordData for: ${searchTerm}`);
     
     try {
       const generatedData = await generateWordData(searchTerm, language);
+      logger.info(`🔍 Debug: generateWordData completed for: ${searchTerm}`);
       
       // 4. 保存到云单词表（先检查是否已存在）
-      try {
+      logger.info(`🔍 Debug: About to save to cloud words: ${searchTerm}`);
+      
+      // 再次检查数据库，确保单词真的不存在
+      const existingWord = await CloudWord.findOne({ word: searchTerm, language });
+      if (existingWord) {
+        logger.info(`🔄 Word found in database during AI save check: ${searchTerm}`);
+        cloudWord = existingWord;
+        // 更新搜索次数和最后搜索时间
+        await updateCloudWordSearchStats(searchTerm, language);
+      } else {
+        // 如果单词不存在，创建新记录但不保存到数据库，直接使用内存数据
+        logger.info(`📝 Creating new word data without saving to database: ${searchTerm}`);
         cloudWord = new CloudWord({
           word: searchTerm,
           language,
@@ -99,24 +112,7 @@ export const searchWord = async (req: Request, res: Response): Promise<void> => 
           searchCount: 1,
           lastSearched: new Date()
         });
-        
-        await cloudWord.save();
-        logger.info(`💾 Saved new word to cloud words: ${searchTerm}`);
-      } catch (saveError) {
-        // 如果是重复键错误，重新查询已存在的单词
-        if (saveError.code === 11000) {
-          logger.info(`🔄 Word already exists, fetching from database: ${searchTerm}`);
-          cloudWord = await CloudWord.findOne({ word: searchTerm, language });
-          if (cloudWord) {
-            // 更新搜索次数和最后搜索时间
-            await updateCloudWordSearchStats(searchTerm, language);
-            logger.info(`✅ Found existing word in database: ${searchTerm}`);
-          } else {
-            throw saveError; // 如果还是找不到，抛出原始错误
-          }
-        } else {
-          throw saveError;
-        }
+        // 不保存到数据库，直接使用内存数据
       }
       
       // 5. 保存到内存缓存
@@ -148,11 +144,23 @@ export const searchWord = async (req: Request, res: Response): Promise<void> => 
         word: searchTerm
       });
       
+      // 记录AI错误，但不立即返回，继续使用fallback
+      logger.error(`❌ AI generation failed, will use fallback for: ${searchTerm}`);
+      
       // 使用模拟数据作为后备方案
       const fallbackData = getFallbackWordData(searchTerm, language);
       
       // 保存到云单词表（先检查是否已存在）
-      try {
+      // 再次检查数据库，确保单词真的不存在
+      const existingFallbackWord = await CloudWord.findOne({ word: searchTerm, language });
+      if (existingFallbackWord) {
+        logger.info(`🔄 Word found in database during fallback save check: ${searchTerm}`);
+        cloudWord = existingFallbackWord;
+        // 更新搜索次数和最后搜索时间
+        await updateCloudWordSearchStats(searchTerm, language);
+      } else {
+        // 如果单词不存在，创建新记录但不保存到数据库，直接使用内存数据
+        logger.info(`📝 Creating fallback word data without saving to database: ${searchTerm}`);
         cloudWord = new CloudWord({
           word: searchTerm,
           language,
@@ -163,24 +171,7 @@ export const searchWord = async (req: Request, res: Response): Promise<void> => 
           searchCount: 1,
           lastSearched: new Date()
         });
-        
-        await cloudWord.save();
-        logger.info(`💾 Saved fallback word to cloud words: ${searchTerm}`);
-      } catch (saveError) {
-        // 如果是重复键错误，重新查询已存在的单词
-        if (saveError.code === 11000) {
-          logger.info(`🔄 Fallback word already exists, fetching from database: ${searchTerm}`);
-          cloudWord = await CloudWord.findOne({ word: searchTerm, language });
-          if (cloudWord) {
-            // 更新搜索次数和最后搜索时间
-            await updateCloudWordSearchStats(searchTerm, language);
-            logger.info(`✅ Found existing fallback word in database: ${searchTerm}`);
-          } else {
-            throw saveError; // 如果还是找不到，抛出原始错误
-          }
-        } else {
-          throw saveError;
-        }
+        // 不保存到数据库，直接使用内存数据
       }
       
       // 保存到内存缓存
@@ -220,10 +211,36 @@ export const searchWord = async (req: Request, res: Response): Promise<void> => 
 
   } catch (error) {
     logger.error('❌ Search word error:', error);
+    logger.error('❌ Error details:', {
+      message: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
+      word: req.body.word,
+      language: req.body.language
+    });
+    
+    // 特殊处理重复键错误
+    if (error instanceof Error && error.message.includes('duplicate key error')) {
+      logger.error(`❌ Duplicate key error for word: ${req.body.word}`);
+      res.status(500).json({
+        success: false,
+        error: `搜索失败: 单词 "${req.body.word}" 已存在于数据库中，但查询时出现错误`,
+        details: {
+          word: req.body.word,
+          language: req.body.language,
+          errorType: 'duplicate_key_error'
+        }
+      });
+      return;
+    }
+    
     res.status(500).json({
       success: false,
-      error: 'Failed to search word',
-      message: error instanceof Error ? error.message : 'Unknown error'
+      error: `搜索失败: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      details: {
+        word: req.body.word,
+        language: req.body.language,
+        errorType: 'general_error'
+      }
     });
   }
 };
@@ -431,15 +448,28 @@ export const addToUserVocabulary = async (req: Request, res: Response) => {
     if (!cloudWord) {
       // 如果云单词不存在，创建它
       const generatedData = await generateWordData(searchTerm);
-      cloudWord = new CloudWord({
-        word: searchTerm,
-        phonetic: generatedData.phonetic,
-        definitions: generatedData.definitions,
-        audioUrl: generatedData.audioUrl || '',
-        searchCount: 1,
-        lastSearched: new Date()
-      });
-      await cloudWord.save();
+      try {
+        cloudWord = new CloudWord({
+          word: searchTerm,
+          phonetic: generatedData.phonetic,
+          definitions: generatedData.definitions,
+          audioUrl: generatedData.audioUrl || '',
+          searchCount: 1,
+          lastSearched: new Date()
+        });
+        await cloudWord.save();
+      } catch (saveError) {
+        // 如果是重复键错误，重新查询已存在的单词
+        if (saveError.code === 11000) {
+          logger.info(`🔄 Word already exists in addToUserVocabulary, fetching from database: ${searchTerm}`);
+          cloudWord = await CloudWord.findOne({ word: searchTerm });
+          if (!cloudWord) {
+            throw saveError; // 如果还是找不到，抛出原始错误
+          }
+        } else {
+          throw saveError;
+        }
+      }
     }
 
     // 2. 检查用户是否已有此单词

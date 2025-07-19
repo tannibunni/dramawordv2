@@ -594,9 +594,9 @@ const HomeScreen: React.FC = () => {
                       onPress={() => handleRecentWordPress(word)}
                       disabled={isLoading}
                     >
-                      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
                         <Ionicons name="time-outline" size={18} color={colors.neutral[400]} style={{ marginRight: 8 }} />
-                        <Text style={styles.recentWordText}>{word.word}</Text>
+                        <Text style={styles.recentWordText} numberOfLines={1} ellipsizeMode="tail">{word.word}</Text>
                         <Text style={styles.recentWordTranslation} numberOfLines={1} ellipsizeMode="tail">{word.translation}</Text>
                       </View>
                     </TouchableOpacity>
@@ -1113,12 +1113,14 @@ const styles = StyleSheet.create({
     color: colors.text.primary,
     marginBottom: 0,
     marginRight: 8,
+    flex: 1,
+    maxWidth: '40%',
   },
   recentWordTranslation: {
     fontSize: 15,
     color: colors.text.secondary,
-    flexShrink: 1,
-    maxWidth: '65%',
+    flex: 1,
+    maxWidth: '60%',
   },
   fixedCandidateCard: {
     width: 340,
