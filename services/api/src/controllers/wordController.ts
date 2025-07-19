@@ -25,7 +25,7 @@ const chineseTranslationCache = new Map<string, string[]>();
 // 单词搜索 - 先查云单词表，没有再用AI
 export const searchWord = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { word } = req.body;
+    const { word, language = 'en' } = req.body;
     
     if (!word) {
       res.status(400).json({
@@ -36,10 +36,11 @@ export const searchWord = async (req: Request, res: Response): Promise<void> => 
     }
 
     const searchTerm = word.toLowerCase().trim();
-    logger.info(`🔍 Searching for word: ${searchTerm}`);
+    const cacheKey = `${searchTerm}_${language}`;
+    logger.info(`🔍 Searching for word: ${searchTerm} in ${language}`);
 
     // 1. 检查内存缓存
-    if (wordCache.has(searchTerm)) {
+    if (wordCache.has(cacheKey)) {
       logger.info(`✅ Found in memory cache: ${searchTerm}`);
       const cachedWord = wordCache.get(searchTerm)!;
       // 修复：缓存里存的是普通对象，不能再 .toObject()
@@ -55,15 +56,15 @@ export const searchWord = async (req: Request, res: Response): Promise<void> => 
     }
 
     // 2. 检查云单词表
-    let cloudWord = await CloudWord.findOne({ word: searchTerm });
+    let cloudWord = await CloudWord.findOne({ word: searchTerm, language });
     if (cloudWord) {
       logger.info(`✅ Found in cloud words: ${searchTerm}`);
       
       // 更新搜索次数和最后搜索时间
-      await updateCloudWordSearchStats(searchTerm);
+      await updateCloudWordSearchStats(searchTerm, language);
       
       // 保存到内存缓存
-      wordCache.set(searchTerm, cloudWord.toObject());
+      wordCache.set(cacheKey, cloudWord.toObject());
       
       // 保存搜索历史
       await saveSearchHistoryToDB(searchTerm, cloudWord.definitions[0]?.definition || '暂无释义');
@@ -83,11 +84,12 @@ export const searchWord = async (req: Request, res: Response): Promise<void> => 
     logger.info(`🤖 Attempting to generate new word data with AI: ${searchTerm}`);
     
     try {
-      const generatedData = await generateWordData(searchTerm);
+      const generatedData = await generateWordData(searchTerm, language);
       
       // 4. 保存到云单词表
       cloudWord = new CloudWord({
         word: searchTerm,
+        language,
         phonetic: generatedData.phonetic,
         definitions: generatedData.definitions,
         audioUrl: generatedData.audioUrl || '',
@@ -100,7 +102,7 @@ export const searchWord = async (req: Request, res: Response): Promise<void> => 
       logger.info(`💾 Saved new word to cloud words: ${searchTerm}`);
       
       // 5. 保存到内存缓存
-      wordCache.set(searchTerm, cloudWord.toObject());
+      wordCache.set(cacheKey, cloudWord.toObject());
       
       // 6. 保存搜索历史
       await saveSearchHistoryToDB(searchTerm, cloudWord.definitions[0]?.definition || '暂无释义');
@@ -122,11 +124,12 @@ export const searchWord = async (req: Request, res: Response): Promise<void> => 
       });
       
       // 使用模拟数据作为后备方案
-      const fallbackData = getFallbackWordData(searchTerm);
+      const fallbackData = getFallbackWordData(searchTerm, language);
       
       // 保存到云单词表
       cloudWord = new CloudWord({
         word: searchTerm,
+        language,
         phonetic: fallbackData.phonetic,
         definitions: fallbackData.definitions,
         audioUrl: fallbackData.audioUrl || '',
@@ -139,7 +142,7 @@ export const searchWord = async (req: Request, res: Response): Promise<void> => 
       logger.info(`💾 Saved fallback word to cloud words: ${searchTerm}`);
       
       // 保存到内存缓存
-      wordCache.set(searchTerm, cloudWord.toObject());
+      wordCache.set(cacheKey, cloudWord.toObject());
       
       // 保存搜索历史
       await saveSearchHistoryToDB(searchTerm, cloudWord.definitions[0]?.definition || '暂无释义');
@@ -187,10 +190,12 @@ export const getPopularWords = async (req: Request, res: Response) => {
   try {
     logger.info('📊 Getting popular words from cloud words');
     
-    const popularWords = await CloudWord.find({})
+    const { language = 'en' } = req.query;
+    
+    const popularWords = await CloudWord.find({ language })
       .sort({ searchCount: -1, lastSearched: -1 })
       .limit(10)
-      .select('word definitions searchCount');
+      .select('word definitions searchCount language');
     
     const formattedWords = popularWords.map(word => ({
       word: word.word,
@@ -540,17 +545,17 @@ export const removeFromUserVocabulary = async (req: Request, res: Response) => {
 };
 
 // 更新云单词表搜索统计
-async function updateCloudWordSearchStats(word: string): Promise<void> {
+async function updateCloudWordSearchStats(word: string, language: string = 'en'): Promise<void> {
   try {
     await CloudWord.updateOne(
-      { word: word.toLowerCase() },
+      { word: word.toLowerCase(), language },
       { 
         $inc: { searchCount: 1 },
         $set: { lastSearched: new Date() }
       }
     );
   } catch (error) {
-    logger.error(`❌ Failed to update search stats for ${word}:`, error);
+    logger.error(`❌ Failed to update search stats for ${word} (${language}):`, error);
   }
 }
 
@@ -590,10 +595,92 @@ function getYoudaoTTSUrl(word: string) {
 }
 
 // 使用 OpenAI 生成单词数据
-async function generateWordData(word: string) {
-  const prompt = `你是专业的英语词典助手和拼写纠错专家。
+async function generateWordData(word: string, language: string = 'en') {
+  // 根据语言生成不同的 prompt
+  const getLanguagePrompt = (lang: string) => {
+    switch (lang) {
+      case 'ko':
+        return `你是专业的韩语词典助手。
 
-任务：为单词或短语 "${word}" 生成词典信息，并检查拼写是否正确。
+任务：为韩语单词或短语 "${word}" 生成简洁的词典信息，适合中文用户学习韩语。
+
+返回JSON格式：
+{
+  "phonetic": "韩文发音",
+  "definitions": [
+    {
+      "partOfSpeech": "词性",
+      "definition": "【简洁的中文释义，适合语言学习】",
+      "examples": [
+        {
+          "korean": "韩文例句",
+          "chinese": "【简洁的中文翻译】"
+        }
+      ]
+    }
+  ],
+  "correctedWord": "${word}"
+}
+
+重要要求：
+- 释义要简洁明了，适合语言学习
+- 例句要简单实用，贴近日常生活
+- 韩文例句必须完全使用韩文字母，绝对不能用英文单词
+- 例句应该是纯韩文，比如："안녕하세요, 만나서 반갑습니다."
+- 只返回JSON，不要其他内容
+
+示例：
+- "안녕하세요" → 释义："你好"，例句："안녕하세요, 만나서 반갑습니다." → "你好，很高兴见到你。"
+- "감사합니다" → 释义："谢谢"，例句："도와주셔서 감사합니다." → "谢谢您的帮助。"
+- "사과" → 释义："苹果"，例句："사과를 먹어요." → "我吃苹果。"
+
+注意：韩文例句必须只包含韩文字母，不能包含任何英文单词！
+
+请严格按照示例格式生成例句，确保韩文例句中不包含任何英文单词。`;
+
+      case 'ja':
+        return `你是专业的日语词典助手。
+
+任务：为日语单词或短语 "${word}" 生成简洁的词典信息，适合中文用户学习日语。
+
+返回JSON格式：
+{
+  "phonetic": "假名发音",
+  "definitions": [
+    {
+      "partOfSpeech": "词性",
+      "definition": "【简洁的中文释义，适合语言学习】",
+      "examples": [
+        {
+          "japanese": "日文例句",
+          "chinese": "【简洁的中文翻译】"
+        }
+      ]
+    }
+  ],
+  "correctedWord": "${word}"
+}
+
+重要要求：
+- 释义要简洁明了，适合语言学习
+- 例句要简单实用，贴近日常生活
+- 日文例句必须完全使用假名和汉字，绝对不能用英文单词
+- 例句应该是纯日文，比如："こんにちは、お元気ですか。"
+- 只返回JSON，不要其他内容
+
+示例：
+- "こんにちは" → 释义："你好"，例句："こんにちは、お元気ですか。" → "你好，你好吗？"
+- "ありがとう" → 释义："谢谢"，例句："手伝ってくれてありがとう。" → "谢谢你的帮助。"
+- "りんご" → 释义："苹果"，例句："りんごを食べます。" → "我吃苹果。"
+
+注意：日文例句必须只包含假名和汉字，不能包含任何英文单词！
+
+请严格按照示例格式生成例句，确保日文例句中不包含任何英文单词。`;
+
+      default: // 'en'
+        return `你是专业的英语词典助手和拼写纠错专家。
+
+任务：为英语单词或短语 "${word}" 生成简洁的词典信息，适合语言学习。
 
 重要：请仔细检查用户输入的单词是否有拼写错误。常见的拼写错误包括：
 - "freind" → "friend" (i 和 e 顺序错误)
@@ -611,30 +698,51 @@ async function generateWordData(word: string) {
   "definitions": [
     {
       "partOfSpeech": "词性",
-      "definition": "【必须是中文释义，不能是英文或其他语言】",
+      "definition": "【简洁的中文释义，适合语言学习，不要过于复杂的解释】",
       "examples": [
         {
-          "english": "英文例句",
-          "chinese": "【必须是该例句的中文翻译，不能是英文或其他语言】"
+          "english": "简单的英文例句",
+          "chinese": "【简洁的中文翻译，适合语言学习】"
         }
       ]
     }
   ],
-  "correctedWord": "【如果用户输入的单词拼写正确，返回原词；如果拼写错误，返回正确的拼写。请仔细检查并修正拼写错误】"
+  "correctedWord": "【如果用户输入的单词拼写正确，返回原词；如果拼写错误，返回正确的拼写】"
 }
 
 要求：
-- 无论查询什么语言，释义（definition）和例句的中文（chinese）字段都必须是中文。
-- 如果查到的释义或例句不是中文，请用"暂无中文释义"或"暂无中文例句"代替。
-- correctedWord 字段：必须仔细检查拼写，如果用户输入的单词拼写正确，返回原词；如果拼写错误，返回正确的拼写。
-- 只返回JSON，不要其他内容。`;
+- 释义要简洁明了，适合语言学习，不要百科全书式的复杂解释
+- 例句要简单实用，贴近日常生活
+- 无论查询什么语言，释义和例句都必须是中文
+- 如果查到的释义或例句不是中文，请用"暂无中文释义"或"暂无中文例句"代替
+- correctedWord 字段：必须仔细检查拼写，如果用户输入的单词拼写正确，返回原词；如果拼写错误，返回正确的拼写
+- 只返回JSON，不要其他内容
+
+示例：
+- "mineral water" → 释义："矿泉水"，例句："I drink mineral water." → "我喝矿泉水。"
+- "university" → 释义："大学"，例句："I study at university." → "我在大学学习。"`;
+    }
+  };
+
+  const prompt = getLanguagePrompt(language);
+
+    const getSystemMessage = (lang: string) => {
+      switch (lang) {
+        case 'ko':
+          return "你是韩语词典助手。只返回JSON格式，不要其他内容。翻译要简洁，适合语言学习。";
+        case 'ja':
+          return "你是日语词典助手。只返回JSON格式，不要其他内容。翻译要简洁，适合语言学习。";
+        default:
+          return "你是英语词典助手。只返回JSON格式，不要其他内容。翻译要简洁，适合语言学习。";
+      }
+    };
 
     const completion = await openai.chat.completions.create({
       model: "gpt-3.5-turbo",
       messages: [
         {
           role: "system",
-          content: "你是词典助手。只返回JSON格式，不要其他内容。"
+          content: getSystemMessage(language)
         },
         {
           role: "user",
@@ -658,13 +766,50 @@ async function generateWordData(word: string) {
         partOfSpeech: def.partOfSpeech || 'n.',
         definition: def.definition || '暂无释义',
         examples: Array.isArray(def.examples) ? def.examples.map((ex: any) => {
-          // 保持对象格式，不要转换为字符串
-          if (typeof ex === 'object' && ex.english && ex.chinese) {
-            return {
-              english: ex.english,
-              chinese: ex.chinese
-            };
+          // 根据语言处理不同的例句格式
+          if (typeof ex === 'object') {
+            // 优先检查特定语言的字段
+            if (language === 'ko' && ex.korean && ex.chinese) {
+              return {
+                english: ex.korean, // 韩文例句
+                chinese: ex.chinese
+              };
+            } else if (language === 'ja' && ex.japanese && ex.chinese) {
+              return {
+                english: ex.japanese, // 日文例句
+                chinese: ex.chinese
+              };
+            } else if (ex.english && ex.chinese) {
+              // 如果AI返回的是english字段，但语言不是英语，我们需要检查内容
+              if (language === 'ko' || language === 'ja') {
+                // 检查是否包含目标语言的字符
+                const hasKoreanChars = /[가-힣]/.test(ex.english);
+                const hasJapaneseChars = /[あ-んア-ン一-龯]/.test(ex.english);
+                
+                console.log(`🔍 语言检测: ${language}, 例句: "${ex.english}", 韩文字符: ${hasKoreanChars}, 日文字符: ${hasJapaneseChars}`);
+                
+                if ((language === 'ko' && hasKoreanChars) || (language === 'ja' && hasJapaneseChars)) {
+                  return {
+                    english: ex.english,
+                    chinese: ex.chinese
+                  };
+                } else {
+                  // AI返回了英文例句，强制替换为目标语言
+                  console.log(`🔄 强制替换英文例句为原词: ${word}`);
+                  return {
+                    english: word, // 使用原词作为例句
+                    chinese: ex.chinese
+                  };
+                }
+              } else {
+                return {
+                  english: ex.english,
+                  chinese: ex.chinese
+                };
+              }
+            }
           }
+          
           // 如果是字符串格式，尝试解析为对象
           if (typeof ex === 'string') {
             const parts = ex.split(' - ');
@@ -679,6 +824,7 @@ async function generateWordData(word: string) {
               chinese: '暂无中文翻译'
             };
           }
+          
           // 默认返回空对象
           return {
             english: '',
@@ -686,6 +832,24 @@ async function generateWordData(word: string) {
           };
         }) : []
       })) : [];
+
+      // 强制替换非英语语言的例句
+      if (language === 'ko' || language === 'ja') {
+        definitions.forEach(def => {
+          if (def.examples && def.examples.length > 0) {
+            def.examples.forEach(ex => {
+              // 检查例句是否包含目标语言字符
+              const hasKoreanChars = /[가-힣]/.test(ex.english);
+              const hasJapaneseChars = /[あ-んア-ン一-龯]/.test(ex.english);
+              
+              if ((language === 'ko' && !hasKoreanChars) || (language === 'ja' && !hasJapaneseChars)) {
+                console.log(`🔄 强制替换例句: "${ex.english}" -> "${word}"`);
+                ex.english = word;
+              }
+            });
+          }
+        });
+      }
 
       return {
         phonetic: parsedData.phonetic || `/${word}/`,
@@ -701,26 +865,59 @@ async function generateWordData(word: string) {
   }
 
 // 获取后备单词数据
-function getFallbackWordData(word: string) {
-  // 检测是否为英文单词（简单检测：是否包含英文字母）
-  const isEnglish = /[a-zA-Z]/.test(word);
-  
-  return {
-    phonetic: isEnglish ? `/${word}/` : '',
-    definitions: [
-      {
-        partOfSpeech: isEnglish ? 'noun' : 'n.',
-        definition: `${word} 的基本含义`,
-        examples: isEnglish ? [
-          { english: `This is a ${word}.`, chinese: `这是一个${word}。` },
-          { english: `I like ${word}.`, chinese: `我喜欢${word}。` }
-        ] : [
-          { english: `${word}`, chinese: `${word} 的含义` }
-        ]
-      }
-    ],
-    audioUrl: getYoudaoTTSUrl(word)
+function getFallbackWordData(word: string, language: string = 'en') {
+  const getLanguageFallback = (lang: string) => {
+    switch (lang) {
+      case 'ko':
+        return {
+          phonetic: word,
+          definitions: [
+            {
+              partOfSpeech: 'n.',
+              definition: `${word} 的基本含义`,
+              examples: [
+                { english: word, chinese: `${word} 的含义` }
+              ]
+            }
+          ],
+          audioUrl: getYoudaoTTSUrl(word)
+        };
+      case 'ja':
+        return {
+          phonetic: word,
+          definitions: [
+            {
+              partOfSpeech: 'n.',
+              definition: `${word} 的基本含义`,
+              examples: [
+                { english: word, chinese: `${word} 的含义` }
+              ]
+            }
+          ],
+          audioUrl: getYoudaoTTSUrl(word)
+        };
+      default: // 'en'
+        const isEnglish = /[a-zA-Z]/.test(word);
+        return {
+          phonetic: isEnglish ? `/${word}/` : '',
+          definitions: [
+            {
+              partOfSpeech: isEnglish ? 'noun' : 'n.',
+              definition: `${word} 的基本含义`,
+              examples: isEnglish ? [
+                { english: `This is a ${word}.`, chinese: `这是一个${word}。` },
+                { english: `I like ${word}.`, chinese: `我喜欢${word}。` }
+              ] : [
+                { english: `${word}`, chinese: `${word} 的含义` }
+              ]
+            }
+          ],
+          audioUrl: getYoudaoTTSUrl(word)
+        };
+    }
   };
+  
+  return getLanguageFallback(language);
 }
 
 // 清空所有数据（调试用）

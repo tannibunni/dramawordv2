@@ -1,6 +1,52 @@
 // 基于艾宾浩斯遗忘曲线的学习算法
 // 实现间隔重复算法和掌握度计算
 
+// @ts-ignore
+import dayjs from 'dayjs';
+
+// 艾宾浩斯间隔数组（单位：天）
+export const EBBINGHAUS_INTERVALS = [0, 1, 2, 4, 7, 15, 30];
+
+// 获取下次复习时间，支持无限推进
+export function getNextReviewTime(stage: number): Date {
+  const days = EBBINGHAUS_INTERVALS[stage] ?? (30 + (stage - EBBINGHAUS_INTERVALS.length + 1) * 10);
+  return dayjs().add(days, 'day').toDate();
+}
+
+export interface ReviewRecord {
+  timestamp: string;
+  result: 'remembered' | 'forgotten';
+}
+
+export interface Word {
+  id: string;
+  word: string;
+  definitions: string[];
+  phonetic?: string;
+  sourceShow?: { type: 'show' | 'wordbook', id: string, name?: string };
+  collectedAt: string;
+  reviewStage: number;
+  nextReviewAt: string;
+  reviewHistory: ReviewRecord[];
+  tags?: string[];
+}
+
+export function updateWordReview(word: Word, remembered: boolean): Word {
+  const now = new Date().toISOString();
+  const newStage = remembered ? (word.reviewStage ?? 0) + 1 : 0;
+  const nextReviewAt = getNextReviewTime(newStage).toISOString();
+  const newHistory = [
+    ...(word.reviewHistory || []),
+    { timestamp: now, result: remembered ? 'remembered' as const : 'forgotten' as const }
+  ];
+  return {
+    ...word,
+    reviewStage: newStage,
+    nextReviewAt,
+    reviewHistory: newHistory
+  };
+}
+
 export interface LearningRecord {
   wordId: string;
   word: string;

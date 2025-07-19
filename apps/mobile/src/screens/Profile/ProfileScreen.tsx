@@ -348,65 +348,26 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   };
 
   const handleClearAllData = async () => {
-    Alert.alert(
-      '清除所有数据',
-      '确定要清除所有数据吗？这将删除搜索历史、单词本、剧集数据和新建的单词本。',
-      [
-        { text: '取消', style: 'cancel' },
-        {
-          text: '清除所有数据',
-          style: 'destructive',
-          onPress: async () => {
-            setClearingCache(true);
-            try {
-              // 导入 DataSyncService
-              const { DataSyncService } = require('../../services/dataSyncService');
-              const dataSyncService = DataSyncService.getInstance();
-              
-              // 清除所有本地存储数据
-              await Promise.all([
-                AsyncStorage.clear(),
-                // 清除搜索历史
-                dataSyncService.clearSearchHistory(),
-                // 清除单词本数据
-                clearVocabulary(),
-                // 清除剧集数据
-                clearShows(),
-                // 清除新建的单词本数据
-                dataSyncService.clearNewWordbook(),
-                // 清除学习统计缓存
-                dataSyncService.clearAllCache(),
-              ]);
-              
-              Alert.alert(
-                '清除成功',
-                '所有数据已清除。应用将重新启动以应用更改。',
-                [
-                  {
-                    text: '确定',
-                    onPress: () => {
-                      // 重启应用
-                      if (Platform.OS === 'ios') {
-                        // iOS 重启应用
-                        Alert.alert('请手动重启应用');
-                      } else {
-                        // Android 重启应用
-                        Alert.alert('请手动重启应用');
-                      }
-                    }
-                  }
-                ]
-              );
-            } catch (error) {
-              console.error('清除所有数据失败:', error);
-              Alert.alert('清除失败', '清除所有数据时发生错误，请稍后重试');
-            } finally {
-              setClearingCache(false);
-            }
-          }
-        }
-      ]
-    );
+    console.log('🔍 handleClearAllData 被调用');
+    setClearingCache(true);
+    try {
+      const { DataSyncService } = require('../../services/dataSyncService');
+      const dataSyncService = DataSyncService.getInstance();
+      await Promise.all([
+        AsyncStorage.clear(),
+        dataSyncService.clearSearchHistory(),
+        clearVocabulary(),
+        clearShows(),
+        dataSyncService.clearNewWordbook(),
+        dataSyncService.clearAllCache(),
+      ]);
+      Alert.alert('清除成功', '所有数据已清除。请手动重启应用。');
+    } catch (error) {
+      console.error('清除所有数据失败:', error);
+      Alert.alert('清除失败', '清除所有数据时发生错误，请稍后重试');
+    } finally {
+      setClearingCache(false);
+    }
   };
 
   // 新增：跳转到订阅页

@@ -104,8 +104,13 @@ export const VocabularyProvider = ({ children }: { children: ReactNode }) => {
         console.log('⚠️ 单词已存在于该剧集中:', word.word, '剧集:', sourceShow?.name);
         return prev;
       }
-      
-      const newWord = { ...word, sourceShow, collectedAt: new Date().toISOString() };
+      // --- 补全 type 字段 ---
+      let fixedSourceShow = sourceShow;
+      if (sourceShow && !sourceShow.type) {
+        // 这里假设 id 为数字时为 show，否则为 wordbook，可根据实际业务调整
+        fixedSourceShow = { ...sourceShow, type: typeof sourceShow.id === 'number' ? 'show' : 'wordbook' };
+      }
+      const newWord = { ...word, sourceShow: fixedSourceShow, collectedAt: new Date().toISOString() };
       // 云端同步
       (async () => {
         const token = await getUserToken();

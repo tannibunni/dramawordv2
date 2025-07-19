@@ -24,6 +24,7 @@
   },
   "dependencies": {
     "@expo/metro-runtime": "~5.0.4",
+    "dayjs": "^1.11.13",
     "expo-audio": "^0.4.8",
     "expo-wechat": "^0.1.1",
     "mongodb": "^6.17.0",

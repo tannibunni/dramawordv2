@@ -16,11 +16,13 @@ import Swiper from 'react-native-deck-swiper';
 import WordCard, { WordData } from '../../components/cards/WordCard';
 import { audioService } from '../../services/audioService';
 import { learningDataService } from '../../services/learningDataService';
-import { LearningRecord } from '../../services/learningAlgorithm';
+import { LearningRecord, updateWordReview } from '../../services/learningAlgorithm';
 import { SwipeableWordCard } from '../../components/cards';
 import { UserService } from '../../services/userService';
 import { useVocabulary } from '../../context/VocabularyContext';
 import { useNavigation } from '../../components/navigation/NavigationContext';
+import dayjs from 'dayjs';
+import { wordService } from '../../services/wordService';
 
 // 复习完成统计接口
 interface ReviewStats {
@@ -145,11 +147,22 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
     console.log('ReviewScreen: swiperIndex changed to:', swiperIndex);
   }, [swiperIndex]);
   
-  // 监控 words 数组变化
+  // 监控 words 数组变化，初始化统计数据
   useEffect(() => {
     console.log('ReviewScreen: words array changed, length:', words.length);
     if (words.length > 0) {
       console.log('ReviewScreen: First word:', words[0]);
+      // 初始化统计数据
+      setReviewStats({
+        totalWords: words.length,
+        rememberedWords: 0,
+        forgottenWords: 0,
+        experience: 0,
+        accuracy: 0,
+      });
+      // 重置计数器
+      rememberedRef.current = 0;
+      forgottenRef.current = 0;
     }
   }, [words]);
   
@@ -161,7 +174,70 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
   // 获取筛选参数
   // const { type, id } = (route.params || {}) as { type?: string; id?: number };
 
+  const MIN_REVIEW_BATCH = 10;
+  const [isEbbinghaus, setIsEbbinghaus] = useState(false);
 
+  const getReviewBatch = (words: any[], filterFn: (w: any) => boolean) => {
+    const all = words.filter(filterFn);
+    if (all.length <= MIN_REVIEW_BATCH) {
+      setIsEbbinghaus(false);
+      return all;
+    }
+    let dueWords = all.filter((w: any) => dayjs(w.nextReviewAt).isBefore(dayjs()));
+    if (dueWords.length < MIN_REVIEW_BATCH) {
+      const extra = all.filter((w: any) => dayjs(w.nextReviewAt).isAfter(dayjs()));
+      dueWords = dueWords.concat(extra.slice(0, MIN_REVIEW_BATCH - dueWords.length));
+    }
+    setIsEbbinghaus(true);
+    return dueWords.slice(0, MIN_REVIEW_BATCH);
+  };
+
+  // 合并 loadReviewWords 实现
+  const loadReviewWords = () => {
+    let filterFn: (w: any) => boolean = () => true;
+    if (type === 'show' && id !== undefined) {
+      filterFn = (w: any) => {
+        const match = String(w.sourceShow?.id) === String(id);
+        console.log(
+          '[filterFn]',
+          'w.word:', w.word,
+          'w.sourceShow?.type:', w.sourceShow?.type,
+          'w.sourceShow?.id:', w.sourceShow?.id,
+          'type:', type,
+          'id:', id,
+          'match:', match
+        );
+        return match;
+      };
+    } else if (type === 'wordbook' && id !== undefined) {
+      filterFn = (w: any) => {
+        const match = String(w.sourceShow?.id) === String(id);
+        console.log(
+          '[filterFn]',
+          'w.word:', w.word,
+          'w.sourceShow?.type:', w.sourceShow?.type,
+          'w.sourceShow?.id:', w.sourceShow?.id,
+          'type:', type,
+          'id:', id,
+          'match:', match
+        );
+        return match;
+      };
+    }
+    console.log('vocabulary:', vocabulary);
+    console.log('vocabulary details:', vocabulary.map(w => ({
+      word: w.word,
+      sourceShow: w.sourceShow,
+      type: type,
+      targetId: id
+    })));
+    const batch = getReviewBatch(vocabulary, filterFn);
+    console.log('review batch:', batch);
+    setWords(batch);
+    setTimeout(() => {
+      console.log('words state:', batch);
+    }, 100);
+  };
 
   useEffect(() => {
     console.log('ReviewScreen: useEffect triggered - vocabulary length:', vocabulary.length, 'type:', type, 'id:', id);
@@ -183,138 +259,61 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
     }
   }, [words]);
 
-  const loadReviewWords = async () => {
-    console.log('ReviewScreen: loadReviewWords called with type:', type, 'id:', id);
-    console.log('ReviewScreen: vocabulary length:', vocabulary.length);
-    
-    try {
-      // 根据参数筛选单词
-      let filtered = vocabulary;
-      if (type === 'show' && id !== undefined) {
-        filtered = vocabulary.filter(word => word.sourceShow && word.sourceShow.type !== 'wordbook' && Number(word.sourceShow.id) === Number(id));
-        console.log('ReviewScreen: Filtered by show, filtered length:', filtered.length);
-      } else if (type === 'wordbook' && id !== undefined) {
-        filtered = vocabulary.filter(word => word.sourceShow && word.sourceShow.type === 'wordbook' && Number(word.sourceShow.id) === Number(id));
-        console.log('ReviewScreen: Filtered by wordbook, filtered length:', filtered.length);
-      } else {
-        console.log('ReviewScreen: No filtering applied, using all vocabulary');
-      }
-      
-      if (filtered.length === 0) {
-        console.log('ReviewScreen: No words found after filtering, using mock data');
-        setWords([]);
-        setSession(null);
-        return;
-      }
+  const [wordDataCache, setWordDataCache] = useState<{ [key: string]: WordData }>({});
+  const [isWordDataLoading, setIsWordDataLoading] = useState(true);
 
-      // 将用户单词表中的单词转换为复习单词格式
-      const reviewWords: ReviewWord[] = filtered.map((word, index) => ({
-        id: `${index}`,
-        word: word.word,
-        translation: word.definitions && word.definitions[0] ? word.definitions[0].definition : '暂无释义',
-        phonetic: word.phonetic || '/ˈwɜːd/',
-        difficulty: 'medium' as const, // 默认难度，可以根据学习进度调整
-        show: word.sourceShow?.name || '我的单词',
-        lastReviewed: word.collectedAt ? new Date(word.collectedAt).toLocaleDateString() : '未复习',
-        reviewCount: 0, // 可以从学习记录中获取
-      }));
-
-      setWords(reviewWords);
-      setSession({
-        totalWords: reviewWords.length,
-        currentIndex: 0,
-        correctCount: 0,
-        incorrectCount: 0,
-        skippedCount: 0,
-        collectedCount: 0,
-        startTime: new Date(),
-      });
-      // 初始化复习统计
-      setReviewStats({
-        totalWords: reviewWords.length,
-        rememberedWords: 0,
-        forgottenWords: 0,
-        experience: 0,
-        accuracy: 0,
-      });
-    } catch (error) {
-      console.error('加载复习单词失败:', error);
-      // 使用模拟数据作为后备
-        const mockWords: ReviewWord[] = [
-          {
-            id: '1',
-            word: 'serendipity',
-            translation: '意外发现美好事物的能力',
-            phonetic: '/ˌserənˈdɪpəti/',
-            difficulty: 'hard',
-            show: '我的单词',
-            lastReviewed: '2024-01-15',
-            reviewCount: 3,
-          },
-          {
-            id: '2',
-            word: 'resilient',
-            translation: '有韧性的，适应力强的',
-            phonetic: '/rɪˈzɪliənt/',
-            difficulty: 'medium',
-            show: '我的单词',
-            lastReviewed: '2024-01-14',
-            reviewCount: 8,
-          },
-          {
-            id: '3',
-            word: 'authentic',
-            translation: '真实的，可信的',
-            phonetic: '/ɔːˈθentɪk/',
-            difficulty: 'medium',
-            show: '我的单词',
-            lastReviewed: '2024-01-13',
-            reviewCount: 5,
-          },
-          {
-            id: '4',
-            word: 'perseverance',
-            translation: '毅力，坚持不懈',
-            phonetic: '/ˌpɜːsɪˈvɪərəns/',
-            difficulty: 'hard',
-            show: '我的单词',
-            lastReviewed: '2024-01-12',
-            reviewCount: 2,
-          },
-          {
-            id: '5',
-            word: 'eloquent',
-            translation: '雄辩的，有说服力的',
-            phonetic: '/ˈeləkwənt/',
-            difficulty: 'medium',
-            show: '我的单词',
-            lastReviewed: '2024-01-11',
-            reviewCount: 10,
-          },
-        ];
-        setWords(mockWords);
-        setSession({
-          totalWords: mockWords.length,
-          currentIndex: 0,
-          correctCount: 0,
-          incorrectCount: 0,
-          skippedCount: 0,
-          collectedCount: 0,
-          startTime: new Date(),
-        });
-        // 初始化复习统计
-        setReviewStats({
-          totalWords: mockWords.length,
-          rememberedWords: 0,
-          forgottenWords: 0,
-          experience: 0,
-          accuracy: 0,
-        });
+  // 词卡数据批量预加载
+  useEffect(() => {
+    console.log('🔄 词卡数据批量预加载开始，words length:', words?.length, '当前 loading 状态:', isWordDataLoading);
+    if (!words || words.length === 0) {
+      console.log('📝 没有 words，设置 loading 为 false');
+      setIsWordDataLoading(false);
+      return;
     }
-  };
+    console.log('🔄 设置 loading 为 true');
+    setIsWordDataLoading(true);
+    console.log('🔄 开始批量加载词卡数据...');
+    Promise.all(words.map(w => loadWordData(w))).then(() => {
+      console.log('✅ 所有词卡数据加载完成，设置 loading 为 false');
+      setIsWordDataLoading(false);
+    }).catch(error => {
+      console.error('❌ 批量加载词卡数据失败:', error);
+      setIsWordDataLoading(false);
+    });
+  }, [words]);
+
+  // 监控 isWordDataLoading 状态变化
+  useEffect(() => {
+    console.log('🔄 isWordDataLoading 状态变化:', isWordDataLoading);
+  }, [isWordDataLoading]);
+
+  // 监控 wordDataCache 变化，强制重新渲染
+  useEffect(() => {
+    console.log('🔄 wordDataCache 更新:', Object.keys(wordDataCache));
+    if (Object.keys(wordDataCache).length > 0 && words.length > 0) {
+      // 强制 Swiper 重新渲染
+      console.log('🔄 强制 Swiper 重新渲染');
+      if (swiperRef.current) {
+        swiperRef.current.forceUpdate();
+      }
+    }
+  }, [wordDataCache]);
 
   // 将 ReviewWord 转换为 WordData 格式
-  const convertToWordData = (reviewWord: ReviewWord): WordData => {
+  const convertToWordData = async (reviewWord: ReviewWord): Promise<WordData> => {
+    try {
+      // 优先从 wordService 获取真实词卡数据
+      const wordDetail = await wordService.getWordDetail(reviewWord.word);
+      if (wordDetail) {
+        console.log(`✅ 获取到真实词卡数据: ${reviewWord.word}`);
+        return wordDetail;
+      }
+    } catch (error) {
+      console.warn(`⚠️ 获取词卡数据失败，使用 fallback: ${reviewWord.word}`, error);
+    }
+    
+    // fallback: 使用基本数据
+    console.log(`📝 使用 fallback 词卡数据: ${reviewWord.word}`);
     return {
       word: reviewWord.word,
       phonetic: reviewWord.phonetic,
@@ -335,6 +334,78 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
       isCollected: false,
     };
   };
+
+  // 加载词卡数据
+  const loadWordData = async (reviewWord: ReviewWord) => {
+    console.log(`🔄 开始加载词卡数据: ${reviewWord.word}`);
+    if (wordDataCache[reviewWord.word]) {
+      console.log(`✅ 词卡数据已缓存: ${reviewWord.word}`);
+      return wordDataCache[reviewWord.word];
+    }
+    
+    try {
+      const wordData = await convertToWordData(reviewWord);
+      console.log(`✅ 词卡数据加载完成: ${reviewWord.word}`, wordData);
+      setWordDataCache(prev => ({ ...prev, [reviewWord.word]: wordData }));
+      return wordData;
+    } catch (error) {
+      console.error(`❌ 词卡数据加载失败: ${reviewWord.word}`, error);
+      // 返回 fallback 数据
+      const fallbackData = {
+        word: reviewWord.word,
+        phonetic: reviewWord.phonetic,
+        definitions: [
+          {
+            partOfSpeech: 'noun',
+            definition: reviewWord.translation,
+            examples: [
+              {
+                english: `Example sentence with ${reviewWord.word}`,
+                chinese: `包含 ${reviewWord.word} 的例句`,
+              },
+            ],
+          },
+        ],
+        searchCount: reviewWord.reviewCount,
+        lastSearched: reviewWord.lastReviewed,
+        isCollected: false,
+      };
+      setWordDataCache(prev => ({ ...prev, [reviewWord.word]: fallbackData }));
+      return fallbackData;
+    }
+  };
+
+  // 渲染卡片内容
+  const renderCard = (item: ReviewWord, index: number) => {
+    console.log(`🔄 renderCard 被调用 - index: ${index}, word: ${item.word}`);
+    console.log(`🔄 wordDataCache 状态:`, Object.keys(wordDataCache));
+    console.log(`🔄 查找 ${item.word} 的缓存数据:`, wordDataCache[item.word]);
+    
+    const wordData = wordDataCache[item.word];
+    if (!wordData) {
+      console.log(`❌ 没有找到 ${item.word} 的缓存数据，显示加载中...`);
+      return <View style={{ height: 300, justifyContent: 'center', alignItems: 'center' }}><Text>加载中...</Text></View>;
+    }
+    
+    console.log(`✅ 找到 ${item.word} 的缓存数据，渲染卡片`);
+    return (
+      <SwipeableWordCard
+        key={`${item.word}-${wordDataCache[item.word] ? 'loaded' : 'loading'}`}
+        wordData={wordData}
+        isExpanded={expandedIndex === index}
+        onExpandToggle={() => setExpandedIndex(expandedIndex === index ? null : index)}
+      />
+    );
+  };
+
+  // Swiper 外层加 loading 判断
+  if (isWordDataLoading) {
+    return (
+      <SafeAreaView style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.background.primary }}>
+        <Text>加载中...</Text>
+      </SafeAreaView>
+    );
+  }
 
   const getDifficultyColor = (difficulty: string) => {
     switch (difficulty) {
@@ -361,18 +432,19 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
 
   // 处理滑动操作
   const handleSwipeLeft = async (word: string) => {
-    // 跳过
+    // 1. 先用 updateWordReview 处理业务逻辑
+    const updatedWord = updateWordReview(words[swiperIndex], false);
     try {
-      // 更新学习记录
+      // 2. 只做存储
       await learningDataService.updateLearningRecord(
-        words[swiperIndex].id,
-        word,
+        updatedWord.word,
+        updatedWord.word,
         false // 不正确
       );
     } catch (error) {
       console.error('更新学习记录失败:', error);
     }
-    
+
     forgottenRef.current += 1;
     setReviewStats(prev => {
       const forgotten = prev.forgottenWords + 1;
@@ -389,15 +461,17 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
     });
     addReviewAction(word, false);
     updateSession('incorrect');
+
     moveToNextWord();
   };
 
   const handleSwipeRight = async (word: string) => {
-    // 保存
+    // 1. 先用 updateWordReview 处理业务逻辑
+    const updatedWord = updateWordReview(words[swiperIndex], true);
     try {
-      // 更新学习记录
+      // 2. 只做存储
       await learningDataService.updateLearningRecord(
-        words[swiperIndex].id,
+        updatedWord.word,
         word,
         true // 正确
       );
@@ -433,7 +507,7 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
     try {
       // 更新学习记录
       await learningDataService.updateLearningRecord(
-        words[swiperIndex].id,
+        words[swiperIndex].word,
         word,
         false // 跳过视为不正确
       );
@@ -467,9 +541,26 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
       setSwiperIndex(newIndex);
       setShowAnswer(false);
     } else {
-      console.log('ReviewScreen: Review complete, setting isReviewComplete to true');
-      // 复习完成
-      setIsReviewComplete(true);
+      console.log('ReviewScreen: Review complete, calculating final stats');
+      // 复习完成 - 计算最终统计数据
+      if (!isReviewComplete) {
+        const rememberedWords = rememberedRef.current;
+        const forgottenWords = forgottenRef.current;
+        const currentStats = reviewStats;
+        const experience = rememberedWords * 15;
+        const accuracy = currentStats.totalWords > 0 ? Math.round((rememberedWords / currentStats.totalWords) * 100) : 0;
+        const finalStats = {
+          totalWords: currentStats.totalWords,
+          rememberedWords,
+          forgottenWords,
+          experience,
+          accuracy,
+        };
+        console.log('ReviewScreen: Final stats:', finalStats);
+        setReviewStats(finalStats);
+        setFinalStats(finalStats);
+        setIsReviewComplete(true);
+      }
     }
   };
 
@@ -587,20 +678,7 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
 
   // 移除 panResponder，因为手势现在由 SwipeableWordCard 处理
 
-  // 渲染卡片内容
-  const renderCard = (item: ReviewWord, index: number) => {
-    console.log('ReviewScreen: renderCard called for index:', index, 'word:', item.word);
-    const wordData = convertToWordData(item);
-    return (
-      <SwipeableWordCard
-        wordData={wordData}
-        isExpanded={expandedIndex === index}
-        onExpandToggle={() => setExpandedIndex(expandedIndex === index ? null : index)}
-      />
-    );
-  };
-
-  if (words.length === 0) {
+  if (!words || words.length === 0) {
     return (
       <SafeAreaView style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.background.primary }}>
         <View style={{ alignItems: 'center', padding: 20 }}>
@@ -611,6 +689,18 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
           <Text style={{ fontSize: 16, color: colors.text.secondary, textAlign: 'center', lineHeight: 24 }}>
             去首页搜索并收藏一些单词，然后就可以在这里复习了！
           </Text>
+          <TouchableOpacity
+            style={{
+              marginTop: 24,
+              backgroundColor: colors.primary[500],
+              paddingHorizontal: 48,
+              paddingVertical: 16,
+              borderRadius: 25,
+            }}
+            onPress={() => navigate('main', { tab: 'home' })}
+          >
+            <Text style={{ color: 'white', fontSize: 18, fontWeight: 'bold' }}>确定</Text>
+          </TouchableOpacity>
         </View>
       </SafeAreaView>
     );
@@ -619,20 +709,24 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
   // onSwipedAll 统计时传 actions
   const handleSwipedAll = () => {
     console.log('ReviewScreen: All cards swiped, completing review');
-    const totalWords = words.length;
+    
+    // 防止重复调用
+    if (isReviewComplete) {
+      console.log('ReviewScreen: Review already completed, skipping duplicate call');
+      return;
+    }
+    
     const rememberedWords = rememberedRef.current;
     const forgottenWords = forgottenRef.current;
     const totalActions = rememberedWords + forgottenWords;
-    console.log('ReviewScreen: Data validation - total actions:', totalActions, 'total words:', totalWords);
-    if (totalActions !== totalWords) {
-      console.warn('ReviewScreen: Data mismatch detected! Actions:', totalActions, 'Words:', totalWords);
-      const missingActions = totalWords - totalActions;
-      console.log('ReviewScreen: Missing actions:', missingActions);
-    }
+    console.log('ReviewScreen: Data validation - total actions:', totalActions, 'remembered:', rememberedWords, 'forgotten:', forgottenWords);
+    
+    // 使用当前的 reviewStats，确保 totalWords 正确
+    const currentStats = reviewStats;
     const experience = rememberedWords * 15;
-    const accuracy = totalWords > 0 ? Math.round((rememberedWords / totalWords) * 100) : 0;
+    const accuracy = currentStats.totalWords > 0 ? Math.round((rememberedWords / currentStats.totalWords) * 100) : 0;
     const finalStats = {
-      totalWords,
+      totalWords: currentStats.totalWords,
       rememberedWords,
       forgottenWords,
       experience,
@@ -662,6 +756,13 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background.primary }}>
+      {isEbbinghaus && (
+        <View style={{padding: 12, backgroundColor: '#E8F5E9', borderRadius: 8, margin: 12}}>
+          <Text style={{color: '#388E3C', fontWeight: 'bold'}}>
+            ☑️已切入艾宾浩斯记忆法
+          </Text>
+        </View>
+      )}
       {renderProgressBar()}
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
         <Swiper
@@ -690,7 +791,6 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
               await handleSwipeRight(word);
             }
           }}
-          onSwipedAll={handleSwipedAll}
           onSwiped={(cardIndex) => {
             // 兜底，不做统计
             handleSwiped(cardIndex);
@@ -699,63 +799,6 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
           cardHorizontalMargin={0}
           containerStyle={{ flex: 1, width: '100%' }}
         />
-        {/* 操作按钮区固定在底部 */}
-        {!isReviewComplete && words.length > 0 && (
-          <View style={{
-            position: 'absolute',
-            left: 0,
-            right: 0,
-            bottom: 32,
-            flexDirection: 'row',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            width: '80%',
-            alignSelf: 'center',
-          }}>
-            <TouchableOpacity
-              style={{
-                flex: 1,
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'center',
-                backgroundColor: colors.error[500],
-                paddingVertical: 16,
-                borderRadius: 25,
-                marginRight: 12,
-                opacity: swiperIndex >= words.length ? 0.5 : 1,
-              }}
-              disabled={swiperIndex >= words.length}
-              onPress={async () => {
-                const word = words[swiperIndex]?.word;
-                if (word) await handleSwipeLeft(word);
-              }}
-            >
-              <Ionicons name="arrow-back" size={20} color="white" />
-              <Text style={{ color: 'white', fontSize: 18, fontWeight: '600', marginLeft: 8 }}>忘记</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={{
-                flex: 1,
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'center',
-                backgroundColor: colors.success[500],
-                paddingVertical: 16,
-                borderRadius: 25,
-                marginLeft: 12,
-                opacity: swiperIndex >= words.length ? 0.5 : 1,
-              }}
-              disabled={swiperIndex >= words.length}
-              onPress={async () => {
-                const word = words[swiperIndex]?.word;
-                if (word) await handleSwipeRight(word);
-              }}
-            >
-              <Text style={{ color: 'white', fontSize: 18, fontWeight: '600', marginRight: 8 }}>记住</Text>
-              <Ionicons name="arrow-forward" size={20} color="white" />
-            </TouchableOpacity>
-          </View>
-        )}
       </View>
     </SafeAreaView>
   );

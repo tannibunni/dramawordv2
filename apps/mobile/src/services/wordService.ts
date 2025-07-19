@@ -70,16 +70,19 @@ export class WordService {
   }
 
   // 搜索单词
-  async searchWord(word: string): Promise<SearchResult> {
+  async searchWord(word: string, language: string = 'en'): Promise<SearchResult> {
     try {
-      console.log(`🔍 搜索单词: ${word}`);
+      console.log(`🔍 搜索单词: ${word} (语言: ${language})`);
       
       const response = await fetch(`${API_BASE_URL}/words/search`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ word: word.toLowerCase().trim() }),
+        body: JSON.stringify({ 
+          word: word.toLowerCase().trim(),
+          language: language
+        }),
       });
 
       if (!response.ok) {
@@ -380,6 +383,43 @@ export class WordService {
       { id: '4', word: 'example', translation: '例子', timestamp: Date.now() - 4000 },
       { id: '5', word: 'learning', translation: '学习', timestamp: Date.now() - 5000 },
     ];
+  }
+
+  // 获取单词详情（优先本地缓存，没有则调用API）
+  async getWordDetail(word: string): Promise<WordData | null> {
+    try {
+      console.log(`🔍 获取单词详情: ${word}`);
+      
+      // 1. 先查本地缓存
+      const cacheKey = `word_detail_${word.toLowerCase()}`;
+      const cached = await AsyncStorage.getItem(cacheKey);
+      if (cached) {
+        try {
+          const wordData = JSON.parse(cached);
+          console.log(`✅ 从本地缓存获取单词详情: ${word}`);
+          return wordData;
+        } catch (error) {
+          console.warn(`⚠️ 本地缓存数据格式错误，重新获取: ${word}`);
+        }
+      }
+      
+      // 2. 没有缓存就调用API
+      console.log(`📡 本地无缓存，调用API获取单词详情: ${word}`);
+      const result = await this.searchWord(word);
+      
+      if (result.success && result.data) {
+        // 3. 缓存到本地
+        await AsyncStorage.setItem(cacheKey, JSON.stringify(result.data));
+        console.log(`✅ API获取成功并缓存: ${word}`);
+        return result.data;
+      } else {
+        console.warn(`⚠️ API获取失败: ${word}`, result.error);
+        return null;
+      }
+    } catch (error) {
+      console.error(`❌ 获取单词详情失败: ${word}`, error);
+      return null;
+    }
   }
 
   // 清空用户缓存（只清空本地缓存，不影响数据库中的词库）

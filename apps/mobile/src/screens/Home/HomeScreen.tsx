@@ -24,6 +24,8 @@ import { useShowList } from '../../context/ShowListContext';
 import { useVocabulary } from '../../context/VocabularyContext';
 import { TMDBService, TMDBShow } from '../../services/tmdbService';
 import { Audio } from 'expo-av';
+import LanguageSelector from '../../components/common/LanguageSelector';
+import { useLanguage } from '../../context/LanguageContext';
 
 const HomeScreen: React.FC = () => {
   const [searchText, setSearchText] = useState('');
@@ -50,6 +52,7 @@ const HomeScreen: React.FC = () => {
   const prevVocabCount = useRef(vocabulary.length);
   const [chToEnCandidates, setChToEnCandidates] = useState<string[]>([]); // 新增：中文查英文候选词
   const [chToEnQuery, setChToEnQuery] = useState<string>('');
+  const { selectedLanguage, getCurrentLanguageConfig } = useLanguage();
 
   useEffect(() => {
     loadRecentWords();
@@ -136,8 +139,8 @@ const HomeScreen: React.FC = () => {
           return;
         }
       }
-      // 英文查词
-      const result = await wordService.searchWord(word.toLowerCase());
+      // 多语言查词
+      const result = await wordService.searchWord(word.toLowerCase(), selectedLanguage);
       if (result.success && result.data) {
         // 日志：输出 definitions 和例句
         if (result.data.definitions) {
@@ -470,7 +473,7 @@ const HomeScreen: React.FC = () => {
               <>
                 <TextInput
                   style={styles.searchInput}
-                  placeholder="输入英文单词..."
+                  placeholder={`输入${getCurrentLanguageConfig().name}单词...`}
                   placeholderTextColor={colors.text.tertiary}
                   value={searchText}
                   onChangeText={handleInputChange}
@@ -492,6 +495,9 @@ const HomeScreen: React.FC = () => {
             )}
           </View>
         </View>
+        
+        {/* 语言选择器 */}
+        <LanguageSelector compact={true} />
         {/* 内容区：有查词结果时只显示卡片，否则显示最近查词 */}
         {chToEnCandidates.length > 0 ? (
           <View style={styles.wordCardWrapper}>
@@ -508,7 +514,7 @@ const HomeScreen: React.FC = () => {
                   setChToEnQuery('');
                   setSearchText(en);
                   // 直接查英文释义
-                  const result = await wordService.searchWord(en.toLowerCase());
+                  const result = await wordService.searchWord(en.toLowerCase(), selectedLanguage);
                   if (result.success && result.data) {
                     setSearchResult(result.data);
                     setSearchText('');

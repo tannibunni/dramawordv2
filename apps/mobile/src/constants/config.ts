@@ -1,11 +1,48 @@
 // API配置
 export const API_BASE_URL = 'https://dramawordv2.onrender.com/api'; // 统一使用生产环境
 
+// 支持的语言配置
+export const SUPPORTED_LANGUAGES = {
+  ENGLISH: {
+    code: 'en',
+    name: '英语',
+    nativeName: 'English',
+    flag: '🇺🇸',
+    direction: 'ltr',
+    phoneticSystem: 'IPA',
+    writingSystem: 'Latin',
+  },
+  KOREAN: {
+    code: 'ko',
+    name: '韩语',
+    nativeName: '한국어',
+    flag: '🇰🇷',
+    direction: 'ltr',
+    phoneticSystem: 'Hangul',
+    writingSystem: 'Hangul',
+  },
+  JAPANESE: {
+    code: 'ja',
+    name: '日语',
+    nativeName: '日本語',
+    flag: '🇯🇵',
+    direction: 'ltr',
+    phoneticSystem: 'Hiragana/Katakana',
+    writingSystem: 'Kanji + Kana',
+  },
+} as const;
+
+export type SupportedLanguageCode = keyof typeof SUPPORTED_LANGUAGES;
+
 // 应用配置
 export const APP_CONFIG = {
   // 应用信息
   APP_NAME: '剧词记',
   APP_VERSION: '1.0.0',
+  
+  // 多语言配置
+  DEFAULT_LANGUAGE: 'ENGLISH' as SupportedLanguageCode,
+  SUPPORTED_LANGUAGES,
   
   // API配置
   API_TIMEOUT: 10000, // 10秒超时
@@ -18,6 +55,8 @@ export const APP_CONFIG = {
     LEARNING_RECORDS: 'learning_records',
     REVIEW_SESSIONS: 'review_sessions',
     APP_SETTINGS: 'app_settings',
+    SELECTED_LANGUAGE: 'selected_language',
+    LANGUAGE_PROGRESS: 'language_progress',
   },
   
   // 学习配置
