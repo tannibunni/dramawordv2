@@ -38,10 +38,9 @@ const LanguagePicker: React.FC<LanguagePickerProps> = ({ onLanguageChange }) => 
         activeOpacity={0.7}
       >
         <Text style={styles.flagText}>{currentLanguage.flag}</Text>
-        <Text style={styles.languageLabel}>{currentLanguage.name}</Text>
         <Ionicons 
           name="chevron-down" 
-          size={16} 
+          size={14} 
           color={colors.neutral[600]} 
           style={styles.chevron}
         />
@@ -128,8 +127,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: colors.background.secondary,
     borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
     borderWidth: 1,
     borderColor: colors.border.light,
     shadowColor: colors.neutral[900],
@@ -139,17 +138,11 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   flagText: {
-    fontSize: 20,
-    marginRight: 8,
-  },
-  languageLabel: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: colors.text.primary,
+    fontSize: 18,
     marginRight: 4,
   },
   chevron: {
-    marginLeft: 4,
+    marginLeft: 2,
   },
   modalOverlay: {
     flex: 1,
