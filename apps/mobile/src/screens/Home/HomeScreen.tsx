@@ -475,18 +475,18 @@ const HomeScreen: React.FC = () => {
                 </>
               ) : (
                 <>
-                  <TextInput
-                    style={styles.searchInput}
-                    placeholder={`输入${getCurrentLanguageConfig().name}单词...`}
-                    placeholderTextColor={colors.text.tertiary}
-                    value={searchText}
-                    onChangeText={handleInputChange}
-                    onSubmitEditing={handleSearch}
-                    returnKeyType="search"
-                    autoCapitalize="none"
-                    autoCorrect={false}
-                    editable={!isLoading}
-                  />
+                                  <TextInput
+                  style={styles.searchInput}
+                  placeholder={`输入${getCurrentLanguageConfig().name}单词或中文词语...`}
+                  placeholderTextColor={colors.text.tertiary}
+                  value={searchText}
+                  onChangeText={handleInputChange}
+                  onSubmitEditing={handleSearch}
+                  returnKeyType="search"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  editable={!isLoading}
+                />
                   {searchText.length > 0 && (
                     <TouchableOpacity onPress={() => handleInputChange('')} style={styles.clearButton}>
                       <Ionicons name="close-circle" size={20} color={colors.text.secondary} />

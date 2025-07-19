@@ -20,55 +20,25 @@ interface LanguagePickerProps {
 const LanguagePicker: React.FC<LanguagePickerProps> = ({ onLanguageChange }) => {
   const { selectedLanguage, setSelectedLanguage } = useLanguage();
   const [isModalVisible, setIsModalVisible] = useState(false);
-  const [selectedLanguages, setSelectedLanguages] = useState<SupportedLanguageCode[]>([selectedLanguage]);
 
   const currentLanguage = SUPPORTED_LANGUAGES[selectedLanguage];
 
-  const handleLanguageSelect = (languageCode: SupportedLanguageCode) => {
-    if (selectedLanguages.includes(languageCode)) {
-      // 如果已选择，则移除
-      const newSelected = selectedLanguages.filter(lang => lang !== languageCode);
-      if (newSelected.length > 0) {
-        setSelectedLanguages(newSelected);
-        setSelectedLanguage(newSelected[0]); // 设置第一个为当前语言
-        onLanguageChange?.(newSelected[0]);
-      }
-    } else {
-      // 如果未选择，则添加
-      const newSelected = [...selectedLanguages, languageCode];
-      setSelectedLanguages(newSelected);
-      setSelectedLanguage(languageCode); // 设置为当前语言
-      onLanguageChange?.(languageCode);
-    }
-  };
-
-  const toggleLanguage = (languageCode: SupportedLanguageCode) => {
-    if (selectedLanguages.includes(languageCode)) {
-      // 如果当前语言被取消选择，且还有其他语言，则切换到其他语言
-      const newSelected = selectedLanguages.filter(lang => lang !== languageCode);
-      if (newSelected.length > 0) {
-        setSelectedLanguages(newSelected);
-        setSelectedLanguage(newSelected[0]);
-        onLanguageChange?.(newSelected[0]);
-      }
-    } else {
-      // 添加新语言
-      const newSelected = [...selectedLanguages, languageCode];
-      setSelectedLanguages(newSelected);
-      setSelectedLanguage(languageCode);
-      onLanguageChange?.(languageCode);
-    }
+  const handleLanguageSwitch = (languageCode: SupportedLanguageCode) => {
+    setSelectedLanguage(languageCode);
+    onLanguageChange?.(languageCode);
+    setIsModalVisible(false);
   };
 
   return (
     <View style={styles.container}>
-      {/* 国旗图标按钮 */}
+      {/* 语言环境切换按钮 */}
       <TouchableOpacity
         style={styles.flagButton}
         onPress={() => setIsModalVisible(true)}
         activeOpacity={0.7}
       >
         <Text style={styles.flagText}>{currentLanguage.flag}</Text>
+        <Text style={styles.languageLabel}>{currentLanguage.name}</Text>
         <Ionicons 
           name="chevron-down" 
           size={16} 
@@ -91,7 +61,7 @@ const LanguagePicker: React.FC<LanguagePickerProps> = ({ onLanguageChange }) => 
         >
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>选择学习语言</Text>
+              <Text style={styles.modalTitle}>切换语言环境</Text>
               <TouchableOpacity
                 onPress={() => setIsModalVisible(false)}
                 style={styles.closeButton}
@@ -106,9 +76,9 @@ const LanguagePicker: React.FC<LanguagePickerProps> = ({ onLanguageChange }) => 
                   key={code}
                   style={[
                     styles.languageItem,
-                    selectedLanguages.includes(code as SupportedLanguageCode) && styles.selectedLanguageItem
+                    code === selectedLanguage && styles.selectedLanguageItem
                   ]}
-                  onPress={() => toggleLanguage(code as SupportedLanguageCode)}
+                  onPress={() => handleLanguageSwitch(code as SupportedLanguageCode)}
                   activeOpacity={0.7}
                 >
                   <View style={styles.languageInfo}>
@@ -120,17 +90,17 @@ const LanguagePicker: React.FC<LanguagePickerProps> = ({ onLanguageChange }) => 
                   </View>
                   
                   <View style={styles.selectionIndicator}>
-                    {selectedLanguages.includes(code as SupportedLanguageCode) && (
-                      <Ionicons 
-                        name="checkmark-circle" 
-                        size={24} 
-                        color={colors.primary[500]} 
-                      />
-                    )}
                     {code === selectedLanguage && (
-                      <View style={styles.currentIndicator}>
-                        <Text style={styles.currentText}>当前</Text>
-                      </View>
+                      <>
+                        <Ionicons 
+                          name="checkmark-circle" 
+                          size={24} 
+                          color={colors.primary[500]} 
+                        />
+                        <View style={styles.currentIndicator}>
+                          <Text style={styles.currentText}>当前</Text>
+                        </View>
+                      </>
                     )}
                   </View>
                 </TouchableOpacity>
@@ -139,7 +109,7 @@ const LanguagePicker: React.FC<LanguagePickerProps> = ({ onLanguageChange }) => 
 
             <View style={styles.modalFooter}>
               <Text style={styles.footerText}>
-                已选择 {selectedLanguages.length} 种语言
+                当前环境：{currentLanguage.name}
               </Text>
             </View>
           </View>
@@ -170,6 +140,12 @@ const styles = StyleSheet.create({
   },
   flagText: {
     fontSize: 20,
+    marginRight: 8,
+  },
+  languageLabel: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: colors.text.primary,
     marginRight: 4,
   },
   chevron: {
