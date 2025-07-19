@@ -447,7 +447,7 @@ const HomeScreen: React.FC = () => {
       )}
       {/* 庆祝弹窗动画 */}
       {showBadgeCelebrate && celebrateBadge && (
-        <View style={styles.celebrateOverlay} pointerEvents="none">
+        <View style={[styles.celebrateOverlay, { pointerEvents: 'none' }]}>
           <View style={styles.celebrateBox}>
             <Text style={styles.celebrateEmoji}>🎉</Text>
             <Text style={styles.celebrateText}>恭喜解锁 {celebrateBadge} 个单词徽章！</Text>

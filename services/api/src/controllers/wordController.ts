@@ -86,20 +86,37 @@ export const searchWord = async (req: Request, res: Response): Promise<void> => 
     try {
       const generatedData = await generateWordData(searchTerm, language);
       
-      // 4. 保存到云单词表
-      cloudWord = new CloudWord({
-        word: searchTerm,
-        language,
-        phonetic: generatedData.phonetic,
-        definitions: generatedData.definitions,
-        audioUrl: generatedData.audioUrl || '',
-        correctedWord: generatedData.correctedWord || searchTerm,
-        searchCount: 1,
-        lastSearched: new Date()
-      });
-      
-      await cloudWord.save();
-      logger.info(`💾 Saved new word to cloud words: ${searchTerm}`);
+      // 4. 保存到云单词表（先检查是否已存在）
+      try {
+        cloudWord = new CloudWord({
+          word: searchTerm,
+          language,
+          phonetic: generatedData.phonetic,
+          definitions: generatedData.definitions,
+          audioUrl: generatedData.audioUrl || '',
+          correctedWord: generatedData.correctedWord || searchTerm,
+          searchCount: 1,
+          lastSearched: new Date()
+        });
+        
+        await cloudWord.save();
+        logger.info(`💾 Saved new word to cloud words: ${searchTerm}`);
+      } catch (saveError) {
+        // 如果是重复键错误，重新查询已存在的单词
+        if (saveError.code === 11000) {
+          logger.info(`🔄 Word already exists, fetching from database: ${searchTerm}`);
+          cloudWord = await CloudWord.findOne({ word: searchTerm, language });
+          if (cloudWord) {
+            // 更新搜索次数和最后搜索时间
+            await updateCloudWordSearchStats(searchTerm, language);
+            logger.info(`✅ Found existing word in database: ${searchTerm}`);
+          } else {
+            throw saveError; // 如果还是找不到，抛出原始错误
+          }
+        } else {
+          throw saveError;
+        }
+      }
       
       // 5. 保存到内存缓存
       wordCache.set(cacheKey, cloudWord.toObject());
@@ -126,20 +143,37 @@ export const searchWord = async (req: Request, res: Response): Promise<void> => 
       // 使用模拟数据作为后备方案
       const fallbackData = getFallbackWordData(searchTerm, language);
       
-      // 保存到云单词表
-      cloudWord = new CloudWord({
-        word: searchTerm,
-        language,
-        phonetic: fallbackData.phonetic,
-        definitions: fallbackData.definitions,
-        audioUrl: fallbackData.audioUrl || '',
-        correctedWord: searchTerm, // fallback 时使用原词作为 correctedWord
-        searchCount: 1,
-        lastSearched: new Date()
-      });
-      
-      await cloudWord.save();
-      logger.info(`💾 Saved fallback word to cloud words: ${searchTerm}`);
+      // 保存到云单词表（先检查是否已存在）
+      try {
+        cloudWord = new CloudWord({
+          word: searchTerm,
+          language,
+          phonetic: fallbackData.phonetic,
+          definitions: fallbackData.definitions,
+          audioUrl: fallbackData.audioUrl || '',
+          correctedWord: searchTerm, // fallback 时使用原词作为 correctedWord
+          searchCount: 1,
+          lastSearched: new Date()
+        });
+        
+        await cloudWord.save();
+        logger.info(`💾 Saved fallback word to cloud words: ${searchTerm}`);
+      } catch (saveError) {
+        // 如果是重复键错误，重新查询已存在的单词
+        if (saveError.code === 11000) {
+          logger.info(`🔄 Fallback word already exists, fetching from database: ${searchTerm}`);
+          cloudWord = await CloudWord.findOne({ word: searchTerm, language });
+          if (cloudWord) {
+            // 更新搜索次数和最后搜索时间
+            await updateCloudWordSearchStats(searchTerm, language);
+            logger.info(`✅ Found existing fallback word in database: ${searchTerm}`);
+          } else {
+            throw saveError; // 如果还是找不到，抛出原始错误
+          }
+        } else {
+          throw saveError;
+        }
+      }
       
       // 保存到内存缓存
       wordCache.set(cacheKey, cloudWord.toObject());
