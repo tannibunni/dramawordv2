@@ -42,7 +42,7 @@ export const searchWord = async (req: Request, res: Response): Promise<void> => 
     // 1. 检查内存缓存
     if (wordCache.has(cacheKey)) {
       logger.info(`✅ Found in memory cache: ${searchTerm}`);
-      const cachedWord = wordCache.get(searchTerm)!;
+      const cachedWord = wordCache.get(cacheKey)!;
       // 修复：缓存里存的是普通对象，不能再 .toObject()
       res.json({
         success: true,
