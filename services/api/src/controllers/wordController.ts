@@ -69,11 +69,12 @@ export const searchWord = async (req: Request, res: Response): Promise<void> => 
       // 保存搜索历史
       await saveSearchHistoryToDB(searchTerm, cloudWord.definitions[0]?.definition || '暂无释义');
       
+      const wordData = cloudWord.toObject();
       res.json({
         success: true,
         data: {
-          ...cloudWord.toObject(),
-          correctedWord: cloudWord.correctedWord || searchTerm
+          ...wordData,
+          correctedWord: wordData.correctedWord || searchTerm
         },
         source: 'cloud_words'
       });
@@ -124,11 +125,18 @@ export const searchWord = async (req: Request, res: Response): Promise<void> => 
       // 6. 保存搜索历史
       await saveSearchHistoryToDB(searchTerm, cloudWord.definitions[0]?.definition || '暂无释义');
 
+      const wordData = cloudWord.toObject();
+      logger.info(`📄 Word data for response:`, {
+        word: wordData.word,
+        correctedWord: wordData.correctedWord,
+        hasCorrectedWord: !!wordData.correctedWord
+      });
+      
       res.json({
         success: true,
         data: {
-          ...cloudWord.toObject(),
-          correctedWord: cloudWord.correctedWord || searchTerm
+          ...wordData,
+          correctedWord: wordData.correctedWord || searchTerm
         },
         source: 'ai'
       });
@@ -181,11 +189,12 @@ export const searchWord = async (req: Request, res: Response): Promise<void> => 
       // 保存搜索历史
       await saveSearchHistoryToDB(searchTerm, cloudWord.definitions[0]?.definition || '暂无释义');
 
+      const wordData = cloudWord.toObject();
       res.json({
         success: true,
         data: {
-          ...cloudWord.toObject(),
-          correctedWord: cloudWord.correctedWord || searchTerm
+          ...wordData,
+          correctedWord: wordData.correctedWord || searchTerm
         },
         source: 'fallback',
         message: 'AI service unavailable, using basic definition'
