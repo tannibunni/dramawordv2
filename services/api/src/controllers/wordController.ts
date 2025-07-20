@@ -714,37 +714,47 @@ async function generateWordData(word: string, language: string = 'en') {
       case 'ja':
         return `你是专业的日语词典助手。
 
-任务：为日语单词或短语 "${word}" 生成简洁的词典信息，适合中文用户学习日语。
+任务：为日语单词或短语 "${word}" 生成详细的词典信息，适合中文用户学习日语。
+
+重要：请仔细分析用户输入的单词，并返回正确的日语写法：
+- 如果输入的是假名（如"taberu"），返回对应的汉字写法（如"食べる"）
+- 如果输入的是汉字，返回原词
+- 提供假名标注（如"たべる"）
+- 提供罗马音标注（如"ta be ru"）
 
 返回JSON格式：
 {
-  "phonetic": "假名发音",
+  "phonetic": "罗马音标注（如：ta be ru）",
   "definitions": [
     {
       "partOfSpeech": "词性",
       "definition": "【简洁的中文释义，适合语言学习】",
       "examples": [
         {
-          "japanese": "日文例句",
+          "japanese": "日文例句（使用汉字和假名）",
           "chinese": "【简洁的中文翻译】"
         }
       ]
     }
   ],
-  "correctedWord": "${word}"
+  "correctedWord": "正确的日语写法（汉字形式）",
+  "kana": "假名标注（如：たべる）"
 }
 
 重要要求：
+- correctedWord：必须返回正确的日语汉字写法
+- kana：提供假名标注，用于显示在汉字上方
+- phonetic：提供罗马音标注，用空格分隔音节
 - 释义要简洁明了，适合语言学习
 - 例句要简单实用，贴近日常生活
 - 日文例句必须完全使用假名和汉字，绝对不能用英文单词
-- 例句应该是纯日文，比如："こんにちは、お元気ですか。"
+- 例句应该是纯日文，比如："私は寿司を食べます。"
 - 只返回JSON，不要其他内容
 
 示例：
-- "こんにちは" → 释义："你好"，例句："こんにちは、お元気ですか。" → "你好，你好吗？"
-- "ありがとう" → 释义："谢谢"，例句："手伝ってくれてありがとう。" → "谢谢你的帮助。"
-- "りんご" → 释义："苹果"，例句："りんごを食べます。" → "我吃苹果。"
+- 输入"taberu" → correctedWord:"食べる", kana:"たべる", phonetic:"ta be ru"
+- 输入"nomu" → correctedWord:"飲む", kana:"のむ", phonetic:"no mu"
+- 输入"iku" → correctedWord:"行く", kana:"いく", phonetic:"i ku"
 
 注意：日文例句必须只包含假名和汉字，不能包含任何英文单词！
 
@@ -928,7 +938,8 @@ async function generateWordData(word: string, language: string = 'en') {
         phonetic: parsedData.phonetic || `/${word}/`,
         definitions: definitions,
         audioUrl: getYoudaoTTSUrl(word),
-        correctedWord: parsedData.correctedWord || word
+        correctedWord: parsedData.correctedWord || word,
+        kana: parsedData.kana || undefined
       };
     } catch (parseError) {
       logger.error('❌ Failed to parse OpenAI response:', parseError);

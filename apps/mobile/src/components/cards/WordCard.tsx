@@ -36,6 +36,7 @@ export interface WordData {
   correctedWord?: string; // 新增：标准单词
   sources?: Array<{ id: string; type: 'wordbook' | 'episode'; name: string }>; // 新增：单词来源
   feedbackStats?: { positive: number; negative: number; total: number }; // 新增：反馈统计
+  kana?: string; // 新增：日语假名标注
 }
 
 interface WordCardProps {
@@ -404,7 +405,12 @@ const WordCard: React.FC<WordCardProps> = ({
       {/* 头部：单词、音标、发音按钮 */}
       <View style={styles.headerRow}>
         <View style={{ flex: 1 }}>
-          <Text style={styles.word}>{wordData.correctedWord || wordData.word}</Text>
+          <View style={styles.wordContainer}>
+            <Text style={styles.word}>{wordData.correctedWord || wordData.word}</Text>
+            {wordData.kana && (
+              <Text style={styles.kana}>{wordData.kana}</Text>
+            )}
+          </View>
           <Text style={styles.phonetic}>{wordData.phonetic}</Text>
           {/* 来源 TAG 区域 */}
           {Array.isArray(wordData.sources) && wordData.sources.length > 0 && (
@@ -592,10 +598,22 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 8,
   },
+  wordContainer: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    marginBottom: 4,
+  },
   word: {
     fontSize: 32,
     fontWeight: 'bold',
     color: '#222',
+  },
+  kana: {
+    fontSize: 16,
+    color: '#888',
+    fontStyle: 'italic',
+    marginLeft: 8,
+    marginBottom: 4,
   },
   phonetic: {
     fontSize: 18,
