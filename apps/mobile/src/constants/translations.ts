@@ -138,7 +138,12 @@ export type TranslationKey =
   | 'congratulations_unlock'
   | 'word_badge'
   | 'word_not_found'
-  | 'check_spelling_or_search';
+  | 'check_spelling_or_search'
+  | 'swipe_down_for_more_examples'
+  | 'swipe_left_ignore_right_collect'
+  | 'ignore'
+  | 'collect'
+  | 'source_from';
 
 // 翻译内容
 export const translations: Record<AppLanguage, Record<TranslationKey, string>> = {
@@ -279,6 +284,11 @@ export const translations: Record<AppLanguage, Record<TranslationKey, string>> =
     word_badge: '个单词徽章',
     word_not_found: '未找到该单词',
     check_spelling_or_search: '请检查拼写或在首页查词',
+    swipe_down_for_more_examples: '向下滑动查看更多例句',
+    swipe_left_ignore_right_collect: '左滑忽略 · 右滑收藏',
+    ignore: '忽略',
+    collect: '收藏',
+    source_from: '来源于',
   },
   
   'en-US': {
@@ -418,6 +428,11 @@ export const translations: Record<AppLanguage, Record<TranslationKey, string>> =
     word_badge: ' word badge',
     word_not_found: 'Word not found',
     check_spelling_or_search: 'Please check spelling or search on home page',
+    swipe_down_for_more_examples: 'Swipe down for more examples',
+    swipe_left_ignore_right_collect: 'Swipe left to ignore · Swipe right to collect',
+    ignore: 'Ignore',
+    collect: 'Collect',
+    source_from: 'From',
   },
 };
 

@@ -6,7 +6,7 @@ async function testTMDBLanguage() {
   // 测试搜索API - 中文
   console.log('📝 Testing search API with Chinese language...');
   try {
-    const response = await fetch(`${API_BASE_URL}/tmdb/search?query=breaking&language=zh-CN`);
+    const response = await fetch(`${API_BASE_URL}/tmdb/search?query=friends&language=zh-CN`);
     const data = await response.json();
     if (data.success && data.data.results.length > 0) {
       const show = data.data.results[0];
@@ -19,7 +19,7 @@ async function testTMDBLanguage() {
   // 测试搜索API - 英文
   console.log('\n📝 Testing search API with English language...');
   try {
-    const response = await fetch(`${API_BASE_URL}/tmdb/search?query=breaking&language=en-US`);
+    const response = await fetch(`${API_BASE_URL}/tmdb/search?query=friends&language=en-US`);
     const data = await response.json();
     if (data.success && data.data.results.length > 0) {
       const show = data.data.results[0];
@@ -32,7 +32,7 @@ async function testTMDBLanguage() {
   // 测试剧集详情API - 中文
   console.log('\n📝 Testing show details API with Chinese language...');
   try {
-    const response = await fetch(`${API_BASE_URL}/tmdb/shows/1396?language=zh-CN`); // Breaking Bad
+    const response = await fetch(`${API_BASE_URL}/tmdb/shows/1668?language=zh-CN`); // Friends
     const data = await response.json();
     if (data.success) {
       const show = data.data;
@@ -45,7 +45,7 @@ async function testTMDBLanguage() {
   // 测试剧集详情API - 英文
   console.log('\n📝 Testing show details API with English language...');
   try {
-    const response = await fetch(`${API_BASE_URL}/tmdb/shows/1396?language=en-US`); // Breaking Bad
+    const response = await fetch(`${API_BASE_URL}/tmdb/shows/1668?language=en-US`); // Friends
     const data = await response.json();
     if (data.success) {
       const show = data.data;
