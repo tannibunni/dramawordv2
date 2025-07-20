@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -14,6 +14,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../../../../packages/ui/src/tokens';
 import { useAppLanguage } from '../../context/AppLanguageContext';
 import { t } from '../../constants/translations';
+import { wordFeedbackService } from '../../services/wordFeedbackService';
 
 export interface WordDefinition {
   partOfSpeech: string;
@@ -34,6 +35,7 @@ export interface WordData {
   lastSearched?: string;
   correctedWord?: string; // 新增：标准单词
   sources?: Array<{ id: string; type: 'wordbook' | 'episode'; name: string }>; // 新增：单词来源
+  feedbackStats?: { positive: number; negative: number; total: number }; // 新增：反馈统计
 }
 
 interface WordCardProps {
@@ -43,6 +45,7 @@ interface WordCardProps {
   onPlayAudio?: (word: string) => void;
   showActions?: boolean;
   style?: any;
+  onFeedbackSubmitted?: (word: string, feedback: 'positive' | 'negative') => void; // 新增：反馈回调
 }
 
 const CARD_CONTENT_MAX_HEIGHT = 360; // 可根据实际UI调整
@@ -57,6 +60,7 @@ const WordCard: React.FC<WordCardProps> = ({
   onPlayAudio,
   showActions = false, // 默认不显示按钮，使用滑动操作
   style,
+  onFeedbackSubmitted,
 }) => {
   const { appLanguage } = useAppLanguage();
   // 添加调试信息
@@ -67,11 +71,91 @@ const WordCard: React.FC<WordCardProps> = ({
   
   const hasMultipleExamples = wordData.definitions.some(def => def.examples && def.examples.length > 1);
   const [showScrollTip, setShowScrollTip] = useState(hasMultipleExamples);
+  const [userFeedback, setUserFeedback] = useState<'positive' | 'negative' | null>(null);
+  const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false);
+  const [feedbackStats, setFeedbackStats] = useState(wordData.feedbackStats);
   const translateX = useRef(new Animated.Value(0)).current;
   const translateY = useRef(new Animated.Value(0)).current;
   const cardOpacity = useRef(new Animated.Value(1)).current;
   const cardScale = useRef(new Animated.Value(1)).current;
   const cardRotation = useRef(new Animated.Value(0)).current;
+
+  // 加载用户反馈状态
+  useEffect(() => {
+    loadUserFeedback();
+    loadFeedbackStats();
+  }, [wordData.word]);
+
+  const loadUserFeedback = async () => {
+    try {
+      const response = await wordFeedbackService.getUserFeedback(wordData.correctedWord || wordData.word);
+      if (response.success && response.data) {
+        setUserFeedback(response.data.feedback);
+      }
+    } catch (error) {
+      console.error('加载用户反馈失败:', error);
+    }
+  };
+
+  const loadFeedbackStats = async () => {
+    try {
+      const response = await wordFeedbackService.getFeedbackStats(wordData.correctedWord || wordData.word);
+      if (response.success && response.data) {
+        setFeedbackStats(response.data);
+      }
+    } catch (error) {
+      console.error('加载反馈统计失败:', error);
+    }
+  };
+
+  // 提交反馈
+  const handleFeedback = async (feedback: 'positive' | 'negative') => {
+    if (isSubmittingFeedback) return;
+    
+    setIsSubmittingFeedback(true);
+    try {
+      const response = await wordFeedbackService.submitFeedback(
+        wordData.correctedWord || wordData.word,
+        feedback
+      );
+      
+      if (response.success) {
+        setUserFeedback(feedback);
+        // 更新本地统计
+        if (feedbackStats) {
+          const newStats = { ...feedbackStats };
+          if (userFeedback === 'positive' && feedback === 'negative') {
+            newStats.positive--;
+            newStats.negative++;
+          } else if (userFeedback === 'negative' && feedback === 'positive') {
+            newStats.positive++;
+            newStats.negative--;
+          } else if (!userFeedback) {
+            if (feedback === 'positive') {
+              newStats.positive++;
+            } else {
+              newStats.negative++;
+            }
+            newStats.total++;
+          }
+          setFeedbackStats(newStats);
+        }
+        
+        // 调用回调函数
+        onFeedbackSubmitted?.(wordData.correctedWord || wordData.word, feedback);
+        
+        // 显示成功提示
+        Alert.alert(t('feedback_submitted', appLanguage));
+      } else {
+        Alert.alert(t('feedback_error', appLanguage), response.error);
+      }
+    } catch (error) {
+      console.error('提交反馈失败:', error);
+      Alert.alert(t('feedback_error', appLanguage));
+    } finally {
+      setIsSubmittingFeedback(false);
+    }
+  };
 
   // 收藏单词
   const handleCollect = () => {
@@ -395,6 +479,64 @@ const WordCard: React.FC<WordCardProps> = ({
       <View style={styles.swipeHint}>
         <Text style={styles.swipeHintText}>{t('swipe_left_ignore_right_collect', appLanguage)}</Text>
       </View>
+
+      {/* 反馈系统 */}
+      <View style={styles.feedbackContainer}>
+        <View style={styles.feedbackButtons}>
+          <TouchableOpacity
+            style={[
+              styles.feedbackButton,
+              userFeedback === 'positive' && styles.feedbackButtonActive
+            ]}
+            onPress={() => handleFeedback('positive')}
+            disabled={isSubmittingFeedback}
+            activeOpacity={0.7}
+          >
+            <Ionicons 
+              name="thumbs-up" 
+              size={20} 
+              color={userFeedback === 'positive' ? colors.success[500] : colors.text.secondary} 
+            />
+            <Text style={[
+              styles.feedbackButtonText,
+              userFeedback === 'positive' && styles.feedbackButtonTextActive
+            ]}>
+              {t('feedback_helpful', appLanguage)}
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[
+              styles.feedbackButton,
+              userFeedback === 'negative' && styles.feedbackButtonActive
+            ]}
+            onPress={() => handleFeedback('negative')}
+            disabled={isSubmittingFeedback}
+            activeOpacity={0.7}
+          >
+            <Ionicons 
+              name="thumbs-down" 
+              size={20} 
+              color={userFeedback === 'negative' ? colors.error[500] : colors.text.secondary} 
+            />
+            <Text style={[
+              styles.feedbackButtonText,
+              userFeedback === 'negative' && styles.feedbackButtonTextActive
+            ]}>
+              {t('feedback_not_helpful', appLanguage)}
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* 反馈统计 */}
+        {feedbackStats && feedbackStats.total > 0 && (
+          <View style={styles.feedbackStats}>
+            <Text style={styles.feedbackStatsText}>
+              {feedbackStats.positive} 👍 {feedbackStats.negative} 👎
+            </Text>
+          </View>
+        )}
+      </View>
         </Animated.View>
       </PanGestureHandler>
 
@@ -594,6 +736,49 @@ const styles = StyleSheet.create({
     color: colors.text.inverse,
     fontSize: 15,
     fontWeight: '500',
+  },
+  feedbackContainer: {
+    marginTop: 16,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: colors.border.light,
+  },
+  feedbackButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginBottom: 8,
+  },
+  feedbackButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: colors.background.tertiary,
+    borderWidth: 1,
+    borderColor: colors.border.light,
+  },
+  feedbackButtonActive: {
+    backgroundColor: colors.primary[50],
+    borderColor: colors.primary[300],
+  },
+  feedbackButtonText: {
+    marginLeft: 6,
+    fontSize: 14,
+    color: colors.text.secondary,
+    fontWeight: '500',
+  },
+  feedbackButtonTextActive: {
+    color: colors.text.primary,
+    fontWeight: '600',
+  },
+  feedbackStats: {
+    alignItems: 'center',
+    marginTop: 4,
+  },
+  feedbackStatsText: {
+    fontSize: 12,
+    color: colors.text.tertiary,
   },
 });
 

@@ -156,7 +156,11 @@ export type TranslationKey =
   | 'no_audio_resource'
   | 'no_audio_resource_message'
   | 'play_error'
-  | 'play_failed';
+  | 'play_failed'
+  | 'feedback_helpful'
+  | 'feedback_not_helpful'
+  | 'feedback_submitted'
+  | 'feedback_error';
 
 // 翻译内容
 export const translations: Record<AppLanguage, Record<TranslationKey, string>> = {
@@ -315,6 +319,10 @@ export const translations: Record<AppLanguage, Record<TranslationKey, string>> =
     no_audio_resource_message: '该单词暂无发音资源',
     play_error: '播放出错',
     play_failed: '播放失败',
+    feedback_helpful: '有帮助',
+    feedback_not_helpful: '没帮助',
+    feedback_submitted: '反馈已提交',
+    feedback_error: '反馈提交失败',
   },
   
   'en-US': {
@@ -472,6 +480,10 @@ export const translations: Record<AppLanguage, Record<TranslationKey, string>> =
     no_audio_resource_message: 'This word has no audio resource',
     play_error: 'Play Error',
     play_failed: 'Play Failed',
+    feedback_helpful: 'Helpful',
+    feedback_not_helpful: 'Not Helpful',
+    feedback_submitted: 'Feedback Submitted',
+    feedback_error: 'Feedback Submission Failed',
   },
 };
 

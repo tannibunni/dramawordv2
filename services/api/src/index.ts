@@ -21,6 +21,7 @@ import wechatRoutes from './routes/wechat';
 import appleRoutes from './routes/apple';
 import tmdbRoutes from './routes/tmdb';
 import debugRoutes from './routes/debug';
+import wordFeedbackRoutes from './routes/wordFeedback';
 import { logger } from './utils/logger';
 
 const app = express();
@@ -48,6 +49,7 @@ app.use('/api/wechat', wechatRoutes);
 app.use('/api/apple', appleRoutes);
 app.use('/api/tmdb', tmdbRoutes);
 app.use('/api/debug', debugRoutes);
+app.use('/api/word-feedback', wordFeedbackRoutes);
 
 // 健康检查
 app.get('/health', (req, res) => {
