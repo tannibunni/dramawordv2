@@ -7,7 +7,7 @@ export class WordFeedbackController {
   static async submitFeedback(req: Request, res: Response) {
     try {
       const { word, feedback } = req.body;
-      const userId = (req as any).user?.id || 'guest';
+      const userId = (req as any).user?.id || `guest_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
       if (!word || !feedback) {
         return res.status(400).json({
@@ -85,7 +85,7 @@ export class WordFeedbackController {
   static async getUserFeedback(req: Request, res: Response) {
     try {
       const { word } = req.params;
-      const userId = (req as any).user?.id || 'guest';
+      const userId = (req as any).user?.id || `guest_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
       if (!word) {
         return res.status(400).json({
