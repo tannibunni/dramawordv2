@@ -86,7 +86,9 @@ const LanguagePicker: React.FC<LanguagePickerProps> = ({ onLanguageChange }) => 
                   <View style={styles.languageInfo}>
                     <Text style={styles.languageFlag}>{language.flag}</Text>
                     <View style={styles.languageText}>
-                      <Text style={styles.languageName}>{language.name}</Text>
+                      <Text style={styles.languageName}>
+                        {appLanguage === 'en-US' ? language.nativeName : language.name}
+                      </Text>
                       <Text style={styles.languageCode}>{language.code.toUpperCase()}</Text>
                     </View>
                   </View>
@@ -111,7 +113,7 @@ const LanguagePicker: React.FC<LanguagePickerProps> = ({ onLanguageChange }) => 
 
             <View style={styles.modalFooter}>
               <Text style={styles.footerText}>
-                {t('current_environment', appLanguage)}{currentLanguage.name}
+                {t('current_environment', appLanguage)}{appLanguage === 'en-US' ? currentLanguage.nativeName : currentLanguage.name}
               </Text>
             </View>
           </View>
