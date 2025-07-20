@@ -143,7 +143,20 @@ export type TranslationKey =
   | 'swipe_left_ignore_right_collect'
   | 'ignore'
   | 'collect'
-  | 'source_from';
+  | 'source_from'
+  | 'switch_language_environment'
+  | 'current_environment'
+  | 'tip'
+  | 'please_enter_word'
+  | 'load_history_failed'
+  | 'check_network_connection'
+  | 'no_suitable_english_meaning'
+  | 'try_other_chinese_words'
+  | 'please_enter_wordbook_name'
+  | 'no_audio_resource'
+  | 'no_audio_resource_message'
+  | 'play_error'
+  | 'play_failed';
 
 // 翻译内容
 export const translations: Record<AppLanguage, Record<TranslationKey, string>> = {
@@ -289,6 +302,19 @@ export const translations: Record<AppLanguage, Record<TranslationKey, string>> =
     ignore: '忽略',
     collect: '收藏',
     source_from: '来源于',
+    switch_language_environment: '切换语言环境',
+    current_environment: '当前环境：',
+    tip: '提示',
+    please_enter_word: '请输入要查询的单词',
+    load_history_failed: '加载历史词失败，请检查网络连接',
+    check_network_connection: '请检查网络连接',
+    no_suitable_english_meaning: '未找到合适的英文释义',
+    try_other_chinese_words: '请尝试输入其他中文词语，或稍后再试。',
+    please_enter_wordbook_name: '请输入单词本名称',
+    no_audio_resource: '没有发音',
+    no_audio_resource_message: '该单词暂无发音资源',
+    play_error: '播放出错',
+    play_failed: '播放失败',
   },
   
   'en-US': {
@@ -433,6 +459,19 @@ export const translations: Record<AppLanguage, Record<TranslationKey, string>> =
     ignore: 'Ignore',
     collect: 'Collect',
     source_from: 'From',
+    switch_language_environment: 'Switch Language Environment',
+    current_environment: 'Current Environment: ',
+    tip: 'Tip',
+    please_enter_word: 'Please enter a word to search',
+    load_history_failed: 'Failed to load search history, please check network connection',
+    check_network_connection: 'Please check network connection',
+    no_suitable_english_meaning: 'No suitable English meaning found',
+    try_other_chinese_words: 'Please try other Chinese words or try again later.',
+    please_enter_wordbook_name: 'Please enter wordbook name',
+    no_audio_resource: 'No Audio',
+    no_audio_resource_message: 'This word has no audio resource',
+    play_error: 'Play Error',
+    play_failed: 'Play Failed',
   },
 };
 

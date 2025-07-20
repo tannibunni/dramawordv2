@@ -91,7 +91,7 @@ const HomeScreen: React.FC = () => {
       setRecentWords(uniqueWords);
     } catch (error) {
       console.error('加载最近查词失败:', error);
-      Alert.alert('提示', '加载历史词失败，请检查网络连接');
+      Alert.alert(t('tip', appLanguage), t('load_history_failed', appLanguage));
     } finally {
       setIsLoadingRecent(false);
     }
@@ -103,7 +103,7 @@ const HomeScreen: React.FC = () => {
   const handleSearch = async () => {
     const word = searchText.trim();
     if (!word) {
-      Alert.alert('提示', '请输入要查询的单词');
+      Alert.alert(t('tip', appLanguage), t('please_enter_word', appLanguage));
       return;
     }
     setIsLoading(true);
@@ -137,7 +137,7 @@ const HomeScreen: React.FC = () => {
           setIsLoading(false);
           return;
         } else {
-          Alert.alert('未找到合适的英文释义', '请尝试输入其他中文词语，或稍后再试。');
+          Alert.alert(t('no_suitable_english_meaning', appLanguage), t('try_other_chinese_words', appLanguage));
           setIsLoading(false);
           return;
         }
@@ -245,7 +245,7 @@ const HomeScreen: React.FC = () => {
   // 修改 handleCreateWordbook：只新建单词本并选中，不添加单词
   const handleCreateWordbook = () => {
     if (!newWordbookName.trim()) {
-      Alert.alert('请输入单词本名称');
+      Alert.alert(t('please_enter_wordbook_name', appLanguage));
       return;
     }
     const newId = Date.now();
@@ -343,7 +343,7 @@ const HomeScreen: React.FC = () => {
     try {
       if (!searchResult?.audioUrl) {
         console.warn('⚠️ 没有音频URL');
-        Alert.alert('没有发音', '该单词暂无发音资源');
+        Alert.alert(t('no_audio_resource', appLanguage), t('no_audio_resource_message', appLanguage));
         return;
       }
 
@@ -370,7 +370,7 @@ const HomeScreen: React.FC = () => {
           }
         } else if (status.error) {
           console.error('🎵 播放出错:', status.error);
-          Alert.alert('播放出错', `错误信息: ${status.error}`);
+          Alert.alert(t('play_error', appLanguage), `错误信息: ${status.error}`);
         }
       });
 
@@ -388,7 +388,7 @@ const HomeScreen: React.FC = () => {
       });
       
       Alert.alert(
-        '播放失败', 
+        t('play_failed', appLanguage), 
         `无法播放发音\n\n错误信息: ${error instanceof Error ? error.message : String(error)}\n\n音频URL: ${searchResult?.audioUrl}`
       );
     }

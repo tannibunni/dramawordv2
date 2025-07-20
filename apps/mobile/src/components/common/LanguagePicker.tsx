@@ -12,6 +12,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../../../../packages/ui/src/tokens';
 import { useLanguage } from '../../context/LanguageContext';
 import { SUPPORTED_LANGUAGES, SupportedLanguageCode } from '../../constants/config';
+import { useAppLanguage } from '../../context/AppLanguageContext';
+import { t } from '../../constants/translations';
 
 interface LanguagePickerProps {
   onLanguageChange?: (language: string) => void;
@@ -19,6 +21,7 @@ interface LanguagePickerProps {
 
 const LanguagePicker: React.FC<LanguagePickerProps> = ({ onLanguageChange }) => {
   const { selectedLanguage, setSelectedLanguage } = useLanguage();
+  const { appLanguage } = useAppLanguage();
   const [isModalVisible, setIsModalVisible] = useState(false);
 
   const currentLanguage = SUPPORTED_LANGUAGES[selectedLanguage];
@@ -60,7 +63,7 @@ const LanguagePicker: React.FC<LanguagePickerProps> = ({ onLanguageChange }) => 
         >
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>切换语言环境</Text>
+              <Text style={styles.modalTitle}>{t('switch_language_environment', appLanguage)}</Text>
               <TouchableOpacity
                 onPress={() => setIsModalVisible(false)}
                 style={styles.closeButton}
@@ -97,7 +100,7 @@ const LanguagePicker: React.FC<LanguagePickerProps> = ({ onLanguageChange }) => 
                           color={colors.primary[500]} 
                         />
                         <View style={styles.currentIndicator}>
-                          <Text style={styles.currentText}>当前</Text>
+                          <Text style={styles.currentText}>{t('current_language', appLanguage)}</Text>
                         </View>
                       </>
                     )}
@@ -108,7 +111,7 @@ const LanguagePicker: React.FC<LanguagePickerProps> = ({ onLanguageChange }) => 
 
             <View style={styles.modalFooter}>
               <Text style={styles.footerText}>
-                当前环境：{currentLanguage.name}
+                {t('current_environment', appLanguage)}{currentLanguage.name}
               </Text>
             </View>
           </View>
