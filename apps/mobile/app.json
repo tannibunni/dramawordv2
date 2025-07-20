@@ -17,7 +17,8 @@
           "appid": "wxa225945508659eb8",
           "universalLink": "https://dramaword.com/app/"
         }
-      ]
+      ],
+      "expo-localization"
     ],
     "ios": {
       "supportsTablet": true,

@@ -28,6 +28,7 @@ import LanguagePicker from '../../components/common/LanguagePicker';
 import { useLanguage } from '../../context/LanguageContext';
 import { useAppLanguage } from '../../context/AppLanguageContext';
 import { t } from '../../constants/translations';
+import { LanguageDebugInfo } from '../../components/common/LanguageDebugInfo';
 
 const HomeScreen: React.FC = () => {
   const [searchText, setSearchText] = useState('');
@@ -774,6 +775,7 @@ const HomeScreen: React.FC = () => {
         </KeyboardAvoidingView>
       </Modal>
       {/* 删除新建单词本弹窗，改为内联输入框 */}
+      <LanguageDebugInfo />
     </SafeAreaView>
   );
 };
