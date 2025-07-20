@@ -8,7 +8,7 @@ async function testJapaneseWordDebug() {
     console.log('📤 发送请求到:', `${API_BASE_URL}/search`);
     console.log('📤 请求方法: POST');
     console.log('📤 请求体:', {
-      word: 'taberu',
+      word: 'yomu',
       language: 'ja'
     });
     
@@ -18,7 +18,7 @@ async function testJapaneseWordDebug() {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        word: 'taberu',
+        word: 'yomu',
         language: 'ja'
       }),
     });
@@ -56,11 +56,11 @@ async function testJapaneseWordDebug() {
 // 测试不同的日语输入
 async function testDifferentInputs() {
   const testCases = [
-    { input: 'taberu', expected: '食べる' },
-    { input: 'nomu', expected: '飲む' },
-    { input: 'iku', expected: '行く' },
-    { input: 'miru', expected: '見る' },
-    { input: 'kaku', expected: '書く' }
+    { input: 'yomu', expected: '読む' },
+    { input: 'hanasu', expected: '話す' },
+    { input: 'kiku', expected: '聞く' },
+    { input: 'aruku', expected: '歩く' },
+    { input: 'hashiru', expected: '走る' }
   ];
   
   for (const testCase of testCases) {

@@ -841,6 +841,9 @@ async function generateWordData(word: string, language: string = 'en') {
       throw new Error('No response from OpenAI');
     }
 
+    // 添加日志查看AI原始响应
+    logger.info(`🤖 AI原始响应 (${language}): ${responseText}`);
+
     try {
       const parsedData = JSON.parse(responseText);
       
