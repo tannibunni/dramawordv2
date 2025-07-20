@@ -5,11 +5,11 @@ import { logger } from '../utils/logger';
 export class TMDBController {
   /**
    * 搜索剧集
-   * GET /api/tmdb/search?query=剧集名&page=1
+   * GET /api/tmdb/search?query=剧集名&page=1&language=zh-CN
    */
   static async searchShows(req: Request, res: Response) {
     try {
-      const { query, page = 1 } = req.query;
+      const { query, page = 1, language = 'zh-CN' } = req.query;
       
       if (!query || typeof query !== 'string') {
         return res.status(400).json({
@@ -18,8 +18,8 @@ export class TMDBController {
         });
       }
 
-      const results = await TMDBService.searchShows(query, parseInt(page as string));
-      logger.info(`TMDB search successful: "${query}" - ${results.results.length} results`);
+      const results = await TMDBService.searchShows(query, parseInt(page as string), language as string);
+      logger.info(`TMDB search successful: "${query}" - ${results.results.length} results (language: ${language})`);
       
       res.json({
         success: true,
@@ -36,11 +36,12 @@ export class TMDBController {
 
   /**
    * 获取剧集详情
-   * GET /api/tmdb/shows/:id
+   * GET /api/tmdb/shows/:id?language=zh-CN
    */
   static async getShowDetails(req: Request, res: Response) {
     try {
       const { id } = req.params;
+      const { language = 'zh-CN' } = req.query;
       
       if (!id) {
         return res.status(400).json({
@@ -57,7 +58,7 @@ export class TMDBController {
         });
       }
 
-      const show = await TMDBService.getShowDetails(showId);
+      const show = await TMDBService.getShowDetails(showId, language as string);
       
       res.json({
         success: true,
@@ -74,11 +75,12 @@ export class TMDBController {
 
   /**
    * 获取剧集季数信息
-   * GET /api/tmdb/shows/:id/seasons/:seasonNumber
+   * GET /api/tmdb/shows/:id/seasons/:seasonNumber?language=zh-CN
    */
   static async getSeasonDetails(req: Request, res: Response) {
     try {
       const { id, seasonNumber } = req.params;
+      const { language = 'zh-CN' } = req.query;
       
       if (!id || !seasonNumber) {
         return res.status(400).json({
@@ -97,7 +99,7 @@ export class TMDBController {
         });
       }
 
-      const seasonDetails = await TMDBService.getSeasonDetails(showId, season);
+      const seasonDetails = await TMDBService.getSeasonDetails(showId, season, language as string);
       
       res.json({
         success: true,
@@ -114,11 +116,12 @@ export class TMDBController {
 
   /**
    * 获取相似剧集
-   * GET /api/tmdb/shows/:id/similar?page=1
+   * GET /api/tmdb/shows/:id/similar?page=1&language=zh-CN
    */
   static async getSimilarShows(req: Request, res: Response) {
     try {
       const { id } = req.params;
+      const { page = 1, language = 'zh-CN' } = req.query;
       
       if (!id) {
         return res.status(400).json({
@@ -135,7 +138,7 @@ export class TMDBController {
         });
       }
 
-      const similarShows = await TMDBService.getSimilarShows(showId);
+      const similarShows = await TMDBService.getSimilarShows(showId, parseInt(page as string), language as string);
       
       res.json({
         success: true,
@@ -152,12 +155,12 @@ export class TMDBController {
 
   /**
    * 获取热门剧集
-   * GET /api/tmdb/shows/popular?page=1
+   * GET /api/tmdb/shows/popular?page=1&language=zh-CN
    */
   static async getPopularShows(req: Request, res: Response) {
     try {
-      const { page = 1 } = req.query;
-      const results = await TMDBService.getPopularShows(parseInt(page as string));
+      const { page = 1, language = 'zh-CN' } = req.query;
+      const results = await TMDBService.getPopularShows(parseInt(page as string), language as string);
       
       res.json({
         success: true,
@@ -174,12 +177,12 @@ export class TMDBController {
 
   /**
    * 获取正在播放的剧集
-   * GET /api/tmdb/shows/on-the-air?page=1
+   * GET /api/tmdb/shows/on-the-air?page=1&language=zh-CN
    */
   static async getOnTheAirShows(req: Request, res: Response) {
     try {
-      const { page = 1 } = req.query;
-      const results = await TMDBService.getOnTheAirShows(parseInt(page as string));
+      const { page = 1, language = 'zh-CN' } = req.query;
+      const results = await TMDBService.getOnTheAirShows(parseInt(page as string), language as string);
       
       res.json({
         success: true,

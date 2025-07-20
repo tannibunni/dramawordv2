@@ -15,6 +15,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { EditProfileModal } from '../../components/profile/EditProfileModal';
+import AppLanguageSelector from '../../components/profile/AppLanguageSelector';
 import { UserService } from '../../services/userService';
 import { useVocabulary } from '../../context/VocabularyContext';
 import { useShowList } from '../../context/ShowListContext';
@@ -22,9 +23,12 @@ import { wordService } from '../../services/wordService';
 import { colors } from '../../constants/colors';
 import { useNavigation } from '../../components/navigation/NavigationContext';
 import { useAuth } from '../../context/AuthContext';
+import { useAppLanguage } from '../../context/AppLanguageContext';
+import { t } from '../../constants/translations';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LearningStatsSection } from '../../components/learning/LearningStatsSection';
 import SubscriptionScreen from './SubscriptionScreen';
+
 
 interface UserStats {
   totalWords: number;
@@ -49,12 +53,14 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   const [autoPlayEnabled, setAutoPlayEnabled] = useState(true);
   const [loading, setLoading] = useState(true);
   const [editModalVisible, setEditModalVisible] = useState(false);
+  const [languageModalVisible, setLanguageModalVisible] = useState(false);
   const [clearingCache, setClearingCache] = useState(false);
   const [aboutModalVisible, setAboutModalVisible] = useState(false);
   const { vocabulary, clearVocabulary } = useVocabulary();
   const { shows, clearShows } = useShowList();
   const { navigate } = useNavigation();
   const { user, loginType, isAuthenticated, logout: authLogout, login } = useAuth();
+  const { appLanguage } = useAppLanguage();
   const userService = UserService.getInstance();
 
   // 获取用户头像
@@ -88,7 +94,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   // 获取用户昵称
   const getUserNickname = () => {
     if (!user || !loginType) {
-      return '游客用户';
+      return t('guest_user', appLanguage);
     }
 
     if (user.nickname) {
@@ -97,14 +103,14 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
 
     switch (loginType) {
       case 'wechat':
-        return '微信用户';
+        return t('wechat_user', appLanguage);
       case 'apple':
-        return 'Apple用户';
+        return t('apple_user', appLanguage);
       case 'phone':
-        return '手机用户';
+        return t('phone_user', appLanguage);
       case 'guest':
       default:
-        return '游客用户';
+        return t('guest_user', appLanguage);
     }
   };
 
@@ -114,7 +120,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
     avatar: 'https://via.placeholder.com/80',
     email: 'user@example.com',
     joinDate: '2024年1月',
-    level: '中级学习者',
+    level: t('intermediate_learner', appLanguage),
     loginType: 'guest',
   };
 
@@ -160,19 +166,18 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
           />
           <View style={styles.userDetails}>
             <Text style={styles.userName}>{getUserNickname()}</Text>
-            <Text style={styles.userLevel}>中级学习者</Text>
+            <Text style={styles.userLevel}>{t('intermediate_learner', appLanguage)}</Text>
             <Text style={styles.userEmail}>{user?.email || 'user@example.com'}</Text>
-            <Text style={styles.joinDate}>加入时间: 2024年1月</Text>
             {/* 登录按钮或用户名 */}
             {isGuest ? (
               <TouchableOpacity 
                 style={styles.loginButton} 
                 onPress={handleLoginPress}
               >
-                <Text style={styles.loginButtonText}>登录</Text>
+                <Text style={styles.loginButtonText}>{t('login', appLanguage)}</Text>
               </TouchableOpacity>
             ) : (
-              <Text style={styles.loggedInText}>已登录：{user?.nickname || '用户'}</Text>
+              <Text style={styles.loggedInText}>{t('logged_in', appLanguage)}：{user?.nickname || t('user', appLanguage)}</Text>
             )}
           </View>
           <TouchableOpacity style={styles.editButton} onPress={handleEditProfile}>
@@ -183,22 +188,14 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
     );
   };
 
-  // const renderStats = () => (
-  //   <LearningStatsSection
-  //     onBadgePress={(badge) => {
-  //       console.log('奖章被点击:', badge);
-  //     }}
-  //   />
-  // );
-
   const renderSettings = () => (
     <View style={styles.settingsSection}>
-      <Text style={styles.sectionTitle}>设置</Text>
+      <Text style={styles.sectionTitle}>{t('settings', appLanguage)}</Text>
       
       <View style={styles.settingItem}>
         <View style={styles.settingLeft}>
           <Ionicons name="notifications-outline" size={24} color={colors.primary[500]} />
-          <Text style={styles.settingLabel}>推送通知</Text>
+          <Text style={styles.settingLabel}>{t('push_notifications', appLanguage)}</Text>
         </View>
         <Switch
           value={notificationsEnabled}
@@ -208,24 +205,10 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
         />
       </View>
 
-      {/* 深色模式按钮和菜单项已隐藏 */}
-      {/* <View style={styles.settingItem}>
-        <View style={styles.settingLeft}>
-          <Ionicons name="moon-outline" size={24} color={colors.primary[500]} />
-          <Text style={styles.settingLabel}>深色模式</Text>
-        </View>
-        <Switch
-          value={darkModeEnabled}
-          onValueChange={setDarkModeEnabled}
-          trackColor={{ false: colors.neutral[300], true: colors.primary[500] }}
-          thumbColor={darkModeEnabled ? colors.background.secondary : colors.background.secondary}
-        />
-      </View> */}
-
       <View style={styles.settingItem}>
         <View style={styles.settingLeft}>
           <Ionicons name="play-outline" size={24} color={colors.primary[500]} />
-          <Text style={styles.settingLabel}>自动播放音频</Text>
+          <Text style={styles.settingLabel}>{t('auto_play_audio', appLanguage)}</Text>
         </View>
         <Switch
           value={autoPlayEnabled}
@@ -235,10 +218,13 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
         />
       </View>
 
-      <TouchableOpacity style={styles.settingItem}>
+      <TouchableOpacity 
+        style={styles.settingItem}
+        onPress={() => setLanguageModalVisible(true)}
+      >
         <View style={styles.settingLeft}>
           <Ionicons name="language-outline" size={24} color={colors.primary[500]} />
-          <Text style={styles.settingLabel}>语言设置</Text>
+          <Text style={styles.settingLabel}>{t('language_settings', appLanguage)}</Text>
         </View>
         <Ionicons name="chevron-forward" size={20} color={colors.neutral[500]} />
       </TouchableOpacity>
@@ -246,7 +232,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
       <TouchableOpacity style={styles.settingItem}>
         <View style={styles.settingLeft}>
           <Ionicons name="help-circle-outline" size={24} color={colors.primary[500]} />
-          <Text style={styles.settingLabel}>帮助与反馈</Text>
+          <Text style={styles.settingLabel}>{t('help_feedback', appLanguage)}</Text>
         </View>
         <Ionicons name="chevron-forward" size={20} color={colors.neutral[500]} />
       </TouchableOpacity>
@@ -254,29 +240,19 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
       <TouchableOpacity style={styles.settingItem} onPress={() => setAboutModalVisible(true)}>
         <View style={styles.settingLeft}>
           <Ionicons name="information-circle-outline" size={24} color={colors.primary[500]} />
-          <Text style={styles.settingLabel}>关于我们</Text>
+          <Text style={styles.settingLabel}>{t('about_us', appLanguage)}</Text>
         </View>
         <Ionicons name="chevron-forward" size={20} color={colors.neutral[500]} />
       </TouchableOpacity>
 
       {/* 数据管理 */}
-      <View style={styles.section}>
-        <TouchableOpacity
-          style={styles.settingItem}
-          onPress={handleClearAllData}
-          disabled={clearingCache}
-        >
-          <View style={styles.settingLeft}>
-            <Ionicons name="trash-outline" size={20} color={colors.error[500]} />
-            <Text style={[styles.settingText, { color: colors.error[500] }]}>清除所有数据</Text>
-          </View>
-          {clearingCache ? (
-            <ActivityIndicator size="small" color={colors.error[500]} />
-          ) : (
-            <Ionicons name="chevron-forward" size={16} color={colors.error[500]} />
-          )}
-        </TouchableOpacity>
-      </View>
+      <TouchableOpacity style={styles.settingItem} onPress={handleClearAllData}>
+        <View style={styles.settingLeft}>
+          <Ionicons name="trash-outline" size={24} color={colors.error[500]} />
+          <Text style={[styles.settingText, { color: colors.error[500] }]}>{t('clear_all_data', appLanguage)}</Text>
+        </View>
+        <Ionicons name="chevron-forward" size={20} color={colors.neutral[500]} />
+      </TouchableOpacity>
     </View>
   );
 
@@ -286,106 +262,103 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
 
   const handleProfileUpdate = (updatedUser: any) => {
     // 用户信息现在由 AuthContext 管理，这里不需要设置
-    console.log('用户资料已更新:', updatedUser);
+    setEditModalVisible(false);
   };
 
   const handleClearCache = async () => {
-    Alert.alert(
-      '清除缓存',
-      '确定要清除所有缓存数据吗？这将删除所有本地存储的剧集、词汇和学习数据。',
-      [
-        { text: '取消', style: 'cancel' },
-        {
-          text: '清除所有数据',
-          style: 'destructive',
-          onPress: async () => {
-            setClearingCache(true);
-            try {
-              // 导入 DataSyncService
-              const { DataSyncService } = require('../../services/dataSyncService');
-              const dataSyncService = DataSyncService.getInstance();
-              
-              // 清除所有本地存储数据
-              await Promise.all([
-                AsyncStorage.clear(),
-                // 清除剧集数据
-                clearShows(),
-                // 清除词汇数据
-                clearVocabulary(),
-                // 清除学习统计缓存
-                dataSyncService.clearAllCache(),
-              ]);
-              
-              Alert.alert(
-                '清除成功',
-                '所有缓存数据已清除。应用将重新启动以应用更改。',
-                [
-                  {
-                    text: '确定',
-                    onPress: () => {
-                      // 重启应用
-                      if (Platform.OS === 'ios') {
-                        // iOS 重启应用
-                        Alert.alert('请手动重启应用');
-                      } else {
-                        // Android 重启应用
-                        Alert.alert('请手动重启应用');
-                      }
-                    }
-                  }
-                ]
-              );
-            } catch (error) {
-              console.error('清除缓存失败:', error);
-              Alert.alert('清除失败', '清除缓存时发生错误，请稍后重试');
-            } finally {
-              setClearingCache(false);
-            }
-          }
-        }
-      ]
-    );
-  };
-
-  const handleClearAllData = async () => {
-    console.log('🔍 handleClearAllData 被调用');
     setClearingCache(true);
     try {
-      const { DataSyncService } = require('../../services/dataSyncService');
-      const dataSyncService = DataSyncService.getInstance();
-      await Promise.all([
-        AsyncStorage.clear(),
-        dataSyncService.clearSearchHistory(),
-        clearVocabulary(),
-        clearShows(),
-        dataSyncService.clearNewWordbook(),
-        dataSyncService.clearAllCache(),
-      ]);
-      Alert.alert('清除成功', '所有数据已清除。请手动重启应用。');
+      // 清除 AsyncStorage 中的缓存数据
+      const keys = await AsyncStorage.getAllKeys();
+      const cacheKeys = keys.filter(key => 
+        key.includes('cache') || 
+        key.includes('temp') || 
+        key.includes('search_history')
+      );
+      
+      if (cacheKeys.length > 0) {
+        await AsyncStorage.multiRemove(cacheKeys);
+        Alert.alert('清除成功', '缓存数据已清除');
+      } else {
+        Alert.alert('提示', '没有找到需要清除的缓存数据');
+      }
     } catch (error) {
-      console.error('清除所有数据失败:', error);
-      Alert.alert('清除失败', '清除所有数据时发生错误，请稍后重试');
+      console.error('清除缓存失败:', error);
+      Alert.alert('清除失败', '清除缓存时发生错误');
     } finally {
       setClearingCache(false);
     }
   };
 
-  // 新增：跳转到订阅页
+  const handleClearAllData = async () => {
+    Alert.alert(
+      t('clear_all_data', appLanguage),
+      t('confirm_clear_data', appLanguage),
+      [
+        { text: t('cancel', appLanguage), style: 'cancel' },
+        { 
+          text: t('confirm', appLanguage), 
+          style: 'destructive', 
+          onPress: async () => {
+            try {
+              // 清除词汇数据
+              await clearVocabulary();
+              
+              // 清除剧集数据
+              await clearShows();
+              
+              // 清除搜索历史
+              await wordService.clearSearchHistory();
+              
+              // 清除用户设置
+              await AsyncStorage.multiRemove([
+                'user_settings',
+                'learning_records',
+                'review_sessions',
+                'app_settings',
+                'selected_language',
+                'language_progress',
+                'search_history',
+                'user_token',
+                'user_profile'
+              ]);
+              
+              Alert.alert(t('clear_success', appLanguage), t('all_data_cleared', appLanguage));
+            } catch (error) {
+              console.error('清除所有数据失败:', error);
+              Alert.alert(t('clear_failed', appLanguage), t('clear_error', appLanguage));
+            }
+          }
+        },
+      ]
+    );
+  };
+
   const handleGoToSubscription = () => {
     navigate('Subscription');
   };
 
-  // 在 renderUserInfo 下方插入会员订阅入口按钮
   const renderSubscriptionEntry = () => (
     <TouchableOpacity style={styles.subscriptionBtn} onPress={handleGoToSubscription} activeOpacity={0.85}>
-      <Text style={styles.subscriptionBtnText}>会员订阅/升级</Text>
+      <Text style={styles.subscriptionBtnText}>{t('member_subscription', appLanguage)}</Text>
     </TouchableOpacity>
   );
+
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={colors.primary[500]} />
+          <Text style={styles.loadingText}>{t('loading', appLanguage)}</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
       {/* 顶部标题已移除 */}
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView style={styles.content} showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
         {renderUserInfo()}
         {renderSubscriptionEntry()}
         {/* {renderStats()} 学习统计板块已删除 */}
@@ -404,6 +377,13 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
           email: user?.email,
         }}
       />
+      
+      {/* 应用语言选择器 */}
+      <AppLanguageSelector
+        visible={languageModalVisible}
+        onClose={() => setLanguageModalVisible(false)}
+      />
+      
       {/* 关于我们弹窗 */}
       <Modal
         visible={aboutModalVisible}
@@ -414,7 +394,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
         <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', alignItems: 'center' }}>
           <View style={{ width: '90%', maxHeight: '80%', backgroundColor: colors.background.primary, borderRadius: 18, padding: 20 }}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-              <Text style={{ fontSize: 20, fontWeight: 'bold', color: colors.primary[500] }}>关于剧词记</Text>
+              <Text style={{ fontSize: 20, fontWeight: 'bold', color: colors.primary[500] }}>{t('about_dramaword', appLanguage)}</Text>
               <TouchableOpacity onPress={() => setAboutModalVisible(false)}>
                 <Ionicons name="close" size={24} color={colors.text.secondary} />
               </TouchableOpacity>
@@ -456,14 +436,18 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
   },
+  scrollContent: {
+    paddingTop: 24, // 增加顶部边距
+    paddingBottom: 20, // 增加底部边距
+  },
   userSection: {
     backgroundColor: colors.background.secondary,
     marginHorizontal: 20,
     marginBottom: 20,
     borderRadius: 16,
     padding: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    shadowColor: colors.primary[200],
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
     shadowRadius: 8,
     elevation: 3,
@@ -530,8 +514,8 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     borderRadius: 16,
     padding: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    shadowColor: colors.primary[200],
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
     shadowRadius: 8,
     elevation: 3,
@@ -626,8 +610,8 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     borderRadius: 16,
     padding: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    shadowColor: colors.primary[200],
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
     shadowRadius: 8,
     elevation: 3,
@@ -664,11 +648,11 @@ const styles = StyleSheet.create({
   subscriptionBtn: {
     marginHorizontal: 20,
     marginBottom: 16,
-    backgroundColor: '#3A8DFF',
+    backgroundColor: colors.primary[500],
     borderRadius: 24,
     paddingVertical: 12,
     alignItems: 'center',
-    shadowColor: '#3A8DFF',
+    shadowColor: colors.primary[200],
     shadowOpacity: 0.12,
     shadowRadius: 8,
     elevation: 2,
@@ -678,5 +662,16 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     letterSpacing: 1,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: colors.background.primary,
+  },
+  loadingText: {
+    marginTop: 10,
+    color: colors.text.secondary,
+    fontSize: 16,
   },
 }); 

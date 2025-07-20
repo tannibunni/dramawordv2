@@ -8,12 +8,14 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../constants/colors';
+import { useAppLanguage } from '../../context/AppLanguageContext';
+import { t } from '../../constants/translations';
 
 export type TabType = 'search' | 'vocabulary' | 'review' | 'shows' | 'profile';
 
 interface TabItem {
   key: TabType;
-  title: string;
+  titleKey: string;
   icon: keyof typeof Ionicons.glyphMap;
   iconActive: keyof typeof Ionicons.glyphMap;
 }
@@ -26,31 +28,31 @@ interface BottomTabBarProps {
 const TAB_ITEMS: TabItem[] = [
   {
     key: 'search',
-    title: '查词',
+    titleKey: 'home',
     icon: 'search-outline',
     iconActive: 'search',
   },
   {
     key: 'vocabulary',
-    title: '单词表',
+    titleKey: 'vocabulary',
     icon: 'library-outline',
     iconActive: 'library',
   },
   {
     key: 'review',
-    title: '复习',
+    titleKey: 'review',
     icon: 'refresh-outline',
     iconActive: 'refresh',
   },
   {
     key: 'shows',
-    title: '剧单',
+    titleKey: 'shows',
     icon: 'film-outline',
     iconActive: 'film',
   },
   {
     key: 'profile',
-    title: '我',
+    titleKey: 'profile',
     icon: 'person-outline',
     iconActive: 'person',
   },
@@ -60,6 +62,8 @@ export const BottomTabBar: React.FC<BottomTabBarProps> = ({
   activeTab,
   onTabPress,
 }) => {
+  const { appLanguage } = useAppLanguage();
+
   return (
     <View style={styles.container}>
       <View style={styles.tabBar}>
@@ -84,7 +88,7 @@ export const BottomTabBar: React.FC<BottomTabBarProps> = ({
                   { color: isActive ? colors.primary[500] : colors.neutral[500] },
                 ]}
               >
-                {item.title}
+                {t(item.titleKey as any, appLanguage)}
               </Text>
             </TouchableOpacity>
           );

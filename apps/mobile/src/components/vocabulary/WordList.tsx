@@ -11,6 +11,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../constants/colors';
 import { WordWithSource } from '../../context/VocabularyContext';
 import { Swipeable } from 'react-native-gesture-handler';
+import { useAppLanguage } from '../../context/AppLanguageContext';
+import { t } from '../../constants/translations';
 
 interface WordListProps {
   words: WordWithSource[];
@@ -25,6 +27,7 @@ const WordList: React.FC<WordListProps> = ({
   onDeleteWord,
   style,
 }) => {
+  const { appLanguage } = useAppLanguage();
   const handleDeleteWord = (word: WordWithSource) => {
             onDeleteWord?.(word);
   };
@@ -109,8 +112,8 @@ const WordList: React.FC<WordListProps> = ({
     return (
       <View style={[styles.emptyState, style]}>
         <Ionicons name="book-outline" size={48} color={colors.text.secondary} />
-        <Text style={styles.emptyStateText}>暂无收藏的单词</Text>
-        <Text style={styles.emptyStateSubtext}>去首页搜索并收藏单词吧</Text>
+        <Text style={styles.emptyStateText}>{t('no_saved_words', appLanguage)}</Text>
+        <Text style={styles.emptyStateSubtext}>{t('go_search_and_save_words', appLanguage)}</Text>
       </View>
     );
   }

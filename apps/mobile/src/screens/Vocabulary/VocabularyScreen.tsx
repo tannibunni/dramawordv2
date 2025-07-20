@@ -18,6 +18,8 @@ import { colors } from '../../constants/colors';
 import { useVocabulary } from '../../context/VocabularyContext';
 import WordCard from '../../components/cards/WordCard';
 import WordList from '../../components/vocabulary/WordList';
+import { useAppLanguage } from '../../context/AppLanguageContext';
+import { t } from '../../constants/translations';
 
 const { width } = Dimensions.get('window');
 
@@ -29,6 +31,7 @@ interface Badge {
 
 const VocabularyScreen: React.FC = () => {
   const { vocabulary, removeWord } = useVocabulary();
+  const { appLanguage } = useAppLanguage();
   const [searchText, setSearchText] = useState('');
   const [filteredWords, setFilteredWords] = useState<any[]>([]);
   const [selectedWord, setSelectedWord] = useState<any | null>(null);
@@ -133,7 +136,7 @@ const VocabularyScreen: React.FC = () => {
     if (found) {
       setSelectedWord(found);
     } else {
-      Alert.alert('未找到该单词', '请检查拼写或在首页查词');
+      Alert.alert(t('word_not_found', appLanguage), t('check_spelling_or_search', appLanguage));
     }
   };
 
@@ -198,7 +201,7 @@ const VocabularyScreen: React.FC = () => {
         <View style={[styles.celebrateOverlay, { pointerEvents: 'none' }]}>
           <View style={styles.celebrateBox}>
             <Text style={styles.celebrateEmoji}>🎉</Text>
-            <Text style={styles.celebrateText}>恭喜解锁 {celebrateBadge} 个单词徽章！</Text>
+            <Text style={styles.celebrateText}>{t('congratulations_unlock', appLanguage, { count: celebrateBadge })}</Text>
           </View>
         </View>
       )}
@@ -217,7 +220,7 @@ const VocabularyScreen: React.FC = () => {
             {progressInfo.isFull ? (
               <View style={styles.progressCheck}><Ionicons name="checkmark" size={20} color={colors.text.inverse} /></View>
             ) : (
-              <Text style={styles.progressLeftText}>还差{progressInfo.target - progressInfo.current}个</Text>
+              <Text style={styles.progressLeftText}>{t('still_need', appLanguage, { count: progressInfo.target - progressInfo.current })}</Text>
             )}
           </View>
         </View>
@@ -237,7 +240,7 @@ const VocabularyScreen: React.FC = () => {
               style={styles.detailSearchInput}
               value={searchText}
               onChangeText={txt => { setSearchText(txt); setIsEditing(true); }}
-              placeholder="搜索单词..."
+              placeholder={t('search_words', appLanguage)}
               placeholderTextColor={colors.neutral[400]}
               autoFocus
               onSubmitEditing={handleSearchSubmit}
@@ -256,7 +259,7 @@ const VocabularyScreen: React.FC = () => {
                   onPress={() => { setSelectedWord(item); setSearchText(item.word); setIsEditing(false); }}
                 >
                   <Text style={styles.previewWord}>{item.word}</Text>
-                  <Text style={styles.previewTranslation}>{item.definitions?.[0]?.definition || '暂无释义'}</Text>
+                  <Text style={styles.previewTranslation}>{item.definitions?.[0]?.definition || t('no_definition', appLanguage)}</Text>
                 </TouchableOpacity>
               ))}
             </View>
@@ -319,7 +322,7 @@ const VocabularyScreen: React.FC = () => {
             <Ionicons name="search" size={18} color={colors.neutral[400]} style={{marginRight:8}} />
             <TextInput
               style={styles.searchInput}
-              placeholder="搜索单词..."
+              placeholder={t('search_words', appLanguage)}
               placeholderTextColor={colors.neutral[400]}
               value={searchText}
               onChangeText={setSearchText}

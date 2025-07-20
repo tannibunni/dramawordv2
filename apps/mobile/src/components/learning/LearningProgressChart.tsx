@@ -2,6 +2,8 @@ import React from 'react';
 import { View, Text, StyleSheet, Dimensions } from 'react-native';
 import { LineChart, BarChart, ProgressChart } from 'react-native-chart-kit';
 import { LearningRecord } from '../../services/learningAlgorithm';
+import { useAppLanguage } from '../../context/AppLanguageContext';
+import { t } from '../../constants/translations';
 
 interface LearningProgressChartProps {
   records: LearningRecord[];
@@ -34,6 +36,8 @@ export const LearningProgressChart: React.FC<LearningProgressChartProps> = ({
       stroke: '#3b82f6',
     },
   };
+
+  const { appLanguage } = useAppLanguage();
 
   // 生成掌握度分布数据
   const generateMasteryData = () => {
@@ -175,8 +179,8 @@ export const LearningProgressChart: React.FC<LearningProgressChartProps> = ({
       <View style={styles.container}>
         <Text style={styles.title}>{title}</Text>
         <View style={styles.emptyState}>
-          <Text style={styles.emptyText}>暂无学习数据</Text>
-          <Text style={styles.emptySubtext}>开始学习后这里会显示你的进度</Text>
+          <Text style={styles.emptyText}>{t('no_learning_data', appLanguage)}</Text>
+          <Text style={styles.emptySubtext}>{t('start_learning_to_see_progress', appLanguage)}</Text>
         </View>
       </View>
     );

@@ -22,6 +22,8 @@ import {
 import { learningDataService } from '../../services/learningDataService';
 import { LearningRecord, LearningStats } from '../../services/learningAlgorithm';
 import { useUserExperience, useDebounce } from '../../hooks/useUserExperience';
+import { useAppLanguage } from '../../context/AppLanguageContext';
+import { t } from '../../constants/translations';
 
 const LearningAnalyticsScreen: React.FC = () => {
   const [learningRecords, setLearningRecords] = useState<LearningRecord[]>([]);
@@ -53,6 +55,8 @@ const LearningAnalyticsScreen: React.FC = () => {
 
   // 防抖搜索
   const debouncedChartType = useDebounce(selectedChartType, 300);
+
+  const { appLanguage } = useAppLanguage();
 
   useEffect(() => {
     loadLearningData();
@@ -264,10 +268,10 @@ const LearningAnalyticsScreen: React.FC = () => {
       <SafeAreaView style={styles.container}>
         <EmptyState
           icon="school"
-          title="还没有学习记录"
-          subtitle="开始学习后这里会显示你的进度分析"
-          actionText="开始学习"
-          onAction={() => Alert.alert('开始学习', '跳转到学习页面')}
+          title={t('no_learning_records', appLanguage)}
+          subtitle={t('progress_analysis', appLanguage)}
+          actionText={t('start_learning', appLanguage)}
+          onAction={() => Alert.alert(t('start_learning', appLanguage), t('navigate_to_learning', appLanguage))}
         />
       </SafeAreaView>
     );
@@ -276,7 +280,7 @@ const LearningAnalyticsScreen: React.FC = () => {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>学习分析</Text>
+        <Text style={styles.headerTitle}>{t('learning_analytics', appLanguage)}</Text>
         <TouchableOpacity onPress={onRefresh} style={styles.refreshButton}>
           <Ionicons name="refresh" size={24} color={colors.primary[500]} />
         </TouchableOpacity>

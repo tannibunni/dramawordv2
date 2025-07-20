@@ -2,6 +2,8 @@ import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LearningStats } from '../../services/learningAlgorithm';
+import { useAppLanguage } from '../../context/AppLanguageContext';
+import { t } from '../../constants/translations';
 
 interface LearningSuggestionsProps {
   suggestions: string[];
@@ -14,6 +16,8 @@ export const LearningSuggestions: React.FC<LearningSuggestionsProps> = ({
   stats,
   onSuggestionPress,
 }) => {
+  const { appLanguage } = useAppLanguage();
+
   const getSuggestionIcon = (suggestion: string): keyof typeof Ionicons.glyphMap => {
     if (suggestion.includes('复习')) return 'refresh';
     if (suggestion.includes('掌握')) return 'checkmark-circle';
@@ -115,8 +119,8 @@ export const LearningSuggestions: React.FC<LearningSuggestionsProps> = ({
         ) : (
           <View style={styles.emptyState}>
             <Ionicons name="checkmark-circle" size={48} color="#d1d5db" />
-            <Text style={styles.emptyText}>暂无建议</Text>
-            <Text style={styles.emptySubtext}>继续学习获取个性化建议</Text>
+            <Text style={styles.emptyText}>{t('no_suggestions', appLanguage)}</Text>
+            <Text style={styles.emptySubtext}>{t('continue_learning_for_suggestions', appLanguage)}</Text>
           </View>
         )}
       </ScrollView>

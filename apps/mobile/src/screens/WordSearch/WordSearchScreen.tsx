@@ -14,6 +14,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../../../../packages/ui/src/tokens';
 import { wordService, RecentWord } from '../../services/wordService';
 import WordCard from '../../components/cards/WordCard';
+import { useAppLanguage } from '../../context/AppLanguageContext';
+import { t } from '../../constants/translations';
 
 const WordSearchScreen: React.FC = () => {
   const [searchText, setSearchText] = useState('');
@@ -21,6 +23,8 @@ const WordSearchScreen: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingRecent, setIsLoadingRecent] = useState(true);
   const [searchResult, setSearchResult] = useState<any>(null);
+
+  const { appLanguage } = useAppLanguage();
 
   useEffect(() => {
     loadRecentWords();
@@ -131,7 +135,7 @@ const WordSearchScreen: React.FC = () => {
 
         {/* 最近查词 */}
         <View style={styles.recentSection}>
-          <Text style={styles.sectionTitle}>最近查词</Text>
+          <Text style={styles.sectionTitle}>{t('recent_searches', appLanguage)}</Text>
           <View style={styles.wordsContainer}>
             {isLoadingRecent ? (
               <View style={styles.loadingContainer}>
@@ -153,7 +157,7 @@ const WordSearchScreen: React.FC = () => {
             ) : (
               <View style={styles.emptyState}>
                 <Ionicons name="search-outline" size={48} color={colors.text.tertiary} />
-                <Text style={styles.emptyStateText}>暂无最近查词记录</Text>
+                <Text style={styles.emptyStateText}>{t('no_recent_searches', appLanguage)}</Text>
               </View>
             )}
           </View>

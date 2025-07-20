@@ -94,13 +94,13 @@ export class TMDBService {
   /**
    * 搜索剧集
    */
-  static async searchShows(query: string, page: number = 1): Promise<TMDBSearchResponse> {
+  static async searchShows(query: string, page: number = 1, language: string = 'zh-CN'): Promise<TMDBSearchResponse> {
     try {
       const params = new URLSearchParams({
         query,
         page: page.toString(),
         include_adult: 'false',
-        language: 'zh-CN',
+        language,
         ...this.getAuthParams()
       });
 
@@ -121,10 +121,10 @@ export class TMDBService {
   /**
    * 获取剧集详情
    */
-  static async getShowDetails(showId: number): Promise<TMDBShow> {
+  static async getShowDetails(showId: number, language: string = 'zh-CN'): Promise<TMDBShow> {
     try {
       const params = new URLSearchParams({
-        language: 'zh-CN',
+        language,
         ...this.getAuthParams()
       });
 
@@ -144,10 +144,10 @@ export class TMDBService {
   /**
    * 获取剧集季数信息
    */
-  static async getSeasonDetails(showId: number, seasonNumber: number): Promise<TMDBSeason> {
+  static async getSeasonDetails(showId: number, seasonNumber: number, language: string = 'zh-CN'): Promise<TMDBSeason> {
     try {
       const params = new URLSearchParams({
-        language: 'zh-CN',
+        language,
         ...this.getAuthParams()
       });
 
@@ -167,11 +167,11 @@ export class TMDBService {
   /**
    * 获取相似剧集
    */
-  static async getSimilarShows(showId: number, page: number = 1): Promise<TMDBSimilarResponse> {
+  static async getSimilarShows(showId: number, page: number = 1, language: string = 'zh-CN'): Promise<TMDBSimilarResponse> {
     try {
       const params = new URLSearchParams({
         page: page.toString(),
-        language: 'zh-CN',
+        language,
         ...this.getAuthParams()
       });
 
@@ -192,11 +192,11 @@ export class TMDBService {
   /**
    * 获取热门剧集
    */
-  static async getPopularShows(page: number = 1): Promise<TMDBSearchResponse> {
+  static async getPopularShows(page: number = 1, language: string = 'zh-CN'): Promise<TMDBSearchResponse> {
     try {
       const params = new URLSearchParams({
         page: page.toString(),
-        language: 'zh-CN',
+        language,
         ...this.getAuthParams()
       });
 
@@ -217,11 +217,11 @@ export class TMDBService {
   /**
    * 获取正在播放的剧集
    */
-  static async getOnTheAirShows(page: number = 1): Promise<TMDBSearchResponse> {
+  static async getOnTheAirShows(page: number = 1, language: string = 'zh-CN'): Promise<TMDBSearchResponse> {
     try {
       const params = new URLSearchParams({
         page: page.toString(),
-        language: 'zh-CN',
+        language,
         ...this.getAuthParams()
       });
 

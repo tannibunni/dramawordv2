@@ -11,7 +11,7 @@ import {
   ScrollView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors } from '../../../../../packages/ui/src/tokens';
+import { colors } from '../../constants/colors';
 import Swiper from 'react-native-deck-swiper';
 import WordCard, { WordData } from '../../components/cards/WordCard';
 import { audioService } from '../../services/audioService';
@@ -23,6 +23,8 @@ import { useVocabulary } from '../../context/VocabularyContext';
 import { useNavigation } from '../../components/navigation/NavigationContext';
 import dayjs from 'dayjs';
 import { wordService } from '../../services/wordService';
+import { useAppLanguage } from '../../context/AppLanguageContext';
+import { t } from '../../constants/translations';
 
 // 复习完成统计接口
 interface ReviewStats {
@@ -74,7 +76,7 @@ const ReviewCompleteScreen: React.FC<{
             paddingHorizontal: 48,
             paddingVertical: 16,
             borderRadius: 25,
-            shadowColor: '#000',
+            shadowColor: colors.primary[200],
             shadowOffset: { width: 0, height: 2 },
             shadowOpacity: 0.1,
             shadowRadius: 4,
@@ -679,16 +681,12 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
   // 移除 panResponder，因为手势现在由 SwipeableWordCard 处理
 
   if (!words || words.length === 0) {
+    const { appLanguage } = useAppLanguage();
     return (
       <SafeAreaView style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.background.primary }}>
         <View style={{ alignItems: 'center', padding: 20 }}>
           <Ionicons name="book-outline" size={64} color={colors.text.tertiary} style={{ marginBottom: 16 }} />
-          <Text style={{ fontSize: 20, fontWeight: '600', color: colors.text.primary, marginBottom: 8, textAlign: 'center' }}>
-            暂无复习单词
-          </Text>
-          <Text style={{ fontSize: 16, color: colors.text.secondary, textAlign: 'center', lineHeight: 24 }}>
-            去首页搜索并收藏一些单词，然后就可以在这里复习了！
-          </Text>
+          <Text style={styles.emptyText}>{t('no_review_words', appLanguage)}</Text>
           <TouchableOpacity
             style={{
               marginTop: 24,
@@ -757,8 +755,8 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background.primary }}>
       {isEbbinghaus && (
-        <View style={{padding: 12, backgroundColor: '#E8F5E9', borderRadius: 8, margin: 12}}>
-          <Text style={{color: '#388E3C', fontWeight: 'bold'}}>
+        <View style={{padding: 12, backgroundColor: colors.success[50], borderRadius: 8, margin: 12}}>
+          <Text style={{color: colors.success[700], fontWeight: 'bold'}}>
             ☑️已切入艾宾浩斯记忆法
           </Text>
         </View>
@@ -947,111 +945,6 @@ const styles = StyleSheet.create({
     width: '100%',
     marginBottom: 20,
   },
-  additionalStats: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    width: '100%',
-    marginBottom: 40,
-  },
-  statItem: {
-    alignItems: 'center',
-  },
-  statNumber: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: colors.primary[500],
-  },
-  statLabel: {
-    fontSize: 14,
-    color: colors.text.secondary,
-    marginTop: 4,
-  },
-  sessionInfo: {
-    marginBottom: 40,
-  },
-  sessionText: {
-    fontSize: 16,
-    color: colors.text.secondary,
-  },
-  actionButtons: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    width: '100%',
-  },
-  actionButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    flex: 1,
-    paddingVertical: 16,
-    borderRadius: 16,
-    marginHorizontal: 8,
-    backgroundColor: colors.primary[500],
-  },
-  actionButtonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: '600',
-    marginLeft: 8,
-  },
-  // 复习完成页面样式
-  completeContent: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  headerSection: {
-    alignItems: 'center',
-    marginBottom: 40,
-  },
-  completeSubtitle: {
-    fontSize: 16,
-    color: colors.text.secondary,
-    marginTop: 8,
-  },
-  completeHint: {
-    fontSize: 14,
-    color: colors.text.secondary,
-    marginTop: 12,
-    opacity: 0.8,
-  },
-  scoreSection: {
-    marginBottom: 30,
-    alignItems: 'center',
-  },
-  scoreCard: {
-    backgroundColor: colors.background.secondary,
-    borderRadius: 16,
-    padding: 20,
-    alignItems: 'center',
-    minWidth: 180,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 6,
-    elevation: 2,
-  },
-  scoreLabel: {
-    fontSize: 16,
-    color: colors.text.primary,
-    marginBottom: 8,
-    fontWeight: '600',
-  },
-  scoreValue: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    marginBottom: 6,
-  },
-  scoreMessage: {
-    fontSize: 14,
-    color: colors.text.secondary,
-    fontWeight: '500',
-  },
-  statsSection: {
-    width: '100%',
-    marginBottom: 40,
-  },
   statsList: {
     width: '100%',
     marginBottom: 30,
@@ -1070,7 +963,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background.secondary,
     borderRadius: 12,
     marginBottom: 8,
-    shadowColor: '#000',
+    shadowColor: colors.primary[200],
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
@@ -1098,7 +991,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     position: 'relative',
-    shadowColor: '#000',
+    shadowColor: colors.primary[200],
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
     shadowRadius: 8,
@@ -1158,7 +1051,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     marginHorizontal: 20,
     marginTop: 16,
-    shadowColor: '#000',
+    shadowColor: colors.primary[200],
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
@@ -1201,7 +1094,7 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     borderRadius: 25,
     marginRight: 16,
-    shadowColor: '#000',
+    shadowColor: colors.primary[200],
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
@@ -1237,7 +1130,7 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     borderRadius: 25,
     marginRight: 16,
-    shadowColor: '#000',
+    shadowColor: colors.success[200],
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
@@ -1248,6 +1141,13 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     marginLeft: 8,
+  },
+  emptyText: {
+    fontSize: 16,
+    color: colors.text.secondary,
+    textAlign: 'center',
+    marginTop: 16,
+    marginBottom: 24,
   },
 });
 

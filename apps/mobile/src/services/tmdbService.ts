@@ -59,49 +59,71 @@ export interface TMDBSeason {
 export class TMDBService {
   private static baseUrl = `${API_BASE_URL}/tmdb`;
 
-  // Genre ID 到 Genre Name 的映射
-  private static genreMap: { [key: number]: string } = {
-    10759: '动作冒险',
-    16: '动画',
-    35: '喜剧',
-    80: '犯罪',
-    99: '纪录片',
-    18: '剧情',
-    10751: '家庭',
-    10762: '儿童',
-    9648: '悬疑',
-    10763: '新闻',
-    10764: '真人秀',
-    10765: '科幻奇幻',
-    10766: '肥皂剧',
-    10767: '脱口秀',
-    10768: '战争政治',
-    37: '西部'
+  // Genre ID 到 Genre Name 的映射 - 支持中英文
+  private static genreMap: { [key: string]: { [key: number]: string } } = {
+    'zh-CN': {
+      10759: '动作冒险',
+      16: '动画',
+      35: '喜剧',
+      80: '犯罪',
+      99: '纪录片',
+      18: '剧情',
+      10751: '家庭',
+      10762: '儿童',
+      9648: '悬疑',
+      10763: '新闻',
+      10764: '真人秀',
+      10765: '科幻奇幻',
+      10766: '肥皂剧',
+      10767: '脱口秀',
+      10768: '战争政治',
+      37: '西部'
+    },
+    'en-US': {
+      10759: 'Action & Adventure',
+      16: 'Animation',
+      35: 'Comedy',
+      80: 'Crime',
+      99: 'Documentary',
+      18: 'Drama',
+      10751: 'Family',
+      10762: 'Kids',
+      9648: 'Mystery',
+      10763: 'News',
+      10764: 'Reality',
+      10765: 'Sci-Fi & Fantasy',
+      10766: 'Soap',
+      10767: 'Talk',
+      10768: 'War & Politics',
+      37: 'Western'
+    }
   };
 
   /**
    * 根据 genre_ids 获取 genre 名称
    */
-  static getGenreNames(genreIds: number[]): string[] {
-    return genreIds.map(id => this.genreMap[id] || '未知类型');
+  static getGenreNames(genreIds: number[], language: string = 'zh-CN'): string[] {
+    const langMap = this.genreMap[language] || this.genreMap['zh-CN'];
+    return genreIds.map(id => langMap[id] || (language === 'en-US' ? 'Unknown' : '未知类型'));
   }
 
   /**
    * 根据 genre_ids 获取 genre 对象数组
    */
-  static getGenresFromIds(genreIds: number[]): Array<{ id: number; name: string }> {
+  static getGenresFromIds(genreIds: number[], language: string = 'zh-CN'): Array<{ id: number; name: string }> {
+    const langMap = this.genreMap[language] || this.genreMap['zh-CN'];
     return genreIds.map(id => ({
       id,
-      name: this.genreMap[id] || '未知类型'
+      name: langMap[id] || (language === 'en-US' ? 'Unknown' : '未知类型')
     }));
   }
 
   /**
    * 搜索剧集
    */
-  static async searchShows(query: string, page: number = 1): Promise<TMDBSearchResponse> {
+  static async searchShows(query: string, page: number = 1, language: string = 'zh-CN'): Promise<TMDBSearchResponse> {
     try {
-      const response = await fetch(`${this.baseUrl}/search?query=${encodeURIComponent(query)}&page=${page}`);
+      const response = await fetch(`${this.baseUrl}/search?query=${encodeURIComponent(query)}&page=${page}&language=${language}`);
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -123,9 +145,9 @@ export class TMDBService {
   /**
    * 获取剧集详情
    */
-  static async getShowDetails(showId: number): Promise<TMDBShow> {
+  static async getShowDetails(showId: number, language: string = 'zh-CN'): Promise<TMDBShow> {
     try {
-      const response = await fetch(`${this.baseUrl}/shows/${showId}`);
+      const response = await fetch(`${this.baseUrl}/shows/${showId}?language=${language}`);
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -147,9 +169,9 @@ export class TMDBService {
   /**
    * 获取剧集季数信息
    */
-  static async getSeasonDetails(showId: number, seasonNumber: number): Promise<TMDBSeason> {
+  static async getSeasonDetails(showId: number, seasonNumber: number, language: string = 'zh-CN'): Promise<TMDBSeason> {
     try {
-      const response = await fetch(`${this.baseUrl}/shows/${showId}/seasons/${seasonNumber}`);
+      const response = await fetch(`${this.baseUrl}/shows/${showId}/seasons/${seasonNumber}?language=${language}`);
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -171,9 +193,9 @@ export class TMDBService {
   /**
    * 获取相似剧集
    */
-  static async getSimilarShows(showId: number, page: number = 1): Promise<TMDBSearchResponse> {
+  static async getSimilarShows(showId: number, page: number = 1, language: string = 'zh-CN'): Promise<TMDBSearchResponse> {
     try {
-      const response = await fetch(`${this.baseUrl}/shows/${showId}/similar?page=${page}`);
+      const response = await fetch(`${this.baseUrl}/shows/${showId}/similar?page=${page}&language=${language}`);
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -195,9 +217,9 @@ export class TMDBService {
   /**
    * 获取热门剧集
    */
-  static async getPopularShows(page: number = 1): Promise<TMDBSearchResponse> {
+  static async getPopularShows(page: number = 1, language: string = 'zh-CN'): Promise<TMDBSearchResponse> {
     try {
-      const response = await fetch(`${this.baseUrl}/shows/popular?page=${page}`);
+      const response = await fetch(`${this.baseUrl}/shows/popular?page=${page}&language=${language}`);
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -219,9 +241,9 @@ export class TMDBService {
   /**
    * 获取正在播放的剧集
    */
-  static async getOnTheAirShows(page: number = 1): Promise<TMDBSearchResponse> {
+  static async getOnTheAirShows(page: number = 1, language: string = 'zh-CN'): Promise<TMDBSearchResponse> {
     try {
-      const response = await fetch(`${this.baseUrl}/shows/on-the-air?page=${page}`);
+      const response = await fetch(`${this.baseUrl}/shows/on-the-air?page=${page}&language=${language}`);
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);

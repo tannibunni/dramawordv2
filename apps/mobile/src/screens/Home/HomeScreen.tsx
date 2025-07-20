@@ -26,6 +26,8 @@ import { TMDBService, TMDBShow } from '../../services/tmdbService';
 import { Audio } from 'expo-av';
 import LanguagePicker from '../../components/common/LanguagePicker';
 import { useLanguage } from '../../context/LanguageContext';
+import { useAppLanguage } from '../../context/AppLanguageContext';
+import { t } from '../../constants/translations';
 
 const HomeScreen: React.FC = () => {
   const [searchText, setSearchText] = useState('');
@@ -53,6 +55,7 @@ const HomeScreen: React.FC = () => {
   const [chToEnCandidates, setChToEnCandidates] = useState<string[]>([]); // 新增：中文查英文候选词
   const [chToEnQuery, setChToEnQuery] = useState<string>('');
   const { selectedLanguage, getCurrentLanguageConfig } = useLanguage();
+  const { appLanguage } = useAppLanguage();
 
   useEffect(() => {
     loadRecentWords();
@@ -398,31 +401,45 @@ const HomeScreen: React.FC = () => {
   }, [searchResult]);
 
   const handleClearSearchHistory = async () => {
-    Alert.alert(
-      '确认清除',
-      '确定要清除所有最近查词记录吗？',
+          Alert.alert(
+        t('clear_history', appLanguage),
+        t('confirm_clear_history', appLanguage),
       [
-        { text: '取消', style: 'cancel' },
+        { text: t('cancel', appLanguage), style: 'cancel' },
         { 
-          text: '确定', 
+          text: t('confirm', appLanguage), 
           style: 'destructive', 
           onPress: async () => {
             try {
               const success = await wordService.clearSearchHistory();
               if (success) {
                 setRecentWords([]);
-                Alert.alert('清除成功', '最近查词记录已清除');
+                Alert.alert(t('clear_history_success', appLanguage));
               } else {
-                Alert.alert('清除失败', '清除最近查词记录失败，请稍后重试');
+                Alert.alert(t('clear_history_failed', appLanguage));
               }
             } catch (error) {
               console.error('清除搜索历史失败:', error);
-              Alert.alert('清除失败', '清除最近查词记录时发生错误');
+              Alert.alert(t('clear_history_failed', appLanguage));
             }
           }
         },
       ]
     );
+  };
+
+  const getSearchPlaceholder = () => {
+    const languageConfig = getCurrentLanguageConfig();
+    switch (languageConfig.code) {
+      case 'en':
+        return t('search_english_placeholder', appLanguage);
+      case 'ko':
+        return t('search_korean_placeholder', appLanguage);
+      case 'ja':
+        return t('search_japanese_placeholder', appLanguage);
+      default:
+        return t('search_placeholder', appLanguage);
+    }
   };
 
   return (
@@ -476,7 +493,7 @@ const HomeScreen: React.FC = () => {
                 <>
                   <TextInput
                     style={styles.searchInput}
-                    placeholder={`输入${getCurrentLanguageConfig().name}单词或中文词语...`}
+                    placeholder={getSearchPlaceholder()}
                     placeholderTextColor={colors.text.tertiary}
                     value={searchText}
                     onChangeText={handleInputChange}
@@ -497,7 +514,9 @@ const HomeScreen: React.FC = () => {
                 <ActivityIndicator size="small" color={colors.primary[500]} style={styles.loadingIndicator} />
               )}
               {/* 搜索图标移到最右边 */}
-              <Ionicons name="search" size={20} color={colors.text.secondary} style={styles.searchIcon} />
+              <TouchableOpacity onPress={handleSearch} style={styles.searchIcon}>
+                <Ionicons name="search" size={20} color={colors.text.secondary} />
+              </TouchableOpacity>
             </View>
           </View>
         </View>
@@ -775,16 +794,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: colors.background.secondary,
-    borderRadius: 12,
+    borderRadius: 16,
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingVertical: 14,
     borderWidth: 1,
     borderColor: colors.border.light,
-    shadowColor: colors.neutral[200],
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
+    shadowColor: colors.primary[200],
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 4,
   },
   searchInputContainer: {
     flex: 1,
@@ -794,6 +813,7 @@ const styles = StyleSheet.create({
   },
   searchIcon: {
     marginLeft: 12,
+    color: colors.primary[500],
   },
   searchInput: {
     flex: 1,
@@ -826,14 +846,16 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   clearHistoryButton: {
-    padding: 4,
+    padding: 8,
+    borderRadius: 8,
+    backgroundColor: colors.primary[50],
   },
   recentSection: {
     marginBottom: 32,
   },
   sectionTitle: {
-    fontSize: 24,
-    fontWeight: '600',
+    fontSize: 26,
+    fontWeight: '700',
     color: colors.text.primary,
     marginBottom: 16,
   },
@@ -842,15 +864,15 @@ const styles = StyleSheet.create({
   },
   wordCard: {
     backgroundColor: colors.background.secondary,
-    borderRadius: 10,
-    padding: 16,
+    borderRadius: 16,
+    padding: 20,
     borderWidth: 1,
     borderColor: colors.border.light,
-    shadowColor: colors.neutral[200],
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 1,
+    shadowColor: colors.primary[200],
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 3,
   },
   wordText: {
     fontSize: 18,
@@ -899,14 +921,14 @@ const styles = StyleSheet.create({
     width: '92%',
     minHeight: 220,
     maxWidth: 500,
-    borderRadius: 20,
+    borderRadius: 24,
     backgroundColor: colors.background.secondary,
-    shadowColor: colors.neutral[200],
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.12,
-    shadowRadius: 12,
-    elevation: 6,
-    padding: 24,
+    shadowColor: colors.primary[200],
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.15,
+    shadowRadius: 16,
+    elevation: 8,
+    padding: 28,
     marginVertical: 12,
   },
   modalOverlay: {

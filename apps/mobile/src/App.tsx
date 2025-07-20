@@ -5,6 +5,7 @@ import { ShowListProvider } from './context/ShowListContext';
 import { VocabularyProvider } from './context/VocabularyContext';
 import { AuthProvider } from './context/AuthContext';
 import { LanguageProvider } from './context/LanguageContext';
+import { AppLanguageProvider } from './context/AppLanguageContext';
 import { Audio } from 'expo-av';
 import { InterruptionModeIOS, InterruptionModeAndroid } from 'expo-av/build/Audio.types';
 
@@ -24,15 +25,17 @@ export default function App() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <AuthProvider>
-        <LanguageProvider>
-          <ShowListProvider>
-            <VocabularyProvider>
-              <MainLayout />
-            </VocabularyProvider>
-          </ShowListProvider>
-        </LanguageProvider>
-      </AuthProvider>
+      <AppLanguageProvider>
+        <AuthProvider>
+          <LanguageProvider>
+            <ShowListProvider>
+              <VocabularyProvider>
+                <MainLayout />
+              </VocabularyProvider>
+            </ShowListProvider>
+          </LanguageProvider>
+        </AuthProvider>
+      </AppLanguageProvider>
     </GestureHandlerRootView>
   );
 } 
