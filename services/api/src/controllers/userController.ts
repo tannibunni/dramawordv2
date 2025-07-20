@@ -293,6 +293,7 @@ export class UserController {
             levelName: (user as any).levelName,
             experience: user.learningStats.experience,
             experienceToNextLevel: (user as any).experienceToNextLevel,
+            contributedWords: user.contributedWords,
             learningStats: user.learningStats,
             settings: user.settings,
             auth: {

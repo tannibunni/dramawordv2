@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { optionalAuth } from '../middleware/auth';
 import { 
   searchWord, 
   getPopularWords, 
@@ -17,8 +18,8 @@ import {
 
 const router = Router();
 
-// 单词搜索路由
-router.post('/search', searchWord);
+// 单词搜索路由 - 使用可选认证，支持游客和登录用户
+router.post('/search', optionalAuth, searchWord);
 router.post('/translate', translateChineseToEnglish); // 新增
 router.get('/popular', getPopularWords);
 router.get('/recent-searches', getRecentSearches);

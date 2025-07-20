@@ -5,6 +5,7 @@ import { SearchHistory, ISearchHistory } from '../models/SearchHistory';
 import { CloudWord } from '../models/CloudWord';
 import UserVocabulary from '../models/UserVocabulary';
 import { ChineseTranslation } from '../models/ChineseTranslation';
+import { User } from '../models/User';
 import { logger } from '../utils/logger';
 
 // 初始化 OpenAI
@@ -100,8 +101,8 @@ export const searchWord = async (req: Request, res: Response): Promise<void> => 
         // 更新搜索次数和最后搜索时间
         await updateCloudWordSearchStats(searchTerm, language);
       } else {
-        // 如果单词不存在，创建新记录但不保存到数据库，直接使用内存数据
-        logger.info(`📝 Creating new word data without saving to database: ${searchTerm}`);
+        // 如果单词不存在，创建新记录并保存到数据库
+        logger.info(`📝 Creating new word data and saving to database: ${searchTerm}`);
         cloudWord = new CloudWord({
           word: searchTerm,
           language,
@@ -112,7 +113,25 @@ export const searchWord = async (req: Request, res: Response): Promise<void> => 
           searchCount: 1,
           lastSearched: new Date()
         });
-        // 不保存到数据库，直接使用内存数据
+        
+        // 保存到数据库
+        await cloudWord.save();
+        logger.info(`✅ New word saved to database: ${searchTerm}`);
+        
+        // 增加用户的贡献新词计数
+        const userId = req.user?.id;
+        if (userId) {
+          try {
+            await User.updateOne(
+              { _id: userId },
+              { $inc: { contributedWords: 1 } }
+            );
+            logger.info(`✅ Incremented contributedWords for user: ${userId}`);
+          } catch (userUpdateError) {
+            logger.error(`❌ Failed to increment contributedWords for user ${userId}:`, userUpdateError);
+            // 不中断流程，继续执行
+          }
+        }
       }
       
       // 5. 保存到内存缓存
@@ -159,8 +178,8 @@ export const searchWord = async (req: Request, res: Response): Promise<void> => 
         // 更新搜索次数和最后搜索时间
         await updateCloudWordSearchStats(searchTerm, language);
       } else {
-        // 如果单词不存在，创建新记录但不保存到数据库，直接使用内存数据
-        logger.info(`📝 Creating fallback word data without saving to database: ${searchTerm}`);
+        // 如果单词不存在，创建新记录并保存到数据库
+        logger.info(`📝 Creating fallback word data and saving to database: ${searchTerm}`);
         cloudWord = new CloudWord({
           word: searchTerm,
           language,
@@ -171,7 +190,25 @@ export const searchWord = async (req: Request, res: Response): Promise<void> => 
           searchCount: 1,
           lastSearched: new Date()
         });
-        // 不保存到数据库，直接使用内存数据
+        
+        // 保存到数据库
+        await cloudWord.save();
+        logger.info(`✅ Fallback word saved to database: ${searchTerm}`);
+        
+        // 增加用户的贡献新词计数（fallback 也算贡献）
+        const userId = req.user?.id;
+        if (userId) {
+          try {
+            await User.updateOne(
+              { _id: userId },
+              { $inc: { contributedWords: 1 } }
+            );
+            logger.info(`✅ Incremented contributedWords for user (fallback): ${userId}`);
+          } catch (userUpdateError) {
+            logger.error(`❌ Failed to increment contributedWords for user ${userId} (fallback):`, userUpdateError);
+            // 不中断流程，继续执行
+          }
+        }
       }
       
       // 保存到内存缓存
@@ -675,7 +712,7 @@ async function generateWordData(word: string, language: string = 'en') {
       case 'ko':
         return `你是专业的韩语词典助手。
 
-任务：为韩语单词或短语 "${word}" 生成简洁的词典信息，适合中文用户学习韩语。
+任务：为韩语单词或短语 "${word}" 生成完整的词典信息，适合中文用户学习韩语。
 
 返回JSON格式：
 {
@@ -692,7 +729,9 @@ async function generateWordData(word: string, language: string = 'en') {
       ]
     }
   ],
-  "correctedWord": "${word}"
+  "correctedWord": "${word}",
+  "slangMeaning": "【如果是网络俚语或流行语，提供简洁的中文解释；如果不是，返回null】",
+  "phraseExplanation": "【如果是短语或固定搭配，提供简洁的中文解释；如果是单个单词，返回null】"
 }
 
 重要要求：
@@ -700,12 +739,15 @@ async function generateWordData(word: string, language: string = 'en') {
 - 例句要简单实用，贴近日常生活
 - 韩文例句必须完全使用韩文字母，绝对不能用英文单词
 - 例句应该是纯韩文，比如："안녕하세요, 만나서 반갑습니다."
+- slangMeaning 字段：仅当查询的是网络俚语、流行语或非正式表达时提供解释，否则返回null
+- phraseExplanation 字段：仅当查询的是短语、固定搭配或习语时提供解释，否则返回null
 - 只返回JSON，不要其他内容
 
 示例：
-- "안녕하세요" → 释义："你好"，例句："안녕하세요, 만나서 반갑습니다." → "你好，很高兴见到你。"
-- "감사합니다" → 释义："谢谢"，例句："도와주셔서 감사합니다." → "谢谢您的帮助。"
-- "사과" → 释义："苹果"，例句："사과를 먹어요." → "我吃苹果。"
+- "안녕하세요" → 释义："你好"，例句："안녕하세요, 만나서 반갑습니다." → "你好，很高兴见到你。", slangMeaning: null, phraseExplanation: null
+- "감사합니다" → 释义："谢谢"，例句："도와주셔서 감사합니다." → "谢谢您的帮助。", slangMeaning: null, phraseExplanation: null
+- "사과" → 释义："苹果"，例句："사과를 먹어요." → "我吃苹果。", slangMeaning: null, phraseExplanation: null
+- "대박" → 释义："大发"，例句："대박이야!" → "太棒了！", slangMeaning: "太棒了，很厉害（网络俚语）", phraseExplanation: null
 
 注意：韩文例句必须只包含韩文字母，不能包含任何英文单词！
 
@@ -714,7 +756,7 @@ async function generateWordData(word: string, language: string = 'en') {
       case 'ja':
         return `你是专业的日语词典助手。
 
-任务：为日语单词或短语 "${word}" 生成详细的词典信息，适合中文用户学习日语。
+任务：为日语单词或短语 "${word}" 生成完整的词典信息，适合中文用户学习日语。
 
 重要：请仔细分析用户输入的单词，并返回正确的日语写法：
 - 如果输入的是假名（如"taberu"），返回对应的汉字写法（如"食べる"）
@@ -739,7 +781,9 @@ async function generateWordData(word: string, language: string = 'en') {
         }
       ]
     }
-  ]
+  ],
+  "slangMeaning": "【如果是网络俚语或流行语，提供简洁的中文解释；如果不是，返回null】",
+  "phraseExplanation": "【如果是短语或固定搭配，提供简洁的中文解释；如果是单个单词，返回null】"
 }
 
 重要要求：
@@ -751,15 +795,19 @@ async function generateWordData(word: string, language: string = 'en') {
 - 例句要简单实用，贴近日常生活
 - 日文例句必须完全使用假名和汉字，绝对不能用英文单词
 - 例句应该是纯日文，比如："私は寿司を食べます。"
+- slangMeaning 字段：仅当查询的是网络俚语、流行语或非正式表达时提供解释，否则返回null
+- phraseExplanation 字段：仅当查询的是短语、固定搭配或习语时提供解释，否则返回null
 - 只返回JSON，不要其他内容
 
 示例：
 - 输入"taberu" → correctedWord:"食べる", kana:"たべる", phonetic:"ta be ru"
-- 例句："彼は毎日りんごを食べます。" → romaji:"kare ha mainichi ringo wo tabemasu", chinese:"他每天吃苹果。"
+- 例句："彼は毎日りんごを食べます。" → romaji:"kare ha mainichi ringo wo tabemasu", chinese:"他每天吃苹果。", slangMeaning: null, phraseExplanation: null
 - 输入"nomu" → correctedWord:"飲む", kana:"のむ", phonetic:"no mu"
-- 例句："彼はコーヒーを飲みます。" → romaji:"kare ha ko-hi- wo nomimasu", chinese:"他喝咖啡。"
+- 例句："彼はコーヒーを飲みます。" → romaji:"kare ha ko-hi- wo nomimasu", chinese:"他喝咖啡。", slangMeaning: null, phraseExplanation: null
 - 输入"iku" → correctedWord:"行く", kana:"いく", phonetic:"i ku"
-- 例句："友達と公園に行きます。" → romaji:"tomodachi to kouen ni ikimasu", chinese:"我和朋友去公园。"
+- 例句："友達と公園に行きます。" → romaji:"tomodachi to kouen ni ikimasu", chinese:"我和朋友去公园。", slangMeaning: null, phraseExplanation: null
+- 输入"やばい" → correctedWord:"やばい", kana:"やばい", phonetic:"ya ba i"
+- 例句："やばい、遅刻しそう！" → romaji:"yabai, chikoku shisou!", chinese:"糟糕，要迟到了！", slangMeaning: "糟糕，不得了（网络俚语）", phraseExplanation: null
 
 注意：kana字段和romaji字段都是必需的，绝对不能省略！
 
@@ -768,7 +816,7 @@ async function generateWordData(word: string, language: string = 'en') {
       default: // 'en'
         return `你是专业的英语词典助手和拼写纠错专家。
 
-任务：为英语单词或短语 "${word}" 生成简洁的词典信息，适合语言学习。
+任务：为英语单词或短语 "${word}" 生成完整的词典信息，适合语言学习。
 
 重要：请仔细检查用户输入的单词是否有拼写错误。常见的拼写错误包括：
 - "freind" → "friend" (i 和 e 顺序错误)
@@ -795,7 +843,9 @@ async function generateWordData(word: string, language: string = 'en') {
       ]
     }
   ],
-  "correctedWord": "【如果用户输入的单词拼写正确，返回原词；如果拼写错误，返回正确的拼写】"
+  "correctedWord": "【如果用户输入的单词拼写正确，返回原词；如果拼写错误，返回正确的拼写】",
+  "slangMeaning": "【如果是网络俚语或流行语，提供简洁的中文解释；如果不是，返回null】",
+  "phraseExplanation": "【如果是短语或固定搭配，提供简洁的中文解释；如果是单个单词，返回null】"
 }
 
 要求：
@@ -804,11 +854,15 @@ async function generateWordData(word: string, language: string = 'en') {
 - 无论查询什么语言，释义和例句都必须是中文
 - 如果查到的释义或例句不是中文，请用"暂无中文释义"或"暂无中文例句"代替
 - correctedWord 字段：必须仔细检查拼写，如果用户输入的单词拼写正确，返回原词；如果拼写错误，返回正确的拼写
+- slangMeaning 字段：仅当查询的是网络俚语、流行语或非正式表达时提供解释，否则返回null
+- phraseExplanation 字段：仅当查询的是短语、固定搭配或习语时提供解释，否则返回null
 - 只返回JSON，不要其他内容
 
 示例：
-- "mineral water" → 释义："矿泉水"，例句："I drink mineral water." → "我喝矿泉水。"
-- "university" → 释义："大学"，例句："I study at university." → "我在大学学习。"`;
+- "mineral water" → 释义："矿泉水"，例句："I drink mineral water." → "我喝矿泉水。", phraseExplanation: "矿泉水"
+- "university" → 释义："大学"，例句："I study at university." → "我在大学学习。", slangMeaning: null, phraseExplanation: null
+- "lit" → 释义："点燃的"，例句："The fire is lit." → "火被点燃了。", slangMeaning: "很酷的，很棒的（网络俚语）", phraseExplanation: null
+- "break up" → 释义："分手"，例句："They broke up." → "他们分手了。", slangMeaning: null, phraseExplanation: "分手，结束关系（动词短语）"`;
     }
   };
 
@@ -948,7 +1002,9 @@ async function generateWordData(word: string, language: string = 'en') {
         definitions: definitions,
         audioUrl: getYoudaoTTSUrl(word),
         correctedWord: parsedData.correctedWord || word,
-        kana: parsedData.kana || undefined
+        kana: parsedData.kana || undefined,
+        slangMeaning: parsedData.slangMeaning || null,
+        phraseExplanation: parsedData.phraseExplanation || null
       };
     } catch (parseError) {
       logger.error('❌ Failed to parse OpenAI response:', parseError);

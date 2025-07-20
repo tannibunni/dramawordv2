@@ -60,6 +60,7 @@ export interface IUser extends Document {
   email?: string;
   auth: IUserAuth;
   learningStats: IUserLearningStats;
+  contributedWords: number;
   settings: IUserSettings;
   createdAt: Date;
   updatedAt: Date;
@@ -201,6 +202,10 @@ const UserSchema = new Schema<IUser>({
       type: Number,
       default: 0
     }
+  },
+  contributedWords: {
+    type: Number,
+    default: 0
   },
   settings: {
     notifications: {
