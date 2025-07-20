@@ -734,6 +734,7 @@ async function generateWordData(word: string, language: string = 'en') {
       "examples": [
         {
           "japanese": "日文例句（使用汉字和假名）",
+          "romaji": "例句的完整罗马音（如：watashi ha nihongo wo benkyou shiteimasu）",
           "chinese": "【简洁的中文翻译】"
         }
       ]
@@ -745,6 +746,7 @@ async function generateWordData(word: string, language: string = 'en') {
 - kana字段：必须提供假名标注，这是必需的字段
 - correctedWord：必须返回正确的日语汉字写法
 - phonetic：提供罗马音标注，用空格分隔音节
+- romaji字段：必须为每个例句提供完整的罗马音发音
 - 释义要简洁明了，适合语言学习
 - 例句要简单实用，贴近日常生活
 - 日文例句必须完全使用假名和汉字，绝对不能用英文单词
@@ -753,10 +755,13 @@ async function generateWordData(word: string, language: string = 'en') {
 
 示例：
 - 输入"taberu" → correctedWord:"食べる", kana:"たべる", phonetic:"ta be ru"
+- 例句："彼は毎日りんごを食べます。" → romaji:"kare ha mainichi ringo wo tabemasu", chinese:"他每天吃苹果。"
 - 输入"nomu" → correctedWord:"飲む", kana:"のむ", phonetic:"no mu"
+- 例句："彼はコーヒーを飲みます。" → romaji:"kare ha ko-hi- wo nomimasu", chinese:"他喝咖啡。"
 - 输入"iku" → correctedWord:"行く", kana:"いく", phonetic:"i ku"
+- 例句："友達と公園に行きます。" → romaji:"tomodachi to kouen ni ikimasu", chinese:"我和朋友去公园。"
 
-注意：kana字段是必需的，绝对不能省略！
+注意：kana字段和romaji字段都是必需的，绝对不能省略！
 
 请严格按照示例格式生成例句，确保日文例句中不包含任何英文单词。`;
 
@@ -863,7 +868,8 @@ async function generateWordData(word: string, language: string = 'en') {
             } else if (language === 'ja' && ex.japanese && ex.chinese) {
               return {
                 english: ex.japanese, // 日文例句
-                chinese: ex.chinese
+                chinese: ex.chinese,
+                romaji: ex.romaji // 添加罗马音字段
               };
             } else if (ex.english && ex.chinese) {
               // 如果AI返回的是english字段，但语言不是英语，我们需要检查内容
