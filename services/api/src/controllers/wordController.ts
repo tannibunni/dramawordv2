@@ -722,9 +722,11 @@ async function generateWordData(word: string, language: string = 'en') {
 - 提供假名标注（如"たべる"）
 - 提供罗马音标注（如"ta be ru"）
 
-返回JSON格式：
+返回JSON格式（必须包含所有字段）：
 {
   "phonetic": "罗马音标注（如：ta be ru）",
+  "kana": "假名标注（如：たべる）",
+  "correctedWord": "正确的日语写法（汉字形式）",
   "definitions": [
     {
       "partOfSpeech": "词性",
@@ -736,14 +738,12 @@ async function generateWordData(word: string, language: string = 'en') {
         }
       ]
     }
-  ],
-  "correctedWord": "正确的日语写法（汉字形式）",
-  "kana": "假名标注（如：たべる）"
+  ]
 }
 
 重要要求：
+- kana字段：必须提供假名标注，这是必需的字段
 - correctedWord：必须返回正确的日语汉字写法
-- kana：提供假名标注，用于显示在汉字上方
 - phonetic：提供罗马音标注，用空格分隔音节
 - 释义要简洁明了，适合语言学习
 - 例句要简单实用，贴近日常生活
@@ -756,7 +756,7 @@ async function generateWordData(word: string, language: string = 'en') {
 - 输入"nomu" → correctedWord:"飲む", kana:"のむ", phonetic:"no mu"
 - 输入"iku" → correctedWord:"行く", kana:"いく", phonetic:"i ku"
 
-注意：日文例句必须只包含假名和汉字，不能包含任何英文单词！
+注意：kana字段是必需的，绝对不能省略！
 
 请严格按照示例格式生成例句，确保日文例句中不包含任何英文单词。`;
 
