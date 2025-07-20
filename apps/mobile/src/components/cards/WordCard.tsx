@@ -406,11 +406,13 @@ const WordCard: React.FC<WordCardProps> = ({
       <View style={styles.headerRow}>
         <View style={{ flex: 1 }}>
           <View style={styles.wordContainer}>
+            {/* 日语：显示汉字和假名 */}
             <Text style={styles.word}>{wordData.correctedWord || wordData.word}</Text>
             {wordData.kana && (
               <Text style={styles.kana}>{wordData.kana}</Text>
             )}
           </View>
+          {/* 罗马音发音 */}
           <Text style={styles.phonetic}>{wordData.phonetic}</Text>
           {/* 来源 TAG 区域 */}
           {Array.isArray(wordData.sources) && wordData.sources.length > 0 && (
@@ -616,7 +618,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   phonetic: {
-    fontSize: 18,
+    fontSize: 14,
     color: '#888',
     fontStyle: 'italic',
     marginTop: 2,
