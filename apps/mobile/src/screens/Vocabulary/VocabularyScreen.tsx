@@ -62,7 +62,17 @@ const VocabularyScreen: React.FC = () => {
   useEffect(() => {
     if (isEditing && searchText.trim()) {
       const searchKey = (searchText || '').trim().toLowerCase();
-      const preview = vocabulary.filter(w => (w.word || '').trim().toLowerCase().includes(searchKey));
+      // 使用去重后的词汇列表进行预览搜索
+      const uniqueWords = vocabulary.reduce((acc: any[], current) => {
+        const normalizedCurrentWord = (current.word || '').trim().toLowerCase();
+        const exists = acc.find(item => (item.word || '').trim().toLowerCase() === normalizedCurrentWord);
+        if (!exists) {
+          acc.push(current);
+        }
+        return acc;
+      }, []);
+      
+      const preview = uniqueWords.filter(w => (w.word || '').trim().toLowerCase().includes(searchKey));
       setPreviewList(preview.slice(0, 5));
     } else {
       setPreviewList([]);
@@ -71,7 +81,17 @@ const VocabularyScreen: React.FC = () => {
 
   // 搜索和过滤时也统一小写和trim
   const filterWords = () => {
-    let filtered = vocabulary;
+    // 去重处理：按单词文本去重，保留第一个出现的实例
+    const uniqueWords = vocabulary.reduce((acc: any[], current) => {
+      const normalizedCurrentWord = (current.word || '').trim().toLowerCase();
+      const exists = acc.find(item => (item.word || '').trim().toLowerCase() === normalizedCurrentWord);
+      if (!exists) {
+        acc.push(current);
+      }
+      return acc;
+    }, []);
+
+    let filtered = uniqueWords;
     if (searchText) {
       const searchKey = (searchText || '').trim().toLowerCase();
       filtered = filtered.filter(word =>
@@ -374,16 +394,15 @@ const styles = StyleSheet.create({
     marginRight: 14,
   },
   progressBarBg: {
-    width: 180,
-    height: 12,
-    backgroundColor: colors.neutral[200],
-    borderRadius: 6,
+    height: 8,
+    backgroundColor: colors.background.tertiary,
+    borderRadius: 4,
     overflow: 'hidden',
   },
   progressBarFg: {
-    height: 12,
+    height: '100%',
     backgroundColor: colors.primary[500],
-    borderRadius: 6,
+    borderRadius: 4,
   },
   badgesSection: {
     paddingTop: 8,
@@ -424,7 +443,7 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingTop: 0,
     paddingBottom: 0,
-    paddingHorizontal: 20,
+    paddingHorizontal: 24,
   },
   searchContainer: {
     flexDirection: 'row',
@@ -450,7 +469,7 @@ const styles = StyleSheet.create({
   listContainer: {
     paddingTop: 0,
     paddingBottom: 20,
-    paddingHorizontal: 0,
+    paddingHorizontal: 16,
   },
   wordCardBox: {
     marginBottom: 12,
@@ -584,17 +603,18 @@ const styles = StyleSheet.create({
   },
   progressBarContainer: {
     flex: 1,
-    marginRight: 16,
+    marginRight: 12,
   },
-
   progressRight: {
-    minWidth: 48,
+    minWidth: 70,
     alignItems: 'center',
     justifyContent: 'center',
   },
   progressLeftText: {
     color: colors.text.secondary,
-    fontSize: 15,
+    fontSize: 12,
+    textAlign: 'center',
+    lineHeight: 16,
   },
   progressCheck: {
     width: 32,

@@ -16,7 +16,7 @@ import Swiper from 'react-native-deck-swiper';
 import WordCard, { WordData } from '../../components/cards/WordCard';
 import { audioService } from '../../services/audioService';
 import { learningDataService } from '../../services/learningDataService';
-import { LearningRecord, updateWordReview } from '../../services/learningAlgorithm';
+import { LearningRecord, updateWordReview, Word } from '../../services/learningAlgorithm';
 import { SwipeableWordCard } from '../../components/cards';
 import { UserService } from '../../services/userService';
 import { useVocabulary } from '../../context/VocabularyContext';
@@ -25,6 +25,8 @@ import dayjs from 'dayjs';
 import { wordService } from '../../services/wordService';
 import { useAppLanguage } from '../../context/AppLanguageContext';
 import { t } from '../../constants/translations';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { API_BASE_URL } from '../../constants/config';
 
 // 复习完成统计接口
 interface ReviewStats {
@@ -144,10 +146,35 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
   const rememberedRef = useRef(0);
   const forgottenRef = useRef(0);
   
+  // 进度条动画相关
+  const progressAnimation = useRef(new Animated.Value(0)).current;
+  const [currentProgress, setCurrentProgress] = useState(0);
+  
   // 监控 swiperIndex 变化
   useEffect(() => {
     console.log('ReviewScreen: swiperIndex changed to:', swiperIndex);
-  }, [swiperIndex]);
+    
+    // 更新进度条动画
+    if (words.length > 0) {
+      // 计算当前卡片进度（1-based索引）
+      const currentCardIndex = swiperIndex + 1;
+      const newProgress = (currentCardIndex / words.length) * 100;
+      console.log('🔄 进度条动画 - 当前进度:', currentProgress, '目标进度:', newProgress, 'swiperIndex:', swiperIndex, 'currentCardIndex:', currentCardIndex, 'words.length:', words.length);
+      
+      // 使用更平滑的动画曲线，增加动画时长
+      Animated.timing(progressAnimation, {
+        toValue: newProgress,
+        duration: 800, // 增加动画时长，让用户能看到进度条变化
+        useNativeDriver: false,
+      }).start(({ finished }) => {
+        if (finished) {
+          console.log('✅ 进度条动画完成 - 最终进度:', newProgress);
+        }
+      });
+      
+      setCurrentProgress(newProgress);
+    }
+  }, [swiperIndex, words.length]);
   
   // 监控 words 数组变化，初始化统计数据
   useEffect(() => {
@@ -245,12 +272,19 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
     console.log('ReviewScreen: useEffect triggered - vocabulary length:', vocabulary.length, 'type:', type, 'id:', id);
     loadReviewWords();
   }, [vocabulary, type, id]);
-  
+
   // 当 words 数组加载完成后，确保 swiperIndex 正确初始化
   useEffect(() => {
     if (words.length > 0) {
       console.log('ReviewScreen: Words loaded, initializing swiperIndex to 0');
       setSwiperIndex(0);
+      
+      // 初始化进度条动画
+      const initialProgress = 0;
+      progressAnimation.setValue(initialProgress);
+      setCurrentProgress(initialProgress);
+      console.log('🔄 进度条动画初始化 - 初始进度:', initialProgress);
+      
       // 延迟一点时间，确保 Swiper 组件完全初始化
       setTimeout(() => {
         console.log('ReviewScreen: Swiper should be initialized now');
@@ -258,6 +292,10 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
     } else {
       console.log('ReviewScreen: Words array is empty, resetting swiperIndex to 0');
       setSwiperIndex(0);
+      
+      // 重置进度条动画
+      progressAnimation.setValue(0);
+      setCurrentProgress(0);
     }
   }, [words]);
 
@@ -270,8 +308,8 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
     if (!words || words.length === 0) {
       console.log('📝 没有 words，设置 loading 为 false');
       setIsWordDataLoading(false);
-      return;
-    }
+        return;
+      }
     console.log('🔄 设置 loading 为 true');
     setIsWordDataLoading(true);
     console.log('🔄 开始批量加载词卡数据...');
@@ -354,24 +392,24 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
       console.error(`❌ 词卡数据加载失败: ${reviewWord.word}`, error);
       // 返回 fallback 数据
       const fallbackData = {
-        word: reviewWord.word,
-        phonetic: reviewWord.phonetic,
-        definitions: [
-          {
-            partOfSpeech: 'noun',
-            definition: reviewWord.translation,
-            examples: [
-              {
-                english: `Example sentence with ${reviewWord.word}`,
-                chinese: `包含 ${reviewWord.word} 的例句`,
-              },
-            ],
-          },
-        ],
-        searchCount: reviewWord.reviewCount,
-        lastSearched: reviewWord.lastReviewed,
-        isCollected: false,
-      };
+      word: reviewWord.word,
+      phonetic: reviewWord.phonetic,
+      definitions: [
+        {
+          partOfSpeech: 'noun',
+          definition: reviewWord.translation,
+          examples: [
+            {
+              english: `Example sentence with ${reviewWord.word}`,
+              chinese: `包含 ${reviewWord.word} 的例句`,
+            },
+          ],
+        },
+      ],
+      searchCount: reviewWord.reviewCount,
+      lastSearched: reviewWord.lastReviewed,
+      isCollected: false,
+    };
       setWordDataCache(prev => ({ ...prev, [reviewWord.word]: fallbackData }));
       return fallbackData;
     }
@@ -396,6 +434,7 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
         wordData={wordData}
         isExpanded={expandedIndex === index}
         onExpandToggle={() => setExpandedIndex(expandedIndex === index ? null : index)}
+        onPlayAudio={handlePlayAudio}
       />
     );
   };
@@ -432,10 +471,26 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
     setReviewActions(prev => ([...prev, { word, remembered }]));
   };
 
+  // 将 ReviewWord 转换为 Word 类型的适配器函数
+  const convertReviewWordToWord = (reviewWord: ReviewWord): Word => {
+    return {
+      id: reviewWord.id,
+      word: reviewWord.word,
+      definitions: [reviewWord.translation], // 使用 translation 作为定义
+      phonetic: reviewWord.phonetic,
+      sourceShow: reviewWord.show ? { type: 'show' as const, id: reviewWord.show } : undefined,
+      collectedAt: reviewWord.lastReviewed,
+      reviewStage: reviewWord.reviewCount,
+      nextReviewAt: reviewWord.lastReviewed, // 使用 lastReviewed 作为 nextReviewAt
+      reviewHistory: [], // 空的历史记录
+    };
+  };
+
   // 处理滑动操作
   const handleSwipeLeft = async (word: string) => {
     // 1. 先用 updateWordReview 处理业务逻辑
-    const updatedWord = updateWordReview(words[swiperIndex], false);
+    const wordObj = convertReviewWordToWord(words[swiperIndex]);
+    const updatedWord = updateWordReview(wordObj, false);
     try {
       // 2. 只做存储
       await learningDataService.updateLearningRecord(
@@ -446,7 +501,7 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
     } catch (error) {
       console.error('更新学习记录失败:', error);
     }
-
+    
     forgottenRef.current += 1;
     setReviewStats(prev => {
       const forgotten = prev.forgottenWords + 1;
@@ -469,7 +524,8 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
 
   const handleSwipeRight = async (word: string) => {
     // 1. 先用 updateWordReview 处理业务逻辑
-    const updatedWord = updateWordReview(words[swiperIndex], true);
+    const wordObj = convertReviewWordToWord(words[swiperIndex]);
+    const updatedWord = updateWordReview(wordObj, true);
     try {
       // 2. 只做存储
       await learningDataService.updateLearningRecord(
@@ -541,8 +597,8 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
       const newIndex = swiperIndex + 1;
       console.log('ReviewScreen: Moving to next word, new index:', newIndex);
       setSwiperIndex(newIndex);
-      setShowAnswer(false);
-    } else {
+        setShowAnswer(false);
+      } else {
       console.log('ReviewScreen: Review complete, calculating final stats');
       // 复习完成 - 计算最终统计数据
       if (!isReviewComplete) {
@@ -561,17 +617,34 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
         console.log('ReviewScreen: Final stats:', finalStats);
         setReviewStats(finalStats);
         setFinalStats(finalStats);
-        setIsReviewComplete(true);
+        
+        // 延迟显示完成页面，确保进度条动画完成
+        setTimeout(() => {
+          setIsReviewComplete(true);
+        }, 800); // 等待进度条动画完成
       }
-    }
+      }
   };
 
   // 处理音频播放
   const handlePlayAudio = async (word: string) => {
+    console.log('🎵 ReviewScreen - 开始播放音频:', word);
+    
     try {
       await audioService.playWordPronunciation(word);
+      console.log('✅ ReviewScreen - 音频播放成功');
     } catch (error) {
-      Alert.alert('播放失败', '音频播放功能开发中...');
+      console.error('❌ ReviewScreen - 音频播放失败:', error);
+      
+      // 尝试使用 Web Speech API 作为备用方案
+      try {
+        console.log('🔄 ReviewScreen - 尝试使用 Web Speech API...');
+        await audioService.playWithWebSpeech(word);
+        console.log('✅ ReviewScreen - Web Speech API 播放成功');
+      } catch (webSpeechError) {
+        console.error('❌ ReviewScreen - Web Speech API 也失败了:', webSpeechError);
+        Alert.alert('播放失败', '音频播放功能暂时不可用，请稍后再试');
+      }
     }
   };
 
@@ -648,30 +721,34 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
 
   // 进度条渲染
   const renderProgressBar = () => {
-    // swiperIndex 现在表示“已完成的卡片数”
-    const progressPercentage = words.length > 0 ? (swiperIndex / words.length) * 100 : 0;
-    const progressText = words.length > 0 ? `${swiperIndex} / ${words.length}` : '';
+    // swiperIndex 表示当前正在查看的卡片索引（从0开始）
+    const currentCardIndex = swiperIndex + 1; // 转换为1-based索引用于显示
+    const progressPercentage = words.length > 0 ? (currentCardIndex / words.length) * 100 : 0;
+    const progressText = words.length > 0 ? `${currentCardIndex} / ${words.length}` : '';
     return (
-      <View style={{ width: '100%', alignItems: 'center', marginTop: 16, marginBottom: 8 }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', width: '90%' }}>
-          <TouchableOpacity 
-            style={{ padding: 8, marginRight: 12 }}
-            onPress={() => navigate('main', { tab: 'review' })}
-          >
-            <Ionicons name="arrow-back" size={24} color={colors.text.primary} />
-          </TouchableOpacity>
-          <View style={{ flex: 1, height: 8, backgroundColor: colors.background.tertiary, borderRadius: 4, marginRight: 8 }}>
-            <View style={{
-              height: 8,
-              backgroundColor: colors.primary[500],
-              borderRadius: 4,
-              width: `${progressPercentage}%`
-            }} />
-          </View>
-          <Text style={{ fontSize: 16, fontWeight: '600', color: colors.text.primary }}>{progressText}</Text>
+    <View style={{ width: '100%', alignItems: 'center', marginTop: 16, marginBottom: 8 }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', width: '90%' }}>
+        <TouchableOpacity 
+          style={{ padding: 8, marginRight: 12 }}
+          onPress={() => navigate('main', { tab: 'review' })}
+        >
+          <Ionicons name="arrow-back" size={24} color={colors.text.primary} />
+        </TouchableOpacity>
+        <View style={{ flex: 1, height: 8, backgroundColor: colors.background.tertiary, borderRadius: 4, marginRight: 8 }}>
+          <Animated.View style={{
+            height: 8,
+            backgroundColor: colors.primary[500],
+            borderRadius: 4,
+            width: progressAnimation.interpolate({
+              inputRange: [0, 100],
+              outputRange: ['0%', '100%'],
+            }),
+          }} />
         </View>
+          <Text style={{ fontSize: 16, fontWeight: '600', color: colors.text.primary }}>{progressText}</Text>
       </View>
-    );
+    </View>
+  );
   };
 
 
@@ -733,7 +810,11 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
     console.log('ReviewScreen: Final stats:', finalStats);
     setReviewStats(finalStats);
     setFinalStats(finalStats);
-    setIsReviewComplete(true);
+    
+    // 延迟显示完成页面，确保进度条动画完成
+    setTimeout(() => {
+      setIsReviewComplete(true);
+    }, 800); // 等待进度条动画完成
   };
 
   // ReviewCompleteScreen 传入 actions
@@ -743,7 +824,72 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
         <ReviewCompleteScreen 
           stats={finalStats || reviewStats}
           actions={reviewActions}
-          onBack={() => navigate('main', { tab: 'review' })}
+          onBack={async () => {
+            // 增加复习次数统计
+            try {
+              // 更新本地存储的复习次数
+              const currentStats = await AsyncStorage.getItem('userStats');
+              if (currentStats) {
+                const stats = JSON.parse(currentStats);
+                const updatedStats = {
+                  ...stats,
+                  totalReviews: (stats.totalReviews || 0) + 1
+                };
+                await AsyncStorage.setItem('userStats', JSON.stringify(updatedStats));
+                console.log('✅ 本地复习次数已更新:', updatedStats.totalReviews);
+              }
+              
+              // 同步到后端
+              const token = await AsyncStorage.getItem('authToken');
+              if (token) {
+                // 更新复习次数和连续学习
+                await fetch(`${API_BASE_URL}/users/stats`, {
+                  method: 'PUT',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`,
+                  },
+                  body: JSON.stringify({
+                    totalReviews: 1, // 增加1次复习
+                    updateContinuousLearning: true // 标记需要更新连续学习
+                  }),
+                });
+                console.log('✅ 复习次数和连续学习已同步到后端');
+              }
+            } catch (error) {
+              console.error('❌ 更新复习次数失败:', error);
+            }
+            
+            // 保存经验值增加参数到AsyncStorage
+            const params = {
+              showExperienceAnimation: true,
+              experienceGained: finalStats?.experience || 0
+            };
+            await AsyncStorage.setItem('navigationParams', JSON.stringify(params));
+            
+            // 确保经验值同步到后端
+            if (finalStats?.experience && finalStats.experience > 0) {
+              try {
+                const token = await AsyncStorage.getItem('authToken');
+                if (token) {
+                  // 调用后端API更新经验值
+                  await fetch(`${API_BASE_URL}/experience/checkin`, {
+                    method: 'POST',
+                    headers: {
+                      'Content-Type': 'application/json',
+                      'Authorization': `Bearer ${token}`,
+                    },
+                  });
+                  console.log('✅ 复习经验值已同步到后端');
+                }
+              } catch (error) {
+                console.error('❌ 同步复习经验值失败:', error);
+              }
+            }
+            
+            // 导航回review intro页面
+            navigate('main', { tab: 'review' });
+          }}
         />
       </SafeAreaView>
     );

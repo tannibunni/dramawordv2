@@ -9,6 +9,7 @@ export interface UserProfile {
   email?: string;
   avatar?: string;
   loginType?: 'wechat' | 'apple' | 'phone' | 'guest';
+  contributedWords?: number;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -81,7 +82,7 @@ export class UserService {
   // 获取用户资料（API调用）
   async getProfile(token: string): Promise<UserServiceResponse> {
     try {
-      const response = await fetch(`${API_BASE_URL}/user/profile`, {
+      const response = await fetch(`${API_BASE_URL}/users/profile`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -107,7 +108,7 @@ export class UserService {
   // 更新用户资料
   async updateProfile(token: string, profileData: Partial<UserProfile>): Promise<UserServiceResponse> {
     try {
-      const response = await fetch(`${API_BASE_URL}/user/profile`, {
+      const response = await fetch(`${API_BASE_URL}/users/profile`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,

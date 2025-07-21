@@ -11,10 +11,13 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { LoginButton } from '../../components/auth/LoginButton';
 import { PhoneLoginModal } from '../../components/auth/PhoneLoginModal';
+import { WelcomeModal } from '../../components/auth/WelcomeModal';
 import { WechatService } from '../../services/wechatService';
 import { AppleService } from '../../services/appleService';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import { colors } from '../../constants/colors';
+import { t } from '../../constants/translations';
+import { useAppLanguage } from '../../context/AppLanguageContext';
 
 interface LoginScreenProps {
   onLoginSuccess: (userData: any) => void;
@@ -25,8 +28,11 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
   onLoginSuccess,
   onGuestLogin,
 }) => {
+  const { appLanguage } = useAppLanguage();
   const [phoneModalVisible, setPhoneModalVisible] = useState(false);
+  const [welcomeModalVisible, setWelcomeModalVisible] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [loginUserData, setLoginUserData] = useState<any>(null);
 
   // 测试登录功能 - 从 ProfileScreen 同步过来
   const testLogin = async (loginType: 'wechat' | 'apple' | 'phone' | 'guest') => {
@@ -105,8 +111,13 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
         const dataSyncService = DataSyncService.getInstance();
         await dataSyncService.clearAllCache();
         
-        onLoginSuccess(userData);
-        Alert.alert('登录成功', `用户ID: ${result.data.user.id}\n登录类型: ${loginType}\n缓存已清除，将显示新用户数据`);
+        // 如果是游客登录，显示欢迎页面
+        if (loginType === 'guest') {
+          setLoginUserData(userData);
+          setWelcomeModalVisible(true);
+        } else {
+          onLoginSuccess(userData);
+        }
       } else {
         throw new Error(result.message || '注册失败');
       }
@@ -148,6 +159,19 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
     Alert.alert('用户协议', '这里将打开用户协议页面');
   };
 
+  const handleWelcomeClose = () => {
+    setWelcomeModalVisible(false);
+    setLoginUserData(null);
+  };
+
+  const handleStartTrial = () => {
+    if (loginUserData) {
+      onLoginSuccess(loginUserData);
+    }
+    setWelcomeModalVisible(false);
+    setLoginUserData(null);
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.content}>
@@ -157,9 +181,9 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
             <View style={styles.logo}>
               <Ionicons name="book-outline" size={48} color={colors.primary[500]} />
             </View>
-            <Text style={styles.appName}>剧词记</Text>
+            <Text style={styles.appName}>{t('app_name', appLanguage)}</Text>
           </View>
-          <Text style={styles.slogan}>看剧，记住真·有用的单词</Text>
+          <Text style={styles.slogan}>{t('app_slogan', appLanguage)}</Text>
         </View>
 
         {/* 登录按钮 */}
@@ -194,13 +218,13 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
         {/* 隐私政策 */}
         <View style={styles.privacyContainer}>
           <Text style={styles.privacyText}>
-            登录即代表你同意
+            {t('login_agreement', appLanguage)}
             <Text style={styles.link} onPress={handleUserAgreement}>
-              《用户协议》
+              {t('user_agreement', appLanguage)}
             </Text>
-            和
+            {appLanguage === 'zh-CN' ? '和' : ' and '}
             <Text style={styles.link} onPress={handlePrivacyPolicy}>
-              《隐私政策》
+              {t('privacy_policy', appLanguage)}
             </Text>
           </Text>
         </View>
@@ -211,6 +235,14 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
         visible={phoneModalVisible}
         onClose={() => setPhoneModalVisible(false)}
         onLoginSuccess={handlePhoneLoginSuccess}
+      />
+
+      {/* 欢迎页面模态框 */}
+      <WelcomeModal
+        visible={welcomeModalVisible}
+        onClose={handleWelcomeClose}
+        onStartTrial={handleStartTrial}
+        userData={loginUserData}
       />
     </SafeAreaView>
   );

@@ -286,6 +286,65 @@ class LearningDataService {
     }
   }
 
+  // 清除所有学习数据
+  async clearAll(): Promise<void> {
+    try {
+      // 清除学习记录和复习会话
+      await this.resetLearningRecords();
+      
+      // 清除用户统计数据
+      await AsyncStorage.removeItem(this.STORAGE_KEYS.USER_STATS);
+      
+      // 清除其他相关的学习数据
+      const keysToRemove = [
+        'user_level',
+        'user_experience',
+        'learning_streak',
+        'total_reviews',
+        'collected_words_count',
+        'contributed_words_count',
+        'learning_days',
+        'last_study_date',
+        'learning_efficiency',
+        'mastery_levels',
+        'difficulty_levels',
+        'confidence_scores',
+        'time_spent_learning',
+        'weekly_progress',
+        'monthly_progress',
+        'learning_goals',
+        'achievement_badges',
+        'learning_suggestions',
+        'forgetting_curve_data',
+        'spaced_repetition_data'
+      ];
+      
+      await AsyncStorage.multiRemove(keysToRemove);
+      
+      // 云端同步清除（如果有用户登录）
+      const token = await getUserToken();
+      if (token) {
+        try {
+          await fetch(`${API_BASE_URL}/users/clear-learning-data`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${token}`,
+            },
+          });
+          console.log('✅ 云端学习数据已清除');
+        } catch (e) {
+          console.error('❌ 云端学习数据清除失败:', e);
+        }
+      }
+      
+      console.log('✅ 所有学习数据已清除');
+    } catch (error) {
+      console.error('清除所有学习数据失败:', error);
+      throw error;
+    }
+  }
+
   // 导出学习数据
   async exportLearningData(): Promise<{
     records: LearningRecord[];

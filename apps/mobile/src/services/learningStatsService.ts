@@ -306,4 +306,56 @@ export class LearningStatsService {
     
     return records;
   }
+
+  // 清除所有学习统计数据
+  static async clearAll(): Promise<void> {
+    try {
+      const keysToRemove = [
+        'user_learning_stats',
+        'user_badges',
+        'user_level',
+        'user_experience',
+        'learning_streak',
+        'total_words_learned',
+        'contributed_words_count',
+        'learning_days',
+        'total_reviews',
+        'learning_accuracy',
+        'last_study_date',
+        'weekly_progress',
+        'monthly_progress',
+        'achievement_progress',
+        'learning_goals',
+        'user_achievements',
+        'learning_history',
+        'streak_records',
+        'level_progress',
+        'experience_points'
+      ];
+      
+      await AsyncStorage.multiRemove(keysToRemove);
+      
+      // 云端同步清除（如果有用户登录）
+      const token = await AsyncStorage.getItem('authToken');
+      if (token) {
+        try {
+          await fetch(`${API_BASE_URL}/users/clear-stats`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${token}`,
+            },
+          });
+          console.log('✅ 云端学习统计数据已清除');
+        } catch (e) {
+          console.error('❌ 云端学习统计数据清除失败:', e);
+        }
+      }
+      
+      console.log('✅ 所有学习统计数据已清除');
+    } catch (error) {
+      console.error('清除学习统计数据失败:', error);
+      throw error;
+    }
+  }
 } 

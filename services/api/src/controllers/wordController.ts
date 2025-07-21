@@ -6,6 +6,7 @@ import { CloudWord } from '../models/CloudWord';
 import UserVocabulary from '../models/UserVocabulary';
 import { ChineseTranslation } from '../models/ChineseTranslation';
 import { User } from '../models/User';
+import { ExperienceService } from '../services/experienceService';
 import { logger } from '../utils/logger';
 
 // 初始化 OpenAI
@@ -118,17 +119,15 @@ export const searchWord = async (req: Request, res: Response): Promise<void> => 
         await cloudWord.save();
         logger.info(`✅ New word saved to database: ${searchTerm}`);
         
-        // 增加用户的贡献新词计数
+        // 增加用户的贡献新词计数和经验值
         const userId = req.user?.id;
         if (userId) {
           try {
-            await User.updateOne(
-              { _id: userId },
-              { $inc: { contributedWords: 1 } }
-            );
-            logger.info(`✅ Incremented contributedWords for user: ${userId}`);
+            // 添加经验值
+            const experienceResult = await ExperienceService.addExperienceForContribution(userId);
+            logger.info(`✅ Experience gained for contribution: ${experienceResult.xpGained} XP`);
           } catch (userUpdateError) {
-            logger.error(`❌ Failed to increment contributedWords for user ${userId}:`, userUpdateError);
+            logger.error(`❌ Failed to add experience for contribution ${userId}:`, userUpdateError);
             // 不中断流程，继续执行
           }
         }
@@ -195,17 +194,15 @@ export const searchWord = async (req: Request, res: Response): Promise<void> => 
         await cloudWord.save();
         logger.info(`✅ Fallback word saved to database: ${searchTerm}`);
         
-        // 增加用户的贡献新词计数（fallback 也算贡献）
+        // 增加用户的贡献新词计数和经验值（fallback 也算贡献）
         const userId = req.user?.id;
         if (userId) {
           try {
-            await User.updateOne(
-              { _id: userId },
-              { $inc: { contributedWords: 1 } }
-            );
-            logger.info(`✅ Incremented contributedWords for user (fallback): ${userId}`);
+            // 添加经验值
+            const experienceResult = await ExperienceService.addExperienceForContribution(userId);
+            logger.info(`✅ Experience gained for contribution (fallback): ${experienceResult.xpGained} XP`);
           } catch (userUpdateError) {
-            logger.error(`❌ Failed to increment contributedWords for user ${userId} (fallback):`, userUpdateError);
+            logger.error(`❌ Failed to add experience for contribution ${userId} (fallback):`, userUpdateError);
             // 不中断流程，继续执行
           }
         }
@@ -535,12 +532,28 @@ export const addToUserVocabulary = async (req: Request, res: Response) => {
     await userVocabulary.save();
     logger.info(`✅ Added word to user vocabulary: ${searchTerm}`);
 
+    // 4. 添加经验值（收集新单词）
+    let experienceResult = null;
+    try {
+      experienceResult = await ExperienceService.addExperienceForNewWord(userId);
+      logger.info(`🎯 Experience gained for new word: ${experienceResult.xpGained} XP`);
+    } catch (xpError) {
+      logger.error('❌ Failed to add experience for new word:', xpError);
+      // 不中断流程，继续执行
+    }
+
     res.json({
       success: true,
       message: 'Word added to vocabulary successfully',
       data: {
         word: searchTerm,
-        definitions: cloudWord.definitions
+        definitions: cloudWord.definitions,
+        experience: experienceResult ? {
+          xpGained: experienceResult.xpGained,
+          newLevel: experienceResult.newLevel,
+          leveledUp: experienceResult.leveledUp,
+          message: experienceResult.message
+        } : null
       }
     });
 
@@ -557,7 +570,7 @@ export const addToUserVocabulary = async (req: Request, res: Response) => {
 // 更新单词学习进度
 export const updateWordProgress = async (req: Request, res: Response) => {
   try {
-    const { userId, word, progress } = req.body;
+    const { userId, word, progress, isSuccessfulReview = false } = req.body;
     
     if (!userId || !word || !progress) {
       res.status(400).json({
@@ -591,9 +604,29 @@ export const updateWordProgress = async (req: Request, res: Response) => {
     await userWord.save();
     logger.info(`✅ Updated progress for word: ${searchTerm}`);
 
+    // 如果是成功复习，添加经验值
+    let experienceResult = null;
+    if (isSuccessfulReview) {
+      try {
+        experienceResult = await ExperienceService.addExperienceForReview(userId);
+        logger.info(`🎯 Experience gained for review: ${experienceResult.xpGained} XP`);
+      } catch (xpError) {
+        logger.error('❌ Failed to add experience for review:', xpError);
+        // 不中断流程，继续执行
+      }
+    }
+
     res.json({
       success: true,
-      message: 'Word progress updated successfully'
+      message: 'Word progress updated successfully',
+      data: {
+        experience: experienceResult ? {
+          xpGained: experienceResult.xpGained,
+          newLevel: experienceResult.newLevel,
+          leveledUp: experienceResult.leveledUp,
+          message: experienceResult.message
+        } : null
+      }
     });
 
   } catch (error) {

@@ -134,7 +134,7 @@ const styles = StyleSheet.create({
   listContainer: {
     paddingTop: 0,
     paddingBottom: 20,
-    paddingHorizontal: 0,
+    // paddingHorizontal: 0, // 移除这行，让父组件的style属性生效
   },
   wordCardBox: {
     marginBottom: 12,

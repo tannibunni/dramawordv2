@@ -15,7 +15,7 @@ interface VocabularyContextType {
   addWord: (word: WordData, sourceShow?: Show) => void;
   removeWord: (word: string, sourceShowId?: number) => void;
   updateWord: (word: string, data: Partial<WordWithSource>) => void;
-  clearVocabulary: () => void;
+  clearVocabulary: () => Promise<void>;
   isWordInShow: (word: string, showId?: number) => boolean;
 }
 
@@ -176,9 +176,16 @@ export const VocabularyProvider = ({ children }: { children: ReactNode }) => {
     setVocabulary(prev => prev.map(w => w.word === word ? { ...w, ...data } : w));
   };
 
-  const clearVocabulary = () => {
-    setVocabulary([]);
-    console.log('🗑️ 清空所有词汇数据');
+  const clearVocabulary = async () => {
+    try {
+      // 清空内存中的词汇数据
+      setVocabulary([]);
+      // 清空本地存储
+      await AsyncStorage.removeItem(VOCABULARY_STORAGE_KEY);
+      console.log('🗑️ 清空所有词汇数据（内存+本地存储）');
+    } catch (error) {
+      console.error('❌ 清空词汇数据失败:', error);
+    }
   };
 
   const isWordInShow = (word: string, showId?: number) => {

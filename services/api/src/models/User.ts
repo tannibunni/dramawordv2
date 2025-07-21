@@ -11,6 +11,12 @@ export interface IUserLearningStats {
   lastStudyDate: Date;
   level: number;
   experience: number;
+  // 新增经验值相关字段
+  dailyReviewXP: number; // 当日通过复习获得的XP
+  dailyStudyTimeXP: number; // 当日通过学习时长获得的XP
+  lastDailyReset: Date; // 上次每日重置时间
+  completedDailyCards: boolean; // 是否完成今日词卡任务
+  lastDailyCardsDate: Date; // 上次完成每日词卡的日期
 }
 
 // 用户设置接口
@@ -201,6 +207,26 @@ const UserSchema = new Schema<IUser>({
     experience: {
       type: Number,
       default: 0
+    },
+    dailyReviewXP: {
+      type: Number,
+      default: 0
+    },
+    dailyStudyTimeXP: {
+      type: Number,
+      default: 0
+    },
+    lastDailyReset: {
+      type: Date,
+      default: Date.now
+    },
+    completedDailyCards: {
+      type: Boolean,
+      default: false
+    },
+    lastDailyCardsDate: {
+      type: Date,
+      default: null
     }
   },
   contributedWords: {
@@ -289,29 +315,164 @@ UserSchema.virtual('levelName').get(function() {
 UserSchema.virtual('experienceToNextLevel').get(function() {
   const currentLevel = this.learningStats.level;
   const currentExp = this.learningStats.experience;
-  const nextLevelExp = currentLevel * 100; // 每级需要 level * 100 经验
-  return Math.max(0, nextLevelExp - currentExp);
+  const nextLevelExp = 50 * Math.pow(currentLevel + 1, 2); // 平方增长公式
+  const totalExpForNextLevel = nextLevelExp;
+  const totalExpForCurrentLevel = 50 * Math.pow(currentLevel, 2);
+  const expNeededForCurrentLevel = totalExpForNextLevel - totalExpForCurrentLevel;
+  return Math.max(0, expNeededForCurrentLevel - currentExp);
 });
 
-// 方法：更新学习统计
-UserSchema.methods.updateLearningStats = function(stats: Partial<IUserLearningStats>) {
-  Object.assign(this.learningStats, stats);
-  return this.save();
+// 虚拟字段：当前等级所需总经验
+UserSchema.virtual('totalExperienceForCurrentLevel').get(function() {
+  const currentLevel = this.learningStats.level;
+  return 50 * Math.pow(currentLevel, 2);
+});
+
+// 虚拟字段：下一等级所需总经验
+UserSchema.virtual('totalExperienceForNextLevel').get(function() {
+  const currentLevel = this.learningStats.level;
+  return 50 * Math.pow(currentLevel + 1, 2);
+});
+
+// 方法：检查并重置每日限制
+UserSchema.methods.checkAndResetDailyLimits = function() {
+  const today = new Date();
+  const lastReset = this.learningStats.lastDailyReset;
+  
+  if (!lastReset || !this.isSameDay(today, lastReset)) {
+    // 新的一天，重置每日限制
+    this.learningStats.dailyReviewXP = 0;
+    this.learningStats.dailyStudyTimeXP = 0;
+    this.learningStats.lastDailyReset = today;
+    
+    // 检查每日词卡任务重置
+    if (!this.learningStats.lastDailyCardsDate || !this.isSameDay(today, this.learningStats.lastDailyCardsDate)) {
+      this.learningStats.completedDailyCards = false;
+    }
+    
+    return true; // 表示已重置
+  }
+  return false; // 表示未重置
 };
 
-// 方法：增加经验值
-UserSchema.methods.addExperience = function(exp: number) {
+// 辅助方法：检查是否为同一天
+UserSchema.methods.isSameDay = function(date1: Date, date2: Date) {
+  return date1.getFullYear() === date2.getFullYear() &&
+         date1.getMonth() === date2.getMonth() &&
+         date1.getDate() === date2.getDate();
+};
+
+// 方法：增加经验值（新版本）
+UserSchema.methods.addExperience = function(exp: number, reason: string = '') {
+  // 检查并重置每日限制
+  this.checkAndResetDailyLimits();
+  
+  // 添加经验值
   this.learningStats.experience += exp;
   
   // 检查是否升级
   const currentLevel = this.learningStats.level;
-  const requiredExp = currentLevel * 100;
+  const totalExpForNextLevel = 50 * Math.pow(currentLevel + 1, 2);
+  const totalExpForCurrentLevel = 50 * Math.pow(currentLevel, 2);
+  const expNeededForCurrentLevel = totalExpForNextLevel - totalExpForCurrentLevel;
   
-  if (this.learningStats.experience >= requiredExp) {
+  if (this.learningStats.experience >= expNeededForCurrentLevel) {
+    // 升级
     this.learningStats.level += 1;
-    this.learningStats.experience -= requiredExp;
+    this.learningStats.experience -= expNeededForCurrentLevel;
+    
+    console.log(`🎉 用户升级！新等级: ${this.learningStats.level}, 原因: ${reason}`);
   }
   
+  return this.save();
+};
+
+// 方法：收集新单词获得经验值
+UserSchema.methods.addExperienceForNewWord = function() {
+  return this.addExperience(5, '收集新单词');
+};
+
+// 方法：成功复习单词获得经验值
+UserSchema.methods.addExperienceForReview = function() {
+  // 检查每日复习XP限制
+  if (this.learningStats.dailyReviewXP >= 30) {
+    console.log('⚠️ 今日复习XP已达上限30点');
+    return this.save();
+  }
+  
+  const xpToAdd = Math.min(2, 30 - this.learningStats.dailyReviewXP);
+  this.learningStats.dailyReviewXP += xpToAdd;
+  
+  return this.addExperience(xpToAdd, '成功复习单词');
+};
+
+// 方法：连续学习打卡获得经验值
+UserSchema.methods.addExperienceForDailyCheckin = function() {
+  // 检查并重置每日限制
+  this.checkAndResetDailyLimits();
+  
+  // 基础XP
+  let baseXP = 5;
+  
+  // 连续学习奖励（最多7天）
+  const streakBonus = Math.min(this.learningStats.currentStreak, 7);
+  
+  const totalXP = baseXP + streakBonus;
+  
+  return this.addExperience(totalXP, `连续学习打卡 (连续${this.learningStats.currentStreak}天)`);
+};
+
+// 方法：完成每日词卡任务获得经验值
+UserSchema.methods.addExperienceForDailyCards = function() {
+  // 检查并重置每日限制
+  this.checkAndResetDailyLimits();
+  
+  // 检查是否已完成今日任务
+  if (this.learningStats.completedDailyCards) {
+    console.log('⚠️ 今日词卡任务已完成');
+    return this.save();
+  }
+  
+  this.learningStats.completedDailyCards = true;
+  this.learningStats.lastDailyCardsDate = new Date();
+  
+  return this.addExperience(5, '完成每日词卡任务');
+};
+
+// 方法：学习时长奖励
+UserSchema.methods.addExperienceForStudyTime = function(minutes: number) {
+  // 检查并重置每日限制
+  this.checkAndResetDailyLimits();
+  
+  // 每10分钟获得3点XP，每日上限30分钟
+  const maxMinutes = 30;
+  const minutesToAdd = Math.min(minutes, maxMinutes - (this.learningStats.totalStudyTime % maxMinutes));
+  
+  if (minutesToAdd <= 0) {
+    console.log('⚠️ 今日学习时长XP已达上限');
+    return this.save();
+  }
+  
+  const xpToAdd = Math.floor(minutesToAdd / 10) * 3;
+  this.learningStats.dailyStudyTimeXP += xpToAdd;
+  this.learningStats.totalStudyTime += minutesToAdd;
+  
+  if (xpToAdd > 0) {
+    return this.addExperience(xpToAdd, `学习时长奖励 (${minutesToAdd}分钟)`);
+  }
+  
+  return this.save();
+};
+
+// 方法：贡献新词获得经验值
+UserSchema.methods.addExperienceForContribution = function() {
+  this.contributedWords += 1;
+  return this.addExperience(8, '贡献新词');
+};
+
+// 方法：更新学习统计
+UserSchema.methods.updateLearningStats = function(stats: Partial<IUserLearningStats>) {
+  Object.assign(this.learningStats, stats);
   return this.save();
 };
 
@@ -323,26 +484,106 @@ UserSchema.methods.updateStudyStreak = function() {
   if (!lastStudy) {
     // 第一次学习
     this.learningStats.currentStreak = 1;
+    this.learningStats.lastStudyDate = today;
+    console.log('🎯 用户首次学习，开始连续学习记录');
   } else {
     const daysDiff = Math.floor((today.getTime() - lastStudy.getTime()) / (1000 * 60 * 60 * 24));
     
-    if (daysDiff === 1) {
-      // 连续学习
+    if (daysDiff === 0) {
+      // 同一天学习，不更新连续天数
+      console.log('🎯 同一天学习，保持连续天数不变');
+    } else if (daysDiff === 1) {
+      // 连续学习（昨天学习过）
       this.learningStats.currentStreak += 1;
+      this.learningStats.lastStudyDate = today;
+      console.log(`🎯 连续学习！当前连续天数: ${this.learningStats.currentStreak}`);
     } else if (daysDiff > 1) {
       // 中断学习，重置连续天数
       this.learningStats.currentStreak = 1;
+      this.learningStats.lastStudyDate = today;
+      console.log(`🎯 学习中断${daysDiff}天，重置连续天数为1`);
     }
-    // daysDiff === 0 表示同一天，不更新连续天数
   }
   
   // 更新最长连续天数
   if (this.learningStats.currentStreak > this.learningStats.longestStreak) {
     this.learningStats.longestStreak = this.learningStats.currentStreak;
+    console.log(`🏆 新的最长连续记录！${this.learningStats.longestStreak}天`);
   }
   
-  this.learningStats.lastStudyDate = today;
   return this.save();
+};
+
+// 方法：连续学习奖励
+UserSchema.methods.addContinuousLearningReward = function() {
+  const currentStreak = this.learningStats.currentStreak;
+  
+  // 连续学习奖励规则
+  let rewardXP = 0;
+  let rewardMessage = '';
+  
+  if (currentStreak >= 7) {
+    // 连续7天：额外10XP
+    rewardXP = 10;
+    rewardMessage = `连续学习${currentStreak}天奖励！`;
+  } else if (currentStreak >= 3) {
+    // 连续3天：额外5XP
+    rewardXP = 5;
+    rewardMessage = `连续学习${currentStreak}天奖励！`;
+  } else if (currentStreak >= 1) {
+    // 连续1天：额外2XP
+    rewardXP = 2;
+    rewardMessage = `连续学习${currentStreak}天奖励！`;
+  }
+  
+  if (rewardXP > 0) {
+    this.addExperience(rewardXP, rewardMessage);
+    console.log(`🎁 连续学习奖励: +${rewardXP}XP (${rewardMessage})`);
+  }
+  
+  return this.save();
+};
+
+// 方法：检查连续学习状态
+UserSchema.methods.checkContinuousLearningStatus = function() {
+  const today = new Date();
+  const lastStudy = this.learningStats.lastStudyDate;
+  
+  if (!lastStudy) {
+    return {
+      status: 'new',
+      message: '开始你的学习之旅吧！',
+      daysUntilReset: null
+    };
+  }
+  
+  const daysDiff = Math.floor((today.getTime() - lastStudy.getTime()) / (1000 * 60 * 60 * 24));
+  
+  if (daysDiff === 0) {
+    return {
+      status: 'today',
+      message: '今天已经学习过了，继续保持！',
+      daysUntilReset: 1
+    };
+  } else if (daysDiff === 1) {
+    return {
+      status: 'yesterday',
+      message: '昨天学习过，今天继续加油！',
+      daysUntilReset: 1
+    };
+  } else if (daysDiff > 1) {
+    return {
+      status: 'broken',
+      message: `学习中断${daysDiff}天，重新开始连续学习吧！`,
+      daysUntilReset: null
+    };
+  }
+  
+  return {
+    status: 'unknown',
+    message: '学习状态未知',
+    daysUntilReset: null
+  };
 };
 
 export const User = mongoose.model<IUser>('User', UserSchema); 

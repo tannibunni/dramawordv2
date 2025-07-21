@@ -9,6 +9,7 @@ export interface Show extends TMDBShow {
   wordCount: number;
   lastWatched?: string;
   icon?: string; // 单词本图标
+  description?: string; // 单词本描述
 }
 
 interface ShowListContextType {
@@ -16,7 +17,7 @@ interface ShowListContextType {
   addShow: (show: Show) => void;
   changeShowStatus: (showId: number, newStatus: ShowStatus) => void;
   removeShow: (showId: number) => void;
-  clearShows: () => void;
+  clearShows: () => Promise<void>;
   updateShow: (showId: number, updates: Partial<Show>) => void;
 }
 
@@ -81,7 +82,7 @@ export const ShowListProvider = ({ children }: { children: ReactNode }) => {
         return prev;
       }
       console.log('➕ 添加新剧集:', show.name, 'ID:', show.id);
-      return [...prev, show];
+      return [show, ...prev]; // 新剧集添加到列表开头
     });
   };
 
@@ -107,9 +108,16 @@ export const ShowListProvider = ({ children }: { children: ReactNode }) => {
     });
   };
 
-  const clearShows = () => {
-    setShows([]);
-    console.log('🗑️ 清空所有剧集数据');
+  const clearShows = async () => {
+    try {
+      // 清空内存中的剧集数据
+      setShows([]);
+      // 清空本地存储
+      await AsyncStorage.removeItem(SHOWS_STORAGE_KEY);
+      console.log('🗑️ 清空所有剧集数据（内存+本地存储）');
+    } catch (error) {
+      console.error('❌ 清空剧集数据失败:', error);
+    }
   };
 
   const updateShow = (showId: number, updates: Partial<Show>) => {

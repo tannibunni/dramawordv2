@@ -9,6 +9,21 @@ import { AppLanguageProvider } from './context/AppLanguageContext';
 import { Audio } from 'expo-av';
 import { InterruptionModeIOS, InterruptionModeAndroid } from 'expo-av/build/Audio.types';
 
+// 内部组件：移除自动通知初始化
+const AppContent = () => {
+  return (
+    <AuthProvider>
+      <LanguageProvider>
+        <ShowListProvider>
+          <VocabularyProvider>
+            <MainLayout />
+          </VocabularyProvider>
+        </ShowListProvider>
+      </LanguageProvider>
+    </AuthProvider>
+  );
+};
+
 export default function App() {
   useEffect(() => {
     // 设置音频模式，确保 iOS 静音拨片下也能播放
@@ -26,15 +41,7 @@ export default function App() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <AppLanguageProvider>
-        <AuthProvider>
-          <LanguageProvider>
-            <ShowListProvider>
-              <VocabularyProvider>
-                <MainLayout />
-              </VocabularyProvider>
-            </ShowListProvider>
-          </LanguageProvider>
-        </AuthProvider>
+        <AppContent />
       </AppLanguageProvider>
     </GestureHandlerRootView>
   );

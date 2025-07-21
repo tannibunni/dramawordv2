@@ -13,6 +13,8 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { LoginButton } from './LoginButton';
 import { colors } from '../../constants/colors';
+import { t } from '../../constants/translations';
+import { useAppLanguage } from '../../context/AppLanguageContext';
 
 interface PhoneLoginModalProps {
   visible: boolean;
@@ -25,6 +27,7 @@ export const PhoneLoginModal: React.FC<PhoneLoginModalProps> = ({
   onClose,
   onLoginSuccess,
 }) => {
+  const { appLanguage } = useAppLanguage();
   const [phone, setPhone] = useState('');
   const [verificationCode, setVerificationCode] = useState('');
   const [countdown, setCountdown] = useState(0);
@@ -41,7 +44,7 @@ export const PhoneLoginModal: React.FC<PhoneLoginModalProps> = ({
 
   const handleSendCode = async () => {
     if (!phone || phone.length !== 11) {
-      Alert.alert('提示', '请输入正确的手机号');
+      Alert.alert(t('tip', appLanguage), t('invalid_phone_number', appLanguage));
       return;
     }
 
@@ -55,9 +58,9 @@ export const PhoneLoginModal: React.FC<PhoneLoginModalProps> = ({
       
       setCountdown(60);
       setStep('code');
-      Alert.alert('提示', '验证码已发送');
+      Alert.alert(t('tip', appLanguage), t('code_sent', appLanguage));
     } catch (error) {
-      Alert.alert('错误', '发送验证码失败，请重试');
+      Alert.alert(t('error', appLanguage), t('code_send_failed', appLanguage));
     } finally {
       setLoading(false);
     }
@@ -65,7 +68,7 @@ export const PhoneLoginModal: React.FC<PhoneLoginModalProps> = ({
 
   const handleVerifyCode = async () => {
     if (!verificationCode || verificationCode.length !== 6) {
-      Alert.alert('提示', '请输入6位验证码');
+      Alert.alert(t('tip', appLanguage), t('invalid_verification_code', appLanguage));
       return;
     }
 
@@ -80,7 +83,7 @@ export const PhoneLoginModal: React.FC<PhoneLoginModalProps> = ({
       onLoginSuccess(phone);
       onClose();
     } catch (error) {
-      Alert.alert('错误', '验证码错误，请重试');
+      Alert.alert(t('error', appLanguage), t('verification_failed', appLanguage));
     } finally {
       setLoading(false);
     }
@@ -111,7 +114,7 @@ export const PhoneLoginModal: React.FC<PhoneLoginModalProps> = ({
             <Ionicons name="close" size={24} color={colors.text.primary} />
           </TouchableOpacity>
           <Text style={styles.title}>
-            {step === 'phone' ? '手机号登录' : '输入验证码'}
+            {step === 'phone' ? t('phone_login', appLanguage) : t('enter_verification_code', appLanguage)}
           </Text>
           <View style={styles.placeholder} />
         </View>
@@ -119,12 +122,12 @@ export const PhoneLoginModal: React.FC<PhoneLoginModalProps> = ({
         <View style={styles.content}>
           {step === 'phone' ? (
             <View style={styles.phoneStep}>
-              <Text style={styles.label}>手机号</Text>
+              <Text style={styles.label}>{appLanguage === 'zh-CN' ? '手机号' : 'Phone Number'}</Text>
               <View style={styles.inputContainer}>
                 <Ionicons name="call-outline" size={20} color={colors.text.secondary} />
                 <TextInput
                   style={styles.input}
-                  placeholder="请输入手机号"
+                  placeholder={t('enter_phone_number', appLanguage)}
                   value={phone}
                   onChangeText={setPhone}
                   keyboardType="phone-pad"
@@ -142,15 +145,15 @@ export const PhoneLoginModal: React.FC<PhoneLoginModalProps> = ({
             </View>
           ) : (
             <View style={styles.codeStep}>
-              <Text style={styles.label}>验证码</Text>
+              <Text style={styles.label}>{appLanguage === 'zh-CN' ? '验证码' : 'Verification Code'}</Text>
               <Text style={styles.subtitle}>
-                验证码已发送至 {phone.replace(/(\d{3})\d{4}(\d{4})/, '$1****$2')}
+                {appLanguage === 'zh-CN' ? '验证码已发送至' : 'Code sent to'} {phone.replace(/(\d{3})\d{4}(\d{4})/, '$1****$2')}
               </Text>
               <View style={styles.inputContainer}>
                 <Ionicons name="key-outline" size={20} color={colors.text.secondary} />
                 <TextInput
                   style={styles.input}
-                  placeholder="请输入6位验证码"
+                  placeholder={t('enter_verification_code', appLanguage)}
                   value={verificationCode}
                   onChangeText={setVerificationCode}
                   keyboardType="number-pad"
@@ -168,7 +171,7 @@ export const PhoneLoginModal: React.FC<PhoneLoginModalProps> = ({
                     { opacity: verificationCode.length === 6 ? 1 : 0.6 }
                   ]}
                 >
-                  <Text style={styles.verifyButtonText}>验证</Text>
+                  <Text style={styles.verifyButtonText}>{t('verify_code', appLanguage)}</Text>
                 </TouchableOpacity>
                 
                 <TouchableOpacity
@@ -180,7 +183,7 @@ export const PhoneLoginModal: React.FC<PhoneLoginModalProps> = ({
                   ]}
                 >
                   <Text style={styles.resendButtonText}>
-                    {countdown > 0 ? `${countdown}s后重发` : '重新发送'}
+                    {countdown > 0 ? `${countdown}s${appLanguage === 'zh-CN' ? '后重发' : ' later'}` : t('resend_code', appLanguage)}
                   </Text>
                 </TouchableOpacity>
               </View>

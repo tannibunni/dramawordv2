@@ -17,7 +17,7 @@ import {
   Dimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors } from '../../../../../packages/ui/src/tokens';
+import { colors } from '../../constants/colors';
 import { wordService, RecentWord } from '../../services/wordService';
 import WordCard from '../../components/cards/WordCard';
 import { useShowList } from '../../context/ShowListContext';
@@ -28,7 +28,8 @@ import LanguagePicker from '../../components/common/LanguagePicker';
 import { useLanguage } from '../../context/LanguageContext';
 import { useAppLanguage } from '../../context/AppLanguageContext';
 import { t } from '../../constants/translations';
-import { LanguageDebugInfo } from '../../components/common/LanguageDebugInfo';
+import { SUPPORTED_LANGUAGES, SupportedLanguageCode } from '../../constants/config';
+// import { LanguageDebugInfo } from '../../components/common/LanguageDebugInfo';
 
 const HomeScreen: React.FC = () => {
   const [searchText, setSearchText] = useState('');
@@ -57,6 +58,20 @@ const HomeScreen: React.FC = () => {
   const [chToEnQuery, setChToEnQuery] = useState<string>('');
   const { selectedLanguage, getCurrentLanguageConfig } = useLanguage();
   const { appLanguage } = useAppLanguage();
+  
+  // 将前端语言代码转换为后端期望的格式
+  const getBackendLanguageCode = (language: SupportedLanguageCode): string => {
+    switch (language) {
+      case 'ENGLISH':
+        return 'en';
+      case 'KOREAN':
+        return 'ko';
+      case 'JAPANESE':
+        return 'ja';
+      default:
+        return 'en';
+    }
+  };
 
   useEffect(() => {
     loadRecentWords();
@@ -80,6 +95,9 @@ const HomeScreen: React.FC = () => {
       setIsLoadingRecent(true);
       const recent = await wordService.getRecentWords();
       
+      console.log('🔍 从wordService获取的最近查词数据:', recent);
+      console.log('🔍 数据长度:', recent.length);
+      
       // 前端去重逻辑，确保没有重复单词
       const uniqueWords = recent.reduce((acc: RecentWord[], current) => {
         const exists = acc.find(item => item.word.toLowerCase() === current.word.toLowerCase());
@@ -88,6 +106,9 @@ const HomeScreen: React.FC = () => {
         }
         return acc;
       }, []);
+      
+      console.log('🔍 去重后的最近查词数据:', uniqueWords);
+      console.log('🔍 去重后数据长度:', uniqueWords.length);
       
       setRecentWords(uniqueWords);
     } catch (error) {
@@ -144,7 +165,7 @@ const HomeScreen: React.FC = () => {
         }
       }
       // 多语言查词
-      const result = await wordService.searchWord(word.toLowerCase(), selectedLanguage);
+      const result = await wordService.searchWord(word.toLowerCase(), getBackendLanguageCode(selectedLanguage));
       if (result.success && result.data) {
         // 日志：输出 definitions 和例句
         if (result.data.definitions) {
@@ -529,7 +550,7 @@ const HomeScreen: React.FC = () => {
               <TouchableOpacity style={styles.closeButton} onPress={() => { setChToEnCandidates([]); setChToEnQuery(''); }}>
                 <Ionicons name="close" size={26} color={colors.text.secondary} />
               </TouchableOpacity>
-              <Text style={{ fontSize: 20, fontWeight: 'bold', color: colors.text.primary, marginBottom: 16, marginTop: 8 }}>“{chToEnQuery}”的英文释义</Text>
+              <Text style={{ fontSize: 20, fontWeight: 'bold', color: colors.text.primary, marginBottom: 16, marginTop: 8 }}>"{chToEnQuery}"{t('chinese_to_english_title', appLanguage)}</Text>
               {chToEnCandidates.map((en, idx) => (
                 <TouchableOpacity key={en} onPress={async () => {
                   setIsLoading(true);
@@ -537,7 +558,7 @@ const HomeScreen: React.FC = () => {
                   setChToEnQuery('');
                   setSearchText(en);
                   // 直接查英文释义
-                  const result = await wordService.searchWord(en.toLowerCase(), selectedLanguage);
+                  const result = await wordService.searchWord(en.toLowerCase(), getBackendLanguageCode(selectedLanguage));
                   if (result.success && result.data) {
                     setSearchResult(result.data);
                     setSearchText('');
@@ -578,7 +599,7 @@ const HomeScreen: React.FC = () => {
         ) : searchSuggestions.length > 0 ? (
           <View style={styles.wordCardWrapper}>
             <View style={[styles.wordCardCustom, { alignItems: 'center', justifyContent: 'center', padding: 32, borderRadius: 20, backgroundColor: colors.background.secondary, shadowColor: colors.neutral[900], shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.15, shadowRadius: 16, elevation: 8, maxWidth: 350, minHeight: 220 }] }>
-              <Text style={{ fontSize: 20, fontWeight: 'bold', color: colors.text.primary, marginBottom: 16 }}>猜你想搜</Text>
+              <Text style={{ fontSize: 20, fontWeight: 'bold', color: colors.text.primary, marginBottom: 16 }}>{t('search_suggestions', appLanguage)}</Text>
               {searchSuggestions.map(sug => (
                 <TouchableOpacity key={sug} onPress={() => { setSearchText(sug); setSearchSuggestions([]); setTimeout(() => handleSearch(), 0); }} style={{ paddingVertical: 10, paddingHorizontal: 24, borderRadius: 16, backgroundColor: colors.primary[50], marginBottom: 10 }}>
                   <Text style={{ fontSize: 18, color: colors.primary[700], fontWeight: '500' }}>{sug}</Text>
@@ -590,7 +611,7 @@ const HomeScreen: React.FC = () => {
           <ScrollView style={styles.recentContainer} showsVerticalScrollIndicator={false}>
             <View style={styles.recentSection}>
               <View style={styles.recentHeader}>
-                <Text style={styles.sectionTitle}>最近查词</Text>
+                <Text style={styles.sectionTitle}>{t('recent_searches', appLanguage)}</Text>
                 {recentWords.length > 0 && (
                   <TouchableOpacity 
                     style={styles.clearHistoryButton}
@@ -604,27 +625,36 @@ const HomeScreen: React.FC = () => {
                 {isLoadingRecent ? (
                   <View style={styles.loadingContainer}>
                     <ActivityIndicator size="large" color={colors.primary[500]} />
-                    <Text style={styles.loadingText}>加载中...</Text>
+                    <Text style={styles.loadingText}>{t('loading', appLanguage)}</Text>
                   </View>
                 ) : recentWords.length > 0 ? (
-                  recentWords.map((word) => (
-                    <TouchableOpacity
-                      key={word.id}
-                      style={styles.recentWordItem}
-                      onPress={() => handleRecentWordPress(word)}
-                      disabled={isLoading}
-                    >
-                      <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
-                        <Ionicons name="time-outline" size={18} color={colors.neutral[400]} style={{ marginRight: 8 }} />
-                        <Text style={styles.recentWordText} numberOfLines={1} ellipsizeMode="tail">{word.word}</Text>
-                        <Text style={styles.recentWordTranslation} numberOfLines={1} ellipsizeMode="tail">{word.translation}</Text>
-                      </View>
-                    </TouchableOpacity>
-                  ))
+                  recentWords.map((word) => {
+                    console.log('🔍 渲染最近查词项:', word);
+                    return (
+                      <TouchableOpacity
+                        key={word.id}
+                        style={styles.recentWordItem}
+                        onPress={() => handleRecentWordPress(word)}
+                        disabled={isLoading}
+                      >
+                        <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+                          <Ionicons name="time-outline" size={18} color={colors.neutral[400]} style={{ marginRight: 8 }} />
+                          <Text style={styles.recentWordText} numberOfLines={1} ellipsizeMode="tail">
+                            <Text style={{ fontWeight: 'bold', color: colors.text.primary }}>
+                              {word.word}
+                            </Text>
+                            <Text style={{ fontWeight: 'normal', color: colors.text.secondary }}>
+                              {' - '}{word.translation}
+                            </Text>
+                          </Text>
+                        </View>
+                      </TouchableOpacity>
+                    );
+                  })
                 ) : (
                   <View style={styles.emptyState}>
                     <Ionicons name="search-outline" size={48} color={colors.text.tertiary} />
-                    <Text style={styles.emptyStateText}>暂无最近查词记录</Text>
+                    <Text style={styles.emptyStateText}>{t('no_recent_searches', appLanguage)}</Text>
                   </View>
                 )}
               </View>
@@ -648,14 +678,14 @@ const HomeScreen: React.FC = () => {
             <View style={styles.collectModal}>
               {/* 打勾动画 */}
               {/* 打勾动画 */}
-              <Text style={styles.modalTitle}>标记单词来源</Text>
-              <Text style={styles.modalSubtitle}>选择正在看的剧集，或搜索添加新剧</Text>
+              <Text style={styles.modalTitle}>{t('mark_word_source', appLanguage)}</Text>
+              <Text style={styles.modalSubtitle}>{t('select_show_or_search', appLanguage)}</Text>
               {/* 剧集搜索框 */}
               <View style={styles.modalSearchBox}>
                 <Ionicons name="search" size={18} color={colors.text.secondary} style={{ marginRight: 6 }} />
                 <TextInput
                   style={styles.modalSearchInput}
-                  placeholder="搜索剧集..."
+                  placeholder={t('search_shows_placeholder', appLanguage)}
                   value={searchShowText}
                   onChangeText={handleShowSearch}
                 />
@@ -676,12 +706,12 @@ const HomeScreen: React.FC = () => {
                 />
               )}
               {/* 正在看剧集列表 */}
-              <Text style={styles.modalSectionTitle}>我的剧集</Text>
+              <Text style={styles.modalSectionTitle}>{t('my_shows', appLanguage)}</Text>
               {(() => {
                 const wordbooks = shows.filter(s => s.type === 'wordbook');
                 const allShows = shows.filter(s => s.type !== 'wordbook');
                 const data = [
-                  { id: 'default', name: '默认词库' }, 
+                  { id: 'default', name: t('default_vocabulary', appLanguage) }, 
                   ...wordbooks,
                   ...allShows
                 ];
@@ -704,7 +734,7 @@ const HomeScreen: React.FC = () => {
                       >
                         <Text style={styles.modalShowName}>{item.name}</Text>
                         {/* 只保留单词本标签 */}
-                        {'type' in item && item.type === 'wordbook' && <Text style={styles.wordbookTag}>单词本</Text>}
+                        {'type' in item && item.type === 'wordbook' && <Text style={styles.wordbookTag}>{t('wordbook_tag', appLanguage)}</Text>}
                         {/* 不再显示“想看”标签 */}
                         {selectedShow && selectedShow.id === item.id && (
                           <Ionicons name="checkmark-circle" size={18} color={colors.primary[500]} style={{ marginLeft: 8 }} />
@@ -712,7 +742,7 @@ const HomeScreen: React.FC = () => {
                       </TouchableOpacity>
                     )}
                     style={{ maxHeight: 160, marginBottom: 8 }}
-                    ListEmptyComponent={<Text style={styles.modalEmptyText}>暂无剧集，请先添加剧集</Text>}
+                    ListEmptyComponent={<Text style={styles.modalEmptyText}>{t('no_shows_add_first', appLanguage)}</Text>}
                   />
                 );
               })()}
@@ -722,7 +752,7 @@ const HomeScreen: React.FC = () => {
                   <View style={styles.createWordbookInputRow}>
                     <TextInput
                       style={styles.createWordbookInput}
-                      placeholder="输入单词本名称"
+                      placeholder={t('enter_wordbook_name', appLanguage)}
                       value={newWordbookName}
                       onChangeText={setNewWordbookName}
                       autoFocus={true}
@@ -731,13 +761,13 @@ const HomeScreen: React.FC = () => {
                       style={styles.createWordbookConfirmButton}
                       onPress={handleCreateWordbook}
                     >
-                      <Text style={styles.createWordbookConfirmText}>确定</Text>
+                      <Ionicons name="checkmark" size={20} color={colors.text.inverse} />
                     </TouchableOpacity>
                     <TouchableOpacity
                       style={styles.createWordbookCancelButton}
                       onPress={cancelCreateWordbook}
                     >
-                      <Text style={styles.createWordbookCancelText}>取消</Text>
+                      <Ionicons name="close" size={20} color={colors.text.secondary} />
                     </TouchableOpacity>
                   </View>
                 </View>
@@ -753,21 +783,21 @@ const HomeScreen: React.FC = () => {
                   onPress={showCreateWordbookInput}
                 >
                   <Ionicons name="add-circle-outline" size={20} color={colors.primary[500]} />
-                  <Text style={{ color: colors.primary[700], fontSize: 15, marginTop: 2 }}>新建单词本</Text>
+                  <Text style={{ color: colors.primary[700], fontSize: 15, marginTop: 2 }}>{t('create_wordbook', appLanguage)}</Text>
                 </TouchableOpacity>
               )}
 
               {/* 按钮区 */}
               <View style={styles.modalButtonRow}>
                 <TouchableOpacity style={styles.modalCancelButton} onPress={() => setShowCollectModal(false)}>
-                  <Text style={styles.modalCancelText}>取消</Text>
+                  <Text style={styles.modalCancelText}>{t('cancel', appLanguage)}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.modalConfirmButton, !selectedShow && { opacity: 0.5 }]}
                   onPress={handleConfirmCollect}
                   disabled={!selectedShow}
                 >
-                  <Text style={styles.modalConfirmText}>确定</Text>
+                  <Text style={styles.modalConfirmText}>{t('confirm', appLanguage)}</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -775,7 +805,7 @@ const HomeScreen: React.FC = () => {
         </KeyboardAvoidingView>
       </Modal>
       {/* 删除新建单词本弹窗，改为内联输入框 */}
-      <LanguageDebugInfo />
+      {/* <LanguageDebugInfo /> */}
     </SafeAreaView>
   );
 };
@@ -801,11 +831,18 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     borderWidth: 1,
     borderColor: colors.border.light,
-    shadowColor: colors.primary[200],
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-    elevation: 4,
+    ...Platform.select({
+      web: {
+        boxShadow: '0 4px 12px rgba(124, 58, 237, 0.15)',
+      },
+      default: {
+        shadowColor: colors.primary[200],
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.15,
+        shadowRadius: 12,
+        elevation: 4,
+      },
+    }),
   },
   searchInputContainer: {
     flex: 1,
@@ -870,11 +907,18 @@ const styles = StyleSheet.create({
     padding: 20,
     borderWidth: 1,
     borderColor: colors.border.light,
-    shadowColor: colors.primary[200],
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-    elevation: 3,
+    ...Platform.select({
+      web: {
+        boxShadow: '0 4px 12px rgba(124, 58, 237, 0.1)',
+      },
+      default: {
+        shadowColor: colors.primary[200],
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.1,
+        shadowRadius: 12,
+        elevation: 3,
+      },
+    }),
   },
   wordText: {
     fontSize: 18,
@@ -925,11 +969,18 @@ const styles = StyleSheet.create({
     maxWidth: 500,
     borderRadius: 24,
     backgroundColor: colors.background.secondary,
-    shadowColor: colors.primary[200],
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.15,
-    shadowRadius: 16,
-    elevation: 8,
+    ...Platform.select({
+      web: {
+        boxShadow: '0 8px 16px rgba(124, 58, 237, 0.15)',
+      },
+      default: {
+        shadowColor: colors.primary[200],
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.15,
+        shadowRadius: 16,
+        elevation: 8,
+      },
+    }),
     padding: 28,
     marginVertical: 12,
   },
@@ -946,10 +997,17 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     padding: 24,
     alignItems: 'stretch',
-    shadowColor: '#23223A',
-    shadowOpacity: 0.10,
-    shadowRadius: 10,
-    elevation: 3,
+    ...Platform.select({
+      web: {
+        boxShadow: '0 10px 10px rgba(35, 34, 58, 0.1)',
+      },
+      default: {
+        shadowColor: '#23223A',
+        shadowOpacity: 0.10,
+        shadowRadius: 10,
+        elevation: 3,
+      },
+    }),
   },
   modalTitle: {
     fontSize: 20,
@@ -970,6 +1028,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 6,
     marginBottom: 8,
+    borderWidth: 1,
+    borderColor: colors.border.light,
   },
   modalSearchInput: {
     flex: 1,
@@ -1058,10 +1118,14 @@ const styles = StyleSheet.create({
   },
   createWordbookConfirmButton: {
     backgroundColor: colors.primary[500],
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 8,
     borderRadius: 6,
     marginLeft: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minWidth: 32,
+    minHeight: 32,
   },
   createWordbookConfirmText: {
     color: colors.text.inverse,
@@ -1069,9 +1133,13 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   createWordbookCancelButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 8,
     marginLeft: 4,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minWidth: 32,
+    minHeight: 32,
   },
   createWordbookCancelText: {
     color: colors.text.secondary,
@@ -1133,18 +1201,9 @@ const styles = StyleSheet.create({
   },
   recentWordText: {
     fontSize: 17,
-    fontWeight: 'bold',
     color: colors.text.primary,
     marginBottom: 0,
-    marginRight: 8,
     flex: 1,
-    maxWidth: '40%',
-  },
-  recentWordTranslation: {
-    fontSize: 15,
-    color: colors.text.secondary,
-    flex: 1,
-    maxWidth: '60%',
   },
   fixedCandidateCard: {
     width: 340,

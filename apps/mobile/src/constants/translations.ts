@@ -9,16 +9,17 @@ export type TranslationKey =
   | 'join_date'
   | 'login'
   | 'logged_in'
+  | 'logout'
   | 'member_subscription'
   | 'settings'
   | 'push_notifications'
-  | 'auto_play_audio'
   | 'language_settings'
   | 'help_feedback'
   | 'about_us'
   | 'clear_all_data'
   | 'confirm_clear_data'
   | 'clear_success'
+  | 'all_data_cleared'
   | 'clear_failed'
   | 'clear_error'
   
@@ -66,6 +67,7 @@ export type TranslationKey =
   
   // 导航
   | 'home'
+  | 'search'
   | 'review'
   | 'vocabulary'
   | 'profile'
@@ -117,10 +119,18 @@ export type TranslationKey =
   | 'go_search_and_save_words'
   | 'no_recent_searches'
   | 'no_suggestions'
-  | 'no_learning_data'
-  | 'no_review_words'
+  | 'search_suggestions'
+  | 'chinese_to_english_title'
+  | 'mark_word_source'
+  | 'select_show_or_search'
+  | 'search_shows_placeholder'
+  | 'my_shows'
+  | 'default_vocabulary'
+  | 'wordbook_tag'
+  | 'no_shows_add_first'
+  | 'enter_wordbook_name'
+  | 'create_wordbook'
   | 'no_definition'
-  | 'all_data_cleared'
   | 'continue_learning_for_suggestions'
   | 'start_learning_to_see_progress'
   | 'no_learning_records'
@@ -160,7 +170,39 @@ export type TranslationKey =
   | 'feedback_helpful'
   | 'feedback_not_helpful'
   | 'feedback_submitted'
-  | 'feedback_error';
+  | 'feedback_error'
+  | 'add'
+  | 'added'
+  
+  // 登录页面
+  | 'app_name'
+  | 'app_slogan'
+  | 'phone_login'
+  | 'wechat_login'
+  | 'apple_login'
+  | 'guest_login'
+  | 'guest_mode_experience'
+  | 'login_agreement'
+  | 'user_agreement'
+  | 'privacy_policy'
+  | 'enter_phone_number'
+  | 'enter_verification_code'
+  | 'send_code'
+  | 'resend_code'
+  | 'verify_code'
+  | 'phone_number_required'
+  | 'verification_code_required'
+  | 'code_sent'
+  | 'code_send_failed'
+  | 'verification_failed'
+  | 'invalid_phone_number'
+  | 'invalid_verification_code'
+  
+  // 欢迎页面
+  | 'welcome_to_dramaword'
+  | 'free_trial_description'
+  | 'try_for_free'
+  | 'welcome_user';
 
 // 翻译内容
 export const translations: Record<AppLanguage, Record<TranslationKey, string>> = {
@@ -171,16 +213,17 @@ export const translations: Record<AppLanguage, Record<TranslationKey, string>> =
     join_date: '加入时间',
     login: '登录',
     logged_in: '已登录',
+    logout: '退出登录',
     member_subscription: '会员订阅/升级',
     settings: '设置',
     push_notifications: '推送通知',
-    auto_play_audio: '自动播放音频',
     language_settings: '语言设置',
     help_feedback: '帮助与反馈',
     about_us: '关于我们',
     clear_all_data: '清除所有数据',
     confirm_clear_data: '确定要清除所有数据吗？此操作不可恢复。',
     clear_success: '清除成功',
+    all_data_cleared: '所有数据已清除',
     clear_failed: '清除失败',
     clear_error: '清除数据时发生错误',
     
@@ -228,6 +271,7 @@ export const translations: Record<AppLanguage, Record<TranslationKey, string>> =
     
     // 导航
     home: '首页',
+    search: '搜索',
     review: '复习',
     vocabulary: '词汇',
     profile: '个人',
@@ -279,10 +323,18 @@ export const translations: Record<AppLanguage, Record<TranslationKey, string>> =
     go_search_and_save_words: '去首页搜索并收藏单词吧',
     no_recent_searches: '暂无最近查词记录',
     no_suggestions: '暂无建议',
-    no_learning_data: '暂无学习数据',
-    no_review_words: '暂无复习单词',
+    search_suggestions: '搜索建议',
+    chinese_to_english_title: '中文转英文',
+    mark_word_source: '标记单词来源',
+    select_show_or_search: '请选择剧集或搜索',
+    search_shows_placeholder: '搜索你喜欢的剧集',
+    my_shows: '我的剧单',
+    default_vocabulary: '默认单词本',
+    wordbook_tag: '单词本',
+    no_shows_add_first: '请先添加剧集到你的单词本',
+    enter_wordbook_name: '请输入单词本名称',
+    create_wordbook: '创建单词本',
     no_definition: '暂无释义',
-    all_data_cleared: '所有数据已清除',
     continue_learning_for_suggestions: '继续学习获取个性化建议',
     start_learning_to_see_progress: '开始学习后这里会显示你的进度',
     no_learning_records: '还没有学习记录',
@@ -323,6 +375,38 @@ export const translations: Record<AppLanguage, Record<TranslationKey, string>> =
     feedback_not_helpful: '没帮助',
     feedback_submitted: '反馈已提交',
     feedback_error: '反馈提交失败',
+    add: '添加',
+    added: '已添加',
+    
+    // 登录页面
+    app_name: '剧词记',
+    app_slogan: '看剧，记住真·有用的单词',
+    phone_login: '使用手机号登录',
+    wechat_login: '使用微信登录',
+    apple_login: '使用 Apple 登录',
+    guest_login: '游客模式立即体验',
+    guest_mode_experience: '游客模式立即体验',
+    login_agreement: '登录即代表你同意',
+    user_agreement: '《用户协议》',
+    privacy_policy: '《隐私政策》',
+    enter_phone_number: '请输入手机号',
+    enter_verification_code: '请输入验证码',
+    send_code: '发送验证码',
+    resend_code: '重新发送',
+    verify_code: '验证',
+    phone_number_required: '请输入正确的手机号',
+    verification_code_required: '请输入6位验证码',
+    code_sent: '验证码已发送',
+    code_send_failed: '发送验证码失败，请重试',
+    verification_failed: '验证码错误，请重试',
+    invalid_phone_number: '请输入正确的手机号',
+    invalid_verification_code: '请输入6位验证码',
+    
+    // 欢迎页面
+    welcome_to_dramaword: '欢迎来到剧词记',
+    free_trial_description: '免费试用期为14天，期间你可以享受所有功能。',
+    try_for_free: '立即免费试用',
+    welcome_user: '欢迎回来，{username}！',
   },
   
   'en-US': {
@@ -332,16 +416,18 @@ export const translations: Record<AppLanguage, Record<TranslationKey, string>> =
     join_date: 'Joined',
     login: 'Login',
     logged_in: 'Logged In',
-    member_subscription: 'Member Subscription/Upgrade',
+    logout: 'Logout',
+    
+    member_subscription: 'Member Subscription',
     settings: 'Settings',
     push_notifications: 'Push Notifications',
-    auto_play_audio: 'Auto Play Audio',
     language_settings: 'Language Settings',
     help_feedback: 'Help & Feedback',
     about_us: 'About Us',
     clear_all_data: 'Clear All Data',
     confirm_clear_data: 'Are you sure you want to clear all data? This action cannot be undone.',
     clear_success: 'Clear Successful',
+    all_data_cleared: 'All data cleared',
     clear_failed: 'Clear Failed',
     clear_error: 'Error occurred while clearing data',
     
@@ -357,7 +443,7 @@ export const translations: Record<AppLanguage, Record<TranslationKey, string>> =
     words_count: '{count} words',
     
     // Home页面
-    recent_searches: 'Recent Searches',
+    recent_searches: 'Recent',
     loading: 'Loading...',
     no_recent_history: 'No recent search history',
     clear_history: 'Clear History',
@@ -389,6 +475,7 @@ export const translations: Record<AppLanguage, Record<TranslationKey, string>> =
     
     // 导航
     home: 'Home',
+    search: 'Search',
     review: 'Review',
     vocabulary: 'Vocabulary',
     profile: 'Profile',
@@ -440,10 +527,18 @@ export const translations: Record<AppLanguage, Record<TranslationKey, string>> =
     go_search_and_save_words: 'Go to Home to search and save words',
     no_recent_searches: 'No recent search history',
     no_suggestions: 'No suggestions',
-    no_learning_data: 'No learning data',
-    no_review_words: 'No review words',
+    search_suggestions: 'Search Suggestions',
+    chinese_to_english_title: 'Chinese to English',
+    mark_word_source: 'Mark Word Source',
+    select_show_or_search: 'Please select a show or search',
+    search_shows_placeholder: 'Add your shows',
+    my_shows: 'My Shows',
+    default_vocabulary: 'Default Vocabulary',
+    wordbook_tag: 'Wordbook',
+    no_shows_add_first: 'Please add shows to your wordbook first',
+    enter_wordbook_name: 'Please enter wordbook name',
+    create_wordbook: 'Create Wordbook',
     no_definition: 'No definition',
-    all_data_cleared: 'All data has been cleared',
     continue_learning_for_suggestions: 'Continue learning to get personalized suggestions',
     start_learning_to_see_progress: 'Your progress will be shown here after you start learning',
     no_learning_records: 'No learning records yet',
@@ -456,7 +551,7 @@ export const translations: Record<AppLanguage, Record<TranslationKey, string>> =
     phone_user: 'Phone User',
     user: 'User',
     about_dramaword: 'About DramaWord',
-    still_need: 'Still need {count} more',
+    still_need: 'Need {count} more',
     search_words: 'Search words...',
     congratulations_unlock: 'Congratulations! Unlocked {count} word badge!',
     word_badge: ' word badge',
@@ -484,6 +579,38 @@ export const translations: Record<AppLanguage, Record<TranslationKey, string>> =
     feedback_not_helpful: 'Not Helpful',
     feedback_submitted: 'Feedback Submitted',
     feedback_error: 'Feedback Submission Failed',
+    add: 'Add',
+    added: 'Added',
+    
+    // 登录页面
+    app_name: 'DramaWord',
+    app_slogan: 'Watch dramas, remember truly useful words',
+    phone_login: 'Login with phone number',
+    wechat_login: 'Login with WeChat',
+    apple_login: 'Login with Apple',
+    guest_login: 'Experience guest mode immediately',
+    guest_mode_experience: 'Experience guest mode immediately',
+    login_agreement: 'By logging in, you agree to',
+    user_agreement: 'User Agreement',
+    privacy_policy: 'Privacy Policy',
+    enter_phone_number: 'Please enter your phone number',
+    enter_verification_code: 'Please enter the verification code',
+    send_code: 'Send verification code',
+    resend_code: 'Resend code',
+    verify_code: 'Verify',
+    phone_number_required: 'Please enter a valid phone number',
+    verification_code_required: 'Please enter a 6-digit verification code',
+    code_sent: 'Verification code sent',
+    code_send_failed: 'Failed to send verification code, please try again',
+    verification_failed: 'Incorrect verification code, please try again',
+    invalid_phone_number: 'Please enter a valid phone number',
+    invalid_verification_code: 'Please enter a 6-digit verification code',
+    
+    // 欢迎页面
+    welcome_to_dramaword: 'Welcome to DramaWord',
+    free_trial_description: 'Your free trial period is 14 days. During this time, you can enjoy all features.',
+    try_for_free: 'Try for free now',
+    welcome_user: 'Welcome back, {username}!',
   },
 };
 
@@ -506,13 +633,13 @@ export const APP_LANGUAGES = {
   'zh-CN': {
     code: 'zh-CN',
     name: '中文',
-    nativeName: '中文',
+    nativeName: 'Chinese',
     flag: '🇨🇳',
   },
   'en-US': {
     code: 'en-US',
     name: 'English',
-    nativeName: 'English',
+    nativeName: '英文',
     flag: '🇺🇸',
   },
 } as const;

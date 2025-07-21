@@ -20,6 +20,9 @@ export interface WordData {
   isCollected: boolean;
   audioUrl?: string;
   correctedWord?: string; // 新增：标准单词
+  slangMeaning?: string | null; // 新增：网络俚语解释
+  phraseExplanation?: string | null; // 新增：短语解释
+  kana?: string; // 新增：日语假名
 }
 
 export interface SearchResult {
@@ -74,11 +77,18 @@ export class WordService {
     try {
       console.log(`🔍 搜索单词: ${word} (语言: ${language})`);
       
+      const token = await getUserToken();
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+      
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      
       const response = await fetch(`${API_BASE_URL}/words/search`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers,
         body: JSON.stringify({ 
           word: word.toLowerCase().trim(),
           language: language
@@ -105,6 +115,9 @@ export class WordService {
           isCollected: false,
           audioUrl: data.audioUrl,
           correctedWord: data.correctedWord || word, // 如果没有 correctedWord，使用搜索词
+          slangMeaning: data.slangMeaning || null, // 网络俚语解释
+          phraseExplanation: data.phraseExplanation || null, // 短语解释
+          kana: data.kana || undefined, // 日语假名
         };
         
         // 如果 definitions 为空，使用 correctedWord 生成一个基本的定义
@@ -180,11 +193,17 @@ export class WordService {
       try {
         const local = await AsyncStorage.getItem(SEARCH_HISTORY_KEY);
         if (local) {
-          return JSON.parse(local);
+          const parsedData = JSON.parse(local);
+          if (parsedData && parsedData.length > 0) {
+            return parsedData;
+          }
         }
+        // 如果没有本地数据，返回空数组（不返回模拟数据）
+        console.log('📚 没有本地搜索历史，返回空数组');
         return [];
       } catch (e) {
         console.error('读取本地搜索历史失败:', e);
+        // 出错时返回空数组
         return [];
       }
     }
@@ -207,6 +226,18 @@ export class WordService {
       }
     } catch (error) {
       console.error(`❌ 获取最近查词错误: ${error}`);
+      // 云端获取失败时，尝试本地获取，如果本地也没有则返回空数组
+      try {
+        const local = await AsyncStorage.getItem(SEARCH_HISTORY_KEY);
+        if (local) {
+          const parsedData = JSON.parse(local);
+          if (parsedData && parsedData.length > 0) {
+            return parsedData;
+          }
+        }
+      } catch (e) {
+        console.error('读取本地搜索历史失败:', e);
+      }
       return [];
     }
   }
@@ -375,7 +406,7 @@ export class WordService {
   }
 
   // 获取模拟最近查词
-  private getMockRecentWords(): RecentWord[] {
+  public getMockRecentWords(): RecentWord[] {
     return [
       { id: '1', word: 'hello', translation: '你好，喂', timestamp: Date.now() - 1000 },
       { id: '2', word: 'world', translation: '世界', timestamp: Date.now() - 2000 },

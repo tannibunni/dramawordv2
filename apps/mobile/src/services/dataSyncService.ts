@@ -158,16 +158,40 @@ export class DataSyncService {
   // 清除所有缓存
   async clearAllCache(): Promise<void> {
     try {
-      console.log('🗑️ 清除所有缓存...');
-      await Promise.all([
-        AsyncStorage.removeItem(this.SYNC_KEYS.LAST_SYNC_TIME),
-        AsyncStorage.removeItem(this.SYNC_KEYS.USER_STATS),
-        AsyncStorage.removeItem(this.SYNC_KEYS.USER_VOCABULARY),
-        AsyncStorage.removeItem(this.SYNC_KEYS.BADGES),
-      ]);
-      console.log('✅ 缓存清除完成');
+      const keysToRemove = Object.values(this.SYNC_KEYS);
+      await AsyncStorage.multiRemove(keysToRemove);
+      console.log('✅ 所有同步缓存已清除');
     } catch (error) {
-      console.error('❌ 清除缓存失败:', error);
+      console.error('❌ 清除同步缓存失败:', error);
+    }
+  }
+
+  // 清除所有同步数据
+  async clearAll(): Promise<void> {
+    try {
+      // 清除同步缓存
+      await this.clearAllCache();
+      
+      // 清除其他同步相关的数据
+      const additionalKeys = [
+        'sync_status',
+        'sync_errors',
+        'sync_progress',
+        'cloud_data_cache',
+        'local_sync_queue',
+        'pending_sync_operations',
+        'sync_conflicts',
+        'last_sync_attempt',
+        'sync_retry_count',
+        'cloud_backup_data'
+      ];
+      
+      await AsyncStorage.multiRemove(additionalKeys);
+      
+      console.log('✅ 所有同步数据已清除');
+    } catch (error) {
+      console.error('❌ 清除同步数据失败:', error);
+      throw error;
     }
   }
 

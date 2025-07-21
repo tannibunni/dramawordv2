@@ -7,11 +7,11 @@ import {
   ScrollView,
   TouchableOpacity,
   Image,
-  Switch,
   Alert,
   Platform,
   ActivityIndicator,
   Modal,
+  Switch,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { EditProfileModal } from '../../components/profile/EditProfileModal';
@@ -28,6 +28,10 @@ import { t } from '../../constants/translations';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LearningStatsSection } from '../../components/learning/LearningStatsSection';
 import SubscriptionScreen from './SubscriptionScreen';
+import notificationService, { NotificationPreferences } from '../../services/notificationService';
+import { learningDataService } from '../../services/learningDataService';
+import { LearningStatsService } from '../../services/learningStatsService';
+import { DataSyncService } from '../../services/dataSyncService';
 
 
 interface UserStats {
@@ -50,7 +54,6 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
 }) => {
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [darkModeEnabled, setDarkModeEnabled] = useState(false);
-  const [autoPlayEnabled, setAutoPlayEnabled] = useState(true);
   const [loading, setLoading] = useState(true);
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [languageModalVisible, setLanguageModalVisible] = useState(false);
@@ -127,6 +130,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   // 获取用户数据
   useEffect(() => {
     setLoading(false);
+    loadNotificationPreferences();
   }, []);
 
   // 监听 AuthContext 状态变化
@@ -137,6 +141,32 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
       isAuthenticated: isAuthenticated
     });
   }, [user, loginType, isAuthenticated]);
+
+  // 当应用语言改变时，更新通知服务的语言设置
+  useEffect(() => {
+    notificationService.setAppLanguage(appLanguage);
+  }, [appLanguage]);
+
+  // 加载通知偏好设置
+  const loadNotificationPreferences = async () => {
+    try {
+      const preferences = await notificationService.loadNotificationPreferences();
+      setNotificationsEnabled(preferences.notificationsEnabled);
+      console.log('📱 通知偏好设置已加载到UI');
+    } catch (error) {
+      console.error('❌ 加载通知偏好设置失败:', error);
+    }
+  };
+
+  // 保存通知偏好设置
+  const saveNotificationPreferences = async (preferences: NotificationPreferences) => {
+    try {
+      await notificationService.saveNotificationPreferences(preferences);
+      console.log('💾 通知偏好设置已保存');
+    } catch (error) {
+      console.error('❌ 保存通知偏好设置失败:', error);
+    }
+  };
 
   // 模拟统计数据
   const stats: UserStats = {
@@ -168,16 +198,24 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
             <Text style={styles.userName}>{getUserNickname()}</Text>
             <Text style={styles.userLevel}>{t('intermediate_learner', appLanguage)}</Text>
             <Text style={styles.userEmail}>{user?.email || 'user@example.com'}</Text>
-            {/* 登录按钮或用户名 */}
+            
+            {/* 登录/退出登录按钮 - 放在邮箱下面 */}
             {isGuest ? (
               <TouchableOpacity 
-                style={styles.loginButton} 
+                style={styles.userActionButton} 
                 onPress={handleLoginPress}
               >
-                <Text style={styles.loginButtonText}>{t('login', appLanguage)}</Text>
+                <Ionicons name="log-in-outline" size={18} color={colors.text.inverse} />
+                <Text style={styles.userActionButtonText}>{t('login', appLanguage)}</Text>
               </TouchableOpacity>
             ) : (
-              <Text style={styles.loggedInText}>{t('logged_in', appLanguage)}：{user?.nickname || t('user', appLanguage)}</Text>
+              <TouchableOpacity 
+                style={[styles.userActionButton, styles.logoutButton]} 
+                onPress={authLogout}
+              >
+                <Ionicons name="log-out-outline" size={18} color={colors.text.inverse} />
+                <Text style={styles.userActionButtonText}>{t('logout', appLanguage)}</Text>
+              </TouchableOpacity>
             )}
           </View>
           <TouchableOpacity style={styles.editButton} onPress={handleEditProfile}>
@@ -192,6 +230,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
     <View style={styles.settingsSection}>
       <Text style={styles.sectionTitle}>{t('settings', appLanguage)}</Text>
       
+      {/* 推送通知设置 */}
       <View style={styles.settingItem}>
         <View style={styles.settingLeft}>
           <Ionicons name="notifications-outline" size={24} color={colors.primary[500]} />
@@ -199,22 +238,9 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
         </View>
         <Switch
           value={notificationsEnabled}
-          onValueChange={setNotificationsEnabled}
-          trackColor={{ false: colors.neutral[300], true: colors.primary[500] }}
-          thumbColor={notificationsEnabled ? colors.background.secondary : colors.background.secondary}
-        />
-      </View>
-
-      <View style={styles.settingItem}>
-        <View style={styles.settingLeft}>
-          <Ionicons name="play-outline" size={24} color={colors.primary[500]} />
-          <Text style={styles.settingLabel}>{t('auto_play_audio', appLanguage)}</Text>
-        </View>
-        <Switch
-          value={autoPlayEnabled}
-          onValueChange={setAutoPlayEnabled}
-          trackColor={{ false: colors.neutral[300], true: colors.primary[500] }}
-          thumbColor={autoPlayEnabled ? colors.background.secondary : colors.background.secondary}
+          onValueChange={handleNotificationToggle}
+          trackColor={{ false: colors.border.light, true: colors.primary[300] }}
+          thumbColor={notificationsEnabled ? colors.primary[500] : colors.text.tertiary}
         />
       </View>
 
@@ -265,6 +291,46 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
     setEditModalVisible(false);
   };
 
+  const handleNotificationToggle = async () => {
+    if (!notificationsEnabled) {
+      // 用户想要启用通知
+      const hasPermission = await notificationService.requestPermissions();
+      if (hasPermission) {
+        // 启用通知时，后台服务会自动设置所有子通知
+        const newPreferences: NotificationPreferences = {
+          notificationsEnabled: true,
+          dailyReminder: true,
+          weeklyReminder: true,
+          motivationReminder: true,
+          streakReminder: true,
+        };
+        setNotificationsEnabled(true);
+        await saveNotificationPreferences(newPreferences);
+        
+        // 只保存用户偏好，不立即设置任何通知
+        // 通知会在适当的时候自动触发，避免立即推送
+      } else {
+        Alert.alert(
+          appLanguage === 'zh-CN' ? '需要通知权限' : 'Notification Permission Required',
+          appLanguage === 'zh-CN' ? '权限被拒绝' : 'Permission Denied',
+          [{ text: t('ok', appLanguage) }]
+        );
+      }
+    } else {
+      // 用户想要禁用通知
+      const newPreferences: NotificationPreferences = {
+        notificationsEnabled: false,
+        dailyReminder: false,
+        weeklyReminder: false,
+        motivationReminder: false,
+        streakReminder: false,
+      };
+      setNotificationsEnabled(false);
+      await saveNotificationPreferences(newPreferences);
+      await notificationService.cancelAllNotifications();
+    }
+  };
+
   const handleClearCache = async () => {
     setClearingCache(true);
     try {
@@ -309,6 +375,11 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
               
               // 清除搜索历史
               await wordService.clearSearchHistory();
+              
+              // 清除用户学习数据
+              await learningDataService.clearAll();
+              await LearningStatsService.clearAll();
+              await DataSyncService.getInstance().clearAll();
               
               // 清除用户设置
               await AsyncStorage.multiRemove([
@@ -357,7 +428,6 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* 顶部标题已移除 */}
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
         {renderUserInfo()}
         {renderSubscriptionEntry()}
@@ -673,5 +743,25 @@ const styles = StyleSheet.create({
     marginTop: 10,
     color: colors.text.secondary,
     fontSize: 16,
+  },
+  userActionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.primary[500],
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    justifyContent: 'center',
+    width: '100%',
+    marginTop: 12,
+  },
+  userActionButtonText: {
+    color: colors.text.inverse,
+    fontWeight: '600',
+    fontSize: 16,
+    marginLeft: 8,
+  },
+  logoutButton: {
+    backgroundColor: colors.error[500],
   },
 }); 

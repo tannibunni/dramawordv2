@@ -8,6 +8,7 @@ import {
   Dimensions,
   Animated,
   Alert,
+  Platform,
 } from 'react-native';
 import { PanGestureHandler, State } from 'react-native-gesture-handler';
 import { Ionicons } from '@expo/vector-icons';
@@ -146,14 +147,12 @@ const WordCard: React.FC<WordCardProps> = ({
         // 调用回调函数
         onFeedbackSubmitted?.(wordData.correctedWord || wordData.word, feedback);
         
-        // 显示成功提示
-        Alert.alert(t('feedback_submitted', appLanguage));
+        // 移除弹窗提示
       } else {
-        Alert.alert(t('feedback_error', appLanguage), response.error);
+        console.error('反馈提交失败:', response.error);
       }
     } catch (error) {
       console.error('提交反馈失败:', error);
-      Alert.alert(t('feedback_error', appLanguage));
     } finally {
       setIsSubmittingFeedback(false);
     }
@@ -318,36 +317,36 @@ const WordCard: React.FC<WordCardProps> = ({
   // 词性英文转中文映射
   const partOfSpeechMap: Record<string, Record<string, string>> = {
     'zh-CN': {
-      'noun': '名词',
-      'verb': '动词',
-      'adjective': '形容词',
-      'adverb': '副词',
-      'pronoun': '代词',
-      'preposition': '介词',
-      'conjunction': '连词',
-      'interjection': '感叹词',
-      'article': '冠词',
-      'numeral': '数词',
-      'auxiliary': '助词',
-      'modal': '情态动词',
-      'determiner': '限定词',
-      'prefix': '前缀',
-      'suffix': '后缀',
-      'n.': '名词',
-      'v.': '动词',
-      'adj.': '形容词',
-      'adv.': '副词',
-      'pron.': '代词',
-      'prep.': '介词',
-      'conj.': '连词',
-      'int.': '感叹词',
-      'art.': '冠词',
-      'num.': '数词',
-      'aux.': '助词',
-      'modal.': '情态动词',
-      'det.': '限定词',
-      'prefix.': '前缀',
-      'suffix.': '后缀',
+    'noun': '名词',
+    'verb': '动词',
+    'adjective': '形容词',
+    'adverb': '副词',
+    'pronoun': '代词',
+    'preposition': '介词',
+    'conjunction': '连词',
+    'interjection': '感叹词',
+    'article': '冠词',
+    'numeral': '数词',
+    'auxiliary': '助词',
+    'modal': '情态动词',
+    'determiner': '限定词',
+    'prefix': '前缀',
+    'suffix': '后缀',
+    'n.': '名词',
+    'v.': '动词',
+    'adj.': '形容词',
+    'adv.': '副词',
+    'pron.': '代词',
+    'prep.': '介词',
+    'conj.': '连词',
+    'int.': '感叹词',
+    'art.': '冠词',
+    'num.': '数词',
+    'aux.': '助词',
+    'modal.': '情态动词',
+    'det.': '限定词',
+    'prefix.': '前缀',
+    'suffix.': '后缀',
     },
     'en-US': {
       'noun': 'noun',
@@ -408,7 +407,7 @@ const WordCard: React.FC<WordCardProps> = ({
         <View style={{ flex: 1 }}>
           <View style={styles.wordContainer}>
             {/* 日语：显示汉字和假名 */}
-            <Text style={styles.word}>{wordData.correctedWord || wordData.word}</Text>
+          <Text style={styles.word}>{wordData.correctedWord || wordData.word}</Text>
             {wordData.kana && (
               <Text style={styles.kana}>{wordData.kana}</Text>
             )}
@@ -490,8 +489,8 @@ const WordCard: React.FC<WordCardProps> = ({
         </View>
       )}
           
-      {/* 滑动操作提示 */}
-      <View style={styles.swipeHint}>
+          {/* 滑动操作提示 */}
+          <View style={styles.swipeHint}>
         <Text style={styles.swipeHintText}>{t('swipe_left_ignore_right_collect', appLanguage)}</Text>
       </View>
 
@@ -518,6 +517,11 @@ const WordCard: React.FC<WordCardProps> = ({
             ]}>
               {t('feedback_helpful', appLanguage)}
             </Text>
+            {feedbackStats && feedbackStats.positive > 0 && (
+              <Text style={styles.feedbackCount}>
+                {feedbackStats.positive}
+              </Text>
+            )}
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -540,18 +544,14 @@ const WordCard: React.FC<WordCardProps> = ({
             ]}>
               {t('feedback_not_helpful', appLanguage)}
             </Text>
+            {feedbackStats && feedbackStats.negative > 0 && (
+              <Text style={styles.feedbackCount}>
+                {feedbackStats.negative}
+              </Text>
+            )}
           </TouchableOpacity>
         </View>
-
-        {/* 反馈统计 */}
-        {feedbackStats && feedbackStats.total > 0 && (
-          <View style={styles.feedbackStats}>
-            <Text style={styles.feedbackStatsText}>
-              {feedbackStats.positive} 👍 {feedbackStats.negative} 👎
-            </Text>
           </View>
-        )}
-      </View>
         </Animated.View>
       </PanGestureHandler>
 
@@ -583,8 +583,15 @@ const styles = StyleSheet.create({
     // 完全无视觉样式
     backgroundColor: 'transparent',
     borderRadius: 0,
-    shadowColor: 'transparent',
-    elevation: 0,
+    ...Platform.select({
+      web: {
+        boxShadow: 'none',
+      },
+      default: {
+        shadowColor: 'transparent',
+        elevation: 0,
+      },
+    }),
     paddingVertical: 0,
   },
   card: {
@@ -594,11 +601,18 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background.secondary,
     borderRadius: 20,
     padding: 32,
-    shadowColor: colors.neutral[900],
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.15,
-    shadowRadius: 16,
-    elevation: 8,
+    ...Platform.select({
+      web: {
+        boxShadow: '0 8px 16px rgba(0, 0, 0, 0.15)',
+      },
+      default: {
+        shadowColor: colors.neutral[900],
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.15,
+        shadowRadius: 16,
+        elevation: 8,
+      },
+    }),
     justifyContent: 'space-between',
     zIndex: 1,
   },
@@ -708,11 +722,18 @@ const styles = StyleSheet.create({
     height: 100,
     borderRadius: 50,
     backgroundColor: 'rgba(255, 255, 255, 0.95)',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 10,
+    ...Platform.select({
+      web: {
+        boxShadow: '0 4px 8px rgba(0, 0, 0, 0.15)',
+      },
+      default: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.15,
+        shadowRadius: 8,
+        elevation: 10,
+      },
+    }),
     zIndex: 1000,
   },
   leftIndicator: {
@@ -812,6 +833,18 @@ const styles = StyleSheet.create({
   feedbackStatsText: {
     fontSize: 12,
     color: colors.text.tertiary,
+  },
+  feedbackCount: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: colors.text.primary,
+    marginLeft: 4,
+    backgroundColor: colors.background.primary,
+    borderRadius: 10,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    minWidth: 16,
+    textAlign: 'center',
   },
 });
 

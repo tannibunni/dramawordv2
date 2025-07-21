@@ -457,6 +457,97 @@ export class UserController {
     }
   }
 
+  // 更新用户学习统计
+  static async updateUserStats(req: Request, res: Response) {
+    try {
+      const userId = (req as any).user.id;
+      const { totalReviews, collectedWords, contributedWords, currentStreak, experience, level, updateContinuousLearning } = req.body;
+
+      const user = await User.findById(userId);
+
+      if (!user) {
+        return res.status(404).json({
+          success: false,
+          message: '用户不存在'
+        });
+      }
+
+      // 更新学习统计
+      const updateData: any = {};
+      
+      if (totalReviews !== undefined) {
+        // 增加复习次数（累加模式）
+        user.learningStats.totalReviews = (user.learningStats.totalReviews || 0) + totalReviews;
+        updateData['learningStats.totalReviews'] = user.learningStats.totalReviews;
+      }
+      
+      if (collectedWords !== undefined) {
+        user.learningStats.totalWordsLearned = collectedWords;
+        updateData['learningStats.totalWordsLearned'] = collectedWords;
+      }
+      
+      if (contributedWords !== undefined) {
+        user.contributedWords = contributedWords;
+        updateData['contributedWords'] = contributedWords;
+      }
+      
+      if (currentStreak !== undefined) {
+        user.learningStats.currentStreak = currentStreak;
+        updateData['learningStats.currentStreak'] = currentStreak;
+      }
+      
+      if (experience !== undefined) {
+        user.learningStats.experience = experience;
+        updateData['learningStats.experience'] = experience;
+      }
+      
+      if (level !== undefined) {
+        user.learningStats.level = level;
+        updateData['learningStats.level'] = level;
+      }
+
+      // 处理连续学习更新
+      if (updateContinuousLearning) {
+        // 更新连续学习天数
+        await user.updateStudyStreak();
+        
+        // 添加连续学习奖励
+        await user.addContinuousLearningReward();
+        
+        // 获取连续学习状态
+        const continuousStatus = user.checkContinuousLearningStatus();
+        
+        updateData['learningStats.currentStreak'] = user.learningStats.currentStreak;
+        updateData['learningStats.longestStreak'] = user.learningStats.longestStreak;
+        updateData['learningStats.lastStudyDate'] = user.learningStats.lastStudyDate;
+        updateData['continuousStatus'] = continuousStatus;
+        
+        logger.info(`连续学习更新成功: ${user.username}, 连续天数: ${user.learningStats.currentStreak}, 最长记录: ${user.learningStats.longestStreak}`);
+      }
+
+      // 保存更新
+      await user.save();
+
+      logger.info(`用户学习统计更新成功: ${user.username}`, updateData);
+
+      res.json({
+        success: true,
+        message: '学习统计更新成功',
+        data: {
+          learningStats: user.learningStats,
+          continuousStatus: updateContinuousLearning ? user.checkContinuousLearningStatus() : null
+        }
+      });
+    } catch (error) {
+      logger.error('更新用户学习统计失败:', error);
+      res.status(500).json({
+        success: false,
+        message: '更新学习统计失败',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  }
+
   // 删除用户账号
   static async deleteAccount(req: Request, res: Response) {
     try {

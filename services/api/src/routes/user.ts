@@ -73,6 +73,22 @@ router.get('/stats',
   UserController.getUserStats
 );
 
+// 更新用户学习统计 (需要认证)
+router.put('/stats',
+  authenticateToken,
+  validateRequest({
+    body: {
+      totalReviews: { type: 'number', required: false, min: 0 },
+      collectedWords: { type: 'number', required: false, min: 0 },
+      contributedWords: { type: 'number', required: false, min: 0 },
+      currentStreak: { type: 'number', required: false, min: 0 },
+      experience: { type: 'number', required: false, min: 0 },
+      level: { type: 'number', required: false, min: 1 }
+    }
+  }),
+  UserController.updateUserStats
+);
+
 // 删除用户账号 (需要认证)
 router.delete('/account',
   authenticateToken,

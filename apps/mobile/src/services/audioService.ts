@@ -13,10 +13,12 @@ class AudioService {
     console.log('🎵 单词:', word);
     
     try {
-      // 停止当前播放
-      console.log('🎵 AudioService - 停止当前播放...');
-      await this.stopAudio();
-      console.log('🎵 AudioService - 当前播放已停止');
+      // 只有在有音频正在播放时才停止
+      if (this.sound && this.isPlaying) {
+        console.log('🎵 AudioService - 停止当前播放...');
+        await this.stopAudio();
+        console.log('🎵 AudioService - 当前播放已停止');
+      }
 
       // 创建新的音频实例
       console.log('🎵 AudioService - 创建新的音频实例...');
@@ -38,9 +40,11 @@ class AudioService {
           this.isPlaying = status.isPlaying;
           if (status.didJustFinish) {
             console.log('🎵 AudioService - 播放完成');
+            this.isPlaying = false;
           }
         } else if (status.error) {
           console.error('🎵 AudioService - 播放出错:', status.error);
+          this.isPlaying = false;
         }
       });
 
@@ -68,6 +72,8 @@ class AudioService {
         stack: error instanceof Error ? error.stack : undefined,
         word: word
       });
+      // 重置状态
+      this.isPlaying = false;
       throw new Error('Failed to play audio');
     }
   }
@@ -78,7 +84,14 @@ class AudioService {
     try {
       if (this.sound) {
         console.log('🎵 AudioService - 停止当前音频...');
-        await this.sound.stopAsync();
+        
+        // 检查音频状态，避免在已经停止的状态下操作
+        const status = await this.sound.getStatusAsync();
+        if (status.isLoaded && !status.didJustFinish) {
+          await this.sound.stopAsync();
+          console.log('🎵 AudioService - 音频停止成功');
+        }
+        
         console.log('🎵 AudioService - 卸载音频...');
         await this.sound.unloadAsync();
         this.sound = null;
@@ -88,7 +101,22 @@ class AudioService {
         console.log('🎵 AudioService - 没有正在播放的音频');
       }
     } catch (error) {
-      console.error('🎵 AudioService - 停止音频出错:', error);
+      // 忽略 "Seeking interrupted" 错误，这是正常的
+      if (error instanceof Error && error.message.includes('Seeking interrupted')) {
+        console.log('🎵 AudioService - 音频停止被中断（正常情况）');
+        // 强制清理资源
+        if (this.sound) {
+          try {
+            await this.sound.unloadAsync();
+          } catch (unloadError) {
+            console.log('🎵 AudioService - 强制卸载音频');
+          }
+          this.sound = null;
+          this.isPlaying = false;
+        }
+      } else {
+        console.error('🎵 AudioService - 停止音频出错:', error);
+      }
     }
   }
 
