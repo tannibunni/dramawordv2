@@ -70,6 +70,16 @@ export interface IUser extends Document {
   settings: IUserSettings;
   createdAt: Date;
   updatedAt: Date;
+  // === 实例方法声明 ===
+  updateStudyStreak: () => Promise<any>;
+  addContinuousLearningReward: () => Promise<any>;
+  checkContinuousLearningStatus: () => any;
+  addExperienceForNewWord: (...args: any[]) => Promise<any>;
+  addExperienceForReview: (...args: any[]) => Promise<any>;
+  addExperienceForDailyCheckin: () => Promise<any>;
+  addExperienceForDailyCards: () => Promise<any>;
+  addExperienceForStudyTime: (minutes: number) => Promise<any>;
+  addExperienceForContribution: () => Promise<any>;
 }
 
 // 用户模式
