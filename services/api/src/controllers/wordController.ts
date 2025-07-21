@@ -732,9 +732,9 @@ async function saveSearchHistoryToDB(word: string, definition?: string, timestam
   }
 }
 
-// 获取有道 TTS 发音链接（美音，免费，无需鉴权）
-function getYoudaoTTSUrl(word: string) {
-  return `https://dict.youdao.com/dictvoice?audio=${encodeURIComponent(word)}&type=2`;
+// 获取 Google TTS 发音链接（免费，无需鉴权）
+function getGoogleTTSUrl(word: string, language: string = 'en') {
+  return `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(word)}&tl=${language}&client=tw-ob`;
 }
 
 // 使用 OpenAI 生成单词数据
@@ -1033,7 +1033,7 @@ async function generateWordData(word: string, language: string = 'en') {
       return {
         phonetic: parsedData.phonetic || `/${word}/`,
         definitions: definitions,
-        audioUrl: getYoudaoTTSUrl(word),
+        audioUrl: getGoogleTTSUrl(word, language),
         correctedWord: parsedData.correctedWord || word,
         kana: parsedData.kana || undefined,
         slangMeaning: parsedData.slangMeaning || null,
@@ -1051,19 +1051,6 @@ function getFallbackWordData(word: string, language: string = 'en') {
   const getLanguageFallback = (lang: string) => {
     switch (lang) {
       case 'ko':
-        return {
-          phonetic: word,
-          definitions: [
-            {
-              partOfSpeech: 'n.',
-              definition: `${word} 的基本含义`,
-              examples: [
-                { english: word, chinese: `${word} 的含义` }
-              ]
-            }
-          ],
-          audioUrl: getYoudaoTTSUrl(word)
-        };
       case 'ja':
         return {
           phonetic: word,
@@ -1076,7 +1063,7 @@ function getFallbackWordData(word: string, language: string = 'en') {
               ]
             }
           ],
-          audioUrl: getYoudaoTTSUrl(word)
+          audioUrl: getGoogleTTSUrl(word, lang)
         };
       default: // 'en'
         const isEnglish = /[a-zA-Z]/.test(word);
@@ -1094,11 +1081,10 @@ function getFallbackWordData(word: string, language: string = 'en') {
               ]
             }
           ],
-          audioUrl: getYoudaoTTSUrl(word)
+          audioUrl: getGoogleTTSUrl(word, lang)
         };
     }
   };
-  
   return getLanguageFallback(language);
 }
 
