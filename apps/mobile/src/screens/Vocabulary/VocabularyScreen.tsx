@@ -368,7 +368,8 @@ const VocabularyScreen: React.FC = () => {
                 onPress={() => setIsSearchExpanded(true)}
                 style={styles.searchExpandBtn}
               >
-                <Ionicons name="add" size={24} color={colors.primary[500]} />
+                <Ionicons name="search" size={16} color={colors.primary[500]} style={{marginRight: 6}} />
+                <Text style={styles.searchExpandText}>SEARCH & FILTER</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -866,14 +867,20 @@ const styles = StyleSheet.create({
   wordbookShowTag: { backgroundColor: colors.success[100] },
   wordbookShowTagText: { color: colors.success[800] },
   searchExpandBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: colors.primary[50],
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: colors.primary[50],
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
     borderWidth: 1,
     borderColor: colors.primary[200],
+  },
+  searchExpandText: {
+    color: colors.primary[500],
+    fontSize: 14,
+    fontWeight: '500',
+    marginLeft: 6,
   },
   searchCloseBtn: {
     padding: 8,
