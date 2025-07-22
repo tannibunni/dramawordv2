@@ -226,7 +226,7 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
     let filterFn: (w: any) => boolean = () => true;
     if (type === 'show' && id !== undefined) {
       filterFn = (w: any) => {
-        const match = String(w.sourceShow?.id) === String(id);
+        const match = w.sourceShow?.type === type && String(w.sourceShow?.id) === String(id);
         console.log(
           '[filterFn]',
           'w.word:', w.word,
@@ -240,7 +240,7 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
       };
     } else if (type === 'wordbook' && id !== undefined) {
       filterFn = (w: any) => {
-        const match = String(w.sourceShow?.id) === String(id);
+        const match = w.sourceShow?.type === type && String(w.sourceShow?.id) === String(id);
         console.log(
           '[filterFn]',
           'w.word:', w.word,

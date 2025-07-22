@@ -42,6 +42,8 @@ const VocabularyScreen: React.FC = () => {
   // 新增：庆祝弹窗
   const [showBadgeCelebrate, setShowBadgeCelebrate] = useState(false);
   const [celebrateBadge, setCelebrateBadge] = useState<null | number>(null);
+  // 新增：搜索框展开状态
+  const [isSearchExpanded, setIsSearchExpanded] = useState(false);
 
   // 徽章配置 - 使用 state 来保持状态
   const [badges, setBadges] = useState<Badge[]>([
@@ -339,15 +341,36 @@ const VocabularyScreen: React.FC = () => {
       ) : (
         <View style={styles.listSection}>
           <View style={styles.searchContainer}>
-            <Ionicons name="search" size={18} color={colors.neutral[400]} style={{marginRight:8}} />
-            <TextInput
-              style={styles.searchInput}
-              placeholder={t('search_words', appLanguage)}
-              placeholderTextColor={colors.neutral[400]}
-              value={searchText}
-              onChangeText={setSearchText}
-              onSubmitEditing={handleSearchSubmit}
-            />
+            {isSearchExpanded ? (
+              <>
+                <Ionicons name="search" size={18} color={colors.neutral[400]} style={{marginRight:8}} />
+                <TextInput
+                  style={styles.searchInput}
+                  placeholder={t('search_words', appLanguage)}
+                  placeholderTextColor={colors.neutral[400]}
+                  value={searchText}
+                  onChangeText={setSearchText}
+                  onSubmitEditing={handleSearchSubmit}
+                  autoFocus
+                />
+                <TouchableOpacity 
+                  onPress={() => {
+                    setIsSearchExpanded(false);
+                    setSearchText('');
+                  }}
+                  style={styles.searchCloseBtn}
+                >
+                  <Ionicons name="close" size={20} color={colors.neutral[400]} />
+                </TouchableOpacity>
+              </>
+            ) : (
+              <TouchableOpacity 
+                onPress={() => setIsSearchExpanded(true)}
+                style={styles.searchExpandBtn}
+              >
+                <Ionicons name="add" size={24} color={colors.primary[500]} />
+              </TouchableOpacity>
+            )}
           </View>
           <WordList
             words={filteredWords}
@@ -459,6 +482,8 @@ const styles = StyleSheet.create({
     elevation: 2,
     marginBottom: 12,
     marginTop: 0,
+    minHeight: 48,
+    justifyContent: 'center', // 在收起状态下居中显示"+"按钮
   },
   searchInput: {
     flex: 1,
@@ -840,6 +865,20 @@ const styles = StyleSheet.create({
   tvShowTagText: { color: colors.primary[700] },
   wordbookShowTag: { backgroundColor: colors.success[100] },
   wordbookShowTagText: { color: colors.success[800] },
+  searchExpandBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.primary[50],
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: colors.primary[200],
+  },
+  searchCloseBtn: {
+    padding: 8,
+    marginLeft: 8,
+  },
 });
 
 export default VocabularyScreen; 

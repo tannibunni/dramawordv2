@@ -65,3 +65,27 @@ main().catch(err => {
   console.error('批量清理出错:', err);
   process.exit(1);
 }); 
+
+// 自动清理 cloudwords 集合中指定词条
+const { MongoClient } = require('mongodb');
+
+const uri = 'mongodb+srv://lt14gs:WZ7KwUo1F2SK0N6W@dramaword.azbr3wj.mongodb.net/dramaword?retryWrites=true&w=majority&appName=dramaword';
+const dbName = 'dramaword';
+const collectionName = 'cloudwords';
+
+async function cleanup() {
+  const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true });
+  try {
+    await client.connect();
+    const db = client.db(dbName);
+    const collection = db.collection(collectionName);
+    const result = await collection.deleteOne({ word: 'flower pollen', language: 'en' });
+    console.log(`删除结果:`, result);
+  } catch (err) {
+    console.error('删除失败:', err);
+  } finally {
+    await client.close();
+  }
+}
+
+cleanup(); 
