@@ -14,6 +14,8 @@ export interface ICloudWord extends Document {
     }>;
   }>;
   audioUrl: string;
+  slangMeaning: string | null;
+  phraseExplanation: string | null;
   correctedWord: string;
   searchCount: number;
   lastSearched: Date;
@@ -67,6 +69,14 @@ const CloudWordSchema = new Schema<ICloudWord>({
   audioUrl: {
     type: String,
     default: '',
+  },
+  slangMeaning: {
+    type: String,
+    default: null,
+  },
+  phraseExplanation: {
+    type: String,
+    default: null,
   },
   correctedWord: {
     type: String,
