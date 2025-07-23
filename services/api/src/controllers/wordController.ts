@@ -839,7 +839,7 @@ async function generateWordData(word: string, language: string = 'en', uiLanguag
           content: prompt
         }
       ],
-      temperature: 0.3,
+      temperature: 0.1,
       max_tokens: 1000
     });
 
