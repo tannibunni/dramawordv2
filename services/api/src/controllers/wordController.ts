@@ -24,6 +24,34 @@ const openai = new OpenAI({
 const wordCache = new Map<string, any>();
 const chineseTranslationCache = new Map<string, string[]>();
 
+// 获取语言中文名
+function getLanguageName(lang: string) {
+  switch (lang) {
+    case 'en': return '英语';
+    case 'zh-CN': return '中文';
+    case 'ja': return '日语';
+    case 'ko': return '韩语';
+    case 'fr': return '法语';
+    case 'es': return '西班牙语';
+    // 可继续扩展
+    default: return lang;
+  }
+}
+
+// 参数化 prompt 生成
+function getLanguagePrompt(word: string, language: string, uiLanguage: string) {
+  const isEnglishUI = uiLanguage && uiLanguage.startsWith('en');
+  const isChineseUI = uiLanguage && (uiLanguage.startsWith('zh') || uiLanguage === 'zh-CN');
+  // 例句翻译字段名
+  const exampleField = isEnglishUI ? 'english' : (isChineseUI ? 'chinese' : getLanguageName(uiLanguage));
+  // 释义语言名
+  const definitionLang = getLanguageName(uiLanguage);
+  // 被查语言名
+  const targetLang = getLanguageName(language);
+
+  return `你是专业的${targetLang}词典助手。\n\n任务：为${targetLang}单词或短语 "${word}" 生成完整的词典信息，适合${definitionLang}用户学习${targetLang}。\n\n返回JSON格式：\n{\n  "phonetic": "音标或发音",\n  "definitions": [\n    {\n      "partOfSpeech": "词性",\n      "definition": "【简洁的${definitionLang}释义，适合语言学习】",\n      "examples": [\n        {\n          "${language}": "${targetLang}例句",\n          "${exampleField}": "【简洁的${definitionLang}翻译】"\n        }\n      ]\n    }\n  ],\n  "correctedWord": "${word}",\n  "slangMeaning": "【如果是网络俚语或流行语，提供简洁的${definitionLang}解释；如果不是，返回null】",\n  "phraseExplanation": "【如果是短语或固定搭配，提供简洁的${definitionLang}解释；如果是单个单词，返回null】"\n}\n\n要求：\n- 释义（definition 字段）必须用${definitionLang}，例句翻译也必须用${definitionLang}\n- 释义要简洁明了，适合语言学习\n- 例句要简单实用，贴近日常生活\n- 只返回JSON，不要其他内容\n- 如有特殊语言（如日语假名/罗马音、韩语发音等），请补充相应字段\n- 示例：\n- "apple" → 释义："A round fruit..."，例句："I eat an apple." → "我吃苹果。"`;
+}
+
 // 单词搜索 - 先查云单词表，没有再用AI
 export const searchWord = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -746,19 +774,7 @@ function getGoogleTTSUrl(word: string, language: string = 'en') {
 // 使用 OpenAI 生成单词数据
 async function generateWordData(word: string, language: string = 'en', uiLanguage: string = 'zh-CN') {
   // 根据语言生成不同的 prompt
-  const getLanguagePrompt = (lang: string, uiLang: string) => {
-    const isEnglishUI = uiLang && uiLang.startsWith('en');
-    switch (lang) {
-      case 'ko':
-        return `你是专业的韩语词典助手。\n\n任务：为韩语单词或短语 "${word}" 生成完整的词典信息，适合${isEnglishUI ? '英语' : '中文'}用户学习韩语。\n\n返回JSON格式：\n{\n  "phonetic": "韩文发音",\n  "definitions": [\n    {\n      "partOfSpeech": "词性",\n      "definition": "【简洁的${isEnglishUI ? '英文' : '中文'}释义，适合语言学习】",\n      "examples": [\n        {\n          "korean": "韩文例句",\n          "${isEnglishUI ? 'english' : 'chinese'}": "【简洁的${isEnglishUI ? '英文' : '中文'}翻译】"\n        }\n      ]\n    }\n  ],\n  "correctedWord": "${word}",\n  "slangMeaning": "【如果是网络俚语或流行语，提供简洁的${isEnglishUI ? '英文' : '中文'}解释；如果不是，返回null】",\n  "phraseExplanation": "【如果是短语或固定搭配，提供简洁的${isEnglishUI ? '英文' : '中文'}解释；如果是单个单词，返回null】"\n}\n\n重要要求：\n- 释义（definition 字段）必须用${isEnglishUI ? '英文' : '中文'}，例句翻译也必须用${isEnglishUI ? '英文' : '中文'}\n- 释义要简洁明了，适合语言学习\n- 例句要简单实用，贴近日常生活\n- 韩文例句必须完全使用韩文字母，绝对不能用英文单词\n- 例句应该是纯韩文，比如：\"안녕하세요, 만나서 반갑습니다.\"\n- slangMeaning 字段：仅当查询的是网络俚语、流行语或非正式表达时提供解释，否则返回null\n- phraseExplanation 字段：仅当查询的是短语、固定搭配或习语时提供解释，否则返回null\n- 只返回JSON，不要其他内容\n\n示例：\n- "안녕하세요" → 释义："你好"，例句："안녕하세요, 만나서 반갑습니다." → "你好，很高兴见到你。", slangMeaning: null, phraseExplanation: null\n- "감사합니다" → 释义："谢谢"，例句："도와주셔서 감사합니다." → "谢谢您的帮助。", slangMeaning: null, phraseExplanation: null\n- "사과" → 释义："苹果"，例句："사과를 먹어요." → "我吃苹果。", slangMeaning: null, phraseExplanation: null\n- "대박" → 释义："大发"，例句："대박이야!" → "太棒了！", slangMeaning: "太棒了，很厉害（网络俚语）", phraseExplanation: null\n\n注意：韩文例句必须只包含韩文字母，不能包含任何英文单词！\n\n请严格按照示例格式生成例句，确保韩文例句中不包含任何英文单词。`;
-      case 'ja':
-        return `你是专业的日语词典助手。\n\n任务：为日语单词或短语 "${word}" 生成完整的词典信息，适合${isEnglishUI ? '英语' : '中文'}用户学习日语。\n\n重要：请仔细分析用户输入的单词，并返回正确的日语写法：\n- 如果输入的是假名（如"taberu"），返回对应的汉字写法（如"食べる"）\n- 如果输入的是汉字，返回原词\n- 提供假名标注（如"たべる"）\n- 提供罗马音标注（如"ta be ru"）\n\n返回JSON格式（必须包含所有字段）：\n{\n  "phonetic": "罗马音标注（如：ta be ru）",\n  "kana": "假名标注（如：たべる）",\n  "correctedWord": "正确的日语写法（汉字形式）",\n  "definitions": [\n    {\n      "partOfSpeech": "词性",\n      "definition": "【简洁的${isEnglishUI ? '英文' : '中文'}释义，适合语言学习】",\n      "examples": [\n        {\n          "japanese": "日文例句（使用汉字和假名）",\n          "romaji": "例句的完整罗马音（如：watashi ha nihongo wo benkyou shiteimasu）",\n          "${isEnglishUI ? 'english' : 'chinese'}": "【简洁的${isEnglishUI ? '英文' : '中文'}翻译】"\n        }\n      ]\n    }\n  ],\n  "slangMeaning": "【如果是网络俚语或流行语，提供简洁的${isEnglishUI ? '英文' : '中文'}解释；如果不是，返回null】",\n  "phraseExplanation": "【如果是短语或固定搭配，提供简洁的${isEnglishUI ? '英文' : '中文'}解释；如果是单个单词，返回null】"\n}\n\n重要要求：\n- 释义（definition 字段）必须用${isEnglishUI ? '英文' : '中文'}，例句翻译也必须用${isEnglishUI ? '英文' : '中文'}\n- kana字段：必须提供假名标注，这是必需的字段\n- correctedWord：必须返回正确的日语汉字写法\n- phonetic：提供罗马音标注，用空格分隔音节\n- romaji字段：必须为每个例句提供完整的罗马音发音\n- 释义要简洁明了，适合语言学习\n- 例句要简单实用，贴近日常生活\n- 日文例句必须完全使用假名和汉字，绝对不能用英文单词\n- 例句应该是纯日文，比如：\"私は寿司を食べます。\"\n- slangMeaning 字段：仅当查询的是网络俚语、流行语或非正式表达时提供解释，否则返回null\n- phraseExplanation 字段：仅当查询的是短语、固定搭配或习语时提供解释，否则返回null\n- 只返回JSON，不要其他内容\n\n示例：\n- 输入"taberu" → correctedWord:"食べる", kana:"たべる", phonetic:"ta be ru"\n- 例句："彼は毎日りんごを食べます。" → romaji:"kare ha mainichi ringo wo tabemasu", chinese:"他每天吃苹果。", slangMeaning: null, phraseExplanation: null\n- 输入"nomu" → correctedWord:"飲む", kana:"のむ", phonetic:"no mu"\n- 例句："彼はコーヒーを飲みます。" → romaji:"kare ha ko-hi- wo nomimasu", chinese:"他喝咖啡。", slangMeaning: null, phraseExplanation: null\n- 输入"iku" → correctedWord:"行く", kana:"いく", phonetic:"i ku"\n- 例句："友達と公園に行きます。" → romaji:"tomodachi to kouen ni ikimasu", chinese:"我和朋友去公园。", slangMeaning: null, phraseExplanation: null\n- 输入"やばい" → correctedWord:"やばい", kana:"やばい", phonetic:"ya ba i"\n- 例句："やばい、遅刻しそう！" → romaji:"yabai, chikoku shisou!", chinese:"糟糕，要迟到了！", slangMeaning: "糟糕，不得了（网络俚语）", phraseExplanation: null\n\n注意：kana字段和romaji字段都是必需的，绝对不能省略！\n\n请严格按照示例格式生成例句，确保日文例句中不包含任何英文单词。`;
-      default: // 'en'
-        return `你是专业的英语词典助手和拼写纠错专家。\n\n任务：为英语单词或短语 "${word}" 生成完整的词典信息，适合语言学习。\n\n${isEnglishUI ? '请用英文返回释义（definition 字段）和例句（examples 字段），所有释义和例句都必须是英文。' : '请用中文返回释义和例句。'}\n\n返回JSON格式：\n{\n  "phonetic": "/音标/",\n  "definitions": [\n    {\n      "partOfSpeech": "词性",\n      "definition": "【简洁的${isEnglishUI ? '英文' : '中文'}释义，适合语言学习】",\n      "examples": [\n        {\n          "english": "简单的英文例句",\n          "chinese": "【简洁的中文翻译，适合语言学习】"\n        }\n      ]\n    }\n  ],\n  "correctedWord": "【如果用户输入的单词拼写正确，返回原词；如果拼写错误，返回正确的拼写】",\n  "slangMeaning": "【如果是网络俚语或流行语，提供简洁的${isEnglishUI ? '英文' : '中文'}解释；如果不是，返回null】",\n  "phraseExplanation": "【如果是短语或固定搭配，提供简洁的${isEnglishUI ? '英文' : '中文'}解释；如果是单个单词，返回null】"\n}\n\n要求：\n- 释义（definition 字段）必须用${isEnglishUI ? '英文' : '中文'}，例句翻译也必须用${isEnglishUI ? '英文' : '中文'}\n- 释义要简洁明了，适合语言学习，不要百科全书式的复杂解释\n- 例句要简单实用，贴近日常生活\n- slangMeaning 字段：仅当查询的是网络俚语、流行语或非正式表达时提供解释，否则返回null\n- phraseExplanation 字段：仅当查询的是短语、固定搭配或习语时提供解释，否则返回null\n- 只返回JSON，不要其他内容\n\n示例：\n- "mineral water" → 释义："矿泉水"，例句："I drink mineral water." → "我喝矿泉水。", phraseExplanation: "矿泉水"\n- "university" → 释义："大学"，例句："I study at university." → "我在大学学习。", slangMeaning: null, phraseExplanation: null\n- "lit" → 释义："点燃的"，例句："The fire is lit." → "火被点燃了。", slangMeaning: "很酷的，很棒的（网络俚语）", phraseExplanation: null\n- "break up" → 释义："分手"，例句："They broke up." → "他们分手了。", slangMeaning: null, phraseExplanation: "分手，结束关系（动词短语）"`;
-    }
-  };
-
-  const prompt = getLanguagePrompt(language, uiLanguage);
+  const prompt = getLanguagePrompt(word, language, uiLanguage);
 
     const getSystemMessage = (lang: string) => {
       switch (lang) {
