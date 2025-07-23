@@ -43,22 +43,36 @@ function getLanguageName(lang: string) {
 function getPromptTemplate(uiLanguage: string, language: string, type: string) {
   const promptDir = path.join(__dirname, '../../prompts', uiLanguage);
   const promptPath = path.join(promptDir, `${language}.json`);
+  
+  // 添加调试日志
+  logger.info(`🔍 Prompt 路径调试: __dirname=${__dirname}, promptDir=${promptDir}, promptPath=${promptPath}`);
+  
   if (fs.existsSync(promptPath)) {
     const templates = JSON.parse(fs.readFileSync(promptPath, 'utf-8'));
+    logger.info(`✅ 找到 prompt 文件: ${promptPath}`);
+    logger.info(`📄 Prompt 内容: ${JSON.stringify(templates[type], null, 2)}`);
     return templates[type];
   }
+  
+  logger.warn(`⚠️ 未找到 prompt 文件: ${promptPath}`);
+  
   // fallback: prompts/{uiLanguage}/default.json
   const fallbackPath = path.join(promptDir, 'default.json');
   if (fs.existsSync(fallbackPath)) {
+    logger.info(`🔄 使用 fallback: ${fallbackPath}`);
     const templates = JSON.parse(fs.readFileSync(fallbackPath, 'utf-8'));
     return templates[type];
   }
+  
   // fallback: prompts/{uiLanguage}.json（兼容老结构）
   const legacyPath = path.join(__dirname, '../../prompts', `${uiLanguage}.json`);
   if (fs.existsSync(legacyPath)) {
+    logger.info(`🔄 使用 legacy fallback: ${legacyPath}`);
     const templates = JSON.parse(fs.readFileSync(legacyPath, 'utf-8'));
     return templates[type];
   }
+  
+  logger.error(`❌ 所有 prompt 文件都未找到: ${promptPath}`);
   throw new Error(`Prompt template not found: ${promptPath}`);
 }
 
