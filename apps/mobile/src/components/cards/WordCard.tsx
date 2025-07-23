@@ -40,6 +40,7 @@ export interface WordData {
   feedbackStats?: { positive: number; negative: number; total: number }; // 新增：反馈统计
   kana?: string; // 新增：日语假名标注
   slangMeaning?: string; // 新增：俚语释义
+  phraseExplanation?: string; // 新增：短语解释
 }
 
 interface WordCardProps {
@@ -461,10 +462,17 @@ const WordCard: React.FC<WordCardProps> = ({
                 </Text>
               </View>
               <Text style={styles.definition}>{def.definition}</Text>
-              {/* slangMeaning 蓝色标签展示 */}
-              {idx === 0 && wordData.slangMeaning && wordData.slangMeaning !== 'null' && (
+              {/* 网络俚语/缩写蓝色标签展示 - 优先显示 slangMeaning，如果没有则显示 phraseExplanation */}
+              {idx === 0 && (
+                (wordData.slangMeaning && wordData.slangMeaning !== 'null') || 
+                (wordData.phraseExplanation && wordData.phraseExplanation !== 'null')
+              ) && (
                 <View style={styles.slangTagWrapper}>
-                  <Text style={styles.slangTagText}>{wordData.slangMeaning}</Text>
+                  <Text style={styles.slangTagText}>
+                    {wordData.slangMeaning && wordData.slangMeaning !== 'null' 
+                      ? wordData.slangMeaning 
+                      : wordData.phraseExplanation}
+                  </Text>
                 </View>
               )}
               {def.examples && def.examples.length > 0 && (
