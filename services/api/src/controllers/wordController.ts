@@ -8,6 +8,8 @@ import { ChineseTranslation } from '../models/ChineseTranslation';
 import { User } from '../models/User';
 import { ExperienceService } from '../services/experienceService';
 import { logger } from '../utils/logger';
+import fs from 'fs';
+import path from 'path';
 
 // 初始化 OpenAI
 const apiKey = process.env.OPENAI_API_KEY;
@@ -38,18 +40,50 @@ function getLanguageName(lang: string) {
   }
 }
 
-// 参数化 prompt 生成
+function getPromptTemplate(uiLanguage: string, language: string, type: string) {
+  const promptDir = path.join(__dirname, '../../prompts', uiLanguage);
+  const promptPath = path.join(promptDir, `${language}.json`);
+  if (fs.existsSync(promptPath)) {
+    const templates = JSON.parse(fs.readFileSync(promptPath, 'utf-8'));
+    return templates[type];
+  }
+  // fallback: prompts/{uiLanguage}/default.json
+  const fallbackPath = path.join(promptDir, 'default.json');
+  if (fs.existsSync(fallbackPath)) {
+    const templates = JSON.parse(fs.readFileSync(fallbackPath, 'utf-8'));
+    return templates[type];
+  }
+  // fallback: prompts/{uiLanguage}.json（兼容老结构）
+  const legacyPath = path.join(__dirname, '../../prompts', `${uiLanguage}.json`);
+  if (fs.existsSync(legacyPath)) {
+    const templates = JSON.parse(fs.readFileSync(legacyPath, 'utf-8'));
+    return templates[type];
+  }
+  throw new Error(`Prompt template not found: ${promptPath}`);
+}
+
+function renderPrompt(template: string, params: Record<string, string>) {
+  let result = template;
+  for (const key in params) {
+    result = result.replace(new RegExp(`{${key}}`, 'g'), params[key]);
+  }
+  return result;
+}
+
 function getLanguagePrompt(word: string, language: string, uiLanguage: string) {
   const isEnglishUI = uiLanguage && uiLanguage.startsWith('en');
   const isChineseUI = uiLanguage && (uiLanguage.startsWith('zh') || uiLanguage === 'zh-CN');
-  // 例句翻译字段名
   const exampleField = isEnglishUI ? 'english' : (isChineseUI ? 'chinese' : getLanguageName(uiLanguage));
-  // 释义语言名
   const definitionLang = getLanguageName(uiLanguage);
-  // 被查语言名
   const targetLang = getLanguageName(language);
-
-  return `你是专业的${targetLang}词典助手。\n\n任务：为${targetLang}单词或短语 "${word}" 生成完整的词典信息，适合${definitionLang}用户学习${targetLang}。\n\n返回JSON格式：\n{\n  "phonetic": "音标或发音",\n  "definitions": [\n    {\n      "partOfSpeech": "词性",\n      "definition": "【简洁的${definitionLang}释义，适合语言学习】",\n      "examples": [\n        {\n          "${language}": "${targetLang}例句",\n          "${exampleField}": "【简洁的${definitionLang}翻译】"\n        }\n      ]\n    }\n  ],\n  "correctedWord": "${word}",\n  "slangMeaning": "【如果是网络俚语或流行语，提供简洁的${definitionLang}解释；如果不是，返回null】",\n  "phraseExplanation": "【如果是短语或固定搭配，提供简洁的${definitionLang}解释；如果是单个单词，返回null】"\n}\n\n要求：\n- 释义（definition 字段）必须用${definitionLang}，例句翻译也必须用${definitionLang}\n- 释义要简洁明了，适合语言学习\n- 例句要简单实用，贴近日常生活\n- 只返回JSON，不要其他内容\n- 如有特殊语言（如日语假名/罗马音、韩语发音等），请补充相应字段\n- 示例：\n- "apple" → 释义："A round fruit..."，例句："I eat an apple." → "我吃苹果。"`;
+  const template = getPromptTemplate(uiLanguage, language, 'definition');
+  return renderPrompt(template, {
+    word,
+    language,
+    uiLanguage: definitionLang,
+    targetLang,
+    exampleField
+  });
 }
 
 // 单词搜索 - 先查云单词表，没有再用AI
@@ -139,6 +173,8 @@ export const searchWord = async (req: Request, res: Response): Promise<void> => 
           phonetic: generatedData.phonetic,
           definitions: generatedData.definitions,
           audioUrl: generatedData.audioUrl || '',
+          slangMeaning: generatedData.slangMeaning || null,
+          phraseExplanation: generatedData.phraseExplanation || null,
           correctedWord: generatedData.correctedWord || searchTerm,
           searchCount: 1,
           lastSearched: new Date()
@@ -215,6 +251,8 @@ export const searchWord = async (req: Request, res: Response): Promise<void> => 
           phonetic: fallbackData.phonetic,
           definitions: fallbackData.definitions,
           audioUrl: fallbackData.audioUrl || '',
+          slangMeaning: null, // fallback 时 slangMeaning 为 null
+          phraseExplanation: null, // fallback 时 phraseExplanation 为 null
           correctedWord: searchTerm, // fallback 时使用原词作为 correctedWord
           searchCount: 1,
           lastSearched: new Date()
@@ -520,6 +558,8 @@ export const addToUserVocabulary = async (req: Request, res: Response) => {
           phonetic: generatedData.phonetic,
           definitions: generatedData.definitions,
           audioUrl: generatedData.audioUrl || '',
+          slangMeaning: generatedData.slangMeaning || null,
+          phraseExplanation: generatedData.phraseExplanation || null,
           correctedWord: generatedData.correctedWord || searchTerm,
           searchCount: 1,
           lastSearched: new Date()
