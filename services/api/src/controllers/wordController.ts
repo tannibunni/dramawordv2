@@ -38,7 +38,7 @@ export const searchWord = async (req: Request, res: Response): Promise<void> => 
     }
 
     const searchTerm = word.toLowerCase().trim();
-    const cacheKey = `${searchTerm}_${language}`;
+    const cacheKey = `${searchTerm}_${language}_${uiLanguage}`;
     logger.info(`🔍 Searching for word: ${searchTerm} in ${language}`);
 
     // 1. 检查内存缓存
@@ -58,12 +58,12 @@ export const searchWord = async (req: Request, res: Response): Promise<void> => 
     }
 
     // 2. 检查云单词表
-    let cloudWord = await CloudWord.findOne({ word: searchTerm, language });
+    let cloudWord = await CloudWord.findOne({ word: searchTerm, language, uiLanguage });
     if (cloudWord) {
       logger.info(`✅ Found in cloud words: ${searchTerm}`);
       
       // 更新搜索次数和最后搜索时间
-      await updateCloudWordSearchStats(searchTerm, language);
+      await updateCloudWordSearchStats(searchTerm, language, uiLanguage);
       
       // 保存到内存缓存
       wordCache.set(cacheKey, cloudWord.toObject());
@@ -95,18 +95,19 @@ export const searchWord = async (req: Request, res: Response): Promise<void> => 
       logger.info(`🔍 Debug: About to save to cloud words: ${searchTerm}`);
       
       // 再次检查数据库，确保单词真的不存在
-      const existingWord = await CloudWord.findOne({ word: searchTerm, language });
+      const existingWord = await CloudWord.findOne({ word: searchTerm, language, uiLanguage });
       if (existingWord) {
         logger.info(`🔄 Word found in database during AI save check: ${searchTerm}`);
         cloudWord = existingWord;
         // 更新搜索次数和最后搜索时间
-        await updateCloudWordSearchStats(searchTerm, language);
+        await updateCloudWordSearchStats(searchTerm, language, uiLanguage);
       } else {
         // 如果单词不存在，创建新记录并保存到数据库
         logger.info(`📝 Creating new word data and saving to database: ${searchTerm}`);
         cloudWord = new CloudWord({
           word: searchTerm,
           language,
+          uiLanguage,
           phonetic: generatedData.phonetic,
           definitions: generatedData.definitions,
           audioUrl: generatedData.audioUrl || '',
@@ -170,18 +171,19 @@ export const searchWord = async (req: Request, res: Response): Promise<void> => 
       
       // 保存到云单词表（先检查是否已存在）
       // 再次检查数据库，确保单词真的不存在
-      const existingFallbackWord = await CloudWord.findOne({ word: searchTerm, language });
+      const existingFallbackWord = await CloudWord.findOne({ word: searchTerm, language, uiLanguage });
       if (existingFallbackWord) {
         logger.info(`🔄 Word found in database during fallback save check: ${searchTerm}`);
         cloudWord = existingFallbackWord;
         // 更新搜索次数和最后搜索时间
-        await updateCloudWordSearchStats(searchTerm, language);
+        await updateCloudWordSearchStats(searchTerm, language, uiLanguage);
       } else {
         // 如果单词不存在，创建新记录并保存到数据库
         logger.info(`📝 Creating fallback word data and saving to database: ${searchTerm}`);
         cloudWord = new CloudWord({
           word: searchTerm,
           language,
+          uiLanguage,
           phonetic: fallbackData.phonetic,
           definitions: fallbackData.definitions,
           audioUrl: fallbackData.audioUrl || '',
@@ -464,7 +466,7 @@ export const getUserVocabulary = async (req: Request, res: Response) => {
 // 添加单词到用户单词本
 export const addToUserVocabulary = async (req: Request, res: Response) => {
   try {
-    const { userId, word, sourceShow } = req.body;
+    const { userId, word, sourceShow, language = 'en', uiLanguage = 'zh-CN' } = req.body;
     
     if (!userId || !word) {
       res.status(400).json({
@@ -478,16 +480,19 @@ export const addToUserVocabulary = async (req: Request, res: Response) => {
     logger.info(`📝 Adding word to user vocabulary: ${searchTerm} for user: ${userId}`);
 
     // 1. 查找或创建云单词
-    let cloudWord = await CloudWord.findOne({ word: searchTerm });
+    let cloudWord = await CloudWord.findOne({ word: searchTerm, language, uiLanguage });
     if (!cloudWord) {
       // 如果云单词不存在，创建它
-      const generatedData = await generateWordData(searchTerm);
+      const generatedData = await generateWordData(searchTerm, language, uiLanguage);
       try {
         cloudWord = new CloudWord({
           word: searchTerm,
+          language,
+          uiLanguage,
           phonetic: generatedData.phonetic,
           definitions: generatedData.definitions,
           audioUrl: generatedData.audioUrl || '',
+          correctedWord: generatedData.correctedWord || searchTerm,
           searchCount: 1,
           lastSearched: new Date()
         });
@@ -496,7 +501,7 @@ export const addToUserVocabulary = async (req: Request, res: Response) => {
         // 如果是重复键错误，重新查询已存在的单词
         if (saveError.code === 11000) {
           logger.info(`🔄 Word already exists in addToUserVocabulary, fetching from database: ${searchTerm}`);
-          cloudWord = await CloudWord.findOne({ word: searchTerm });
+          cloudWord = await CloudWord.findOne({ word: searchTerm, language, uiLanguage });
           if (!cloudWord) {
             throw saveError; // 如果还是找不到，抛出原始错误
           }
@@ -689,17 +694,17 @@ export const removeFromUserVocabulary = async (req: Request, res: Response) => {
 };
 
 // 更新云单词表搜索统计
-async function updateCloudWordSearchStats(word: string, language: string = 'en'): Promise<void> {
+async function updateCloudWordSearchStats(word: string, language: string = 'en', uiLanguage: string = 'zh-CN'): Promise<void> {
   try {
     await CloudWord.updateOne(
-      { word: word.toLowerCase(), language },
+      { word: word.toLowerCase(), language, uiLanguage },
       { 
         $inc: { searchCount: 1 },
         $set: { lastSearched: new Date() }
       }
     );
   } catch (error) {
-    logger.error(`❌ Failed to update search stats for ${word} (${language}):`, error);
+    logger.error(`❌ Failed to update search stats for ${word} (${language}, ${uiLanguage}):`, error);
   }
 }
 
