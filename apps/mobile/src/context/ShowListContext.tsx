@@ -77,12 +77,15 @@ export const ShowListProvider = ({ children }: { children: ReactNode }) => {
 
   const addShow = (show: Show) => {
     setShows(prev => {
-      if (prev.some(s => s.id === show.id)) {
+      const showIdNum = Number(show.id);
+      const prevIds = prev.map(s => Number(s.id));
+      console.log('addShow 参数 show.id:', show.id, '类型:', typeof show.id, '现有 shows:', prevIds);
+      if (prevIds.includes(showIdNum)) {
         console.log('📺 剧集已存在:', show.name);
         return prev;
       }
-      console.log('➕ 添加新剧集:', show.name, 'ID:', show.id);
-      return [show, ...prev]; // 新剧集添加到列表开头
+      console.log('➕ 添加新剧集:', show.name, 'ID:', showIdNum);
+      return [{ ...show, id: showIdNum }, ...prev]; // 新剧集添加到列表开头，确保 id 为 number
     });
   };
 

@@ -173,6 +173,8 @@ export type TranslationKey =
   | 'feedback_error'
   | 'add'
   | 'added'
+  | 'add_to_list'
+  | 'not_watched'
   
   // 登录页面
   | 'app_name'
@@ -202,7 +204,11 @@ export type TranslationKey =
   | 'welcome_to_dramaword'
   | 'free_trial_description'
   | 'try_for_free'
-  | 'welcome_user';
+  | 'welcome_user'
+  | 'all_languages'
+  | 'english_language'
+  | 'japanese_language'
+  | 'korean_language';
 
 // 翻译内容
 export const translations: Record<AppLanguage, Record<TranslationKey, string>> = {
@@ -377,6 +383,8 @@ export const translations: Record<AppLanguage, Record<TranslationKey, string>> =
     feedback_error: '反馈提交失败',
     add: '添加',
     added: '已添加',
+    add_to_list: '加入剧单',
+    not_watched: '未看',
     
     // 登录页面
     app_name: '剧词记',
@@ -407,6 +415,10 @@ export const translations: Record<AppLanguage, Record<TranslationKey, string>> =
     free_trial_description: '免费试用期为14天，期间你可以享受所有功能。',
     try_for_free: '立即免费试用',
     welcome_user: '欢迎回来，{username}！',
+    all_languages: '全部',
+    english_language: '英语',
+    japanese_language: '日语',
+    korean_language: '韩语',
   },
   
   'en-US': {
@@ -581,6 +593,8 @@ export const translations: Record<AppLanguage, Record<TranslationKey, string>> =
     feedback_error: 'Feedback Submission Failed',
     add: 'Add',
     added: 'Added',
+    add_to_list: 'Add to List',
+    not_watched: 'Not watched',
     
     // 登录页面
     app_name: 'DramaWord',
@@ -611,6 +625,10 @@ export const translations: Record<AppLanguage, Record<TranslationKey, string>> =
     free_trial_description: 'Your free trial period is 14 days. During this time, you can enjoy all features.',
     try_for_free: 'Try for free now',
     welcome_user: 'Welcome back, {username}!',
+    all_languages: 'All',
+    english_language: 'English',
+    japanese_language: 'Japanese',
+    korean_language: 'Korean',
   },
 };
 

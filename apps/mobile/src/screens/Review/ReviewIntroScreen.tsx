@@ -357,7 +357,7 @@ const ReviewIntroScreen = () => {
       console.error('❌ 加载用户统计数据失败:', error);
     }
   };
-
+  
   // 处理经验值增长动画
   const animateExperienceGain = (gainedExp: number) => {
     const oldProgress = getExperienceProgress() / 100;
@@ -710,6 +710,9 @@ const ReviewIntroScreen = () => {
     navigate('ReviewScreen', { type: 'wordbook', id: item.id });
   };
 
+  // 在组件顶部添加常量
+  const EMPTY_SECTION_HEIGHT = 120;
+
   return (
     <View style={styles.container}>
       {/* 经验值增加动画 */}
@@ -832,9 +835,10 @@ const ReviewIntroScreen = () => {
       </View>
       
       {/* 第二行：剧集复习 */}
-      {showItems.length > 0 && (
-        <View style={styles.showsSection}>
-          <Text style={styles.showsTitle}>{t('series_review')}</Text>
+      {/* 剧集复习板块 */}
+      <View style={styles.showsSection}>
+        <Text style={styles.showsTitle}>{t('series_review')}</Text>
+        {showItems.length > 0 ? (
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.showsScroll}>
             {showItems.map(item => {
               const wordCount = getShowWords(item.id).length;
@@ -859,13 +863,23 @@ const ReviewIntroScreen = () => {
               );
             })}
           </ScrollView>
-        </View>
-      )}
+        ) : (
+          <TouchableOpacity
+            style={{ height: EMPTY_SECTION_HEIGHT, justifyContent: 'center', alignItems: 'center' }}
+            activeOpacity={0.7}
+            onPress={() => navigate('main', { tab: 'shows' })}
+          >
+            <Ionicons name="film-outline" size={36} color={colors.text.secondary} style={{ marginBottom: 8 }} />
+            <Text style={{ color: colors.text.secondary, fontSize: 16 }}>请添加剧集吧！</Text>
+          </TouchableOpacity>
+        )}
+      </View>
 
       {/* 第三行：单词本复习 */}
-      {wordbookItems.length > 0 && (
-        <View style={styles.wordbookSection}>
-          <Text style={styles.wordbookTitle}>{t('wordbook_review')}</Text>
+      {/* 单词本复习板块 */}
+      <View style={styles.wordbookSection}>
+        <Text style={styles.wordbookTitle}>{t('wordbook_review')}</Text>
+        {wordbookItems.length > 0 ? (
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.wordbookScroll}>
             {wordbookItems.map(item => {
               const wordCount = getShowWords(item.id).length;
@@ -884,8 +898,17 @@ const ReviewIntroScreen = () => {
               );
             })}
           </ScrollView>
-        </View>
-      )}
+        ) : (
+          <TouchableOpacity
+            style={{ height: EMPTY_SECTION_HEIGHT, justifyContent: 'center', alignItems: 'center' }}
+            activeOpacity={0.7}
+            onPress={() => navigate('main', { tab: 'wordbook' })}
+          >
+            <Ionicons name="book-outline" size={36} color={colors.text.secondary} style={{ marginBottom: 8 }} />
+            <Text style={{ color: colors.text.secondary, fontSize: 16 }}>去添加自己的单词本吧！</Text>
+          </TouchableOpacity>
+        )}
+      </View>
     </View>
   );
 };
@@ -896,7 +919,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background.primary, 
     paddingHorizontal: 20,
     paddingTop: Platform.OS === 'ios' ? 40 : 16, // 减少顶部间距，从50/20改为40/16
-    justifyContent: 'space-between',
+    // justifyContent: 'space-between', // 移除这行，让内容自然流式排列
   },
   // 统一信息区域样式
   unifiedInfoContainer: {
@@ -987,10 +1010,11 @@ const styles = StyleSheet.create({
   },
   // 挑战横幅样式
   challengeBanner: {
-    backgroundColor: colors.background.secondary, // 使用统一的背景色
+    backgroundColor: colors.background.secondary,
     borderRadius: 16,
-    marginBottom: 12, // 减少底部间距，从20改为12
-    marginTop: 4, // 减少顶部间距
+    marginBottom: 8,
+    marginTop: 2,
+    minHeight: 90, // 新增，提升横幅最小高度
     ...Platform.select({
       web: {
         boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
@@ -1007,26 +1031,27 @@ const styles = StyleSheet.create({
   bannerContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 20,
+    padding: 24, // 从20增加到28，让内容整体更高
+    minHeight: 150, // 保证内容区和横幅高度一致
   },
   bannerTextContainer: {
     flex: 1,
   },
   bannerTitle: {
-    fontSize: 18,
+    fontSize: 24,
     fontWeight: 'bold',
     color: colors.text.primary,
     marginBottom: 4,
   },
   bannerSubtitle: {
-    fontSize: 14,
+    fontSize: 16,
     color: colors.text.secondary,
     marginBottom: 12,
   },
   bannerButton: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+    width: 80,
+    height: 80,
+    borderRadius: 40,
     backgroundColor: colors.background.secondary,
     alignItems: 'center',
     justifyContent: 'center',
@@ -1056,8 +1081,8 @@ const styles = StyleSheet.create({
   challengeIconWrap: { marginBottom: 12 },
   challengeCardTitle: { fontSize: 18, fontWeight: 'bold', color: colors.primary[500], marginBottom: 2 },
   challengeCardSubtitle: { fontSize: 14, color: colors.text.tertiary },
-
-  showsSection: { marginBottom: 8 }, // 减少底部间距，从0改为8
+// 剧集复习样式
+  showsSection: { marginBottom: 4 }, // 从8减少到4
   showsTitle: { fontSize: 18, fontWeight: 'bold', color: colors.text.primary, marginBottom: 8 }, // 减少底部间距，从12改为8
   showsScroll: { flexGrow: 0 },
   showCard: { 
@@ -1094,8 +1119,8 @@ const styles = StyleSheet.create({
   showName: { fontSize: 14, fontWeight: 'bold', color: colors.text.primary, textAlign: 'center', marginBottom: 2, width: '100%' },
   showWordCount: { fontSize: 12, color: colors.text.secondary, textAlign: 'center' },
   // 单词本复习样式
-  wordbookSection: { marginBottom: 8 }, // 减少底部间距，从0改为8
-  wordbookTitle: { fontSize: 18, fontWeight: 'bold', color: colors.text.primary, marginBottom: 8 }, // 减少底部间距，从12改为8
+  wordbookSection: { marginBottom: 4 }, // 从8减少到4
+  wordbookTitle: { fontSize: 18, fontWeight: 'bold', color: colors.text.primary, marginBottom: 8 },
   wordbookScroll: { flexGrow: 0 },
   wordbookCard: { 
     width: 120, 
@@ -1189,7 +1214,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background.secondary,
     borderRadius: 16,
     padding: 20,
-    marginBottom: 12, // 减少底部间距，从20改为12
+    marginBottom: 8, // 从12减少到8
     shadowColor: '#000',
     shadowOffset: {
       width: 0,

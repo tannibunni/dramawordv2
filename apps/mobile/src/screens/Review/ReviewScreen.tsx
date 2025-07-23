@@ -24,7 +24,7 @@ import { useNavigation } from '../../components/navigation/NavigationContext';
 import dayjs from 'dayjs';
 import { wordService } from '../../services/wordService';
 import { useAppLanguage } from '../../context/AppLanguageContext';
-import { t } from '../../constants/translations';
+import { t, TranslationKey } from '../../constants/translations';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_BASE_URL } from '../../constants/config';
 
@@ -141,6 +141,7 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
   const [reviewActions, setReviewActions] = useState<{ word: string; remembered: boolean }[]>([]);
   const { vocabulary } = useVocabulary();
   const { navigate } = useNavigation();
+  const { appLanguage } = useAppLanguage();
   const swiperRef = useRef<any>(null);
   const [swiperIndex, setSwiperIndex] = useState(0);
   const rememberedRef = useRef(0);
@@ -758,12 +759,11 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
   // 移除 panResponder，因为手势现在由 SwipeableWordCard 处理
 
   if (!words || words.length === 0) {
-    const { appLanguage } = useAppLanguage();
     return (
       <SafeAreaView style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.background.primary }}>
         <View style={{ alignItems: 'center', padding: 20 }}>
           <Ionicons name="book-outline" size={64} color={colors.text.tertiary} style={{ marginBottom: 16 }} />
-          <Text style={styles.emptyText}>{t('no_review_words', appLanguage)}</Text>
+          <Text style={styles.emptyText}>{t('no_review_words' as TranslationKey, appLanguage)}</Text>
           <TouchableOpacity
             style={{
               marginTop: 24,

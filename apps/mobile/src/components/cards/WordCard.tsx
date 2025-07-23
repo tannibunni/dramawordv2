@@ -39,6 +39,7 @@ export interface WordData {
   sources?: Array<{ id: string; type: 'wordbook' | 'episode'; name: string }>; // 新增：单词来源
   feedbackStats?: { positive: number; negative: number; total: number }; // 新增：反馈统计
   kana?: string; // 新增：日语假名标注
+  slangMeaning?: string; // 新增：俚语释义
 }
 
 interface WordCardProps {
@@ -460,6 +461,12 @@ const WordCard: React.FC<WordCardProps> = ({
                 </Text>
               </View>
               <Text style={styles.definition}>{def.definition}</Text>
+              {/* slangMeaning 蓝色标签展示 */}
+              {idx === 0 && wordData.slangMeaning && wordData.slangMeaning !== 'null' && (
+                <View style={styles.slangTagWrapper}>
+                  <Text style={styles.slangTagText}>{wordData.slangMeaning}</Text>
+                </View>
+              )}
               {def.examples && def.examples.length > 0 && (
                 <View style={styles.examplesBlock}>
                   {def.examples.map((ex, exIdx) => (
@@ -845,6 +852,20 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
     minWidth: 16,
     textAlign: 'center',
+  },
+  slangTagWrapper: {
+    alignSelf: 'flex-start',
+    backgroundColor: colors.primary[500],
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 2,
+    marginTop: 4,
+    marginBottom: 2,
+  },
+  slangTagText: {
+    color: '#fff',
+    fontSize: 13,
+    fontWeight: 'bold',
   },
 });
 

@@ -20,6 +20,9 @@ import WordCard from '../../components/cards/WordCard';
 import WordList from '../../components/vocabulary/WordList';
 import { useAppLanguage } from '../../context/AppLanguageContext';
 import { t } from '../../constants/translations';
+import { useLanguage } from '../../context/LanguageContext';
+import { SUPPORTED_LANGUAGES, SupportedLanguageCode } from '../../constants/config';
+import { TranslationKey } from '../../constants/translations';
 
 const { width } = Dimensions.get('window');
 
@@ -32,6 +35,7 @@ interface Badge {
 const VocabularyScreen: React.FC = () => {
   const { vocabulary, removeWord } = useVocabulary();
   const { appLanguage } = useAppLanguage();
+  const { selectedLanguage } = useLanguage();
   const [searchText, setSearchText] = useState('');
   const [filteredWords, setFilteredWords] = useState<any[]>([]);
   const [selectedWord, setSelectedWord] = useState<any | null>(null);
@@ -44,6 +48,8 @@ const VocabularyScreen: React.FC = () => {
   const [celebrateBadge, setCelebrateBadge] = useState<null | number>(null);
   // 新增：搜索框展开状态
   const [isSearchExpanded, setIsSearchExpanded] = useState(false);
+  // 新增：语言筛选状态
+  const [selectedFilterLanguage, setSelectedFilterLanguage] = useState<SupportedLanguageCode | 'ALL'>('ALL');
 
   // 徽章配置 - 使用 state 来保持状态
   const [badges, setBadges] = useState<Badge[]>([
@@ -59,7 +65,7 @@ const VocabularyScreen: React.FC = () => {
   useEffect(() => {
     filterWords();
     updateBadges();
-  }, [vocabulary, searchText]);
+  }, [vocabulary, searchText, selectedFilterLanguage]);
 
   useEffect(() => {
     if (isEditing && searchText.trim()) {
@@ -94,6 +100,35 @@ const VocabularyScreen: React.FC = () => {
     }, []);
 
     let filtered = uniqueWords;
+    
+    // 语言筛选
+    if (selectedFilterLanguage !== 'ALL') {
+      const languageCode = selectedFilterLanguage.toLowerCase();
+      filtered = filtered.filter(word => {
+        // 检查单词的语言属性，如果没有明确的语言属性，则根据单词特征判断
+        if (word.language) {
+          return word.language.toLowerCase() === languageCode;
+        }
+        
+        // 根据单词特征判断语言
+        const wordText = word.word || '';
+        switch (languageCode) {
+          case 'en':
+            // 英语：只包含英文字母、空格、连字符
+            return /^[a-zA-Z\s\-']+$/.test(wordText);
+          case 'ja':
+            // 日语：包含平假名、片假名、汉字
+            return /[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]/.test(wordText);
+          case 'ko':
+            // 韩语：包含韩文字母
+            return /[\uAC00-\uD7AF]/.test(wordText);
+          default:
+            return true;
+        }
+      });
+    }
+
+    // 文本搜索筛选
     if (searchText) {
       const searchKey = (searchText || '').trim().toLowerCase();
       filtered = filtered.filter(word =>
@@ -101,6 +136,7 @@ const VocabularyScreen: React.FC = () => {
         (word.definitions?.[0]?.definition || '').toLowerCase().includes(searchKey)
       );
     }
+
     setFilteredWords(filtered);
   };
 
@@ -215,6 +251,12 @@ const VocabularyScreen: React.FC = () => {
   };
 
   const progressInfo = getCurrentProgress();
+
+  const LANGUAGE_KEY_MAP: Record<string, string> = {
+    en: 'english_language',
+    ja: 'japanese_language',
+    ko: 'korean_language',
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -357,6 +399,7 @@ const VocabularyScreen: React.FC = () => {
                   onPress={() => {
                     setIsSearchExpanded(false);
                     setSearchText('');
+                    setSelectedFilterLanguage('ALL'); // 重置为全部
                   }}
                   style={styles.searchCloseBtn}
                 >
@@ -364,15 +407,66 @@ const VocabularyScreen: React.FC = () => {
                 </TouchableOpacity>
               </>
             ) : (
-              <TouchableOpacity 
-                onPress={() => setIsSearchExpanded(true)}
-                style={styles.searchExpandBtn}
-              >
-                <Ionicons name="search" size={16} color={colors.primary[500]} style={{marginRight: 6}} />
-                <Text style={styles.searchExpandText}>SEARCH & FILTER</Text>
-              </TouchableOpacity>
+              <View style={styles.searchExpandBtnWrapper}>
+                <TouchableOpacity 
+                  onPress={() => setIsSearchExpanded(true)}
+                  style={styles.searchExpandBtn}
+                >
+                  <Ionicons name="search" size={16} color={colors.primary[500]} style={{marginRight: 8}} />
+                  <Text style={styles.searchExpandText}>
+                    {appLanguage === 'zh-CN' ? '查找收藏词' : 'Find Saved Words'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
             )}
           </View>
+          {/* 语言筛选器 - 滑块形式 */}
+          {isSearchExpanded && (
+            <View style={styles.languageFilterSliderWrapper}>
+              <ScrollView 
+                horizontal 
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.languageFilterScrollContent}
+              >
+                {/* 全部选项 */}
+                <TouchableOpacity
+                  style={[
+                    styles.languageFilterSliderButton,
+                    styles.languageFilterSliderButtonFirst,
+                    selectedFilterLanguage === 'ALL' && styles.languageFilterSliderButtonActive
+                  ]}
+                  onPress={() => setSelectedFilterLanguage('ALL')}
+                >
+                  <Text style={styles.languageFilterSliderFlag}>🌍</Text>
+                  <Text style={[
+                    styles.languageFilterSliderText,
+                    selectedFilterLanguage === 'ALL' && styles.languageFilterSliderTextActive
+                  ]}>
+                    {t('all_languages', appLanguage)}
+                  </Text>
+                </TouchableOpacity>
+                {/* 语言选项 */}
+                {Object.entries(SUPPORTED_LANGUAGES).map(([code, language]) => (
+                  <TouchableOpacity
+                    key={code}
+                    style={[
+                      styles.languageFilterSliderButton,
+                      selectedFilterLanguage === code && styles.languageFilterSliderButtonActive
+                    ]}
+                    onPress={() => setSelectedFilterLanguage(code as SupportedLanguageCode)}
+                  >
+                    <Text style={styles.languageFilterSliderFlag}>{language.flag}</Text>
+                    <Text style={[
+                      styles.languageFilterSliderText,
+                      selectedFilterLanguage === code && styles.languageFilterSliderTextActive
+                    ]}>
+                      {t(LANGUAGE_KEY_MAP[code] as TranslationKey, appLanguage)}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+          )}
           <WordList
             words={filteredWords}
             onWordPress={(word) => { setSelectedWord(word); setSearchText(word.word); setIsEditing(false); }}
@@ -866,25 +960,73 @@ const styles = StyleSheet.create({
   tvShowTagText: { color: colors.primary[700] },
   wordbookShowTag: { backgroundColor: colors.success[100] },
   wordbookShowTagText: { color: colors.success[800] },
+  searchExpandBtnWrapper: {
+    alignItems: 'center',
+    marginTop: 8,
+    marginBottom: 16,
+  },
   searchExpandBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.primary[50],
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
+    borderRadius: 24,
+    paddingHorizontal: 24,
+    paddingVertical: 10,
+    backgroundColor: '#fff',
     borderWidth: 1,
-    borderColor: colors.primary[200],
+    borderColor: colors.primary[500],
   },
   searchExpandText: {
     color: colors.primary[500],
-    fontSize: 14,
-    fontWeight: '500',
-    marginLeft: 6,
+    fontSize: 16,
+    fontWeight: '600',
+    marginLeft: 8,
   },
   searchCloseBtn: {
     padding: 8,
     marginLeft: 8,
+  },
+  languageFilterSliderWrapper: {
+    marginBottom: 12,
+  },
+  languageFilterSlider: {
+    paddingVertical: 8,
+    borderRadius: 16,
+  },
+  languageFilterScrollContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+    paddingRight: 20,
+  },
+  languageFilterSliderButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.background.tertiary,
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    marginVertical: 4,
+    marginLeft: 12,
+  },
+  languageFilterSliderButtonFirst: {
+    marginLeft: 0,
+  },
+  languageFilterSliderButtonActive: {
+    backgroundColor: colors.primary[100],
+    borderColor: colors.primary[300],
+    borderWidth: 1,
+  },
+  languageFilterSliderFlag: {
+    fontSize: 20,
+    marginRight: 8,
+  },
+  languageFilterSliderText: {
+    fontSize: 14,
+    color: colors.text.secondary,
+  },
+  languageFilterSliderTextActive: {
+    color: colors.primary[500],
+    fontWeight: '500',
   },
 });
 

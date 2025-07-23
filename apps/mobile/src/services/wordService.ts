@@ -73,9 +73,9 @@ export class WordService {
   }
 
   // 搜索单词
-  async searchWord(word: string, language: string = 'en'): Promise<SearchResult> {
+  async searchWord(word: string, language: string = 'en', uiLanguage?: string): Promise<SearchResult> {
     try {
-      console.log(`🔍 搜索单词: ${word} (语言: ${language})`);
+      console.log(`🔍 搜索单词: ${word} (语言: ${language}, 界面语言: ${uiLanguage})`);
       
       const token = await getUserToken();
       const headers: Record<string, string> = {
@@ -91,7 +91,8 @@ export class WordService {
         headers,
         body: JSON.stringify({ 
           word: word.toLowerCase().trim(),
-          language: language
+          language: language,
+          ...(uiLanguage ? { uiLanguage } : {})
         }),
       });
 

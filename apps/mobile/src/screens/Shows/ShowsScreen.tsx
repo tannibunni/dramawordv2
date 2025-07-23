@@ -90,6 +90,7 @@ const ShowsScreen: React.FC = () => {
       'shows_tab': isChinese ? '剧单' : 'Shows',
       'wordbooks_tab': isChinese ? '单词本' : 'Wordbooks',
       'not_completed': isChinese ? '未看' : 'Not Watched',
+      'add_to_list': isChinese ? '添加到列表' : 'Add to List',
     };
     
     let text = translations[key as keyof typeof translations] || key;
@@ -122,6 +123,7 @@ const ShowsScreen: React.FC = () => {
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const searchInputRef = useRef<TextInput>(null);
+  const [showCheckmark, setShowCheckmark] = useState(false);
 
   // Robust modal close handlers
   const closeShowDetailModal = () => {
@@ -368,18 +370,27 @@ const ShowsScreen: React.FC = () => {
     }
   };
 
-  const addShowToWatching = (show: TMDBShow) => {
-    // 避免重复添加
-    if (shows.some(s => s.id === show.id)) return;
+  const addShowToWatching = (show: TMDBShow, onAdded?: () => void) => {
+    console.log('addShowToWatching 被调用，参数 show:', show);
+    if (shows.some(s => Number(s.id) === Number(show.id))) {
+      console.log('addShowToWatching: 剧集已存在，id:', show.id);
+      return;
+    }
     const newShow: Show = {
       ...show,
-      status: 'watching', // 直接添加到"观看中"
+      id: Number(show.id),
+      status: 'plan_to_watch',
       wordCount: 0,
     };
-    addShow(newShow); // 使用 ShowListContext 的 addShow
+    console.log('addShowToWatching: 调用 addShow, newShow:', newShow);
+    addShow(newShow);
     setSearchText('');
     setSearchResults([]);
-    setFilter('shows'); // 添加后切换到"剧单"
+    setFilter('shows');
+    setTimeout(() => {
+      console.log('addShowToWatching: 当前 shows:', shows);
+    }, 500);
+    if (onAdded) onAdded();
   };
 
   const filterShows = () => {
@@ -390,8 +401,8 @@ const ShowsScreen: React.FC = () => {
       
       // 再根据状态筛选
       if (showStatusFilter === 'not_completed') {
-        filtered = filtered.filter(show => show.status !== 'completed');
-        console.log('🔍 筛选条件: 剧集 - 未看完');
+        filtered = filtered.filter(show => show.status === 'plan_to_watch');
+        console.log('🔍 筛选条件: 剧集 - 未看');
       } else if (showStatusFilter === 'completed') {
         filtered = filtered.filter(show => show.status === 'completed');
         console.log('🔍 筛选条件: 剧集 - 已看完');
@@ -837,6 +848,7 @@ const ShowsScreen: React.FC = () => {
                 style={[styles.statusBadge, { backgroundColor: colors.primary[500] }]}
                 onPress={(e) => {
                   e.stopPropagation(); // 阻止触发父级的 onPress
+                  console.log('点击 Add to List，item:', item);
                   addShowToWatching(item);
                 }}
               >
@@ -1146,12 +1158,31 @@ const ShowsScreen: React.FC = () => {
                       {/* 操作按钮 - 只对剧集显示，单词本不显示 */}
                       {selectedShow.type !== 'wordbook' && (
                         <View style={{ flexDirection: 'row', justifyContent: 'center', marginTop: 18, marginBottom: 8 }}>
-                          <TouchableOpacity
-                            style={{ flex: 1, marginHorizontal: 16, backgroundColor: selectedShow.status === 'watching' ? colors.primary[500] : '#222', borderRadius: 10, paddingVertical: 14, alignItems: 'center' }}
-                            onPress={() => { changeShowStatus(selectedShow.id, 'watching'); setShowDetailModal(false); }}
-                          >
-                            <Text style={{ color: selectedShow.status === 'watching' ? '#fff' : '#aaa', fontWeight: 'bold', fontSize: 16 }}>{t('watching')}</Text>
-                          </TouchableOpacity>
+                          {shows.some(s => Number(s.id) === Number(selectedShow.id)) ? (
+                            <TouchableOpacity
+                              style={{ flex: 1, marginHorizontal: 16, backgroundColor: colors.success[100], borderRadius: 10, paddingVertical: 14, alignItems: 'center', borderWidth: 2, borderColor: colors.success[500] }}
+                              onPress={() => {
+                                removeShow(selectedShow.id);
+                                setSelectedShow({ ...selectedShow, status: 'plan_to_watch' });
+                              }}
+                            >
+                              <Text style={{ color: colors.success[700], fontWeight: 'bold', fontSize: 16, flexDirection: 'row', alignItems: 'center' }}>
+                                <Ionicons name="checkmark" size={18} color={colors.success[700]} style={{marginRight: 6}} />
+                                {appLanguage === 'zh-CN' ? '已添加' : 'Added'}
+                              </Text>
+                            </TouchableOpacity>
+                          ) : (
+                            <TouchableOpacity
+                              style={{ flex: 1, marginHorizontal: 16, backgroundColor: colors.primary[500], borderRadius: 10, paddingVertical: 14, alignItems: 'center', borderWidth: 2, borderColor: colors.primary[700] }}
+                              onPress={() => {
+                                addShowToWatching(selectedShow, () => setShowDetailModal(false));
+                              }}
+                            >
+                              <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 16, flexDirection: 'row', alignItems: 'center' }}>
+                                {t('add_to_list')}
+                              </Text>
+                            </TouchableOpacity>
+                          )}
                           <TouchableOpacity
                             style={{ flex: 1, marginHorizontal: 16, backgroundColor: selectedShow.status === 'completed' ? colors.success[500] : '#222', borderRadius: 10, paddingVertical: 14, alignItems: 'center' }}
                             onPress={() => { changeShowStatus(selectedShow.id, 'completed'); setShowDetailModal(false); }}

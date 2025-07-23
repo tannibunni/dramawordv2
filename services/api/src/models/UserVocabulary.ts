@@ -12,6 +12,7 @@ export interface IUserVocabulary extends Document {
   userId: string;
   wordId: mongoose.Types.ObjectId; // 关联到 cloud_words._id
   word: string; // 冗余字段，便于查询
+  language: string; // 新增
   
   // 用户个性化数据
   mastery: number; // 0-100 掌握度
@@ -54,6 +55,13 @@ const UserVocabularySchema = new Schema<IUserVocabulary>({
     required: true,
     lowercase: true,
     trim: true
+  },
+  language: {
+    type: String,
+    required: true,
+    enum: ['en', 'ko', 'ja'],
+    default: 'en',
+    index: true,
   },
   
   // 用户个性化数据
@@ -143,6 +151,7 @@ UserVocabularySchema.index({ userId: 1, wordId: 1 }, { unique: true });
 UserVocabularySchema.index({ userId: 1, word: 1 });
 UserVocabularySchema.index({ userId: 1, nextReviewDate: 1 });
 UserVocabularySchema.index({ userId: 1, mastery: -1 });
+UserVocabularySchema.index({ userId: 1, language: 1 }); // 新增语言索引
 
 // 实例方法：更新学习进度
 UserVocabularySchema.methods.updateLearningProgress = function(

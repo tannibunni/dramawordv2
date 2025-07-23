@@ -13,7 +13,8 @@ import {
   removeFromUserVocabulary,
   checkEnvironment,
   testOpenAI,
-  translateChineseToEnglish // 新增
+  translateChineseToEnglish, // 新增
+  testPromptLoading // 新增
 } from '../controllers/wordController';
 
 const router = Router();
@@ -51,5 +52,8 @@ router.get('/debug/environment', checkEnvironment);
 
 // 测试 Open AI 连接
 router.get('/debug/openai', testOpenAI);
+
+// 测试 prompt 文件加载
+router.get('/debug/prompt', testPromptLoading);
 
 export default router; 

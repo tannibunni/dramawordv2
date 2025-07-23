@@ -110,7 +110,9 @@ export const VocabularyProvider = ({ children }: { children: ReactNode }) => {
         // 这里假设 id 为数字时为 show，否则为 wordbook，可根据实际业务调整
         fixedSourceShow = { ...sourceShow, type: typeof sourceShow.id === 'number' ? 'show' : 'wordbook' };
       }
-      const newWord = { ...word, sourceShow: fixedSourceShow, collectedAt: new Date().toISOString() };
+      // 新增：language 字段
+      const language = (word as any).language || 'en';
+      const newWord = { ...word, sourceShow: fixedSourceShow, collectedAt: new Date().toISOString(), language };
       // 云端同步
       (async () => {
         const token = await getUserToken();
@@ -123,7 +125,7 @@ export const VocabularyProvider = ({ children }: { children: ReactNode }) => {
                 'Content-Type': 'application/json',
                 Authorization: `Bearer ${token}`,
               },
-              body: JSON.stringify({ userId, word: word.word, sourceShow }),
+              body: JSON.stringify({ userId, word: word.word, sourceShow, language }),
             });
             console.log('✅ 云端词汇本已同步');
           } catch (e) {

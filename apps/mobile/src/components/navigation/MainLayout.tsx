@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { BottomTabBar, TabType } from './BottomTabBar';
 import { HomeScreen } from '../../screens/Home/HomeScreen';
@@ -19,6 +19,15 @@ interface MainLayoutProps {
 const MainContent: React.FC<MainLayoutProps> = ({ initialTab = 'search' }) => {
   const [activeTab, setActiveTab] = useState<TabType>(initialTab);
   const { currentScreen, params, navigate } = useNavigation();
+
+  // 新增：监听 params.tab，自动切换 tab
+  useEffect(() => {
+    if (currentScreen === 'main' && params.tab && params.tab !== activeTab) {
+      setActiveTab(params.tab);
+      // 清空 tab 参数，防止后续 navigate('main') 时重复切换
+      setTimeout(() => navigate('main', {}), 0);
+    }
+  }, [params.tab, currentScreen, activeTab]);
 
   const renderCurrentPage = () => {
     switch (currentScreen) {

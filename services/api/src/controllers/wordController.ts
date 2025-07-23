@@ -1252,6 +1252,45 @@ export const translateChineseToEnglish = async (req: Request, res: Response) => 
   }
 };
 
+// 测试 prompt 文件加载
+export const testPromptLoading = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { uiLanguage = 'zh-CN', language = 'en' } = req.query;
+    
+    logger.info(`🧪 测试 prompt 文件加载: uiLanguage=${uiLanguage}, language=${language}`);
+    
+    try {
+      const template = getPromptTemplate(uiLanguage as string, language as string, 'definition');
+      
+      res.json({
+        success: true,
+        data: {
+          uiLanguage,
+          language,
+          template,
+          message: 'Prompt 文件加载成功'
+        }
+      });
+    } catch (error) {
+      res.json({
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+        data: {
+          uiLanguage,
+          language,
+          message: 'Prompt 文件加载失败'
+        }
+      });
+    }
+  } catch (error) {
+    logger.error('❌ Test prompt loading error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to test prompt loading'
+    });
+  }
+};
+
 export const wordController = {
   searchWord,
   getPopularWords,
@@ -1264,5 +1303,6 @@ export const wordController = {
   clearUserHistory,
   checkEnvironment,
   testOpenAI,
-  translateChineseToEnglish
+  translateChineseToEnglish,
+  testPromptLoading
 }; 

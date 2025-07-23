@@ -53,7 +53,7 @@ const WordSearchScreen: React.FC = () => {
     setIsLoading(true);
     setSearchResult(null);
     try {
-      const result = await wordService.searchWord(word);
+      const result = await wordService.searchWord(word, undefined, appLanguage); // 传递 uiLanguage
       if (result.success && result.data) {
         // 保存查词记录
         await wordService.saveSearchHistory(
@@ -89,7 +89,7 @@ const WordSearchScreen: React.FC = () => {
     setIsLoading(true);
     setSearchResult(null);
     try {
-      const result = await wordService.searchWord(searchWord);
+      const result = await wordService.searchWord(searchWord, undefined, appLanguage); // 传递 uiLanguage
       if (result.success && result.data) {
         setSearchResult(result.data);
       } else {
