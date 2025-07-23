@@ -441,11 +441,12 @@ const WordCard: React.FC<WordCardProps> = ({
       </View>
           
       {/* 主体内容区：可滚动 */}
-      <View style={{ maxHeight: CARD_CONTENT_MAX_HEIGHT, marginBottom: 8 }}>
+      <View style={{ maxHeight: CARD_CONTENT_MAX_HEIGHT, marginBottom: 8, width: '100%' }}>
         <ScrollView
           showsVerticalScrollIndicator={true}
           indicatorStyle="black"
           persistentScrollbar={true}
+          contentContainerStyle={{ paddingHorizontal: 0 }}
           onScroll={e => {
             if (showScrollTip && e.nativeEvent.contentOffset.y > 10) {
               setShowScrollTip(false);
@@ -455,6 +456,24 @@ const WordCard: React.FC<WordCardProps> = ({
         >
           {wordData.definitions.map((def, idx) => (
             <View key={idx} style={styles.definitionBlock}>
+              {/* 网络俚语/缩写标签和内容 - 只在第一个定义块且有俚语内容时显示 */}
+              {idx === 0 && (
+                (wordData.slangMeaning && wordData.slangMeaning !== 'null') || 
+                (wordData.phraseExplanation && wordData.phraseExplanation !== 'null')
+              ) && (
+                <>
+                  <View style={styles.posTagWrapper}>
+                    <Text style={styles.posTag}>
+                      缩写/俚语/网络用语
+                    </Text>
+                  </View>
+                  <Text style={styles.definition}>
+                    {wordData.slangMeaning && wordData.slangMeaning !== 'null' 
+                      ? wordData.slangMeaning 
+                      : wordData.phraseExplanation}
+                  </Text>
+                </>
+              )}
               {/* 词性标签 */}
               <View style={styles.posTagWrapper}>
                 <Text style={styles.posTag}>
@@ -462,19 +481,6 @@ const WordCard: React.FC<WordCardProps> = ({
                 </Text>
               </View>
               <Text style={styles.definition}>{def.definition}</Text>
-              {/* 网络俚语/缩写蓝色标签展示 - 优先显示 slangMeaning，如果没有则显示 phraseExplanation */}
-              {idx === 0 && (
-                (wordData.slangMeaning && wordData.slangMeaning !== 'null') || 
-                (wordData.phraseExplanation && wordData.phraseExplanation !== 'null')
-              ) && (
-                <View style={styles.slangTagWrapper}>
-                  <Text style={styles.slangTagText}>
-                    {wordData.slangMeaning && wordData.slangMeaning !== 'null' 
-                      ? wordData.slangMeaning 
-                      : wordData.phraseExplanation}
-                  </Text>
-                </View>
-              )}
               {def.examples && def.examples.length > 0 && (
                 <View style={styles.examplesBlock}>
                   {def.examples.map((ex, exIdx) => (
@@ -611,11 +617,11 @@ const styles = StyleSheet.create({
   },
   card: {
     width: '100%',
-    maxWidth: 350,
-    minHeight: 600,
+    maxWidth: 340,
+    minHeight: 580,
     backgroundColor: colors.background.secondary,
     borderRadius: 20,
-    padding: 32,
+    padding: 25,
     ...Platform.select({
       web: {
         boxShadow: '0 8px 16px rgba(0, 0, 0, 0.15)',
@@ -642,7 +648,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   word: {
-    fontSize: 32,
+    fontSize: 40,
     fontWeight: 'bold',
     color: '#222',
   },
@@ -670,7 +676,8 @@ const styles = StyleSheet.create({
   },
   definitionBlock: {
     marginTop: 12,
-    marginBottom: 8,
+    marginBottom: 6,
+    marginHorizontal: 8,
   },
   partOfSpeech: {
     fontSize: 15,
@@ -690,7 +697,7 @@ const styles = StyleSheet.create({
   },
   exampleContainer: {
     marginTop: 4,
-    paddingLeft: 8,
+    paddingLeft: 10,
   },
   exampleJapanese: {
     fontSize: 15,
@@ -860,20 +867,6 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
     minWidth: 16,
     textAlign: 'center',
-  },
-  slangTagWrapper: {
-    alignSelf: 'flex-start',
-    backgroundColor: colors.primary[500],
-    borderRadius: 12,
-    paddingHorizontal: 10,
-    paddingVertical: 2,
-    marginTop: 4,
-    marginBottom: 2,
-  },
-  slangTagText: {
-    color: '#fff',
-    fontSize: 13,
-    fontWeight: 'bold',
   },
 });
 
