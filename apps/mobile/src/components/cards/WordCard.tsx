@@ -39,6 +39,7 @@ export interface WordData {
   sources?: Array<{ id: string; type: 'wordbook' | 'episode'; name: string }>; // 新增：单词来源
   feedbackStats?: { positive: number; negative: number; total: number }; // 新增：反馈统计
   kana?: string; // 新增：日语假名标注
+  language?: string; // 新增：单词语言
 }
 
 interface WordCardProps {
@@ -405,9 +406,19 @@ const WordCard: React.FC<WordCardProps> = ({
       {/* 头部：单词、音标、发音按钮 */}
       <View style={styles.headerRow}>
         <View style={{ flex: 1 }}>
+          {/* 主词顶部语言标签，靠左+国旗 */}
+          {/* <View style={styles.wordLangTagWrapper}>
+            <Text style={styles.wordLangTag}>
+              {getWordLangFlag(wordData, appLanguage)} {getWordLangShort(wordData, appLanguage)}
+            </Text>
+          </View> */}
           <View style={styles.wordContainer}>
             {/* 日语：显示汉字和假名 */}
-          <Text style={styles.word}>{wordData.correctedWord || wordData.word}</Text>
+            <Text style={styles.word}>
+              {wordData.correctedWord || wordData.word}
+              {/* 语言标签 */}
+              {/* <Text style={styles.wordLangLabel}> {getWordLangLabel(wordData)}</Text> */}
+            </Text>
             {wordData.kana && (
               <Text style={styles.kana}>{wordData.kana}</Text>
             )}
@@ -462,18 +473,32 @@ const WordCard: React.FC<WordCardProps> = ({
               <Text style={styles.definition}>{def.definition}</Text>
               {def.examples && def.examples.length > 0 && (
                 <View style={styles.examplesBlock}>
-                  {def.examples.map((ex, exIdx) => (
-                    <View key={exIdx} style={styles.exampleContainer}>
-                      <Text style={styles.exampleJapanese}>{ex.english}</Text>
-                      {/* 日语例句的罗马音发音 */}
-                      {appLanguage === 'zh-CN' && ex.romaji && (
-                        <Text style={styles.examplePronunciation}>
-                          {ex.romaji}
-                        </Text>
-                      )}
-                      <Text style={styles.exampleChinese}>{ex.chinese}</Text>
-                    </View>
-                  ))}
+                  {def.examples.map((ex, exIdx) => {
+                    // 只显示中英
+                    if (appLanguage === 'zh-CN' && getWordLangLabel(wordData) === '【英语】') {
+                      if (!ex.english && !ex.chinese) return null;
+                      return (
+                        <View key={exIdx} style={styles.exampleContainer}>
+                          {ex.english ? (
+                            <Text style={styles.exampleLabelAndText}>{ex.english}</Text>
+                          ) : null}
+                          {ex.chinese ? (
+                            <Text style={styles.exampleLabelAndText}>{ex.chinese}</Text>
+                          ) : null}
+                        </View>
+                      );
+                    }
+                    // 其它情况，保持原有逻辑，但不加语言标签
+                    return (
+                      <View key={exIdx} style={styles.exampleContainer}>
+                        <Text style={styles.exampleLabelAndText}>{ex.english}</Text>
+                        {appLanguage === 'zh-CN' && ex.romaji && (
+                          <Text style={styles.examplePronunciation}>{ex.romaji}</Text>
+                        )}
+                        <Text style={styles.exampleLabelAndText}>{ex.chinese}</Text>
+                      </View>
+                    );
+                  })}
                 </View>
               )}
             </View>
@@ -573,6 +598,56 @@ const WordCard: React.FC<WordCardProps> = ({
     </View>
   );
 };
+
+function getWordLangLabel(wordData: WordData) {
+  // 优先用language字段
+  const lang = wordData.language;
+  if (lang === 'zh' || lang === 'zh-CN') return '【中文】';
+  if (lang === 'ja' || lang === 'ja-JP') return '【日语】';
+  if (lang === 'en' || lang === 'en-US') return '【英语】';
+  // 自动推断
+  const w = wordData.correctedWord || wordData.word || '';
+  if (/[0-9]+$/.test(w) && /^[a-zA-Z\s\-']+$/.test(w)) return '【英语】';
+  if (/[0-9]*[\u4e00-\u9fa5]+/.test(w)) return '【中文】';
+  if (/([\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF])/.test(w)) return '【日语】';
+  return '';
+}
+
+function getWordLangShort(wordData: WordData, appLanguage: string) {
+  // 如果界面为中文，只显示EN或JA
+  if (appLanguage === 'zh-CN') {
+    if ((wordData.language === 'ja' || wordData.language === 'ja-JP') || wordData.kana || /[\u3040-\u309F\u30A0-\u30FF]/.test(wordData.correctedWord || wordData.word || '')) return 'JA';
+    return 'EN';
+  }
+  const lang = wordData.language;
+  if (lang === 'zh' || lang === 'zh-CN') return 'ZH';
+  if (lang === 'ja' || lang === 'ja-JP') return 'JA';
+  if (lang === 'en' || lang === 'en-US') return 'EN';
+  const w = wordData.correctedWord || wordData.word || '';
+  if (wordData.kana) return 'JA';
+  if (/^[a-zA-Z\s\-']+$/.test(w)) return 'EN';
+  if (/[\u3040-\u309F\u30A0-\u30FF]/.test(w)) return 'JA';
+  if (/[\u4e00-\u9fa5]+/.test(w)) return 'ZH';
+  return '';
+}
+
+function getWordLangFlag(wordData: WordData, appLanguage: string) {
+  // 如果界面为中文，只显示EN或JA
+  if (appLanguage === 'zh-CN') {
+    if ((wordData.language === 'ja' || wordData.language === 'ja-JP') || wordData.kana || /[\u3040-\u309F\u30A0-\u30FF]/.test(wordData.correctedWord || wordData.word || '')) return '🇯🇵';
+    return '🇺🇸';
+  }
+  const lang = wordData.language;
+  if (lang === 'zh' || lang === 'zh-CN') return '🇨🇳';
+  if (lang === 'ja' || lang === 'ja-JP') return '🇯🇵';
+  if (lang === 'en' || lang === 'en-US') return '🇺🇸';
+  const w = wordData.correctedWord || wordData.word || '';
+  if (wordData.kana) return '🇯🇵';
+  if (/^[a-zA-Z\s\-']+$/.test(w)) return '🇺🇸';
+  if (/[\u3040-\u309F\u30A0-\u30FF]/.test(w)) return '🇯🇵';
+  if (/[\u4e00-\u9fa5]+/.test(w)) return '🇨🇳';
+  return '';
+}
 
 const styles = StyleSheet.create({
   container: {
@@ -845,6 +920,40 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
     minWidth: 16,
     textAlign: 'center',
+  },
+  exampleLabelAndText: {
+    fontSize: 15,
+    color: '#888',
+    fontStyle: 'italic',
+  },
+  exampleLangLabel: {
+    fontWeight: 'bold',
+    color: '#318ce7',
+    fontSize: 13,
+  },
+  wordLangLabel: {
+    fontSize: 14,
+    color: '#318ce7',
+    fontWeight: 'bold',
+    marginLeft: 4,
+  },
+  wordLangTagWrapper: {
+    alignItems: 'flex-start',
+    marginBottom: 4,
+  },
+  wordLangTag: {
+    backgroundColor: '#318ce7',
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 13,
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 2,
+    overflow: 'hidden',
+    alignSelf: 'flex-start',
+    marginBottom: 2,
+    flexDirection: 'row',
+    textAlign: 'left',
   },
 });
 

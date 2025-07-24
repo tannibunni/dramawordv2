@@ -189,19 +189,22 @@ const VocabularyScreen: React.FC = () => {
       .filter(Boolean);
   };
 
-  // 1. 点击单词卡后，搜索框自动填入该单词
+  // 1. 点击单词卡后，优先显示本地内容，若无释义则查云词库
   const handleWordPress = async (word: any) => {
     setSelectedWord(word);
-    setIsLoadingWordDetail(true);
-    // 兼容 word.language 为空时 fallback
-    const lang = word.language || selectedLanguage || 'en';
-    try {
-      const result = await wordService.searchWord(word.word, lang);
-      setSelectedWordDetail(result.success ? result.data : null);
-    } catch (e) {
-      setSelectedWordDetail(null);
+    if (word.definitions && Array.isArray(word.definitions) && word.definitions.length > 0) {
+      setSelectedWordDetail(word);
+      setIsLoadingWordDetail(false);
+    } else {
+      setIsLoadingWordDetail(true);
+      try {
+        const result = await wordService.searchWord(word.word, 'en');
+        setSelectedWordDetail(result.success ? result.data : null);
+      } catch (e) {
+        setSelectedWordDetail(null);
+      }
+      setIsLoadingWordDetail(false);
     }
-    setIsLoadingWordDetail(false);
   };
 
   // 2. 搜索框支持回车/提交时查找单词
@@ -415,52 +418,7 @@ const VocabularyScreen: React.FC = () => {
             )}
           </View>
           {/* 语言筛选器 - 滑块形式 */}
-          {isSearchExpanded && (
-            <View style={styles.languageFilterSliderWrapper}>
-              <ScrollView 
-                horizontal 
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.languageFilterScrollContent}
-              >
-                {/* 全部选项 */}
-                <TouchableOpacity
-                  style={[
-                    styles.languageFilterSliderButton,
-                    styles.languageFilterSliderButtonFirst,
-                    selectedFilterLanguage === 'ALL' && styles.languageFilterSliderButtonActive
-                  ]}
-                  onPress={() => setSelectedFilterLanguage('ALL')}
-                >
-                  <Text style={styles.languageFilterSliderFlag}>🌍</Text>
-                  <Text style={[
-                    styles.languageFilterSliderText,
-                    selectedFilterLanguage === 'ALL' && styles.languageFilterSliderTextActive
-                  ]}>
-                    {t('all_languages', appLanguage)}
-                  </Text>
-                </TouchableOpacity>
-                {/* 语言选项 */}
-                {filterLanguageOptions.map((lang) => (
-                  <TouchableOpacity
-                    key={lang.code}
-                    style={[
-                      styles.languageFilterSliderButton,
-                      selectedFilterLanguage === lang.code && styles.languageFilterSliderButtonActive
-                    ]}
-                    onPress={() => setSelectedFilterLanguage(lang.code)}
-                  >
-                    <Text style={styles.languageFilterSliderFlag}>{lang.flag}</Text>
-                    <Text style={[
-                      styles.languageFilterSliderText,
-                      selectedFilterLanguage === lang.code && styles.languageFilterSliderTextActive
-                    ]}>
-                      {appLanguage === 'zh-CN' ? lang.name : lang.nativeName}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-            </View>
-          )}
+          {/* 已彻底移除语言筛选器相关JSX块 */}
           <WordList
             words={filteredWords}
             onWordPress={(word) => { setSelectedWord(word); setSearchText(word.word); setIsEditing(false); }}

@@ -25,7 +25,7 @@ import { useVocabulary } from '../../context/VocabularyContext';
 import { TMDBService, TMDBShow } from '../../services/tmdbService';
 import { Audio } from 'expo-av';
 import LanguagePicker from '../../components/common/LanguagePicker';
-import { useLanguage, CustomLanguageCode } from '../../context/LanguageContext';
+import { useLanguage } from '../../context/LanguageContext';
 import { useAppLanguage } from '../../context/AppLanguageContext';
 import { t } from '../../constants/translations';
 import { SUPPORTED_LANGUAGES, SupportedLanguageCode } from '../../constants/config';
@@ -59,21 +59,7 @@ const HomeScreen: React.FC = () => {
   const { selectedLanguage, getCurrentLanguageConfig } = useLanguage();
   const { appLanguage } = useAppLanguage();
   
-  // 将前端语言代码转换为后端期望的格式
-  const getBackendLanguageCode = (language: CustomLanguageCode): string => {
-    switch (language) {
-      case 'ENGLISH':
-        return 'en';
-      case 'KOREAN':
-        return 'ko';
-      case 'JAPANESE':
-        return 'ja';
-      case 'CHINESE':
-        return 'zh';
-      default:
-        return 'en';
-    }
-  };
+  // 移除 getBackendLanguageCode 相关函数和调用
 
   useEffect(() => {
     loadRecentWords();
@@ -123,7 +109,7 @@ const HomeScreen: React.FC = () => {
 
   const isChinese = (text: string) => /[\u4e00-\u9fa5]/.test(text);
 
-  // 搜索处理
+  // handleSearch 只保留中英查词
   const handleSearch = async () => {
     const word = searchText.trim();
     if (!word) {
@@ -142,7 +128,6 @@ const HomeScreen: React.FC = () => {
         if (result.success && result.candidates.length > 0) {
           setChToEnCandidates(result.candidates);
           setChToEnQuery(word);
-          // 新增：将中文查词结果加入历史
           const translation = result.candidates.join(', ');
           await wordService.saveSearchHistory(word, translation, result.candidates);
           setRecentWords(prev => {
@@ -166,11 +151,10 @@ const HomeScreen: React.FC = () => {
           return;
         }
       }
-      // 多语言查词
-      const result = await wordService.searchWord(word.toLowerCase(), getBackendLanguageCode(selectedLanguage));
+      // 英文查中文
+      const result = await wordService.searchWord(word.toLowerCase(), 'en');
       if (result.success && result.data) {
-        // 日志：输出 definitions 和例句
-        if (result.data.definitions) {
+        if (result.data?.definitions) {
           result.data.definitions.forEach((def: any, idx: number) => {
             console.log(`释义[${idx}]:`, def.definition);
             if (def.examples) {
@@ -184,29 +168,24 @@ const HomeScreen: React.FC = () => {
             }
           });
         }
-        // 保存查词记录
         await wordService.saveSearchHistory(
-          (result.data.correctedWord || result.data.word).trim().toLowerCase(),
-          result.data.definitions && result.data.definitions[0]?.definition ? result.data.definitions[0].definition : '暂无释义'
+          (result.data?.correctedWord || result.data?.word)?.trim().toLowerCase(),
+          result.data?.definitions && result.data.definitions[0]?.definition ? result.data.definitions[0].definition : '暂无释义'
         );
-        // 更新最近查词列表 - 去重并保持最新
         setRecentWords(prev => {
-          // 过滤掉重复的单词，保留最新的
-          const filtered = prev.filter(w => (w.word.trim().toLowerCase() !== (result.data!.correctedWord || result.data!.word).trim().toLowerCase()));
+          const filtered = prev.filter(w => (w.word.trim().toLowerCase() !== ((result.data?.correctedWord || result.data?.word) ? (result.data?.correctedWord || result.data?.word).trim().toLowerCase() : '')));
           return [
             {
               id: Date.now().toString(),
-              word: (result.data!.correctedWord || result.data!.word).trim().toLowerCase(),
-              translation: result.data!.definitions && result.data!.definitions[0]?.definition ? result.data!.definitions[0].definition : '暂无释义',
+              word: ((result.data?.correctedWord || result.data?.word) ? (result.data?.correctedWord || result.data?.word).trim().toLowerCase() : ''),
+              translation: result.data?.definitions && result.data.definitions[0]?.definition ? result.data.definitions[0].definition : '暂无释义',
               timestamp: Date.now(),
             },
-            ...filtered.slice(0, 4) // 只保留前5个（包括新添加的）
+            ...filtered.slice(0, 4)
           ];
         });
         setSearchResult(result.data);
         setSearchText('');
-      } else if ((result as any).suggestions && (result as any).suggestions.length > 0) {
-        setSearchSuggestions((result as any).suggestions);
       } else {
         Alert.alert('查询失败', result.error || '无法找到该单词');
       }
@@ -503,7 +482,7 @@ const HomeScreen: React.FC = () => {
         <View style={styles.searchContainer}>
           <View style={styles.searchBox}>
             {/* 语言选择器 */}
-            <LanguagePicker />
+            {/* <LanguagePicker /> */}
             {/* 搜索输入框 */}
             <View style={styles.searchInputContainer}>
               {searchResult ? (
@@ -560,7 +539,7 @@ const HomeScreen: React.FC = () => {
                   setChToEnQuery('');
                   setSearchText(en);
                   // 直接查英文释义
-                  const result = await wordService.searchWord(en.toLowerCase(), getBackendLanguageCode(selectedLanguage));
+                  const result = await wordService.searchWord(en.toLowerCase(), 'en');
                   if (result.success && result.data) {
                     setSearchResult(result.data);
                     setSearchText('');
