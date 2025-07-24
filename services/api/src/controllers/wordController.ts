@@ -40,10 +40,30 @@ function getLanguageName(lang: string) {
   }
 }
 
+function mapUILanguage(uiLanguage: string) {
+  if (uiLanguage.startsWith('en')) return 'en';
+  if (uiLanguage.startsWith('zh')) return 'zh-CN';
+  if (uiLanguage.startsWith('ja')) return 'ja';
+  if (uiLanguage.startsWith('ko')) return 'ko';
+  if (uiLanguage.startsWith('fr')) return 'fr';
+  if (uiLanguage.startsWith('es')) return 'es';
+  return uiLanguage;
+}
+function mapTargetLanguage(language: string) {
+  if (language === 'zh') return 'zh-CN';
+  if (language === 'en') return 'en';
+  if (language === 'ja') return 'ja';
+  if (language === 'ko') return 'ko';
+  if (language === 'fr') return 'fr';
+  if (language === 'es') return 'es';
+  return language;
+}
 function getPromptTemplate(uiLanguage: string, language: string, type: string) {
+  const mappedUI = mapUILanguage(uiLanguage);
+  const mappedLang = mapTargetLanguage(language);
   // 优先查 /prompts/{uiLanguage}/{language}.json
-  const promptDir = path.join(__dirname, '../../prompts', uiLanguage);
-  const promptPath = path.join(promptDir, `${language}.json`);
+  const promptDir = path.join(__dirname, '../../prompts', mappedUI);
+  const promptPath = path.join(promptDir, `${mappedLang}.json`);
   logger.info(`🔍 Prompt 路径调试: __dirname=${__dirname}, promptDir=${promptDir}, promptPath=${promptPath}`);
   if (fs.existsSync(promptPath)) {
     const templates = JSON.parse(fs.readFileSync(promptPath, 'utf-8'));
@@ -52,7 +72,7 @@ function getPromptTemplate(uiLanguage: string, language: string, type: string) {
     return templates[type];
   }
   // fallback: /prompts/{uiLanguage}-{language}.json
-  const altPromptPath = path.join(__dirname, '../../prompts', `${uiLanguage}-${language}.json`);
+  const altPromptPath = path.join(__dirname, '../../prompts', `${mappedUI}-${mappedLang}.json`);
   if (fs.existsSync(altPromptPath)) {
     const templates = JSON.parse(fs.readFileSync(altPromptPath, 'utf-8'));
     logger.info(`✅ 找到 fallback prompt 文件: ${altPromptPath}`);
@@ -67,7 +87,7 @@ function getPromptTemplate(uiLanguage: string, language: string, type: string) {
     return templates[type];
   }
   // fallback: prompts/{uiLanguage}.json（兼容老结构）
-  const legacyPath = path.join(__dirname, '../../prompts', `${uiLanguage}.json`);
+  const legacyPath = path.join(__dirname, '../../prompts', `${mappedUI}.json`);
   if (fs.existsSync(legacyPath)) {
     logger.info(`🔄 使用 legacy fallback: ${legacyPath}`);
     const templates = JSON.parse(fs.readFileSync(legacyPath, 'utf-8'));
