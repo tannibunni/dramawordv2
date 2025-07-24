@@ -25,7 +25,7 @@ import { useVocabulary } from '../../context/VocabularyContext';
 import { TMDBService, TMDBShow } from '../../services/tmdbService';
 import { Audio } from 'expo-av';
 import LanguagePicker from '../../components/common/LanguagePicker';
-import { useLanguage } from '../../context/LanguageContext';
+import { useLanguage, CustomLanguageCode } from '../../context/LanguageContext';
 import { useAppLanguage } from '../../context/AppLanguageContext';
 import { t } from '../../constants/translations';
 import { SUPPORTED_LANGUAGES, SupportedLanguageCode } from '../../constants/config';
@@ -60,7 +60,7 @@ const HomeScreen: React.FC = () => {
   const { appLanguage } = useAppLanguage();
   
   // 将前端语言代码转换为后端期望的格式
-  const getBackendLanguageCode = (language: SupportedLanguageCode): string => {
+  const getBackendLanguageCode = (language: CustomLanguageCode): string => {
     switch (language) {
       case 'ENGLISH':
         return 'en';
@@ -68,6 +68,8 @@ const HomeScreen: React.FC = () => {
         return 'ko';
       case 'JAPANESE':
         return 'ja';
+      case 'CHINESE':
+        return 'zh';
       default:
         return 'en';
     }

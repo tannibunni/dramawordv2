@@ -109,6 +109,11 @@ const VocabularyScreen: React.FC = () => {
     if (selectedFilterLanguage !== 'ALL') {
       const languageCode = selectedFilterLanguage.toLowerCase();
       filtered = filtered.filter(word => {
+        // CHINESE 特殊处理
+        if (selectedFilterLanguage === 'CHINESE') {
+          // 包含中文字符
+          return /[\u4e00-\u9fa5]/.test(word.word || '');
+        }
         // 检查单词的语言属性，如果没有明确的语言属性，则根据单词特征判断
         if (word.language) {
           return word.language.toLowerCase() === languageCode;
@@ -271,6 +276,19 @@ const VocabularyScreen: React.FC = () => {
     ko: 'korean_language',
   };
 
+  // 语言筛选选项：EN界面下将英文选项替换为Chinese
+  let filterLanguageOptions: { code: string, flag: string, name: string, nativeName: string }[] = [];
+  if (appLanguage === 'en-US') {
+    filterLanguageOptions = [
+      { code: 'CHINESE', flag: '🇨🇳', name: '中文', nativeName: 'Chinese' },
+      ...Object.entries(SUPPORTED_LANGUAGES)
+        .filter(([key]) => key !== 'ENGLISH')
+        .map(([key, lang]) => ({ code: lang.code, flag: lang.flag, name: lang.name, nativeName: lang.nativeName }))
+    ];
+  } else {
+    filterLanguageOptions = Object.entries(SUPPORTED_LANGUAGES).map(([key, lang]) => ({ code: lang.code, flag: lang.flag, name: lang.name, nativeName: lang.nativeName }));
+  }
+
   return (
     <SafeAreaView style={styles.container}>
       {/* 庆祝弹窗动画 */}
@@ -422,22 +440,21 @@ const VocabularyScreen: React.FC = () => {
                   </Text>
                 </TouchableOpacity>
                 {/* 语言选项 */}
-                {Object.entries(SUPPORTED_LANGUAGES).map(([key, language]) => (
+                {filterLanguageOptions.map((lang) => (
                   <TouchableOpacity
-                    key={language.code}
+                    key={lang.code}
                     style={[
                       styles.languageFilterSliderButton,
-                      selectedFilterLanguage === language.code && styles.languageFilterSliderButtonActive
+                      selectedFilterLanguage === lang.code && styles.languageFilterSliderButtonActive
                     ]}
-                    onPress={() => setSelectedFilterLanguage(language.code as string)}
+                    onPress={() => setSelectedFilterLanguage(lang.code)}
                   >
-                    <Text style={styles.languageFilterSliderFlag}>{language.flag}</Text>
+                    <Text style={styles.languageFilterSliderFlag}>{lang.flag}</Text>
                     <Text style={[
                       styles.languageFilterSliderText,
-                      selectedFilterLanguage === language.code && styles.languageFilterSliderTextActive
+                      selectedFilterLanguage === lang.code && styles.languageFilterSliderTextActive
                     ]}>
-                      {/* 中文界面显示 name，英文界面显示 nativeName */}
-                      {appLanguage === 'zh-CN' ? language.name : language.nativeName}
+                      {appLanguage === 'zh-CN' ? lang.name : lang.nativeName}
                     </Text>
                   </TouchableOpacity>
                 ))}
