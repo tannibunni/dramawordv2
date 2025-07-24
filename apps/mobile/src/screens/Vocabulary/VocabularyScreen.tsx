@@ -23,7 +23,7 @@ import { t } from '../../constants/translations';
 import { useLanguage } from '../../context/LanguageContext';
 import { SUPPORTED_LANGUAGES, SupportedLanguageCode } from '../../constants/config';
 import { TranslationKey } from '../../constants/translations';
-import { WordCardContent } from '../../components/cards/WordCard';
+import { wordService } from '../../services/wordService';
 
 const { width } = Dimensions.get('window');
 
@@ -40,6 +40,8 @@ const VocabularyScreen: React.FC = () => {
   const [searchText, setSearchText] = useState('');
   const [filteredWords, setFilteredWords] = useState<any[]>([]);
   const [selectedWord, setSelectedWord] = useState<any | null>(null);
+  const [selectedWordDetail, setSelectedWordDetail] = useState<any | null>(null);
+  const [isLoadingWordDetail, setIsLoadingWordDetail] = useState(false);
   const [showWordCard, setShowWordCard] = useState(false);
   // 新增：下拉预览逻辑
   const [previewList, setPreviewList] = useState<any[]>([]);
@@ -183,9 +185,18 @@ const VocabularyScreen: React.FC = () => {
   };
 
   // 1. 点击单词卡后，搜索框自动填入该单词
-  const handleWordPress = (word: any) => {
-    setSearchText((word.word || '').trim().toLowerCase());
+  const handleWordPress = async (word: any) => {
     setSelectedWord(word);
+    setIsLoadingWordDetail(true);
+    // 兼容 word.language 为空时 fallback
+    const lang = word.language || selectedLanguage || 'en';
+    try {
+      const result = await wordService.searchWord(word.word, lang);
+      setSelectedWordDetail(result.success ? result.data : null);
+    } catch (e) {
+      setSelectedWordDetail(null);
+    }
+    setIsLoadingWordDetail(false);
   };
 
   // 2. 搜索框支持回车/提交时查找单词
@@ -332,7 +343,13 @@ const VocabularyScreen: React.FC = () => {
           {/* 单词卡 */}
           <ScrollView contentContainerStyle={styles.detailCardScroll}>
             <View style={styles.detailCardBox}>
-              <WordCardContent wordData={selectedWord} />
+              {isLoadingWordDetail ? (
+                <Text style={{textAlign:'center',padding:32}}>加载中...</Text>
+              ) : selectedWordDetail ? (
+                <WordCard wordData={selectedWordDetail} />
+              ) : (
+                <Text style={{textAlign:'center',padding:32}}>未找到释义</Text>
+              )}
             </View>
           </ScrollView>
         </View>
