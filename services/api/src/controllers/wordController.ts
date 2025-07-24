@@ -112,13 +112,18 @@ function getLanguagePrompt(word: string, language: string, uiLanguage: string) {
   const definitionLang = getLanguageName(uiLanguage);
   const targetLang = getLanguageName(language);
   const template = getPromptTemplate(uiLanguage, language, 'definition');
-  return renderPrompt(template, {
+  let prompt = renderPrompt(template, {
     word,
     language,
     uiLanguage: definitionLang,
     targetLang,
     exampleField
   });
+  // 兜底：英文界面强制英文释义
+  if (isEnglishUI) {
+    prompt += '\n\nImportant: All definitions, explanations, and example translations must be in English, suitable for English speakers learning this language.';
+  }
+  return prompt;
 }
 
 // 单词搜索 - 先查云单词表，没有再用AI
