@@ -32,7 +32,7 @@ const CloudWordSchema = new Schema<ICloudWord>({
   language: {
     type: String,
     required: true,
-    enum: ['en', 'ko', 'ja'],
+    enum: ['en', 'ko', 'ja', 'zh'], // 支持中文查词
     default: 'en',
     index: true,
   },
