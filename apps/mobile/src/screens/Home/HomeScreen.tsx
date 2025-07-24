@@ -165,7 +165,9 @@ const HomeScreen: React.FC = () => {
         }
       }
       // 多语言查词
-      const result = await wordService.searchWord(word.toLowerCase(), getBackendLanguageCode(selectedLanguage), appLanguage); // 传递 uiLanguage
+      // EN 界面下查拼音/汉字/英文，language 始终传 'zh'
+      const languageParam = appLanguage.startsWith('en') ? 'zh' : getBackendLanguageCode(selectedLanguage);
+      const result = await wordService.searchWord(word.toLowerCase(), languageParam, appLanguage); // 传递 uiLanguage
       if (result.success && result.data) {
         // 日志：输出 definitions 和例句
         if (result.data.definitions) {
