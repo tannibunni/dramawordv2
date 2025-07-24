@@ -10,19 +10,23 @@ export interface WordDefinition {
   examples: Array<{
     english: string;
     chinese: string;
+    pinyin?: string; // 新增：例句拼音，兼容新后端
+    romaji?: string; // 日语罗马音（原有）
   }>;
 }
 
 export interface WordData {
-  word: string;
-  phonetic: string;
+  word: string;                // 词条本身（如“我爱你”或“woaini”）
+  phonetic?: string;           // 拼音（如“wǒ ài nǐ”），原有
+  pinyin?: string;             // 新增：标准拼音，兼容新后端
   definitions: WordDefinition[];
-  isCollected: boolean;
-  audioUrl?: string;
-  correctedWord?: string; // 新增：标准单词
-  slangMeaning?: string | null; // 新增：网络俚语解释
-  phraseExplanation?: string | null; // 新增：短语解释
-  kana?: string; // 新增：日语假名
+  audioUrl?: string;           // 发音音频链接
+  isCollected?: boolean;       // 是否已收藏
+  correctedWord?: string;      // 标准化词条
+  slangMeaning?: string | null;// 网络俚语解释
+  phraseExplanation?: string | null;// 短语解释
+  kana?: string;               // 日语假名（中文查词一般无）
+  // 其它字段如来源、反馈等
 }
 
 export interface SearchResult {
@@ -73,7 +77,7 @@ export class WordService {
   }
 
   // 搜索单词
-  async searchWord(word: string, language: string = 'en'): Promise<SearchResult> {
+  async searchWord(word: string, language: string = 'en', uiLanguage?: string): Promise<SearchResult> {
     try {
       console.log(`🔍 搜索单词: ${word} (语言: ${language})`);
       
@@ -104,6 +108,28 @@ export class WordService {
       console.log('🔍 result.data:', result.data);
       
       if (result.success) {
+        // 新增：兼容新版 results 数组结构（新 prompt）
+        if (result.data && Array.isArray(result.data.results)) {
+          const mapped = result.data.results.map((item: any) => ({
+            word: item.chinese, // 兼容前端结构
+            pinyin: item.pinyin,
+            audioUrl: item.audioUrl,
+            phraseExplanation: item.phraseExplanation,
+            definitions: [
+              {
+                partOfSpeech: '',
+                definition: item.definition,
+                examples: (item.examples || []).map((ex: any) => ({
+                  chinese: ex.chinese,
+                  english: ex.english,
+                  pinyin: ex.pinyin
+                }))
+              }
+            ]
+          }));
+          // 只返回第一个，或你可以让前端支持多卡片切换
+          return { success: true, data: mapped[0] };
+        }
         // 处理 Mongoose 文档结构，优先使用 _doc 字段
         const data = result.data._doc || result.data;
         
