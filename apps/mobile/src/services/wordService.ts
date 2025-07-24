@@ -105,6 +105,24 @@ export class WordService {
       console.log('🔍 result.data:', result.data);
       
       if (result.success) {
+        // 新增：兼容新版 results 数组结构
+        if (result.data && Array.isArray(result.data.results)) {
+          const mapped = result.data.results.map((item: any) => ({
+            word: item.chinese,
+            phonetic: item.pinyin,
+            definitions: [
+              {
+                partOfSpeech: '',
+                definition: item.definition,
+                examples: item.examples || [],
+              },
+            ],
+            correctedWord: item.chinese,
+            isCollected: false,
+          }));
+          // 只返回第一个，或你可以让前端支持多卡片切换
+          return { success: true, data: mapped[0] };
+        }
         // 处理 Mongoose 文档结构，优先使用 _doc 字段
         const data = result.data._doc || result.data;
         
