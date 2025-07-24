@@ -56,14 +56,16 @@ const CloudWordSchema = new Schema<ICloudWord>({
       required: true,
     },
     examples: [{
-      english: {
-        type: String,
-        default: '',
-      },
-      chinese: {
-        type: String,
-        default: '',
-      },
+      english: { type: String, default: '' },
+      chinese: { type: String, default: '' },
+      japanese: { type: String, default: '' },
+      korean: { type: String, default: '' },
+      french: { type: String, default: '' },
+      spanish: { type: String, default: '' },
+      romaji: { type: String, default: '' },
+      hangul: { type: String, default: '' },
+      pinyin: { type: String, default: '' },
+      // 允许未来扩展更多语言
     }],
   }],
   audioUrl: {

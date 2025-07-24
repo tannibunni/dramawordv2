@@ -146,6 +146,29 @@ export class WordService {
           kana: data.kana || undefined, // 日语假名
         };
         
+        // 在解析 examples 时，保留所有多语言字段，前端渲染时可根据 UI 语言优先展示。
+        // 例如：
+        // examples: [
+        //   { english, chinese, japanese, korean, french, spanish, romaji, hangul, pinyin }
+        // ]
+        if (wordData.definitions && wordData.definitions.length > 0) {
+          wordData.definitions.forEach(def => {
+            def.examples = def.examples || [];
+            def.examples.forEach(example => {
+              // 确保所有字段都存在，如果不存在则设为空字符串
+              example.english = example.english || '';
+              example.chinese = example.chinese || '';
+              example.japanese = example.japanese || '';
+              example.korean = example.korean || '';
+              example.french = example.french || '';
+              example.spanish = example.spanish || '';
+              example.romaji = example.romaji || '';
+              example.hangul = example.hangul || '';
+              example.pinyin = example.pinyin || '';
+            });
+          });
+        }
+        
         // 如果 definitions 为空，使用 correctedWord 生成一个基本的定义
         if (!wordData.definitions || wordData.definitions.length === 0) {
           wordData.definitions = [
