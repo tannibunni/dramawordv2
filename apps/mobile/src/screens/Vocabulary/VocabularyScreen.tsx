@@ -23,6 +23,7 @@ import { t } from '../../constants/translations';
 import { useLanguage } from '../../context/LanguageContext';
 import { SUPPORTED_LANGUAGES, SupportedLanguageCode } from '../../constants/config';
 import { TranslationKey } from '../../constants/translations';
+import { WordCardContent } from '../../components/cards/WordCard';
 
 const { width } = Dimensions.get('window');
 
@@ -49,7 +50,8 @@ const VocabularyScreen: React.FC = () => {
   // 新增：搜索框展开状态
   const [isSearchExpanded, setIsSearchExpanded] = useState(false);
   // 新增：语言筛选状态
-  const [selectedFilterLanguage, setSelectedFilterLanguage] = useState<SupportedLanguageCode | 'ALL'>('ALL');
+  // 统一用 string 类型，避免 code 类型不一致导致的比较问题
+  const [selectedFilterLanguage, setSelectedFilterLanguage] = useState<string>('ALL');
 
   // 徽章配置 - 使用 state 来保持状态
   const [badges, setBadges] = useState<Badge[]>([
@@ -306,7 +308,6 @@ const VocabularyScreen: React.FC = () => {
               onChangeText={txt => { setSearchText(txt); setIsEditing(true); }}
               placeholder={t('search_words', appLanguage)}
               placeholderTextColor={colors.neutral[400]}
-              autoFocus
               onSubmitEditing={handleSearchSubmit}
             />
             <TouchableOpacity onPress={() => { setSelectedWord(null); setSearchText(''); setIsEditing(false); }} style={styles.detailCloseBtn}>
@@ -331,58 +332,16 @@ const VocabularyScreen: React.FC = () => {
           {/* 单词卡 */}
           <ScrollView contentContainerStyle={styles.detailCardScroll}>
             <View style={styles.detailCardBox}>
-              <View style={styles.detailCardHeader}>
-                <Text style={styles.detailWord}>{selectedWord.word}</Text>
-                <TouchableOpacity style={styles.detailAudioBtn} onPress={() => audioService.playWordPronunciation(selectedWord.word)}>
-                  <Ionicons name="volume-high" size={20} color={colors.primary[500]} />
-                </TouchableOpacity>
-              </View>
-              {/* detailPhoneticRow 只显示音标 */}
-              <View style={styles.detailPhoneticRow}>
-                <Text style={styles.detailPhonetic}>{selectedWord.phonetic}</Text>
-              </View>
-              {/* 剧集标签单独一行 */}
-              {(() => {
-                const allShows = getWordShows(selectedWord.word);
-                return allShows.length > 0 && (
-                  <View style={styles.detailShowTagsContainer}>
-                    {allShows.map((show, index) => {
-                      const isWordbook = show?.type === 'wordbook';
-                      return (
-                        <View
-                          key={`${show?.id}-${index}`}
-                          style={[styles.detailShowTag, { backgroundColor: isWordbook ? colors.success[100] : colors.primary[50] }]}
-                        >
-                          <Text style={[styles.detailShowTagText, { color: isWordbook ? colors.success[800] : colors.primary[700] }]}>{show?.name}</Text>
-                        </View>
-                      );
-                    })}
-                  </View>
-                );
-              })()}
-              {/* 释义和例句 */}
-              {selectedWord.definitions && selectedWord.definitions.map((def: any, idx: number) => (
-                <View key={idx} style={styles.detailDefBlock}>
-                  {/* 释义和例句部分，把词性样式改成蓝色标签 */}
-                  <View style={styles.partOfSpeechTagRow}>
-                    <Text style={styles.partOfSpeechTag}>{def.partOfSpeech}</Text>
-                  </View>
-                  <Text style={styles.detailDefinition}>{def.definition}</Text>
-                  {def.examples && def.examples.length > 0 && def.examples.map((ex: any, exIdx: number) => (
-                    <View key={exIdx} style={styles.detailExampleBlock}>
-                      <Text style={styles.detailExampleEn}>{ex.english}</Text>
-                      <Text style={styles.detailExampleZh}>{ex.chinese}</Text>
-                    </View>
-                  ))}
-                </View>
-              ))}
-              {/* 删除操作按钮区域 */}
+              <WordCardContent wordData={selectedWord} />
             </View>
           </ScrollView>
         </View>
       ) : (
         <View style={styles.listSection}>
-          <View style={styles.searchContainer}>
+          <View style={[
+            styles.searchContainer,
+            !isSearchExpanded && styles.searchContainerInactive
+          ]}>
             {isSearchExpanded ? (
               <>
                 <Ionicons name="search" size={18} color={colors.neutral[400]} style={{marginRight:8}} />
@@ -446,21 +405,22 @@ const VocabularyScreen: React.FC = () => {
                   </Text>
                 </TouchableOpacity>
                 {/* 语言选项 */}
-                {Object.entries(SUPPORTED_LANGUAGES).map(([code, language]) => (
+                {Object.entries(SUPPORTED_LANGUAGES).map(([key, language]) => (
                   <TouchableOpacity
-                    key={code}
+                    key={language.code}
                     style={[
                       styles.languageFilterSliderButton,
-                      selectedFilterLanguage === code && styles.languageFilterSliderButtonActive
+                      selectedFilterLanguage === language.code && styles.languageFilterSliderButtonActive
                     ]}
-                    onPress={() => setSelectedFilterLanguage(code as SupportedLanguageCode)}
+                    onPress={() => setSelectedFilterLanguage(language.code as string)}
                   >
                     <Text style={styles.languageFilterSliderFlag}>{language.flag}</Text>
                     <Text style={[
                       styles.languageFilterSliderText,
-                      selectedFilterLanguage === code && styles.languageFilterSliderTextActive
+                      selectedFilterLanguage === language.code && styles.languageFilterSliderTextActive
                     ]}>
-                      {t(LANGUAGE_KEY_MAP[code] as TranslationKey, appLanguage)}
+                      {/* 中文界面显示 name，英文界面显示 nativeName */}
+                      {appLanguage === 'zh-CN' ? language.name : language.nativeName}
                     </Text>
                   </TouchableOpacity>
                 ))}
@@ -579,6 +539,14 @@ const styles = StyleSheet.create({
     marginTop: 0,
     minHeight: 48,
     justifyContent: 'center', // 在收起状态下居中显示"+"按钮
+  },
+  searchContainerInactive: {
+    backgroundColor: 'transparent', // 未激活时透明
+    borderWidth: 0,
+    shadowColor: 'transparent',
+    elevation: 0,
+    paddingHorizontal: 0,
+    paddingVertical: 0,
   },
   searchInput: {
     flex: 1,
@@ -961,9 +929,11 @@ const styles = StyleSheet.create({
   wordbookShowTag: { backgroundColor: colors.success[100] },
   wordbookShowTagText: { color: colors.success[800] },
   searchExpandBtnWrapper: {
-    alignItems: 'center',
-    marginTop: 8,
-    marginBottom: 16,
+    // 让父容器撑满整行，确保按钮宽度和激活搜索框一致
+    width: '100%',
+    // marginTop: 8,
+    // 调整查找收藏词按钮和下面单词列表之间的距离，修改 marginBottom 即可
+    marginBottom: 5, // 增大此值可增大间距，减小则减小间距
   },
   searchExpandBtn: {
     flexDirection: 'row',
@@ -974,6 +944,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderWidth: 1,
     borderColor: colors.primary[500],
+    width: '100%', // 宽度和搜索框一致
+    justifyContent: 'center', // 内容居中
   },
   searchExpandText: {
     color: colors.primary[500],
