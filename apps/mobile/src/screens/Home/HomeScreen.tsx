@@ -165,9 +165,7 @@ const HomeScreen: React.FC = () => {
         }
       }
       // 多语言查词
-      // EN 界面下查拼音/汉字/英文，language 始终传 'zh'
-      const languageParam = appLanguage.startsWith('en') ? 'zh' : getBackendLanguageCode(selectedLanguage);
-      const result = await wordService.searchWord(word.toLowerCase(), languageParam, appLanguage); // 传递 uiLanguage
+      const result = await wordService.searchWord(word.toLowerCase(), getBackendLanguageCode(selectedLanguage));
       if (result.success && result.data) {
         // 日志：输出 definitions 和例句
         if (result.data.definitions) {
@@ -233,7 +231,7 @@ const HomeScreen: React.FC = () => {
     setIsLoading(true);
     setSearchResult(null);
     try {
-      const result = await wordService.searchWord(searchWord, undefined, appLanguage); // 传递 uiLanguage
+      const result = await wordService.searchWord(searchWord);
       console.log('🔍 搜索结果:', result);
       if (result.success && result.data) {
         console.log('🔍 设置 searchResult:', result.data);
@@ -560,7 +558,7 @@ const HomeScreen: React.FC = () => {
                   setChToEnQuery('');
                   setSearchText(en);
                   // 直接查英文释义
-                  const result = await wordService.searchWord(en.toLowerCase(), getBackendLanguageCode(selectedLanguage), appLanguage); // 传递 uiLanguage
+                  const result = await wordService.searchWord(en.toLowerCase(), getBackendLanguageCode(selectedLanguage));
                   if (result.success && result.data) {
                     setSearchResult(result.data);
                     setSearchText('');

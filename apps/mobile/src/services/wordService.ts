@@ -73,9 +73,9 @@ export class WordService {
   }
 
   // 搜索单词
-  async searchWord(word: string, language: string = 'en', uiLanguage?: string): Promise<SearchResult> {
+  async searchWord(word: string, language: string = 'en'): Promise<SearchResult> {
     try {
-      console.log(`🔍 搜索单词: ${word} (语言: ${language}, 界面语言: ${uiLanguage})`);
+      console.log(`🔍 搜索单词: ${word} (语言: ${language})`);
       
       const token = await getUserToken();
       const headers: Record<string, string> = {
@@ -91,8 +91,7 @@ export class WordService {
         headers,
         body: JSON.stringify({ 
           word: word.toLowerCase().trim(),
-          language: language,
-          ...(uiLanguage ? { uiLanguage } : {})
+          language: language
         }),
       });
 
@@ -105,24 +104,6 @@ export class WordService {
       console.log('🔍 result.data:', result.data);
       
       if (result.success) {
-        // 新增：兼容新版 results 数组结构
-        if (result.data && Array.isArray(result.data.results)) {
-          const mapped = result.data.results.map((item: any) => ({
-            word: item.chinese,
-            phonetic: item.pinyin,
-            definitions: [
-              {
-                partOfSpeech: '',
-                definition: item.definition,
-                examples: item.examples || [],
-              },
-            ],
-            correctedWord: item.chinese,
-            isCollected: false,
-          }));
-          // 只返回第一个，或你可以让前端支持多卡片切换
-          return { success: true, data: mapped[0] };
-        }
         // 处理 Mongoose 文档结构，优先使用 _doc 字段
         const data = result.data._doc || result.data;
         
