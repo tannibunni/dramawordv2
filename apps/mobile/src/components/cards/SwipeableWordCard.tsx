@@ -74,7 +74,21 @@ const SwipeableWordCard: React.FC<SwipeableWordCardProps> = ({
               showsVerticalScrollIndicator={true}
               contentContainerStyle={styles.expandedContentContainer}
             >
-              <WordCardContent wordData={wordData} onPlayAudio={onPlayAudio} />
+              <WordCardContent 
+                wordData={wordData} 
+                onPlayAudio={onPlayAudio} 
+                showHeader={false}
+                scrollable={false}
+              />
+              {/* 调试信息 */}
+              {__DEV__ && (
+                <View style={{padding: 10, backgroundColor: '#f0f0f0', marginTop: 10}}>
+                  <Text style={{fontSize: 12, color: '#666'}}>
+                    调试: slangMeaning={wordData.slangMeaning ? '有' : '无'}, 
+                    phraseExplanation={wordData.phraseExplanation ? '有' : '无'}
+                  </Text>
+                </View>
+              )}
               {/* 单词来源信息 */}
               {wordData.lastSearched && (
                 <View style={styles.originSection}>
@@ -193,53 +207,6 @@ const styles = StyleSheet.create({
   },
   expandedContentContainer: {
     paddingBottom: 20, // 底部留出空间给提示文字
-  },
-  definitionItem: {
-    marginBottom: 20,
-  },
-  partOfSpeechTag: {
-    backgroundColor: colors.primary[100],
-    borderRadius: 12,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    marginBottom: 8,
-    alignSelf: 'flex-start',
-  },
-  partOfSpeechText: {
-    fontSize: 12,
-    color: colors.primary[700],
-    fontWeight: '600',
-    textTransform: 'uppercase',
-  },
-  definition: {
-    fontSize: 16,
-    color: colors.text.primary,
-    lineHeight: 24,
-    marginBottom: 8,
-  },
-  examplesContainer: {
-    marginTop: 8,
-    paddingLeft: 12,
-  },
-  examplesTitle: {
-    fontSize: 14,
-    color: colors.text.secondary,
-    fontWeight: '600',
-    marginBottom: 4,
-  },
-  exampleItem: {
-    marginBottom: 8,
-    paddingLeft: 8,
-  },
-  exampleEnglish: {
-    fontSize: 14,
-    color: colors.text.primary,
-    fontStyle: 'italic',
-    marginBottom: 2,
-  },
-  exampleChinese: {
-    fontSize: 14,
-    color: colors.text.secondary,
   },
   originSection: {
     marginTop: 16,
