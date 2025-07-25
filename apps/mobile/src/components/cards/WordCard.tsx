@@ -29,7 +29,7 @@ export interface WordDefinition {
 
 export interface WordData {
   word: string;
-  phonetic: string;
+  phonetic?: string;
   definitions: WordDefinition[];
   audioUrl?: string;
   isCollected?: boolean;
@@ -40,6 +40,8 @@ export interface WordData {
   feedbackStats?: { positive: number; negative: number; total: number }; // 新增：反馈统计
   kana?: string; // 新增：日语假名标注
   language?: string; // 新增：单词语言
+  slangMeaning?: string; // 新增：俚语/缩写含义
+  phraseExplanation?: string; // 新增：短语解释
 }
 
 interface WordCardProps {
@@ -52,7 +54,7 @@ interface WordCardProps {
   onFeedbackSubmitted?: (word: string, feedback: 'positive' | 'negative') => void; // 新增：反馈回调
 }
 
-const CARD_CONTENT_MAX_HEIGHT = 360; // 可根据实际UI调整
+const CARD_CONTENT_MAX_HEIGHT = 400; // 可根据实际UI调整
 const SWIPE_THRESHOLD = 100; // 降低滑动阈值，更容易触发
 const SWIPE_ANIMATION_DURATION = 250; // 更快的动画
 const ROTATION_ANGLE = 10; // 卡片旋转角度
@@ -68,7 +70,7 @@ const WordCard: React.FC<WordCardProps> = ({
 }) => {
   const { appLanguage } = useAppLanguage();
   // 添加调试信息
-  console.log('🔍 WordCard 接收到的数据:', wordData);
+  console.log('WordCard 渲染 wordData:', wordData, 'definitions:', wordData.definitions);
   console.log('🔍 wordData.word:', wordData?.word);
   console.log('🔍 wordData.definitions:', wordData?.definitions);
   console.log('🔍 wordData.definitions.length:', wordData?.definitions?.length);
@@ -514,69 +516,12 @@ const WordCard: React.FC<WordCardProps> = ({
         </View>
       )}
           
-          {/* 滑动操作提示 */}
-          <View style={styles.swipeHint}>
-        <Text style={styles.swipeHintText}>{t('swipe_left_ignore_right_collect', appLanguage)}</Text>
+      {/* 滑动操作提示 + 汇报问题ICON */}
+      <View style={styles.swipeHintsContainer}>
+        <Text style={styles.swipeHintLeft}>←左滑忽略</Text>
+        <FlagFeedbackButton onFeedback={() => handleFeedback('negative')} disabled={isSubmittingFeedback} />
+        <Text style={styles.swipeHintRight}>右滑收藏→</Text>
       </View>
-
-      {/* 反馈系统 */}
-      <View style={styles.feedbackContainer}>
-        <View style={styles.feedbackButtons}>
-          <TouchableOpacity
-            style={[
-              styles.feedbackButton,
-              userFeedback === 'positive' && styles.feedbackButtonActive
-            ]}
-            onPress={() => handleFeedback('positive')}
-            disabled={isSubmittingFeedback}
-            activeOpacity={0.7}
-          >
-            <Ionicons 
-              name="thumbs-up" 
-              size={20} 
-              color={userFeedback === 'positive' ? colors.success[500] : colors.text.secondary} 
-            />
-            <Text style={[
-              styles.feedbackButtonText,
-              userFeedback === 'positive' && styles.feedbackButtonTextActive
-            ]}>
-              {t('feedback_helpful', appLanguage)}
-            </Text>
-            {feedbackStats && feedbackStats.positive > 0 && (
-              <Text style={styles.feedbackCount}>
-                {feedbackStats.positive}
-              </Text>
-            )}
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[
-              styles.feedbackButton,
-              userFeedback === 'negative' && styles.feedbackButtonActive
-            ]}
-            onPress={() => handleFeedback('negative')}
-            disabled={isSubmittingFeedback}
-            activeOpacity={0.7}
-          >
-            <Ionicons 
-              name="thumbs-down" 
-              size={20} 
-              color={userFeedback === 'negative' ? colors.error[500] : colors.text.secondary} 
-            />
-            <Text style={[
-              styles.feedbackButtonText,
-              userFeedback === 'negative' && styles.feedbackButtonTextActive
-            ]}>
-              {t('feedback_not_helpful', appLanguage)}
-            </Text>
-            {feedbackStats && feedbackStats.negative > 0 && (
-              <Text style={styles.feedbackCount}>
-                {feedbackStats.negative}
-              </Text>
-            )}
-          </TouchableOpacity>
-        </View>
-          </View>
         </Animated.View>
       </PanGestureHandler>
 
@@ -672,7 +617,7 @@ const styles = StyleSheet.create({
   card: {
     width: '100%',
     maxWidth: 350,
-    minHeight: 600,
+    height: 570,
     backgroundColor: colors.background.secondary,
     borderRadius: 20,
     padding: 32,
@@ -786,6 +731,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: colors.text.tertiary,
     fontStyle: 'italic',
+    // 不要flex: 1，避免挤出icon
   },
   indicator: {
     position: 'absolute',
@@ -955,6 +901,82 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     textAlign: 'left',
   },
+  reportButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.error[50],
+    borderRadius: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    marginTop: 8,
+    alignSelf: 'center',
+  },
+  reportButtonText: {
+    color: colors.error[700],
+    fontSize: 15,
+    fontWeight: '500',
+    marginLeft: 8,
+  },
+  swipeHintRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 12,
+    paddingHorizontal: 8,
+  },
+  swipeHintsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    width: '100%',
+    paddingHorizontal: 24,
+    marginTop: 12,
+    gap: 8,
+  },
+  swipeHintLeft: {
+    fontSize: 14,
+    color: colors.text.tertiary,
+    fontStyle: 'italic',
+  },
+  swipeHintRight: {
+    fontSize: 14,
+    color: colors.text.tertiary,
+    fontStyle: 'italic',
+  },
+  reportIconOnly: {
+    marginLeft: 12,
+    padding: 6,
+    borderRadius: 16,
+    backgroundColor: '#E5E7EB', // 浅灰色圆圈
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  // reportIconRow 已不再需要
 });
 
 export default WordCard; 
+
+const FlagFeedbackButton = ({ onFeedback, disabled }: { onFeedback: () => void; disabled?: boolean }) => {
+  const [flagged, setFlagged] = useState(false);
+  const handlePress = () => {
+    if (!flagged && !disabled) {
+      setFlagged(true);
+      onFeedback();
+    }
+  };
+  return (
+    <TouchableOpacity
+      style={styles.reportIconOnly}
+      onPress={handlePress}
+      disabled={disabled || flagged}
+      activeOpacity={0.7}
+    >
+      <Ionicons
+        name="flag-outline"
+        size={20}
+        color={flagged ? colors.primary[500] : colors.text.tertiary}
+      />
+    </TouchableOpacity>
+  );
+}; 
