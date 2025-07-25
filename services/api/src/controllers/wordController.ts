@@ -154,6 +154,7 @@ export const searchWord = async (req: Request, res: Response): Promise<void> => 
       // 如果前端传递的是 'en'，尝试检测实际语言
       const hasChineseChars = /[\u4e00-\u9fff]/.test(searchTerm);
       const hasPinyinTones = /[āáǎàēéěèīíǐìōóǒòūúǔùǖǘǚǜü]/.test(searchTerm);
+      // 更精确的拼音检测：只检测无声调拼音
       const isPinyinLike = /^[a-z]+(\s+[a-z]+)*$/i.test(searchTerm) && searchTerm.length <= 20;
       
       if (hasChineseChars) {
@@ -163,7 +164,7 @@ export const searchWord = async (req: Request, res: Response): Promise<void> => 
         // 包含声调符号的拼音
         detectedLanguage = 'zh';
         logger.info(`🔍 检测到拼音声调，将语言从 'en' 改为 'zh': ${searchTerm}`);
-      } else if (isPinyinLike && !/^(hello|hi|bye|good|bad|yes|no|ok|okay|bonjour|merci|oui|non|gracias|hola|ciao|grazie|danke|bitte|ja|nein|arigato|konnichiwa|sayonara|annyeong|kamsahamnida)$/i.test(searchTerm)) {
+      } else if (isPinyinLike && !/^(hello|hi|bye|good|bad|yes|no|ok|okay|bonjour|merci|oui|non|gracias|hola|ciao|grazie|danke|bitte|ja|nein|arigato|konnichiwa|sayonara|annyeong|kamsahamnida|child|prodigy|beautiful|apple|test|word|english|chinese|japanese|korean|french|spanish|german|italian|portuguese|russian|arabic|hindi|thai|vietnamese|indonesian|malay|filipino|swahili|zulu|xhosa|afrikaans|dutch|swedish|norwegian|danish|finnish|icelandic|polish|czech|slovak|hungarian|romanian|bulgarian|serbian|croatian|slovenian|macedonian|albanian|greek|turkish|hebrew|persian|urdu|bengali|tamil|telugu|kannada|malayalam|gujarati|marathi|punjabi|odia|assamese|nepali|sinhala|myanmar|lao|cambodian|mongolian|kazakh|uzbek|kyrgyz|tajik|turkmen|azerbaijani|georgian|armenian|moldovan|belarusian|ukrainian|lithuanian|latvian|estonian)$/i.test(searchTerm)) {
         // 可能是无声调拼音，但排除常见英文单词和其他语言的常见词汇
         detectedLanguage = 'zh';
         logger.info(`🔍 检测到可能的拼音模式，将语言从 'en' 改为 'zh': ${searchTerm}`);

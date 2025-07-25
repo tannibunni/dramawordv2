@@ -113,12 +113,12 @@ const SwipeableWordCard: React.FC<SwipeableWordCardProps> = ({
         
         
       </View>
-      {/* 滑动提示区域 */}
-      <View style={styles.swipeHintsContainer}>
+        {/* 滑动提示区域 */}
+        <View style={styles.swipeHintsContainer}>
           <Text style={styles.swipeHintLeft}>←左滑忘记</Text>
           <Text style={styles.swipeHintRight}>右划记住→</Text>
         </View>
-    </View>
+      </View>
     
   );
 };
