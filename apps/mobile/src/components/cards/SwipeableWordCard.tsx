@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-nati
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../constants/colors';
 import { WordData } from './WordCard';
+import WordCardContent from './WordCardContent';
 import { Audio } from 'expo-av';
 import { useAppLanguage } from '../../context/AppLanguageContext';
 
@@ -73,34 +74,7 @@ const SwipeableWordCard: React.FC<SwipeableWordCardProps> = ({
               showsVerticalScrollIndicator={true}
               contentContainerStyle={styles.expandedContentContainer}
             >
-              <View style={styles.wordSection}>
-                <Text style={styles.word}>{wordData.correctedWord || wordData.word}</Text>
-                <View style={styles.phoneticContainer}>
-                  <Text style={styles.phonetic}>{wordData.phonetic}</Text>
-                  <TouchableOpacity style={styles.audioButton} onPress={handlePlayAudio}>
-                    <Ionicons name="volume-high" size={20} color={colors.primary[500]} />
-                  </TouchableOpacity>
-                </View>
-              </View>
-              {wordData.definitions.map((def, index) => (
-                <View key={index} style={styles.definitionItem}>
-                  <View style={styles.partOfSpeechTag}>
-                    <Text style={styles.partOfSpeechText}>{def.partOfSpeech}</Text>
-                  </View>
-                  <Text style={styles.definition}>{def.definition}</Text>
-                  {def.examples && def.examples.length > 0 && (
-                    <View style={styles.examplesContainer}>
-                      <Text style={styles.examplesTitle}>{t('examples')}</Text>
-                      {def.examples.map((ex, exIdx) => (
-                        <View key={exIdx} style={styles.exampleItem}>
-                          <Text style={styles.exampleEnglish}>{ex.english}</Text>
-                          <Text style={styles.exampleChinese}>{ex.chinese}</Text>
-                        </View>
-                      ))}
-                    </View>
-                  )}
-                </View>
-              ))}
+              <WordCardContent wordData={wordData} onPlayAudio={onPlayAudio} />
               {/* 单词来源信息 */}
               {wordData.lastSearched && (
                 <View style={styles.originSection}>

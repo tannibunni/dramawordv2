@@ -17,6 +17,7 @@ import { audioService } from '../../services/audioService';
 import { colors } from '../../constants/colors';
 import { useVocabulary } from '../../context/VocabularyContext';
 import WordCard from '../../components/cards/WordCard';
+import WordCardContent from '../../components/cards/WordCardContent';
 import WordList from '../../components/vocabulary/WordList';
 import { useAppLanguage } from '../../context/AppLanguageContext';
 import { t } from '../../constants/translations';
@@ -367,7 +368,7 @@ const VocabularyScreen: React.FC = () => {
               {isLoadingWordDetail ? (
                 <Text style={{textAlign:'center',padding:32}}>加载中...</Text>
               ) : selectedWordDetail ? (
-                <WordCard wordData={selectedWordDetail} />
+                <WordCardContent wordData={selectedWordDetail} />
               ) : (
                 <Text style={{textAlign:'center',padding:32}}>未找到释义</Text>
               )}
