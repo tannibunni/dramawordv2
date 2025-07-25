@@ -152,7 +152,7 @@ const HomeScreen: React.FC = () => {
         }
       }
       // 英文查中文
-      const result = await wordService.searchWord(word.toLowerCase(), 'en');
+      const result = await wordService.searchWord(word.toLowerCase(), 'en', appLanguage);
       if (result.success && result.data) {
         if (result.data?.definitions) {
           result.data.definitions.forEach((def: any, idx: number) => {
@@ -212,7 +212,7 @@ const HomeScreen: React.FC = () => {
     setIsLoading(true);
     setSearchResult(null);
     try {
-      const result = await wordService.searchWord(searchWord);
+      const result = await wordService.searchWord(searchWord, 'en', appLanguage);
       console.log('🔍 搜索结果:', result);
       if (result.success && result.data) {
         console.log('🔍 设置 searchResult:', result.data);
@@ -539,7 +539,7 @@ const HomeScreen: React.FC = () => {
                   setChToEnQuery('');
                   setSearchText(en);
                   // 直接查英文释义
-                  const result = await wordService.searchWord(en.toLowerCase(), 'en');
+                  const result = await wordService.searchWord(en.toLowerCase(), 'en', appLanguage);
                   if (result.success && result.data) {
                     setSearchResult(result.data);
                     setSearchText('');

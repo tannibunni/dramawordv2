@@ -209,7 +209,7 @@ const VocabularyScreen: React.FC = () => {
       console.log('🔄 本地无释义数据，查询云词库');
       setIsLoadingWordDetail(true);
       try {
-        const result = await wordService.searchWord(word.word, 'en');
+        const result = await wordService.searchWord(word.word, 'en', appLanguage);
         console.log('🌐 云词库查询结果:', result);
         setSelectedWordDetail(result.success ? result.data : null);
       } catch (e) {

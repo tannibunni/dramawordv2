@@ -117,7 +117,8 @@ export class WordService {
         headers,
         body: JSON.stringify({ 
           word: word.toLowerCase().trim(),
-          language: language
+          language: language,
+          uiLanguage: uiLanguage || 'zh-CN' // 传递界面语言
         }),
       });
 

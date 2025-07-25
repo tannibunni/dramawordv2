@@ -17,6 +17,7 @@ import { audioService } from '../../services/audioService';
 import { useShowList } from '../../context/ShowListContext';
 import { useVocabulary } from '../../context/VocabularyContext';
 import { useNavigation } from '../../components/navigation/NavigationContext';
+import { useAppLanguage } from '../../context/AppLanguageContext';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -57,6 +58,7 @@ const WordCardScreen: React.FC<WordCardScreenProps> = ({ navigation = {}, route 
   
   const { shows } = useShowList();
   const { addWord } = useVocabulary();
+  const { appLanguage } = useAppLanguage();
   
   // 加载单词数据
   useEffect(() => {
@@ -70,7 +72,7 @@ const WordCardScreen: React.FC<WordCardScreenProps> = ({ navigation = {}, route 
       setIsLoading(true);
       setError(null);
       
-      const result = await wordService.searchWord(word);
+      const result = await wordService.searchWord(word, 'en', appLanguage);
       
       if (result.success && result.data) {
         setWordData(result.data);
