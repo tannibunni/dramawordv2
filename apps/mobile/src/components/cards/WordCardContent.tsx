@@ -10,6 +10,8 @@ interface WordCardContentProps {
   wordData: WordData;
   onPlayAudio?: (word: string) => void;
   style?: any;
+  scrollable?: boolean; // 是否支持滚动
+  onScroll?: (event: any) => void; // 滚动事件回调
 }
 
 // 取消高度限制，让所有definitions都能直接显示
@@ -75,7 +77,7 @@ const getSpecialLabel = (type: 'slang' | 'phrase', lang: string) => {
   return map[type] || type;
 };
 
-const WordCardContent: React.FC<WordCardContentProps> = ({ wordData, onPlayAudio, style }) => {
+const WordCardContent: React.FC<WordCardContentProps> = ({ wordData, onPlayAudio, style, scrollable = false, onScroll }) => {
   const { appLanguage } = useAppLanguage();
   const handlePlayAudio = async () => {
     try {
@@ -102,47 +104,97 @@ const WordCardContent: React.FC<WordCardContentProps> = ({ wordData, onPlayAudio
           <Ionicons name="volume-medium" size={22} color={colors.primary[500]} />
         </TouchableOpacity>
       </View>
-      {/* 主体内容区：无滚动，全部展示 */}
-      <View style={{ marginBottom: 8 }}>
-        {wordData.definitions.map((def, idx) => (
-          <View key={idx} style={styles.definitionBlock}>
-            <View style={styles.posTagWrapper}>
-              <Text style={styles.posTag}>{getPartOfSpeechLabel(def.partOfSpeech, appLanguage)}</Text>
-            </View>
-            <Text style={styles.definition}>{def.definition}</Text>
-            {def.examples && def.examples.length > 0 && (
-              <View style={styles.examplesBlock}>
-                {def.examples.map((ex, exIdx) => (
-                  <View key={exIdx} style={styles.exampleContainer}>
-                    <Text style={styles.exampleLabelAndText}>{ex.english}</Text>
-                    <Text style={styles.exampleLabelAndText}>{ex.chinese}</Text>
-                  </View>
-                ))}
+      {/* 主体内容区：根据scrollable属性决定是否滚动 */}
+      {scrollable ? (
+        <ScrollView
+          style={{ marginBottom: 8 }}
+          showsVerticalScrollIndicator={true}
+          indicatorStyle="black"
+          persistentScrollbar={true}
+          onScroll={onScroll}
+          scrollEventThrottle={16}
+        >
+          {wordData.definitions.map((def, idx) => (
+            <View key={idx} style={styles.definitionBlock}>
+              <View style={styles.posTagWrapper}>
+                <Text style={styles.posTag}>{getPartOfSpeechLabel(def.partOfSpeech, appLanguage)}</Text>
               </View>
-            )}
-          </View>
-        ))}
-        
-        {/* 俚语/缩写含义 */}
-        {wordData.slangMeaning && (
-          <View style={styles.definitionBlock}>
-            <View style={styles.posTagWrapper}>
-              <Text style={styles.posTag}>{getSpecialLabel('slang', appLanguage)}</Text>
+              <Text style={styles.definition}>{def.definition}</Text>
+              {def.examples && def.examples.length > 0 && (
+                <View style={styles.examplesBlock}>
+                  {def.examples.map((ex, exIdx) => (
+                    <View key={exIdx} style={styles.exampleContainer}>
+                      <Text style={styles.exampleLabelAndText}>{ex.english}</Text>
+                      <Text style={styles.exampleLabelAndText}>{ex.chinese}</Text>
+                    </View>
+                  ))}
+                </View>
+              )}
             </View>
-            <Text style={styles.definition}>{wordData.slangMeaning}</Text>
-          </View>
-        )}
-        
-        {/* 短语解释 */}
-        {wordData.phraseExplanation && (
-          <View style={styles.definitionBlock}>
-            <View style={styles.posTagWrapper}>
-              <Text style={styles.posTag}>{getSpecialLabel('phrase', appLanguage)}</Text>
+          ))}
+          
+          {/* 俚语/缩写含义 */}
+          {wordData.slangMeaning && (
+            <View style={styles.definitionBlock}>
+              <View style={styles.posTagWrapper}>
+                <Text style={styles.posTag}>{getSpecialLabel('slang', appLanguage)}</Text>
+              </View>
+              <Text style={styles.definition}>{wordData.slangMeaning}</Text>
             </View>
-            <Text style={styles.definition}>{wordData.phraseExplanation}</Text>
-          </View>
-        )}
-      </View>
+          )}
+          
+          {/* 短语解释 */}
+          {wordData.phraseExplanation && (
+            <View style={styles.definitionBlock}>
+              <View style={styles.posTagWrapper}>
+                <Text style={styles.posTag}>{getSpecialLabel('phrase', appLanguage)}</Text>
+              </View>
+              <Text style={styles.definition}>{wordData.phraseExplanation}</Text>
+            </View>
+          )}
+        </ScrollView>
+      ) : (
+        <View style={{ marginBottom: 8 }}>
+          {wordData.definitions.map((def, idx) => (
+            <View key={idx} style={styles.definitionBlock}>
+              <View style={styles.posTagWrapper}>
+                <Text style={styles.posTag}>{getPartOfSpeechLabel(def.partOfSpeech, appLanguage)}</Text>
+              </View>
+              <Text style={styles.definition}>{def.definition}</Text>
+              {def.examples && def.examples.length > 0 && (
+                <View style={styles.examplesBlock}>
+                  {def.examples.map((ex, exIdx) => (
+                    <View key={exIdx} style={styles.exampleContainer}>
+                      <Text style={styles.exampleLabelAndText}>{ex.english}</Text>
+                      <Text style={styles.exampleLabelAndText}>{ex.chinese}</Text>
+                    </View>
+                  ))}
+                </View>
+              )}
+            </View>
+          ))}
+          
+          {/* 俚语/缩写含义 */}
+          {wordData.slangMeaning && (
+            <View style={styles.definitionBlock}>
+              <View style={styles.posTagWrapper}>
+                <Text style={styles.posTag}>{getSpecialLabel('slang', appLanguage)}</Text>
+              </View>
+              <Text style={styles.definition}>{wordData.slangMeaning}</Text>
+            </View>
+          )}
+          
+          {/* 短语解释 */}
+          {wordData.phraseExplanation && (
+            <View style={styles.definitionBlock}>
+              <View style={styles.posTagWrapper}>
+                <Text style={styles.posTag}>{getSpecialLabel('phrase', appLanguage)}</Text>
+              </View>
+              <Text style={styles.definition}>{wordData.phraseExplanation}</Text>
+            </View>
+          )}
+        </View>
+      )}
     </View>
   );
 };

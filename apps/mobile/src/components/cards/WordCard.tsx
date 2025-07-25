@@ -16,6 +16,7 @@ import { colors } from '../../../../../packages/ui/src/tokens';
 import { useAppLanguage } from '../../context/AppLanguageContext';
 import { t } from '../../constants/translations';
 import { wordFeedbackService } from '../../services/wordFeedbackService';
+import WordCardContent from './WordCardContent';
 
 export interface WordDefinition {
   partOfSpeech: string;
@@ -317,73 +318,7 @@ const WordCard: React.FC<WordCardProps> = ({
     extrapolate: 'clamp',
   });
 
-  // 词性英文转中文映射
-  const partOfSpeechMap: Record<string, Record<string, string>> = {
-    'zh-CN': {
-    'noun': '名词',
-    'verb': '动词',
-    'adjective': '形容词',
-    'adverb': '副词',
-    'pronoun': '代词',
-    'preposition': '介词',
-    'conjunction': '连词',
-    'interjection': '感叹词',
-    'article': '冠词',
-    'numeral': '数词',
-    'auxiliary': '助词',
-    'modal': '情态动词',
-    'determiner': '限定词',
-    'prefix': '前缀',
-    'suffix': '后缀',
-    'n.': '名词',
-    'v.': '动词',
-    'adj.': '形容词',
-    'adv.': '副词',
-    'pron.': '代词',
-    'prep.': '介词',
-    'conj.': '连词',
-    'int.': '感叹词',
-    'art.': '冠词',
-    'num.': '数词',
-    'aux.': '助词',
-    'modal.': '情态动词',
-    'det.': '限定词',
-    'prefix.': '前缀',
-    'suffix.': '后缀',
-    },
-    'en-US': {
-      'noun': 'noun',
-      'verb': 'verb',
-      'adjective': 'adjective',
-      'adverb': 'adverb',
-      'pronoun': 'pronoun',
-      'preposition': 'preposition',
-      'conjunction': 'conjunction',
-      'interjection': 'interjection',
-      'article': 'article',
-      'numeral': 'numeral',
-      'auxiliary': 'auxiliary',
-      'modal': 'modal',
-      'determiner': 'determiner',
-      'prefix': 'prefix',
-      'suffix': 'suffix',
-      'n.': 'n.',
-      'v.': 'v.',
-      'adj.': 'adj.',
-      'adv.': 'adv.',
-      'pron.': 'pron.',
-      'prep.': 'prep.',
-      'conj.': 'conj.',
-      'int.': 'int.',
-      'art.': 'art.',
-      'num.': 'num.',
-      'aux.': 'aux.',
-      'modal.': 'modal.',
-      'det.': 'det.',
-      'prefix.': 'prefix.',
-      'suffix.': 'suffix.',
-    }
-  };
+
 
   return (
     <View style={[styles.container, style]}>
@@ -451,81 +386,18 @@ const WordCard: React.FC<WordCardProps> = ({
         </TouchableOpacity>
       </View>
           
-      {/* 主体内容区：可滚动 */}
+      {/* 主体内容区：使用统一的WordCardContent组件 */}
       <View style={{ maxHeight: CARD_CONTENT_MAX_HEIGHT, marginBottom: 8 }}>
-        <ScrollView
-          showsVerticalScrollIndicator={true}
-          indicatorStyle="black"
-          persistentScrollbar={true}
+        <WordCardContent 
+          wordData={wordData} 
+          onPlayAudio={onPlayAudio} 
+          scrollable={true}
           onScroll={e => {
             if (showScrollTip && e.nativeEvent.contentOffset.y > 10) {
               setShowScrollTip(false);
             }
           }}
-          scrollEventThrottle={16}
-        >
-          {wordData.definitions.map((def, idx) => (
-            <View key={idx} style={styles.definitionBlock}>
-              {/* 词性标签 */}
-              <View style={styles.posTagWrapper}>
-                <Text style={styles.posTag}>
-                  {partOfSpeechMap[appLanguage]?.[(def.partOfSpeech || '').toLowerCase()] || def.partOfSpeech}
-                </Text>
-              </View>
-              <Text style={styles.definition}>{def.definition}</Text>
-              {def.examples && def.examples.length > 0 && (
-                <View style={styles.examplesBlock}>
-                  {def.examples.map((ex, exIdx) => {
-                    // 只显示中英
-                    if (appLanguage === 'zh-CN' && getWordLangLabel(wordData) === '【英语】') {
-                      if (!ex.english && !ex.chinese) return null;
-                      return (
-                        <View key={exIdx} style={styles.exampleContainer}>
-                          {ex.english ? (
-                            <Text style={styles.exampleLabelAndText}>{ex.english}</Text>
-                          ) : null}
-                          {ex.chinese ? (
-                            <Text style={styles.exampleLabelAndText}>{ex.chinese}</Text>
-                          ) : null}
-                        </View>
-                      );
-                    }
-                    // 其它情况，保持原有逻辑，但不加语言标签
-                    return (
-                      <View key={exIdx} style={styles.exampleContainer}>
-                        <Text style={styles.exampleLabelAndText}>{ex.english}</Text>
-                        {appLanguage === 'zh-CN' && ex.romaji && (
-                          <Text style={styles.examplePronunciation}>{ex.romaji}</Text>
-                        )}
-                        <Text style={styles.exampleLabelAndText}>{ex.chinese}</Text>
-                      </View>
-                    );
-                  })}
-                </View>
-              )}
-            </View>
-          ))}
-          
-          {/* 俚语/缩写含义 */}
-          {wordData.slangMeaning && (
-            <View style={styles.definitionBlock}>
-              <View style={styles.posTagWrapper}>
-                <Text style={styles.posTag}>{getSpecialLabel('slang', appLanguage)}</Text>
-              </View>
-              <Text style={styles.definition}>{wordData.slangMeaning}</Text>
-            </View>
-          )}
-          
-          {/* 短语解释 */}
-          {wordData.phraseExplanation && (
-            <View style={styles.definitionBlock}>
-              <View style={styles.posTagWrapper}>
-                <Text style={styles.posTag}>{getSpecialLabel('phrase', appLanguage)}</Text>
-              </View>
-              <Text style={styles.definition}>{wordData.phraseExplanation}</Text>
-            </View>
-          )}
-        </ScrollView>
+        />
       </View>
           
       {/* 滑动提示，仅初始显示，滑动后消失 */}
@@ -596,22 +468,7 @@ function getWordLangShort(wordData: WordData, appLanguage: string) {
   return '';
 }
 
-// 特殊标签的多语言映射
-const specialLabelMap: Record<string, Record<string, string>> = {
-  'zh-CN': {
-    'slang': '俚语/缩写',
-    'phrase': '短语',
-  },
-  'en-US': {
-    'slang': 'Slang/Abbr',
-    'phrase': 'Phrase',
-  }
-};
 
-const getSpecialLabel = (type: 'slang' | 'phrase', lang: string) => {
-  const map = specialLabelMap[lang] || specialLabelMap['en-US'];
-  return map[type] || type;
-};
 
 function getWordLangFlag(wordData: WordData, appLanguage: string) {
   // 如果界面为中文，只显示EN或JA
