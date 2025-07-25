@@ -32,6 +32,7 @@ import notificationService, { NotificationPreferences } from '../../services/not
 import { learningDataService } from '../../services/learningDataService';
 import { LearningStatsService } from '../../services/learningStatsService';
 import { DataSyncService } from '../../services/dataSyncService';
+import { cacheService, CACHE_KEYS } from '../../services/cacheService';
 
 
 interface UserStats {
@@ -367,19 +368,13 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   const handleClearWordCache = async () => {
     setClearingCache(true);
     try {
-      // 专门清除单词详情缓存
-      const keys = await AsyncStorage.getAllKeys();
-      const wordCacheKeys = keys.filter(key => 
-        key.startsWith('word_detail_')
-      );
+      // 使用统一缓存服务清除单词详情缓存
+      await cacheService.clearPrefix(CACHE_KEYS.WORD_DETAIL);
       
-      if (wordCacheKeys.length > 0) {
-        await AsyncStorage.multiRemove(wordCacheKeys);
-        Alert.alert('清除成功', `已清除 ${wordCacheKeys.length} 个单词缓存`);
-        console.log('🗑️ 清除的单词缓存:', wordCacheKeys);
-      } else {
-        Alert.alert('提示', '没有找到单词缓存数据');
-      }
+      // 获取缓存统计信息
+      const stats = await cacheService.getStats();
+      Alert.alert('清除成功', `已清除单词缓存\n内存缓存: ${stats.memorySize} 项\n存储缓存: ${stats.storageSize} 项`);
+      console.log('🗑️ 单词缓存清除完成，缓存统计:', stats);
     } catch (error) {
       console.error('清除单词缓存失败:', error);
       Alert.alert('清除失败', '清除单词缓存时发生错误');

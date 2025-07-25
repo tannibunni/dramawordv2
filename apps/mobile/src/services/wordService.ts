@@ -2,6 +2,7 @@
 import { colors } from '../../../../packages/ui/src/tokens';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_BASE_URL } from '../constants/config';
+import { cacheService, CACHE_KEYS } from './cacheService';
 
 // 类型定义
 export interface WordDefinition {
@@ -465,31 +466,25 @@ export class WordService {
     ];
   }
 
-  // 获取单词详情（优先本地缓存，没有则调用API）
+  // 获取单词详情（使用统一缓存服务）
   async getWordDetail(word: string): Promise<WordData | null> {
     try {
       console.log(`🔍 获取单词详情: ${word}`);
       
-      // 1. 先查本地缓存
-      const cacheKey = `word_detail_${word.toLowerCase()}`;
-      const cached = await AsyncStorage.getItem(cacheKey);
+      // 1. 先查统一缓存
+      const cached = await cacheService.get<WordData>(CACHE_KEYS.WORD_DETAIL, word);
       if (cached) {
-        try {
-          const wordData = JSON.parse(cached);
-          console.log(`✅ 从本地缓存获取单词详情: ${word}`);
-          return wordData;
-        } catch (error) {
-          console.warn(`⚠️ 本地缓存数据格式错误，重新获取: ${word}`);
-        }
+        console.log(`✅ 从统一缓存获取单词详情: ${word}`);
+        return cached;
       }
       
       // 2. 没有缓存就调用API
-      console.log(`📡 本地无缓存，调用API获取单词详情: ${word}`);
+      console.log(`📡 缓存无数据，调用API获取单词详情: ${word}`);
       const result = await this.searchWord(word);
       
       if (result.success && result.data) {
-        // 3. 缓存到本地
-        await AsyncStorage.setItem(cacheKey, JSON.stringify(result.data));
+        // 3. 缓存到统一缓存服务
+        await cacheService.set(CACHE_KEYS.WORD_DETAIL, word, result.data);
         console.log(`✅ API获取成功并缓存: ${word}`);
         return result.data;
       } else {
@@ -502,7 +497,7 @@ export class WordService {
     }
   }
 
-  // 清空用户缓存（只清空本地缓存，不影响数据库中的词库）
+  // 清空用户缓存（使用统一缓存服务）
   async clearUserCache(): Promise<boolean> {
     try {
       console.log('🧹 清空用户缓存...');
@@ -517,15 +512,25 @@ export class WordService {
 
       if (response.ok) {
         const result = await response.json();
-        console.log('✅ 用户缓存清空成功:', result.message);
-        return true;
+        console.log('✅ 后端用户缓存清空成功:', result.message);
       } else {
         console.log('⚠️ 后端清空失败，仅清空本地缓存');
-        return true; // 即使后端失败，本地清空也算成功
       }
+
+      // 清空统一缓存服务中的单词详情缓存
+      await cacheService.clearPrefix(CACHE_KEYS.WORD_DETAIL);
+      console.log('✅ 统一缓存服务清空成功');
+      
+      return true;
     } catch (error) {
       console.error(`❌ 清空用户缓存错误: ${error}`);
-      // 即使网络错误，也返回成功，因为主要是清空本地缓存
+      // 即使网络错误，也清空本地缓存
+      try {
+        await cacheService.clearPrefix(CACHE_KEYS.WORD_DETAIL);
+        console.log('✅ 网络错误后清空本地缓存成功');
+      } catch (localError) {
+        console.error('❌ 清空本地缓存也失败:', localError);
+      }
       return true;
     }
   }
