@@ -340,6 +340,12 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
     }
   }, [wordDataCache]);
 
+  // 清理内存缓存的函数
+  const clearWordDataCache = () => {
+    console.log('🗑️ 清理 ReviewScreen 内存缓存');
+    setWordDataCache({});
+  };
+
   // 将 ReviewWord 转换为 WordData 格式
   const convertToWordData = async (reviewWord: ReviewWord): Promise<WordData> => {
     try {

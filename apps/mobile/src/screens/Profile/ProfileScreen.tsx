@@ -272,6 +272,14 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
       </TouchableOpacity>
 
       {/* 数据管理 */}
+      <TouchableOpacity style={styles.settingItem} onPress={handleClearWordCache}>
+        <View style={styles.settingLeft}>
+          <Ionicons name="refresh-outline" size={24} color={colors.accent[500]} />
+          <Text style={[styles.settingText, { color: colors.accent[500] }]}>清除单词缓存</Text>
+        </View>
+        <Ionicons name="chevron-forward" size={20} color={colors.neutral[500]} />
+      </TouchableOpacity>
+
       <TouchableOpacity style={styles.settingItem} onPress={handleClearAllData}>
         <View style={styles.settingLeft}>
           <Ionicons name="trash-outline" size={24} color={colors.error[500]} />
@@ -351,6 +359,30 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
     } catch (error) {
       console.error('清除缓存失败:', error);
       Alert.alert('清除失败', '清除缓存时发生错误');
+    } finally {
+      setClearingCache(false);
+    }
+  };
+
+  const handleClearWordCache = async () => {
+    setClearingCache(true);
+    try {
+      // 专门清除单词详情缓存
+      const keys = await AsyncStorage.getAllKeys();
+      const wordCacheKeys = keys.filter(key => 
+        key.startsWith('word_detail_')
+      );
+      
+      if (wordCacheKeys.length > 0) {
+        await AsyncStorage.multiRemove(wordCacheKeys);
+        Alert.alert('清除成功', `已清除 ${wordCacheKeys.length} 个单词缓存`);
+        console.log('🗑️ 清除的单词缓存:', wordCacheKeys);
+      } else {
+        Alert.alert('提示', '没有找到单词缓存数据');
+      }
+    } catch (error) {
+      console.error('清除单词缓存失败:', error);
+      Alert.alert('清除失败', '清除单词缓存时发生错误');
     } finally {
       setClearingCache(false);
     }
