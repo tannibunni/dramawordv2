@@ -244,10 +244,9 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   specialContent: {
-    fontSize: 16,
+    fontSize: 18,
     color: '#222',
     marginBottom: 6,
-    lineHeight: 22,
   },
 });
 
