@@ -1057,46 +1057,21 @@ async function generateWordData(word: string, language: string = 'en', uiLanguag
     }
   }
 
-// 获取后备单词数据
+// 获取后备单词数据 - 返回错误信息而不是假数据
 function getFallbackWordData(word: string, language: string = 'en') {
-  const getLanguageFallback = (lang: string) => {
-    switch (lang) {
-      case 'ko':
-      case 'ja':
-        return {
-          phonetic: word,
-          definitions: [
-            {
-              partOfSpeech: 'n.',
-              definition: `${word} 的基本含义`,
-              examples: [
-                { english: word, chinese: `${word} 的含义` }
-              ]
-            }
-          ],
-          audioUrl: getGoogleTTSUrl(word, lang)
-        };
-      default: // 'en'
-        const isEnglish = /[a-zA-Z]/.test(word);
-        return {
-          phonetic: isEnglish ? `/${word}/` : '',
-          definitions: [
-            {
-              partOfSpeech: isEnglish ? 'noun' : 'n.',
-              definition: `${word} 的基本含义`,
-              examples: isEnglish ? [
-                { english: `This is a ${word}.`, chinese: `这是一个${word}。` },
-                { english: `I like ${word}.`, chinese: `我喜欢${word}。` }
-              ] : [
-                { english: `${word}`, chinese: `${word} 的含义` }
-              ]
-            }
-          ],
-          audioUrl: getGoogleTTSUrl(word, lang)
-        };
-    }
+  return {
+    phonetic: '',
+    definitions: [
+      {
+        partOfSpeech: '',
+        definition: '查询失败，请重试',
+        examples: []
+      }
+    ],
+    audioUrl: '',
+    slangMeaning: null,
+    phraseExplanation: null
   };
-  return getLanguageFallback(language);
 }
 
 // 清空所有数据（调试用）

@@ -12,6 +12,11 @@ export interface WordDefinition {
     chinese: string;
     pinyin?: string; // 新增：例句拼音，兼容新后端
     romaji?: string; // 日语罗马音（原有）
+    japanese?: string; // 日语例句
+    korean?: string; // 韩语例句
+    french?: string; // 法语例句
+    spanish?: string; // 西班牙语例句
+    hangul?: string; // 韩语谚文
   }>;
 }
 
@@ -194,15 +199,10 @@ export class WordService {
     } catch (error) {
       console.error(`❌ 单词搜索错误: ${error}`);
       
-      // 如果是网络错误，返回模拟数据
-      if (error instanceof TypeError && error.message.includes('fetch')) {
-        console.log('🌐 网络错误，使用模拟数据');
-        return this.getMockWordData(word);
-      }
-      
+      // 返回错误信息而不是模拟数据
       return {
         success: false,
-        error: error instanceof Error ? error.message : '未知错误',
+        error: error instanceof Error ? error.message : '网络连接失败，请检查网络后重试',
       };
     }
   }
