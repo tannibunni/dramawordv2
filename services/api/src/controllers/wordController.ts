@@ -69,7 +69,8 @@ function getPromptTemplate(uiLanguage: string, language: string, type: string) {
     const templates = JSON.parse(fs.readFileSync(promptPath, 'utf-8'));
     logger.info(`✅ 找到 prompt 文件: ${promptPath}`);
     logger.info(`📄 Prompt 内容: ${JSON.stringify(templates[type], null, 2)}`);
-    return templates[type];
+    // 新增：返回时带上路径和内容，便于后续log
+    return { template: templates[type], promptPath, promptContent: templates[type] };
   }
   // fallback: /prompts/{uiLanguage}-{language}.json
   const altPromptPath = path.join(__dirname, '../../prompts', `${mappedUI}-${mappedLang}.json`);
@@ -77,21 +78,21 @@ function getPromptTemplate(uiLanguage: string, language: string, type: string) {
     const templates = JSON.parse(fs.readFileSync(altPromptPath, 'utf-8'));
     logger.info(`✅ 找到 fallback prompt 文件: ${altPromptPath}`);
     logger.info(`📄 Prompt 内容: ${JSON.stringify(templates[type], null, 2)}`);
-    return templates[type];
+    return { template: templates[type], promptPath: altPromptPath, promptContent: templates[type] };
   }
   // fallback: prompts/{uiLanguage}/default.json
   const fallbackPath = path.join(promptDir, 'default.json');
   if (fs.existsSync(fallbackPath)) {
     logger.info(`🔄 使用 fallback: ${fallbackPath}`);
     const templates = JSON.parse(fs.readFileSync(fallbackPath, 'utf-8'));
-    return templates[type];
+    return { template: templates[type], promptPath: fallbackPath, promptContent: templates[type] };
   }
   // fallback: prompts/{uiLanguage}.json（兼容老结构）
   const legacyPath = path.join(__dirname, '../../prompts', `${mappedUI}.json`);
   if (fs.existsSync(legacyPath)) {
     logger.info(`🔄 使用 legacy fallback: ${legacyPath}`);
     const templates = JSON.parse(fs.readFileSync(legacyPath, 'utf-8'));
-    return templates[type];
+    return { template: templates[type], promptPath: legacyPath, promptContent: templates[type] };
   }
   logger.error(`❌ 所有 prompt 文件都未找到: ${promptPath}`);
   throw new Error(`Prompt template not found: ${promptPath}`);
@@ -112,7 +113,7 @@ function getLanguagePrompt(word: string, language: string, uiLanguage: string) {
   const definitionLang = getLanguageName(uiLanguage);
   const targetLang = getLanguageName(language);
   const template = getPromptTemplate(uiLanguage, language, 'definition');
-  let prompt = renderPrompt(template, {
+  let prompt = renderPrompt(template.template, {
     word,
     language,
     uiLanguage: definitionLang,
@@ -123,7 +124,7 @@ function getLanguagePrompt(word: string, language: string, uiLanguage: string) {
   if (isEnglishUI) {
     prompt += '\n\nImportant: All definitions, explanations, and example translations must be in English, suitable for English speakers learning this language.';
   }
-  return prompt;
+  return { template: prompt, promptPath: template.promptPath, promptContent: template.promptContent };
 }
 
 // 单词搜索 - 先查云单词表，没有再用AI
@@ -190,6 +191,9 @@ export const searchWord = async (req: Request, res: Response): Promise<void> => 
     logger.info(`🔍 Debug: About to call generateWordData for: ${searchTerm}`);
     
     try {
+      const { template: prompt, promptPath, promptContent } = getLanguagePrompt(searchTerm, language, uiLanguage);
+      logger.info(`📝 本次查词引用的prompt文件: ${promptPath}`);
+      logger.info(`📝 prompt内容: ${JSON.stringify(promptContent, null, 2)}`);
       const generatedData = await generateWordData(searchTerm, language, uiLanguage); // 传递 uiLanguage
       logger.info(`🔍 Debug: generateWordData completed for: ${searchTerm}`);
       
@@ -854,7 +858,9 @@ function getGoogleTTSUrl(word: string, language: string = 'en') {
 // 使用 OpenAI 生成单词数据
 async function generateWordData(word: string, language: string = 'en', uiLanguage: string = 'zh-CN') {
   // 根据语言生成不同的 prompt
-  const prompt = getLanguagePrompt(word, language, uiLanguage);
+  const { template: prompt, promptPath, promptContent } = getLanguagePrompt(word, language, uiLanguage);
+  logger.info(`📝 本次查词引用的prompt文件: ${promptPath}`);
+  logger.info(`📝 prompt内容: ${JSON.stringify(promptContent, null, 2)}`);
 
     const getSystemMessage = (lang: string) => {
       switch (lang) {
@@ -866,6 +872,9 @@ async function generateWordData(word: string, language: string = 'en', uiLanguag
           return "你是英语词典助手。只返回JSON格式，不要其他内容。翻译要简洁，适合语言学习。";
       }
     };
+
+    // 新增：详细log打印本次发送给OpenAI的完整prompt内容
+    logger.info(`📝 发送给OpenAI的完整prompt: system: ${getSystemMessage(language)} | user: ${prompt}`);
 
     const completion = await openai.chat.completions.create({
       model: "gpt-3.5-turbo",
@@ -1286,7 +1295,7 @@ export const testPromptLoading = async (req: Request, res: Response): Promise<vo
     logger.info(`🧪 测试 prompt 文件加载: uiLanguage=${uiLanguage}, language=${language}`);
     
     try {
-      const template = getPromptTemplate(uiLanguage as string, language as string, 'definition');
+      const { template, promptPath, promptContent } = getPromptTemplate(uiLanguage as string, language as string, 'definition');
       
       res.json({
         success: true,
