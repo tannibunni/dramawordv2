@@ -193,15 +193,27 @@ const VocabularyScreen: React.FC = () => {
   // 1. 点击单词卡后，优先显示本地内容，若无释义则查云词库
   const handleWordPress = async (word: any) => {
     setSelectedWord(word);
+    console.log('🔍 点击单词:', word.word);
+    console.log('🔍 单词数据结构:', {
+      hasDefinitions: !!word.definitions,
+      isArray: Array.isArray(word.definitions),
+      length: word.definitions?.length,
+      definitions: word.definitions
+    });
+    
     if (word.definitions && Array.isArray(word.definitions) && word.definitions.length > 0) {
+      console.log('✅ 使用本地释义数据');
       setSelectedWordDetail(word);
       setIsLoadingWordDetail(false);
     } else {
+      console.log('🔄 本地无释义数据，查询云词库');
       setIsLoadingWordDetail(true);
       try {
         const result = await wordService.searchWord(word.word, 'en');
+        console.log('🌐 云词库查询结果:', result);
         setSelectedWordDetail(result.success ? result.data : null);
       } catch (e) {
+        console.error('❌ 云词库查询失败:', e);
         setSelectedWordDetail(null);
       }
       setIsLoadingWordDetail(false);
@@ -370,7 +382,12 @@ const VocabularyScreen: React.FC = () => {
               ) : selectedWordDetail ? (
                 <WordCardContent wordData={selectedWordDetail} />
               ) : (
-                <Text style={{textAlign:'center',padding:32}}>未找到释义</Text>
+                <View style={{padding:32}}>
+                  <Text style={{textAlign:'center',marginBottom:8}}>未找到释义</Text>
+                  <Text style={{textAlign:'center',fontSize:12,color:'#666'}}>
+                    可能原因：网络连接问题或该单词暂未收录
+                  </Text>
+                </View>
               )}
             </View>
           </ScrollView>
