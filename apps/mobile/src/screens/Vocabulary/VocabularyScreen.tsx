@@ -439,7 +439,11 @@ const VocabularyScreen: React.FC = () => {
           {/* 已彻底移除语言筛选器相关JSX块 */}
           <WordList
             words={filteredWords}
-            onWordPress={(word) => { setSelectedWord(word); setSearchText(word.word); setIsEditing(false); }}
+            onWordPress={(word) => { 
+              handleWordPress(word); 
+              setSearchText(word.word); 
+              setIsEditing(false); 
+            }}
             onDeleteWord={handleDeleteWord}
           />
         </View>
