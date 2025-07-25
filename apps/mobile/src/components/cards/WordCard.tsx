@@ -505,6 +505,26 @@ const WordCard: React.FC<WordCardProps> = ({
               )}
             </View>
           ))}
+          
+          {/* 俚语/缩写含义 */}
+          {wordData.slangMeaning && (
+            <View style={styles.definitionBlock}>
+              <View style={styles.posTagWrapper}>
+                <Text style={styles.posTag}>俚语/缩写</Text>
+              </View>
+              <Text style={styles.definition}>{wordData.slangMeaning}</Text>
+            </View>
+          )}
+          
+          {/* 短语解释 */}
+          {wordData.phraseExplanation && (
+            <View style={styles.definitionBlock}>
+              <View style={styles.posTagWrapper}>
+                <Text style={styles.posTag}>短语</Text>
+              </View>
+              <Text style={styles.definition}>{wordData.phraseExplanation}</Text>
+            </View>
+          )}
         </ScrollView>
       </View>
           
