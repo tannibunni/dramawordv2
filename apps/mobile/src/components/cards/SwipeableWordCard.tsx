@@ -77,18 +77,9 @@ const SwipeableWordCard: React.FC<SwipeableWordCardProps> = ({
               <WordCardContent 
                 wordData={wordData} 
                 onPlayAudio={onPlayAudio} 
-                showHeader={false}
+                showHeader={true}
                 scrollable={false}
               />
-              {/* 调试信息 */}
-              {__DEV__ && (
-                <View style={{padding: 10, backgroundColor: '#f0f0f0', marginTop: 10}}>
-                  <Text style={{fontSize: 12, color: '#666'}}>
-                    调试: slangMeaning={wordData.slangMeaning ? '有' : '无'}, 
-                    phraseExplanation={wordData.phraseExplanation ? '有' : '无'}
-                  </Text>
-                </View>
-              )}
               {/* 单词来源信息 */}
               {wordData.lastSearched && (
                 <View style={styles.originSection}>
@@ -120,13 +111,15 @@ const SwipeableWordCard: React.FC<SwipeableWordCardProps> = ({
           )}
         </View>
         
-        {/* 滑动提示区域 */}
-        <View style={styles.swipeHintsContainer}>
+        
+      </View>
+      {/* 滑动提示区域 */}
+      <View style={styles.swipeHintsContainer}>
           <Text style={styles.swipeHintLeft}>←左滑忘记</Text>
           <Text style={styles.swipeHintRight}>右划记住→</Text>
         </View>
-      </View>
     </View>
+    
   );
 };
 
