@@ -59,8 +59,10 @@ function mapTargetLanguage(language: string) {
   return language;
 }
 function getPromptTemplate(uiLanguage: string, language: string, type: string) {
+  logger.info(`🔍 getPromptTemplate 参数: uiLanguage=${uiLanguage}, language=${language}, type=${type}`);
   const mappedUI = mapUILanguage(uiLanguage);
   const mappedLang = mapTargetLanguage(language);
+  logger.info(`🔍 getPromptTemplate 映射: mappedUI=${mappedUI}, mappedLang=${mappedLang}`);
   // 优先查 /prompts/{uiLanguage}/{language}.json
   const promptDir = path.join(__dirname, '../../prompts', mappedUI);
   const promptPath = path.join(promptDir, `${mappedLang}.json`);
@@ -107,11 +109,13 @@ function renderPrompt(template: string, params: Record<string, string>) {
 }
 
 function getLanguagePrompt(word: string, language: string, uiLanguage: string) {
+  logger.info(`🔍 getLanguagePrompt 参数: word=${word}, language=${language}, uiLanguage=${uiLanguage}`);
   const isEnglishUI = uiLanguage && uiLanguage.startsWith('en');
   const isChineseUI = uiLanguage && (uiLanguage.startsWith('zh') || uiLanguage === 'zh-CN');
   const exampleField = isEnglishUI ? 'english' : (isChineseUI ? 'chinese' : getLanguageName(uiLanguage));
   const definitionLang = getLanguageName(uiLanguage);
   const targetLang = getLanguageName(language);
+  logger.info(`🔍 getLanguagePrompt 处理: isEnglishUI=${isEnglishUI}, isChineseUI=${isChineseUI}, exampleField=${exampleField}, definitionLang=${definitionLang}, targetLang=${targetLang}`);
   const template = getPromptTemplate(uiLanguage, language, 'definition');
   let prompt = renderPrompt(template.template, {
     word,
@@ -936,7 +940,7 @@ async function generateWordData(word: string, language: string = 'en', uiLanguag
     logger.info(`📝 发送给OpenAI的完整prompt: system: ${getSystemMessage(language, uiLanguage)} | user: ${prompt}`);
 
     const completion = await openai.chat.completions.create({
-      model: "gpt-4o",
+      model: "gpt-3.5-turbo",
       messages: [
         {
           role: "system",
