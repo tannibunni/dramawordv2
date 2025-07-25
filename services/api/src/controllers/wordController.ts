@@ -141,8 +141,31 @@ export const searchWord = async (req: Request, res: Response): Promise<void> => 
     }
 
     const searchTerm = word.toLowerCase().trim();
-    const cacheKey = `${searchTerm}_${language}_${uiLanguage}`;
-    logger.info(`🔍 Searching for word: ${searchTerm} in ${language}`);
+    
+    // 自动检测搜索词的语言
+    let detectedLanguage = language;
+    if (language === 'en') {
+      // 如果前端传递的是 'en'，尝试检测实际语言
+      const hasChineseChars = /[\u4e00-\u9fff]/.test(searchTerm);
+      const hasPinyinTones = /[āáǎàēéěèīíǐìōóǒòūúǔùǖǘǚǜü]/.test(searchTerm);
+      const isPinyinLike = /^[a-z]+(\s+[a-z]+)*$/i.test(searchTerm) && searchTerm.length <= 20;
+      
+      if (hasChineseChars) {
+        detectedLanguage = 'zh-CN';
+        logger.info(`🔍 检测到中文字符，将语言从 'en' 改为 'zh-CN': ${searchTerm}`);
+      } else if (hasPinyinTones) {
+        // 包含声调符号的拼音
+        detectedLanguage = 'zh-CN';
+        logger.info(`🔍 检测到拼音声调，将语言从 'en' 改为 'zh-CN': ${searchTerm}`);
+      } else if (isPinyinLike && !/^(hello|hi|bye|good|bad|yes|no|ok|okay|bonjour|merci|oui|non|gracias|hola|ciao|grazie|danke|bitte|ja|nein|arigato|konnichiwa|sayonara|annyeong|kamsahamnida)$/i.test(searchTerm)) {
+        // 可能是无声调拼音，但排除常见英文单词和其他语言的常见词汇
+        detectedLanguage = 'zh-CN';
+        logger.info(`🔍 检测到可能的拼音模式，将语言从 'en' 改为 'zh-CN': ${searchTerm}`);
+      }
+    }
+    
+    const cacheKey = `${searchTerm}_${detectedLanguage}_${uiLanguage}`;
+    logger.info(`🔍 Searching for word: ${searchTerm} in ${detectedLanguage} (original: ${language})`);
 
     // 1. 检查内存缓存
     if (wordCache.has(cacheKey)) {
@@ -161,12 +184,12 @@ export const searchWord = async (req: Request, res: Response): Promise<void> => 
     }
 
     // 2. 检查云单词表
-    let cloudWord = await CloudWord.findOne({ word: searchTerm, language, uiLanguage });
+    let cloudWord = await CloudWord.findOne({ word: searchTerm, language: detectedLanguage, uiLanguage });
     if (cloudWord) {
       logger.info(`✅ Found in cloud words: ${searchTerm}`);
       
       // 更新搜索次数和最后搜索时间
-      await updateCloudWordSearchStats(searchTerm, language, uiLanguage);
+      await updateCloudWordSearchStats(searchTerm, detectedLanguage, uiLanguage);
       
       // 保存到内存缓存
       wordCache.set(cacheKey, cloudWord.toObject());
@@ -191,28 +214,28 @@ export const searchWord = async (req: Request, res: Response): Promise<void> => 
     logger.info(`🔍 Debug: About to call generateWordData for: ${searchTerm}`);
     
     try {
-      const { template: prompt, promptPath, promptContent } = getLanguagePrompt(searchTerm, language, uiLanguage);
+      const { template: prompt, promptPath, promptContent } = getLanguagePrompt(searchTerm, detectedLanguage, uiLanguage);
       logger.info(`📝 本次查词引用的prompt文件: ${promptPath}`);
       logger.info(`📝 prompt内容: ${JSON.stringify(promptContent, null, 2)}`);
-      const generatedData = await generateWordData(searchTerm, language, uiLanguage); // 传递 uiLanguage
+      const generatedData = await generateWordData(searchTerm, detectedLanguage, uiLanguage); // 传递 uiLanguage
       logger.info(`🔍 Debug: generateWordData completed for: ${searchTerm}`);
       
       // 4. 保存到云单词表（先检查是否已存在）
       logger.info(`🔍 Debug: About to save to cloud words: ${searchTerm}`);
       
       // 再次检查数据库，确保单词真的不存在
-      const existingWord = await CloudWord.findOne({ word: searchTerm, language, uiLanguage });
+      const existingWord = await CloudWord.findOne({ word: searchTerm, language: detectedLanguage, uiLanguage });
       if (existingWord) {
         logger.info(`🔄 Word found in database during AI save check: ${searchTerm}`);
         cloudWord = existingWord;
         // 更新搜索次数和最后搜索时间
-        await updateCloudWordSearchStats(searchTerm, language, uiLanguage);
+        await updateCloudWordSearchStats(searchTerm, detectedLanguage, uiLanguage);
       } else {
         // 如果单词不存在，创建新记录并保存到数据库
         logger.info(`📝 Creating new word data and saving to database: ${searchTerm}`);
         cloudWord = new CloudWord({
           word: searchTerm,
-          language,
+          language: detectedLanguage,
           uiLanguage,
           phonetic: generatedData.phonetic,
           pinyin: generatedData.pinyin,
