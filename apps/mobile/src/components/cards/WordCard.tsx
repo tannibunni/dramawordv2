@@ -340,51 +340,7 @@ const WordCard: React.FC<WordCardProps> = ({
             },
           ]}
         >
-      {/* 头部：单词、音标、发音按钮 */}
-      <View style={styles.headerRow}>
-        <View style={{ flex: 1 }}>
-          {/* 主词顶部语言标签，靠左+国旗 */}
-          {/* <View style={styles.wordLangTagWrapper}>
-            <Text style={styles.wordLangTag}>
-              {getWordLangFlag(wordData, appLanguage)} {getWordLangShort(wordData, appLanguage)}
-            </Text>
-          </View> */}
-          <View style={styles.wordContainer}>
-            {/* 日语：显示汉字和假名 */}
-            <Text style={styles.word}>
-              {wordData.correctedWord || wordData.word}
-              {/* 语言标签 */}
-              {/* <Text style={styles.wordLangLabel}> {getWordLangLabel(wordData)}</Text> */}
-            </Text>
-            {wordData.kana && (
-              <Text style={styles.kana}>{wordData.kana}</Text>
-            )}
-          </View>
-          {/* 罗马音发音 */}
-          <Text style={styles.phonetic}>{wordData.phonetic}</Text>
-          {/* 来源 TAG 区域 */}
-          {Array.isArray(wordData.sources) && wordData.sources.length > 0 && (
-            <View style={styles.sourceTagsContainer}>
-              {wordData.sources.map((src, idx) => (
-                <View
-                  key={src.id || idx}
-                  style={[
-                    styles.sourceTag,
-                    src.type === 'wordbook' && styles.wordbookTag
-                  ]}
-                >
-                  <Text style={styles.sourceTagText} numberOfLines={1} ellipsizeMode="tail">
-                    {src.type === 'wordbook' ? `${t('source_from', appLanguage)} ${src.name}` : `${t('source_from', appLanguage)} ${src.name}`}
-                  </Text>
-                </View>
-              ))}
-            </View>
-          )}
-        </View>
-        <TouchableOpacity style={styles.audioButton} onPress={handlePlayAudio} activeOpacity={0.7}>
-          <Ionicons name="volume-medium" size={22} color={colors.primary[500]} />
-        </TouchableOpacity>
-      </View>
+
           
       {/* 主体内容区：使用统一的WordCardContent组件 */}
       <View style={{ maxHeight: CARD_CONTENT_MAX_HEIGHT, marginBottom: 8 }}>
@@ -392,6 +348,7 @@ const WordCard: React.FC<WordCardProps> = ({
           wordData={wordData} 
           onPlayAudio={onPlayAudio} 
           scrollable={true}
+          showHeader={true}
           onScroll={e => {
             if (showScrollTip && e.nativeEvent.contentOffset.y > 10) {
               setShowScrollTip(false);

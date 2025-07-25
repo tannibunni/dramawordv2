@@ -12,6 +12,7 @@ interface WordCardContentProps {
   style?: any;
   scrollable?: boolean; // 是否支持滚动
   onScroll?: (event: any) => void; // 滚动事件回调
+  showHeader?: boolean; // 是否显示头部（单词、音标、发音按钮）
 }
 
 // 取消高度限制，让所有definitions都能直接显示
@@ -77,7 +78,7 @@ const getSpecialLabel = (type: 'slang' | 'phrase', lang: string) => {
   return map[type] || type;
 };
 
-const WordCardContent: React.FC<WordCardContentProps> = ({ wordData, onPlayAudio, style, scrollable = false, onScroll }) => {
+const WordCardContent: React.FC<WordCardContentProps> = ({ wordData, onPlayAudio, style, scrollable = false, onScroll, showHeader = true }) => {
   const { appLanguage } = useAppLanguage();
   const handlePlayAudio = async () => {
     try {
@@ -93,17 +94,40 @@ const WordCardContent: React.FC<WordCardContentProps> = ({ wordData, onPlayAudio
   return (
     <View style={[styles.container, style]}>
       {/* 头部：单词、音标、发音按钮 */}
-      <View style={styles.headerRow}>
+      {showHeader && (
+        <View style={styles.headerRow}>
         <View style={{ flex: 1 }}>
           <View style={styles.wordContainer}>
             <Text style={styles.word}>{wordData.correctedWord || wordData.word}</Text>
+            {wordData.kana && (
+              <Text style={styles.kana}>{wordData.kana}</Text>
+            )}
           </View>
           <Text style={styles.phonetic}>{wordData.phonetic}</Text>
+          {/* 来源 TAG 区域 */}
+          {Array.isArray(wordData.sources) && wordData.sources.length > 0 && (
+            <View style={styles.sourceTagsContainer}>
+              {wordData.sources.map((src, idx) => (
+                <View
+                  key={src.id || idx}
+                  style={[
+                    styles.sourceTag,
+                    src.type === 'wordbook' && styles.wordbookTag
+                  ]}
+                >
+                  <Text style={styles.sourceTagText} numberOfLines={1} ellipsizeMode="tail">
+                    {src.type === 'wordbook' ? `来源：${src.name}` : `来源：${src.name}`}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          )}
         </View>
         <TouchableOpacity style={styles.audioButton} onPress={handlePlayAudio} activeOpacity={0.7}>
           <Ionicons name="volume-medium" size={22} color={colors.primary[500]} />
         </TouchableOpacity>
       </View>
+      )}
       {/* 主体内容区：根据scrollable属性决定是否滚动 */}
       {scrollable ? (
         <ScrollView
@@ -275,6 +299,32 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: '#888',
     fontStyle: 'italic',
+  },
+  kana: {
+    fontSize: 16,
+    color: '#666',
+    marginLeft: 8,
+    fontStyle: 'italic',
+  },
+  sourceTagsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginTop: 4,
+    gap: 4,
+  },
+  sourceTag: {
+    backgroundColor: '#f0f0f0',
+    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    marginRight: 4,
+  },
+  wordbookTag: {
+    backgroundColor: '#e8f5e8',
+  },
+  sourceTagText: {
+    fontSize: 12,
+    color: '#666',
   },
   specialBlock: {
     marginTop: 12,
