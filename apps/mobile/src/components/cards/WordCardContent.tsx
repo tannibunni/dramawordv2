@@ -78,6 +78,26 @@ const getSpecialLabel = (type: 'slang' | 'phrase', lang: string) => {
   return map[type] || type;
 };
 
+// 辅助函数：根据语言获取例句显示内容
+const getExampleDisplay = (example: any, targetLanguage: string) => {
+  const languageMap: { [key: string]: string[] } = {
+    'en': ['english', 'chinese'],
+    'fr': ['french', 'chinese'],
+    'es': ['spanish', 'chinese'],
+    'ja': ['japanese', 'chinese'],
+    'ko': ['korean', 'chinese'],
+    'zh-CN': ['chinese', 'english']
+  };
+  
+  const fields = languageMap[targetLanguage] || ['english', 'chinese'];
+  const [primaryField, secondaryField] = fields;
+  
+  return {
+    primary: example[primaryField] || '',
+    secondary: example[secondaryField] || ''
+  };
+};
+
 const WordCardContent: React.FC<WordCardContentProps> = ({ wordData, onPlayAudio, style, scrollable = false, onScroll, showHeader = true }) => {
   const { appLanguage } = useAppLanguage();
   const handlePlayAudio = async () => {
@@ -170,12 +190,15 @@ const WordCardContent: React.FC<WordCardContentProps> = ({ wordData, onPlayAudio
                   <Text style={styles.definition}>{(wordData.slangMeaning as any).definition}</Text>
                   {(wordData.slangMeaning as any).examples && (wordData.slangMeaning as any).examples.length > 0 && (
                     <View style={styles.examplesBlock}>
-                      {(wordData.slangMeaning as any).examples.map((ex: any, exIdx: number) => (
-                        <View key={exIdx} style={styles.exampleContainer}>
-                          <Text style={styles.exampleLabelAndText}>{ex.english}</Text>
-                          <Text style={styles.exampleLabelAndText}>{ex.chinese}</Text>
-                        </View>
-                      ))}
+                      {(wordData.slangMeaning as any).examples.map((ex: any, exIdx: number) => {
+                        const display = getExampleDisplay(ex, 'en'); // 默认使用英文作为目标语言
+                        return (
+                          <View key={exIdx} style={styles.exampleContainer}>
+                            {display.primary && <Text style={styles.exampleLabelAndText}>{display.primary}</Text>}
+                            {display.secondary && <Text style={styles.exampleLabelAndText}>{display.secondary}</Text>}
+                          </View>
+                        );
+                      })}
                     </View>
                   )}
                 </>
@@ -196,12 +219,15 @@ const WordCardContent: React.FC<WordCardContentProps> = ({ wordData, onPlayAudio
                   <Text style={styles.definition}>{(wordData.phraseExplanation as any).definition}</Text>
                   {(wordData.phraseExplanation as any).examples && (wordData.phraseExplanation as any).examples.length > 0 && (
                     <View style={styles.examplesBlock}>
-                      {(wordData.phraseExplanation as any).examples.map((ex: any, exIdx: number) => (
-                        <View key={exIdx} style={styles.exampleContainer}>
-                          <Text style={styles.exampleLabelAndText}>{ex.english}</Text>
-                          <Text style={styles.exampleLabelAndText}>{ex.chinese}</Text>
-                        </View>
-                      ))}
+                      {(wordData.phraseExplanation as any).examples.map((ex: any, exIdx: number) => {
+                        const display = getExampleDisplay(ex, 'en'); // 默认使用英文作为目标语言
+                        return (
+                          <View key={exIdx} style={styles.exampleContainer}>
+                            {display.primary && <Text style={styles.exampleLabelAndText}>{display.primary}</Text>}
+                            {display.secondary && <Text style={styles.exampleLabelAndText}>{display.secondary}</Text>}
+                          </View>
+                        );
+                      })}
                     </View>
                   )}
                 </>

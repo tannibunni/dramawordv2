@@ -25,8 +25,15 @@ export interface WordDefinition {
 export interface SpecialMeaning {
   definition: string;
   examples?: Array<{
-    english: string;
-    chinese: string;
+    english?: string;
+    chinese?: string;
+    pinyin?: string; // 例句拼音
+    romaji?: string; // 日语罗马音
+    japanese?: string; // 日语例句
+    korean?: string; // 韩语例句
+    french?: string; // 法语例句
+    spanish?: string; // 西班牙语例句
+    hangul?: string; // 韩语谚文
   }>;
 }
 
