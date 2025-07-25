@@ -936,7 +936,19 @@ async function generateWordData(word: string, language: string = 'en', uiLanguag
     logger.info(`🤖 AI原始响应 (${language}): ${responseText}`);
 
     try {
-      const parsedData = JSON.parse(responseText);
+      // 清理 markdown 代码块标记
+      let cleanedResponse = responseText.trim();
+      if (cleanedResponse.startsWith('```json')) {
+        cleanedResponse = cleanedResponse.replace(/^```json\s*/, '');
+      }
+      if (cleanedResponse.startsWith('```')) {
+        cleanedResponse = cleanedResponse.replace(/^```\s*/, '');
+      }
+      if (cleanedResponse.endsWith('```')) {
+        cleanedResponse = cleanedResponse.replace(/\s*```$/, '');
+      }
+      
+      const parsedData = JSON.parse(cleanedResponse);
       
       // 验证和修复数据格式
       const definitions = Array.isArray(parsedData.definitions) ? parsedData.definitions.map((def: any) => ({
