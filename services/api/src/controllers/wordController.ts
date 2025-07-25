@@ -215,6 +215,7 @@ export const searchWord = async (req: Request, res: Response): Promise<void> => 
           language,
           uiLanguage,
           phonetic: generatedData.phonetic,
+          pinyin: generatedData.pinyin,
           definitions: generatedData.definitions,
           audioUrl: generatedData.audioUrl || '',
           slangMeaning: generatedData.slangMeaning || null,
@@ -1043,6 +1044,7 @@ async function generateWordData(word: string, language: string = 'en', uiLanguag
 
       return {
         phonetic: parsedData.phonetic || `/${word}/`,
+        pinyin: parsedData.pinyin || parsedData.phonetic || undefined, // 优先使用 pinyin 字段
         definitions: definitions,
         audioUrl: getGoogleTTSUrl(word, language),
         correctedWord: parsedData.correctedWord || word,

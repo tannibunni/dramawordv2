@@ -123,7 +123,9 @@ const WordCardContent: React.FC<WordCardContentProps> = ({ wordData, onPlayAudio
               <Text style={styles.kana}>{wordData.kana}</Text>
             )}
           </View>
-          <Text style={styles.phonetic}>{wordData.phonetic}</Text>
+          <Text style={styles.phonetic}>
+            {wordData.pinyin || wordData.phonetic}
+          </Text>
           {/* 来源 TAG 区域 */}
           {Array.isArray(wordData.sources) && wordData.sources.length > 0 && (
             <View style={styles.sourceTagsContainer}>

@@ -31,6 +31,7 @@ export interface WordDefinition {
 export interface WordData {
   word: string;
   phonetic?: string;
+  pinyin?: string; // 新增：标准拼音，兼容新后端
   definitions: WordDefinition[];
   audioUrl?: string;
   isCollected?: boolean;
