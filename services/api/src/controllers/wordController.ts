@@ -862,26 +862,61 @@ async function generateWordData(word: string, language: string = 'en', uiLanguag
   logger.info(`📝 本次查词引用的prompt文件: ${promptPath}`);
   logger.info(`📝 prompt内容: ${JSON.stringify(promptContent, null, 2)}`);
 
-    const getSystemMessage = (lang: string) => {
-      switch (lang) {
-        case 'ko':
-          return "你是韩语词典助手。只返回JSON格式，不要其他内容。翻译要简洁，适合语言学习。";
-        case 'ja':
-          return "你是日语词典助手。只返回JSON格式，不要其他内容。翻译要简洁，适合语言学习。";
-        default:
-          return "你是英语词典助手。只返回JSON格式，不要其他内容。翻译要简洁，适合语言学习。";
+    // 优化：EN界面和CN界面分别根据目标语言返回不同的system role
+    function getSystemMessage(lang: string, uiLanguage: string) {
+      const isEnglishUI = uiLanguage && uiLanguage.startsWith('en');
+      const isChineseUI = uiLanguage && (uiLanguage.startsWith('zh') || uiLanguage === 'zh-CN');
+
+      const commonInstructionEN = `You are an intelligent dictionary assistant. Explain the meaning of a word like you're chatting with a curious learner. Go beyond standard definitions—include context, slang (if any), tone, and simple examples. Be clear, friendly, and natural. Always return JSON format.`;
+      const commonInstructionZH = `你是一个智能词典助手。请像和好奇的语言学习者对话一样解释单词，不要只给干巴巴的释义。请提供使用语境、俚语含义（如果有）、语气、简单例句。语气自然友好。始终返回 JSON 格式。`;
+
+      // UI语言与目标语言一致时无需特殊 role
+      if ((isEnglishUI && (lang === 'en' || lang === 'en-US' || lang === 'en-GB')) ||
+          (isChineseUI && (lang === 'zh' || lang === 'zh-CN'))) {
+        return "";
       }
-    };
+
+      switch (lang) {
+        case 'zh': case 'zh-CN':
+          return isEnglishUI
+            ? `You are a Chinese-English dictionary assistant. All output should be in English. ${commonInstructionEN}`
+            : commonInstructionZH;
+        case 'en': case 'en-US': case 'en-GB':
+          return isEnglishUI
+            ? commonInstructionEN
+            : `你是英语词典助手。所有输出请用中文。${commonInstructionZH}`;
+        case 'ja': case 'ja-JP':
+          return isEnglishUI
+            ? `You are a Japanese-English dictionary assistant. All output should be in English. ${commonInstructionEN}`
+            : `你是日语词典助手。所有输出请用中文。${commonInstructionZH}`;
+        case 'ko': case 'ko-KR':
+          return isEnglishUI
+            ? `You are a Korean-English dictionary assistant. All output should be in English. ${commonInstructionEN}`
+            : `你是韩语词典助手。所有输出请用中文。${commonInstructionZH}`;
+        case 'fr': case 'fr-FR':
+          return isEnglishUI
+            ? `You are a French-English dictionary assistant. All output should be in English. ${commonInstructionEN}`
+            : `你是法语词典助手。所有输出请用中文。${commonInstructionZH}`;
+        case 'es': case 'es-ES':
+          return isEnglishUI
+            ? `You are a Spanish-English dictionary assistant. All output should be in English. ${commonInstructionEN}`
+            : `你是西班牙语词典助手。所有输出请用中文。${commonInstructionZH}`;
+        default:
+          return isEnglishUI
+            ? `You are a multilingual dictionary assistant. All output should be in English. ${commonInstructionEN}`
+            : `你是多语言词典助手。所有输出请用中文。${commonInstructionZH}`;
+      }
+    }
 
     // 新增：详细log打印本次发送给OpenAI的完整prompt内容
-    logger.info(`📝 发送给OpenAI的完整prompt: system: ${getSystemMessage(language)} | user: ${prompt}`);
+    logger.info(`📝 发送给OpenAI的完整prompt: system: ${getSystemMessage(language, uiLanguage)} | user: ${prompt}`);
 
     const completion = await openai.chat.completions.create({
-      model: "gpt-3.5-turbo",
+      model: "gpt-4o",
       messages: [
         {
           role: "system",
-          content: getSystemMessage(language)
+          content: getSystemMessage(language, uiLanguage)
         },
         {
           role: "user",
