@@ -51,11 +51,28 @@ const partOfSpeechMap: Record<string, Record<string, string>> = {
   }
 };
 
+// 特殊标签的多语言映射
+const specialLabelMap: Record<string, Record<string, string>> = {
+  'zh-CN': {
+    'slang': '俚语/缩写',
+    'phrase': '短语',
+  },
+  'en-US': {
+    'slang': 'Slang/Abbr',
+    'phrase': 'Phrase',
+  }
+};
+
 const getPartOfSpeechLabel = (pos: string, lang: string) => {
   if (!pos) return '';
   const map = partOfSpeechMap[lang] || partOfSpeechMap['en-US'];
   // 统一小写查找
   return map[pos.trim().toLowerCase()] || map[pos.trim()] || pos;
+};
+
+const getSpecialLabel = (type: 'slang' | 'phrase', lang: string) => {
+  const map = specialLabelMap[lang] || specialLabelMap['en-US'];
+  return map[type] || type;
 };
 
 const WordCardContent: React.FC<WordCardContentProps> = ({ wordData, onPlayAudio, style }) => {
@@ -110,7 +127,7 @@ const WordCardContent: React.FC<WordCardContentProps> = ({ wordData, onPlayAudio
         {wordData.slangMeaning && (
           <View style={styles.specialBlock}>
             <View style={styles.specialTagWrapper}>
-              <Text style={styles.specialTag}>俚语/缩写</Text>
+              <Text style={styles.specialTag}>{getSpecialLabel('slang', appLanguage)}</Text>
             </View>
             <Text style={styles.specialContent}>{wordData.slangMeaning}</Text>
           </View>
@@ -120,7 +137,7 @@ const WordCardContent: React.FC<WordCardContentProps> = ({ wordData, onPlayAudio
         {wordData.phraseExplanation && (
           <View style={styles.specialBlock}>
             <View style={styles.specialTagWrapper}>
-              <Text style={styles.specialTag}>短语</Text>
+              <Text style={styles.specialTag}>{getSpecialLabel('phrase', appLanguage)}</Text>
             </View>
             <Text style={styles.specialContent}>{wordData.phraseExplanation}</Text>
           </View>
