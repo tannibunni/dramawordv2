@@ -21,6 +21,15 @@ export interface WordDefinition {
   }>;
 }
 
+// 俚语/短语解释结构
+export interface SpecialMeaning {
+  definition: string;
+  examples?: Array<{
+    english: string;
+    chinese: string;
+  }>;
+}
+
 export interface WordData {
   word: string;                // 词条本身（如“我爱你”或“woaini”）
   phonetic?: string;           // 拼音（如“wǒ ài nǐ”），原有
@@ -29,8 +38,8 @@ export interface WordData {
   audioUrl?: string;           // 发音音频链接
   isCollected?: boolean;       // 是否已收藏
   correctedWord?: string;      // 标准化词条
-  slangMeaning?: string | null;// 网络俚语解释
-  phraseExplanation?: string | null;// 短语解释
+  slangMeaning?: SpecialMeaning | string | null;// 网络俚语解释（支持新旧格式）
+  phraseExplanation?: SpecialMeaning | string | null;// 短语解释（支持新旧格式）
   kana?: string;               // 日语假名（中文查词一般无）
   // 其它字段如来源、反馈等
 }

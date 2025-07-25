@@ -163,7 +163,23 @@ const WordCardContent: React.FC<WordCardContentProps> = ({ wordData, onPlayAudio
               <View style={styles.posTagWrapper}>
                 <Text style={styles.posTag}>{getSpecialLabel('slang', appLanguage)}</Text>
               </View>
-              <Text style={styles.definition}>{wordData.slangMeaning}</Text>
+              {typeof wordData.slangMeaning === 'string' ? (
+                <Text style={styles.definition}>{wordData.slangMeaning}</Text>
+              ) : (
+                <>
+                  <Text style={styles.definition}>{(wordData.slangMeaning as any).definition}</Text>
+                  {(wordData.slangMeaning as any).examples && (wordData.slangMeaning as any).examples.length > 0 && (
+                    <View style={styles.examplesBlock}>
+                      {(wordData.slangMeaning as any).examples.map((ex: any, exIdx: number) => (
+                        <View key={exIdx} style={styles.exampleContainer}>
+                          <Text style={styles.exampleLabelAndText}>{ex.english}</Text>
+                          <Text style={styles.exampleLabelAndText}>{ex.chinese}</Text>
+                        </View>
+                      ))}
+                    </View>
+                  )}
+                </>
+              )}
             </View>
           )}
           
@@ -173,7 +189,23 @@ const WordCardContent: React.FC<WordCardContentProps> = ({ wordData, onPlayAudio
               <View style={styles.posTagWrapper}>
                 <Text style={styles.posTag}>{getSpecialLabel('phrase', appLanguage)}</Text>
               </View>
-              <Text style={styles.definition}>{wordData.phraseExplanation}</Text>
+              {typeof wordData.phraseExplanation === 'string' ? (
+                <Text style={styles.definition}>{wordData.phraseExplanation}</Text>
+              ) : (
+                <>
+                  <Text style={styles.definition}>{(wordData.phraseExplanation as any).definition}</Text>
+                  {(wordData.phraseExplanation as any).examples && (wordData.phraseExplanation as any).examples.length > 0 && (
+                    <View style={styles.examplesBlock}>
+                      {(wordData.phraseExplanation as any).examples.map((ex: any, exIdx: number) => (
+                        <View key={exIdx} style={styles.exampleContainer}>
+                          <Text style={styles.exampleLabelAndText}>{ex.english}</Text>
+                          <Text style={styles.exampleLabelAndText}>{ex.chinese}</Text>
+                        </View>
+                      ))}
+                    </View>
+                  )}
+                </>
+              )}
             </View>
           )}
         </ScrollView>
@@ -204,7 +236,23 @@ const WordCardContent: React.FC<WordCardContentProps> = ({ wordData, onPlayAudio
               <View style={styles.posTagWrapper}>
                 <Text style={styles.posTag}>{getSpecialLabel('slang', appLanguage)}</Text>
               </View>
-              <Text style={styles.definition}>{wordData.slangMeaning}</Text>
+              {typeof wordData.slangMeaning === 'string' ? (
+                <Text style={styles.definition}>{wordData.slangMeaning}</Text>
+              ) : (
+                <>
+                  <Text style={styles.definition}>{wordData.slangMeaning.definition}</Text>
+                  {wordData.slangMeaning.examples && wordData.slangMeaning.examples.length > 0 && (
+                    <View style={styles.examplesBlock}>
+                      {wordData.slangMeaning.examples.map((ex, exIdx) => (
+                        <View key={exIdx} style={styles.exampleContainer}>
+                          <Text style={styles.exampleLabelAndText}>{ex.english}</Text>
+                          <Text style={styles.exampleLabelAndText}>{ex.chinese}</Text>
+                        </View>
+                      ))}
+                    </View>
+                  )}
+                </>
+              )}
             </View>
           )}
           
@@ -214,7 +262,23 @@ const WordCardContent: React.FC<WordCardContentProps> = ({ wordData, onPlayAudio
               <View style={styles.posTagWrapper}>
                 <Text style={styles.posTag}>{getSpecialLabel('phrase', appLanguage)}</Text>
               </View>
-              <Text style={styles.definition}>{wordData.phraseExplanation}</Text>
+              {typeof wordData.phraseExplanation === 'string' ? (
+                <Text style={styles.definition}>{wordData.phraseExplanation}</Text>
+              ) : (
+                <>
+                  <Text style={styles.definition}>{wordData.phraseExplanation.definition}</Text>
+                  {wordData.phraseExplanation.examples && wordData.phraseExplanation.examples.length > 0 && (
+                    <View style={styles.examplesBlock}>
+                      {wordData.phraseExplanation.examples.map((ex, exIdx) => (
+                        <View key={exIdx} style={styles.exampleContainer}>
+                          <Text style={styles.exampleLabelAndText}>{ex.english}</Text>
+                          <Text style={styles.exampleLabelAndText}>{ex.chinese}</Text>
+                        </View>
+                      ))}
+                    </View>
+                  )}
+                </>
+              )}
             </View>
           )}
         </View>
