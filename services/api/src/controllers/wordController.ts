@@ -224,7 +224,7 @@ export const searchWord = async (req: Request, res: Response): Promise<void> => 
       const { template: prompt, promptPath, promptContent } = getLanguagePrompt(searchTerm, detectedLanguage, uiLanguage);
       logger.info(`📝 本次查词引用的prompt文件: ${promptPath}`);
       logger.info(`📝 prompt内容: ${JSON.stringify(promptContent, null, 2)}`);
-      const generatedData = await generateWordData(searchTerm, detectedLanguage, uiLanguage); // 传递 uiLanguage
+      const generatedData = await generateWordData(searchTerm, dbLanguage, uiLanguage); // 传递映射后的语言值
       logger.info(`🔍 Debug: generateWordData completed for: ${searchTerm}`);
       
       // 4. 保存到云单词表（先检查是否已存在）
@@ -625,7 +625,7 @@ export const addToUserVocabulary = async (req: Request, res: Response) => {
     let cloudWord = await CloudWord.findOne({ word: searchTerm, language: dbLanguage, uiLanguage });
     if (!cloudWord) {
       // 如果云单词不存在，创建它
-      const generatedData = await generateWordData(searchTerm, language, uiLanguage);
+      const generatedData = await generateWordData(searchTerm, dbLanguage, uiLanguage);
       try {
         cloudWord = new CloudWord({
           word: searchTerm,
