@@ -125,9 +125,9 @@ const WordCardContent: React.FC<WordCardContentProps> = ({ wordData, onPlayAudio
         
         {/* 俚语/缩写含义 */}
         {wordData.slangMeaning && (
-          <View style={styles.specialBlock}>
-            <View style={styles.specialTagWrapper}>
-              <Text style={styles.specialTag}>{getSpecialLabel('slang', appLanguage)}</Text>
+          <View style={styles.definitionBlock}>
+            <View style={styles.posTagWrapper}>
+              <Text style={styles.posTag}>{getSpecialLabel('slang', appLanguage)}</Text>
             </View>
             <Text style={styles.definition}>{wordData.slangMeaning}</Text>
           </View>
@@ -135,9 +135,9 @@ const WordCardContent: React.FC<WordCardContentProps> = ({ wordData, onPlayAudio
         
         {/* 短语解释 */}
         {wordData.phraseExplanation && (
-          <View style={styles.specialBlock}>
-            <View style={styles.specialTagWrapper}>
-              <Text style={styles.specialTag}>{getSpecialLabel('phrase', appLanguage)}</Text>
+          <View style={styles.definitionBlock}>
+            <View style={styles.posTagWrapper}>
+              <Text style={styles.posTag}>{getSpecialLabel('phrase', appLanguage)}</Text>
             </View>
             <Text style={styles.definition}>{wordData.phraseExplanation}</Text>
           </View>

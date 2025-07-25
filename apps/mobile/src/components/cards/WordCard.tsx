@@ -510,7 +510,7 @@ const WordCard: React.FC<WordCardProps> = ({
           {wordData.slangMeaning && (
             <View style={styles.definitionBlock}>
               <View style={styles.posTagWrapper}>
-                <Text style={styles.posTag}>俚语/缩写</Text>
+                <Text style={styles.posTag}>{getSpecialLabel('slang', appLanguage)}</Text>
               </View>
               <Text style={styles.definition}>{wordData.slangMeaning}</Text>
             </View>
@@ -520,7 +520,7 @@ const WordCard: React.FC<WordCardProps> = ({
           {wordData.phraseExplanation && (
             <View style={styles.definitionBlock}>
               <View style={styles.posTagWrapper}>
-                <Text style={styles.posTag}>短语</Text>
+                <Text style={styles.posTag}>{getSpecialLabel('phrase', appLanguage)}</Text>
               </View>
               <Text style={styles.definition}>{wordData.phraseExplanation}</Text>
             </View>
@@ -595,6 +595,23 @@ function getWordLangShort(wordData: WordData, appLanguage: string) {
   if (/[\u4e00-\u9fa5]+/.test(w)) return 'ZH';
   return '';
 }
+
+// 特殊标签的多语言映射
+const specialLabelMap: Record<string, Record<string, string>> = {
+  'zh-CN': {
+    'slang': '俚语/缩写',
+    'phrase': '短语',
+  },
+  'en-US': {
+    'slang': 'Slang/Abbr',
+    'phrase': 'Phrase',
+  }
+};
+
+const getSpecialLabel = (type: 'slang' | 'phrase', lang: string) => {
+  const map = specialLabelMap[lang] || specialLabelMap['en-US'];
+  return map[type] || type;
+};
 
 function getWordLangFlag(wordData: WordData, appLanguage: string) {
   // 如果界面为中文，只显示EN或JA
