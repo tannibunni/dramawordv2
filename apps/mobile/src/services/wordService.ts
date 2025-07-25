@@ -112,13 +112,24 @@ export class WordService {
         headers['Authorization'] = `Bearer ${token}`;
       }
       
+      // 映射前端语言到后端语言
+      const mapUILanguageForBackend = (uiLang?: string): string => {
+        if (!uiLang) return 'zh-CN';
+        if (uiLang === 'en-US') return 'en';
+        if (uiLang === 'zh-CN') return 'zh-CN';
+        return uiLang;
+      };
+      
+      const mappedUILanguage = mapUILanguageForBackend(uiLanguage);
+      console.log(`🔍 界面语言映射: ${uiLanguage} -> ${mappedUILanguage}`);
+      
       const response = await fetch(`${API_BASE_URL}/words/search`, {
         method: 'POST',
         headers,
         body: JSON.stringify({ 
           word: word.toLowerCase().trim(),
           language: language,
-          uiLanguage: uiLanguage || 'zh-CN' // 传递界面语言
+          uiLanguage: mappedUILanguage // 使用映射后的界面语言
         }),
       });
 
