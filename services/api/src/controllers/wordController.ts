@@ -19,7 +19,7 @@ if (!apiKey) {
 }
 
 const openai = new OpenAI({
-  apiKey: apiKey || 'dummy-key',
+  apiKey: apiKey,
 });
 
 // 内存缓存，用于提高性能
