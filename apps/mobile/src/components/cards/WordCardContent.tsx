@@ -129,7 +129,7 @@ const WordCardContent: React.FC<WordCardContentProps> = ({ wordData, onPlayAudio
             <View style={styles.specialTagWrapper}>
               <Text style={styles.specialTag}>{getSpecialLabel('slang', appLanguage)}</Text>
             </View>
-            <Text style={styles.specialContent}>{wordData.slangMeaning}</Text>
+            <Text style={styles.definition}>{wordData.slangMeaning}</Text>
           </View>
         )}
         
@@ -139,7 +139,7 @@ const WordCardContent: React.FC<WordCardContentProps> = ({ wordData, onPlayAudio
             <View style={styles.specialTagWrapper}>
               <Text style={styles.specialTag}>{getSpecialLabel('phrase', appLanguage)}</Text>
             </View>
-            <Text style={styles.specialContent}>{wordData.phraseExplanation}</Text>
+            <Text style={styles.definition}>{wordData.phraseExplanation}</Text>
           </View>
         )}
       </View>
@@ -242,11 +242,6 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
     overflow: 'hidden',
     marginBottom: 2,
-  },
-  specialContent: {
-    fontSize: 18,
-    color: '#222',
-    marginBottom: 6,
   },
 });
 
