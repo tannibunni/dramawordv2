@@ -8,6 +8,7 @@ import { ChineseTranslation } from '../models/ChineseTranslation';
 import { User } from '../models/User';
 import { ExperienceService } from '../services/experienceService';
 import { logger } from '../utils/logger';
+import { openAIRateLimiter } from '../utils/rateLimiter';
 import fs from 'fs';
 import path from 'path';
 
@@ -939,20 +940,23 @@ async function generateWordData(word: string, language: string = 'en', uiLanguag
     // 新增：详细log打印本次发送给OpenAI的完整prompt内容
     logger.info(`📝 发送给OpenAI的完整prompt: system: ${getSystemMessage(language, uiLanguage)} | user: ${prompt}`);
 
-    const completion = await openai.chat.completions.create({
-      model: "gpt-3.5-turbo",
-      messages: [
-        {
-          role: "system",
-          content: getSystemMessage(language, uiLanguage)
-        },
-        {
-          role: "user",
-          content: prompt
-        }
-      ],
-      temperature: 0.1,
-      max_tokens: 1000
+    // 使用限流器执行OpenAI请求
+    const completion = await openAIRateLimiter.executeRequest(async () => {
+      return await openai.chat.completions.create({
+        model: "gpt-3.5-turbo",
+        messages: [
+          {
+            role: "system",
+            content: getSystemMessage(language, uiLanguage)
+          },
+          {
+            role: "user",
+            content: prompt
+          }
+        ],
+        temperature: 0.1,
+        max_tokens: 1000
+      });
     });
 
     const responseText = completion.choices[0]?.message?.content;
@@ -1339,6 +1343,22 @@ export const translateChineseToEnglish = async (req: Request, res: Response) => 
 };
 
 // 测试 prompt 文件加载
+export const getRateLimitStatus = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const status = openAIRateLimiter.getStatus();
+    res.json({
+      success: true,
+      data: status
+    });
+  } catch (error) {
+    logger.error('❌ Rate limit status error:', error);
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+};
+
 export const testPromptLoading = async (req: Request, res: Response): Promise<void> => {
   try {
     const { uiLanguage = 'zh-CN', language = 'en' } = req.query;

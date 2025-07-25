@@ -918,7 +918,7 @@ const styles = StyleSheet.create({
     flex: 1, 
     backgroundColor: colors.background.primary, 
     paddingHorizontal: 20,
-    paddingTop: Platform.OS === 'ios' ? 40 : 16, // 减少顶部间距，从50/20改为40/16
+    paddingTop: Platform.OS === 'ios' ? 80 : 36, // 增加顶部间距，让第一个板块与顶部有足够距离
     // justifyContent: 'space-between', // 移除这行，让内容自然流式排列
   },
   // 统一信息区域样式
@@ -949,7 +949,7 @@ const styles = StyleSheet.create({
     color: colors.text.secondary,
   },
   progressBarContainer: {
-    height: 18,
+    height: 14,
     backgroundColor: colors.neutral[100],
     borderRadius: 18,
     marginBottom: 0,
@@ -1012,8 +1012,8 @@ const styles = StyleSheet.create({
   challengeBanner: {
     backgroundColor: colors.background.secondary,
     borderRadius: 16,
-    marginBottom: 8,
-    marginTop: 2,
+    marginBottom: 24, // 增加与剧集复习板块的距离，让挑战横幅更突出
+    marginTop: 0,
     minHeight: 90, // 新增，提升横幅最小高度
     ...Platform.select({
       web: {
@@ -1031,8 +1031,8 @@ const styles = StyleSheet.create({
   bannerContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 24, // 从20增加到28，让内容整体更高
-    minHeight: 150, // 保证内容区和横幅高度一致
+    padding: 20, // 从20增加到28，让内容整体更高
+    minHeight: 120, // 保证内容区和横幅高度一致
   },
   bannerTextContainer: {
     flex: 1,
@@ -1082,7 +1082,7 @@ const styles = StyleSheet.create({
   challengeCardTitle: { fontSize: 18, fontWeight: 'bold', color: colors.primary[500], marginBottom: 2 },
   challengeCardSubtitle: { fontSize: 14, color: colors.text.tertiary },
 // 剧集复习样式
-  showsSection: { marginBottom: 4 }, // 从8减少到4
+  showsSection: { marginBottom: 24 }, // 增加与单词本复习板块的距离，让两个复习板块有明显分隔
   showsTitle: { fontSize: 18, fontWeight: 'bold', color: colors.text.primary, marginBottom: 8 }, // 减少底部间距，从12改为8
   showsScroll: { flexGrow: 0 },
   showCard: { 
@@ -1119,7 +1119,7 @@ const styles = StyleSheet.create({
   showName: { fontSize: 14, fontWeight: 'bold', color: colors.text.primary, textAlign: 'center', marginBottom: 2, width: '100%' },
   showWordCount: { fontSize: 12, color: colors.text.secondary, textAlign: 'center' },
   // 单词本复习样式
-  wordbookSection: { marginBottom: 4 }, // 从8减少到4
+  wordbookSection: { marginBottom: 24 }, // 增加底部间距，让最后一个板块与屏幕底部有足够距离
   wordbookTitle: { fontSize: 18, fontWeight: 'bold', color: colors.text.primary, marginBottom: 8 },
   wordbookScroll: { flexGrow: 0 },
   wordbookCard: { 
@@ -1214,7 +1214,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background.secondary,
     borderRadius: 16,
     padding: 20,
-    marginBottom: 8, // 从12减少到8
+    marginBottom: 24, // 增加与挑战横幅的距离，让板块之间有更明显的分隔
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
