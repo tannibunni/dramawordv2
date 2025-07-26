@@ -198,7 +198,8 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   };
 
   const renderUserInfo = () => {
-    const isGuest = !isAuthenticated || !user;
+    // 游客登录时也显示"登录"按钮，让用户可以切换到正式登录
+    const isGuest = !isAuthenticated || !user || loginType === 'guest';
     
     return (
       <View style={styles.userSection}>
