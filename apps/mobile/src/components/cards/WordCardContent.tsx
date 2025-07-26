@@ -208,12 +208,35 @@ const WordCardContent: React.FC<WordCardContentProps> = ({ wordData, onPlayAudio
               <Text style={styles.definition} selectable>{def.definition}</Text>
               {def.examples && def.examples.length > 0 && (
                 <View style={styles.examplesBlock}>
-                  {def.examples.map((ex, exIdx) => (
-                    <View key={exIdx} style={styles.exampleContainer}>
-                      <Text style={styles.exampleLabelAndText} selectable>{ex.english}</Text>
-                      <Text style={styles.exampleLabelAndText} selectable>{ex.chinese}</Text>
-                    </View>
-                  ))}
+                  {def.examples.map((ex, exIdx) => {
+                    // 根据单词语言确定例句显示内容
+                    const getExampleText = () => {
+                      const example = ex as any; // 类型断言
+                      if (wordData.language === 'ja') {
+                        // 日语：显示日语例句
+                        return example.english || example.japanese || '';
+                      } else if (wordData.language === 'ko') {
+                        // 韩语：显示韩语例句
+                        return example.english || example.korean || '';
+                      } else if (wordData.language === 'fr') {
+                        // 法语：显示法语例句
+                        return example.english || example.french || '';
+                      } else if (wordData.language === 'es') {
+                        // 西班牙语：显示西班牙语例句
+                        return example.english || example.spanish || '';
+                      } else {
+                        // 英语或其他语言：显示英语例句
+                        return example.english || '';
+                      }
+                    };
+
+                    return (
+                      <View key={exIdx} style={styles.exampleContainer}>
+                        <Text style={styles.exampleLabelAndText} selectable>{getExampleText()}</Text>
+                        <Text style={styles.exampleLabelAndText} selectable>{ex.chinese}</Text>
+                      </View>
+                    );
+                  })}
                 </View>
               )}
             </View>
@@ -281,12 +304,35 @@ const WordCardContent: React.FC<WordCardContentProps> = ({ wordData, onPlayAudio
               <Text style={styles.definition} selectable>{def.definition}</Text>
               {def.examples && def.examples.length > 0 && (
                 <View style={styles.examplesBlock}>
-                  {def.examples.map((ex, exIdx) => (
-                    <View key={exIdx} style={styles.exampleContainer}>
-                      <Text style={styles.exampleLabelAndText} selectable>{ex.english}</Text>
-                      <Text style={styles.exampleLabelAndText} selectable>{ex.chinese}</Text>
-                    </View>
-                  ))}
+                  {def.examples.map((ex, exIdx) => {
+                    // 根据单词语言确定例句显示内容
+                    const getExampleText = () => {
+                      const example = ex as any; // 类型断言
+                      if (wordData.language === 'ja') {
+                        // 日语：显示日语例句
+                        return example.english || example.japanese || '';
+                      } else if (wordData.language === 'ko') {
+                        // 韩语：显示韩语例句
+                        return example.english || example.korean || '';
+                      } else if (wordData.language === 'fr') {
+                        // 法语：显示法语例句
+                        return example.english || example.french || '';
+                      } else if (wordData.language === 'es') {
+                        // 西班牙语：显示西班牙语例句
+                        return example.english || example.spanish || '';
+                      } else {
+                        // 英语或其他语言：显示英语例句
+                        return example.english || '';
+                      }
+                    };
+
+                    return (
+                      <View key={exIdx} style={styles.exampleContainer}>
+                        <Text style={styles.exampleLabelAndText} selectable>{getExampleText()}</Text>
+                        <Text style={styles.exampleLabelAndText} selectable>{ex.chinese}</Text>
+                      </View>
+                    );
+                  })}
                 </View>
               )}
             </View>

@@ -988,6 +988,16 @@ async function generateWordData(word: string, language: string = 'en', uiLanguag
                 chinese: ex.chinese,
                 romaji: ex.romaji // 添加罗马音字段
               };
+            } else if (language === 'fr' && ex.french && ex.chinese) {
+              return {
+                english: ex.french, // 法文例句
+                chinese: ex.chinese
+              };
+            } else if (language === 'es' && ex.spanish && ex.chinese) {
+              return {
+                english: ex.spanish, // 西班牙文例句
+                chinese: ex.chinese
+              };
             } else if (ex.english && ex.chinese) {
               // 如果AI返回的是english字段，但语言不是英语，我们需要检查内容
               if (language === 'ko' || language === 'ja') {
