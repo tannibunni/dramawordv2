@@ -15,7 +15,8 @@ import {
   testOpenAI,
   translateChineseToEnglish, // 新增
   testPromptLoading, // 新增
-  getRateLimitStatus // 新增
+  getRateLimitStatus, // 新增
+  getCloudWord // 新增：云词库获取
 } from '../controllers/wordController';
 
 const router = Router();
@@ -26,6 +27,9 @@ router.post('/translate', translateChineseToEnglish); // 新增
 router.get('/popular', getPopularWords);
 router.get('/recent-searches', getRecentSearches);
 router.post('/history', saveSearchHistory);
+
+// 云词库路由 - 从云词库获取单词数据
+router.get('/cloud/:word', getCloudWord);
 
 // 清空所有数据（管理员功能）
 router.delete('/clear-all', clearAllData);

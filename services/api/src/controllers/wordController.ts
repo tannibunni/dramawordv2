@@ -1435,6 +1435,70 @@ export const testPromptLoading = async (req: Request, res: Response): Promise<vo
   }
 };
 
+// 从云词库获取单词数据
+export const getCloudWord = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const word = req.params.word;
+    const language = req.query.language as string || 'en';
+    const uiLanguage = req.query.uiLanguage as string || 'zh-CN';
+    
+    logger.info(`☁️ 从云词库获取单词: ${word} (语言: ${language}, UI语言: ${uiLanguage})`);
+    
+    if (!word) {
+      res.status(400).json({
+        success: false,
+        message: '单词参数不能为空'
+      });
+      return;
+    }
+    
+    // 从CloudWord模型中查找
+    const cloudWord = await CloudWord.findOne({
+      word: word.toLowerCase(),
+      language: mapTargetLanguage(language)
+    });
+    
+    if (cloudWord) {
+      logger.info(`✅ 从云词库找到单词: ${word}`);
+      
+      // 转换为前端需要的格式
+      const wordData = {
+        word: cloudWord.word,
+        phonetic: cloudWord.phonetic,
+        pinyin: cloudWord.pinyin,
+        definitions: cloudWord.definitions || [],
+        audioUrl: cloudWord.audioUrl,
+        correctedWord: cloudWord.correctedWord,
+        slangMeaning: cloudWord.slangMeaning,
+        phraseExplanation: cloudWord.phraseExplanation,
+        searchCount: cloudWord.searchCount,
+        createdAt: cloudWord.createdAt,
+        updatedAt: cloudWord.updatedAt
+      };
+      
+      res.json({
+        success: true,
+        message: '从云词库获取成功',
+        data: wordData
+      });
+    } else {
+      logger.info(`⚠️ 云词库中未找到单词: ${word}`);
+      res.json({
+        success: false,
+        message: '云词库中未找到该单词',
+        data: null
+      });
+    }
+  } catch (error) {
+    logger.error('❌ 从云词库获取单词失败:', error);
+    res.status(500).json({
+      success: false,
+      message: '从云词库获取单词失败',
+      error: error instanceof Error ? error.message : '未知错误'
+    });
+  }
+};
+
 export const wordController = {
   searchWord,
   getPopularWords,
