@@ -8,6 +8,7 @@ import {
   TextInput,
   Alert,
   ActivityIndicator,
+  ScrollView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../constants/colors';
@@ -120,7 +121,7 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({
             </TouchableOpacity>
           </View>
 
-          <View style={styles.content}>
+          <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
             <Text style={styles.label}>
               {appLanguage === 'zh-CN' ? '请为剧词记评分：' : 'Please rate Dramaword:'}
             </Text>
@@ -143,7 +144,7 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({
               numberOfLines={4}
               textAlignVertical="top"
             />
-          </View>
+          </ScrollView>
 
           <View style={styles.footer}>
             <TouchableOpacity
@@ -190,15 +191,6 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 400,
     maxHeight: '80%',
-    alignSelf: 'center',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
   },
   header: {
     flexDirection: 'row',
@@ -216,6 +208,7 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
+    marginBottom: 20,
   },
   label: {
     fontSize: 16,
@@ -239,12 +232,13 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: colors.text.primary,
     backgroundColor: colors.background.secondary,
-    minHeight: 100,
+    minHeight: 80,
+    maxHeight: 120,
   },
   footer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: 24,
+    marginTop: 16,
     gap: 12,
   },
   button: {

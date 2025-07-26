@@ -484,8 +484,8 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
         transparent={true}
         onRequestClose={() => setAboutModalVisible(false)}
       >
-        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', alignItems: 'center', paddingHorizontal: 20 }}>
-          <View style={{ width: '100%', maxHeight: '80%', backgroundColor: colors.background.primary, borderRadius: 18, padding: 20, alignSelf: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 3.84, elevation: 5 }}>
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', alignItems: 'center' }}>
+          <View style={{ width: '90%', maxHeight: '80%', backgroundColor: colors.background.primary, borderRadius: 18, padding: 20 }}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
               <Text style={{ fontSize: 20, fontWeight: 'bold', color: colors.primary[500] }}>{t('about_dramaword', appLanguage)}</Text>
               <TouchableOpacity onPress={() => setAboutModalVisible(false)}>
