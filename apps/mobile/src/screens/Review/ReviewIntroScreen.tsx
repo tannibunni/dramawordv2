@@ -668,7 +668,9 @@ const ReviewIntroScreen = () => {
       'guest_user': isChinese ? '老伙计' : 'Buddy',
       'review_subtitle': isChinese ? '最近都收集了啥单词？我们来回顾一下吧' : 'What words have you collected recently? Let\'s review them',
       'exp_gained': isChinese ? '经验值' : 'EXP',
-      'congratulations_exp': isChinese ? '恭喜获得经验值！' : 'Congratulations! You gained experience!'
+      'congratulations_exp': isChinese ? '恭喜获得经验值！' : 'Congratulations! You gained experience!',
+      'add_shows': isChinese ? '请添加剧集吧！' : ' Add some shows!',
+      'add_wordbook': isChinese ? '去添加自己的单词本吧！' : 'Go add your own wordbook!'
     };
     
     let text = translations[key as keyof typeof translations] || key;
@@ -870,7 +872,7 @@ const ReviewIntroScreen = () => {
             onPress={() => navigate('main', { tab: 'shows' })}
           >
             <Ionicons name="film-outline" size={36} color={colors.text.secondary} style={{ marginBottom: 8 }} />
-            <Text style={{ color: colors.text.secondary, fontSize: 16 }}>请添加剧集吧！</Text>
+            <Text style={{ color: colors.text.secondary, fontSize: 16 }}>{t('add_shows')}</Text>
           </TouchableOpacity>
         )}
       </View>
@@ -902,10 +904,10 @@ const ReviewIntroScreen = () => {
           <TouchableOpacity
             style={{ height: EMPTY_SECTION_HEIGHT, justifyContent: 'center', alignItems: 'center' }}
             activeOpacity={0.7}
-            onPress={() => navigate('main', { tab: 'wordbook' })}
+            onPress={() => navigate('main', { tab: 'vocabulary' })}
           >
             <Ionicons name="book-outline" size={36} color={colors.text.secondary} style={{ marginBottom: 8 }} />
-            <Text style={{ color: colors.text.secondary, fontSize: 16 }}>去添加自己的单词本吧！</Text>
+            <Text style={{ color: colors.text.secondary, fontSize: 16 }}>{t('add_wordbook')}</Text>
           </TouchableOpacity>
         )}
       </View>
