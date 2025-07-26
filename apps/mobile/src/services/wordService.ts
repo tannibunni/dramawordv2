@@ -193,6 +193,7 @@ export class WordService {
           slangMeaning: data.slangMeaning || null, // 网络俚语解释
           phraseExplanation: data.phraseExplanation || null, // 短语解释
           kana: data.kana || undefined, // 日语假名
+          language: data.language || language, // 添加语言字段
         };
         
         // 在解析 examples 时，保留所有多语言字段，前端渲染时可根据 UI 语言优先展示。
