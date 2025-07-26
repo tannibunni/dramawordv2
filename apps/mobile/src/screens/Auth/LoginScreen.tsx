@@ -188,11 +188,13 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
 
         {/* 登录按钮 */}
         <View style={styles.loginButtons}>
+          {/* 暂时隐藏手机号登录
           <LoginButton
             type="phone"
             onPress={handlePhoneLogin}
             loading={loading}
           />
+          */}
           
           <LoginButton
             type="wechat"
@@ -230,12 +232,13 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
         </View>
       </View>
 
-      {/* 手机号登录模态框 */}
+      {/* 手机号登录模态框 - 暂时隐藏
       <PhoneLoginModal
         visible={phoneModalVisible}
         onClose={() => setPhoneModalVisible(false)}
         onLoginSuccess={handlePhoneLoginSuccess}
       />
+      */}
 
       {/* 欢迎页面模态框 */}
       <WelcomeModal
