@@ -121,7 +121,7 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({
             </TouchableOpacity>
           </View>
 
-          <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+          <View style={styles.content}>
             <Text style={styles.label}>
               {appLanguage === 'zh-CN' ? '请为剧词记评分：' : 'Please rate Dramaword:'}
             </Text>
@@ -144,7 +144,7 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({
               numberOfLines={4}
               textAlignVertical="top"
             />
-          </ScrollView>
+          </View>
 
           <View style={styles.footer}>
             <TouchableOpacity
@@ -190,7 +190,6 @@ const styles = StyleSheet.create({
     padding: 20,
     width: '100%',
     maxWidth: 400,
-    maxHeight: '80%',
   },
   header: {
     flexDirection: 'row',
@@ -207,7 +206,6 @@ const styles = StyleSheet.create({
     padding: 4,
   },
   content: {
-    flex: 1,
     marginBottom: 20,
   },
   label: {
@@ -232,8 +230,8 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: colors.text.primary,
     backgroundColor: colors.background.secondary,
-    minHeight: 80,
-    maxHeight: 120,
+    minHeight: 60,
+    maxHeight: 100,
   },
   footer: {
     flexDirection: 'row',
