@@ -77,9 +77,9 @@ const MainContent: React.FC<MainLayoutProps> = ({ initialTab = 'search' }) => {
       await login(userData, userData.loginType);
       console.log('✅ AuthContext登录状态已更新');
       
-      // 登录成功后返回主页面
-      navigate('main');
-      console.log('登录成功:', userData);
+    // 登录成功后返回主页面
+    navigate('main');
+    console.log('登录成功:', userData);
     } catch (error) {
       console.error('❌ 登录状态更新失败:', error);
       // 即使状态更新失败，也返回主页面

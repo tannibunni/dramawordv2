@@ -170,7 +170,7 @@ const LanguagePicker: React.FC<LanguagePickerProps> = ({ onLanguageChange, onNav
                 console.log('🎯 LanguagePicker渲染 - 过滤后语言数量:', filteredLanguages.length);
                 
                                 return filteredLanguages.map(([key, language]) => (
-                  <TouchableOpacity
+                <TouchableOpacity
                       key={language.code}
                   style={[
                     styles.languageItem,

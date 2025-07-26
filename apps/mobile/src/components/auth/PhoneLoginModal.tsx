@@ -65,7 +65,7 @@ export const PhoneLoginModal: React.FC<PhoneLoginModalProps> = ({
       if (!response.ok) {
         throw new Error(data.message || '发送验证码失败');
       }
-
+      
       setCountdown(60);
       setStep('code');
       Alert.alert(t('tip', appLanguage), t('code_sent', appLanguage));
@@ -106,9 +106,9 @@ export const PhoneLoginModal: React.FC<PhoneLoginModalProps> = ({
         // 保存用户信息到本地存储
         await AsyncStorage.setItem('userToken', data.data.token);
         await AsyncStorage.setItem('userData', JSON.stringify(data.data.user));
-        
-        onLoginSuccess(phone);
-        onClose();
+      
+      onLoginSuccess(phone);
+      onClose();
       } else {
         throw new Error('登录响应格式错误');
       }

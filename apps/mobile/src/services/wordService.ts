@@ -38,8 +38,8 @@ export interface SpecialMeaning {
 }
 
 export interface WordData {
-  word: string;                // 词条本身（如“我爱你”或“woaini”）
-  phonetic?: string;           // 拼音（如“wǒ ài nǐ”），原有
+  word: string;                // 词条本身（如"我爱你"或"woaini"）
+  phonetic?: string;           // 拼音（如"wǒ ài nǐ"），原有
   pinyin?: string;             // 新增：标准拼音，兼容新后端
   definitions: WordDefinition[];
   audioUrl?: string;           // 发音音频链接
@@ -48,6 +48,7 @@ export interface WordData {
   slangMeaning?: SpecialMeaning | string | null;// 网络俚语解释（支持新旧格式）
   phraseExplanation?: SpecialMeaning | string | null;// 短语解释（支持新旧格式）
   kana?: string;               // 日语假名（中文查词一般无）
+  language?: string;           // 新增：语言代码 (en, ja, ko, fr, es, zh)
   // 其它字段如来源、反馈等
 }
 

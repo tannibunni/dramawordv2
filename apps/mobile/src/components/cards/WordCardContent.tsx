@@ -233,10 +233,10 @@ const WordCardContent: React.FC<WordCardContentProps> = ({ wordData, onPlayAudio
                   {(wordData.slangMeaning as any)?.examples && (wordData.slangMeaning as any).examples.length > 0 && (
                     <View style={styles.examplesBlock}>
                       {(wordData.slangMeaning as any).examples.map((ex: any, exIdx: number) => (
-                        <View key={exIdx} style={styles.exampleContainer}>
+                          <View key={exIdx} style={styles.exampleContainer}>
                           <Text style={styles.exampleLabelAndText} selectable>{ex.english}</Text>
                           <Text style={styles.exampleLabelAndText} selectable>{ex.chinese}</Text>
-                        </View>
+                          </View>
                       ))}
                     </View>
                   )}
@@ -259,10 +259,10 @@ const WordCardContent: React.FC<WordCardContentProps> = ({ wordData, onPlayAudio
                   {(wordData.phraseExplanation as any)?.examples && (wordData.phraseExplanation as any).examples.length > 0 && (
                     <View style={styles.examplesBlock}>
                       {(wordData.phraseExplanation as any).examples.map((ex: any, exIdx: number) => (
-                        <View key={exIdx} style={styles.exampleContainer}>
+                          <View key={exIdx} style={styles.exampleContainer}>
                           <Text style={styles.exampleLabelAndText} selectable>{ex.english}</Text>
                           <Text style={styles.exampleLabelAndText} selectable>{ex.chinese}</Text>
-                        </View>
+                          </View>
                       ))}
                     </View>
                   )}

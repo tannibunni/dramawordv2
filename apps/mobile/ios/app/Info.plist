@@ -27,24 +27,23 @@
       <dict>
         <key>CFBundleURLSchemes</key>
         <array>
+          <string>dramaword</string>
           <string>com.tannibunni.dramawordmobile</string>
+        </array>
+      </dict>
+      <dict>
+        <key>CFBundleURLSchemes</key>
+        <array>
+          <string>exp+dramaword-mobile</string>
         </array>
       </dict>
     </array>
     <key>CFBundleVersion</key>
-    <string>5</string>
+    <string>1</string>
     <key>ITSAppUsesNonExemptEncryption</key>
     <false/>
     <key>LSApplicationQueriesSchemes</key>
     <array>
-      <string>weixin</string>
-      <string>weixinULAPI</string>
-      <string>weixinURLParamsAPI</string>
-      <string>weixinQRCodePayAPI</string>
-      <string>weixin</string>
-      <string>weixinULAPI</string>
-      <string>weixinURLParamsAPI</string>
-      <string>weixinQRCodePayAPI</string>
       <string>weixin</string>
       <string>weixinULAPI</string>
       <string>weixinURLParamsAPI</string>

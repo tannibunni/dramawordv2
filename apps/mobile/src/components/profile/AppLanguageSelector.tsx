@@ -220,17 +220,17 @@ const AppLanguageSelector: React.FC<AppLanguageSelectorProps> = ({
           {/* 界面语言设置 */}
           {activeTab === 'app' && (
             <>
-              <ScrollView style={styles.languageList} showsVerticalScrollIndicator={false}>
-                {Object.keys(APP_LANGUAGES).map((languageCode) =>
-                  renderLanguageItem(languageCode as AppLanguage)
-                )}
-              </ScrollView>
+          <ScrollView style={styles.languageList} showsVerticalScrollIndicator={false}>
+            {Object.keys(APP_LANGUAGES).map((languageCode) =>
+              renderLanguageItem(languageCode as AppLanguage)
+            )}
+          </ScrollView>
 
-              <View style={styles.modalFooter}>
-                <Text style={styles.footerText}>
-                  {t('current_language' as TranslationKey, appLanguage)}: {APP_LANGUAGES[appLanguage].name}
-                </Text>
-              </View>
+          <View style={styles.modalFooter}>
+            <Text style={styles.footerText}>
+              {t('current_language' as TranslationKey, appLanguage)}: {APP_LANGUAGES[appLanguage].name}
+            </Text>
+          </View>
             </>
           )}
 
