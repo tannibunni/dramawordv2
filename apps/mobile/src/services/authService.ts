@@ -67,7 +67,7 @@ class AuthService {
 
   // 微信登录
   async wechatLogin(request: LoginRequest): Promise<LoginResponse> {
-    return this.request<LoginResponse>('/auth/wechat-login', {
+    return this.request<LoginResponse>('/wechat/login', {
       method: 'POST',
       body: JSON.stringify(request),
     });
@@ -75,7 +75,7 @@ class AuthService {
 
   // Apple登录
   async appleLogin(request: LoginRequest): Promise<LoginResponse> {
-    return this.request<LoginResponse>('/auth/apple-login', {
+    return this.request<LoginResponse>('/apple/login', {
       method: 'POST',
       body: JSON.stringify(request),
     });
