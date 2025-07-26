@@ -66,6 +66,14 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   const { selectedLanguage, getCurrentLanguageConfig, setSelectedLanguage } = useLanguage();
   const { appLanguage } = useAppLanguage();
   
+  // 语言提醒缓存，避免频繁弹窗
+  const [languageReminderCache, setLanguageReminderCache] = useState<{
+    [key: string]: {
+      timestamp: number;
+      dismissed: boolean;
+    }
+  }>({});
+  
   // 导航到语言设置页面
   const handleNavigateToLanguageSettings = () => {
     if (navigation) {
@@ -74,17 +82,46 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     }
   };
 
+  // 清理过期的语言提醒缓存
+  const cleanupExpiredCache = () => {
+    const now = Date.now();
+    const CACHE_DURATION = 5 * 60 * 1000; // 5分钟
+    
+    setLanguageReminderCache(prev => {
+      const cleaned = Object.entries(prev).reduce((acc, [key, value]) => {
+        if (now - value.timestamp < CACHE_DURATION) {
+          acc[key] = value;
+        }
+        return acc;
+      }, {} as typeof prev);
+      
+      if (Object.keys(cleaned).length !== Object.keys(prev).length) {
+        console.log('🧹 清理过期语言提醒缓存');
+      }
+      
+      return cleaned;
+    });
+  };
+
   // 处理语言切换
   const handleLanguageChange = (languageCode: string) => {
     console.log('🔄 HomeScreen - 语言切换:', languageCode);
-    // LanguagePicker已经通过useLanguage context自动更新了selectedLanguage
-    // 这里可以添加额外的逻辑，比如重新加载数据等
+    // 语言切换时清理缓存，因为用户可能改变了学习偏好
+    setLanguageReminderCache({});
+    console.log('🧹 语言切换时清理语言提醒缓存');
   };
   
   // 移除 getBackendLanguageCode 相关函数和调用
 
   useEffect(() => {
     loadRecentWords();
+  }, []);
+
+  // 定期清理过期的语言提醒缓存
+  useEffect(() => {
+    const cleanupInterval = setInterval(cleanupExpiredCache, 60000); // 每分钟清理一次
+    
+    return () => clearInterval(cleanupInterval);
   }, []);
 
   useEffect(() => {
@@ -154,6 +191,19 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     // 语言检测和提醒（仅对非中文输入且非英文UI下的英文输入）
     const reminderCheck = shouldShowLanguageReminder(word, selectedLanguage);
     if (reminderCheck.shouldShow && reminderCheck.detectedLanguage) {
+      // 生成缓存键：单词 + 检测到的语言 + 当前语言
+      const cacheKey = `${word}_${reminderCheck.detectedLanguage.code}_${selectedLanguage}`;
+      const now = Date.now();
+      const cacheEntry = languageReminderCache[cacheKey];
+      
+      // 检查缓存：如果5分钟内已经显示过相同提醒，则跳过
+      const CACHE_DURATION = 5 * 60 * 1000; // 5分钟
+      if (cacheEntry && (now - cacheEntry.timestamp) < CACHE_DURATION) {
+        console.log('🔍 跳过重复的语言提醒:', cacheKey);
+        await performSearch(word);
+        return;
+      }
+      
       const { title, message } = generateLanguageReminderMessage(
         word,
         reminderCheck.detectedLanguage,
@@ -168,11 +218,29 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
           {
             text: appLanguage === 'zh-CN' ? '保持当前语言' : 'Keep Current',
             style: 'cancel',
-            onPress: () => performSearch(word)
+            onPress: () => {
+              // 记录用户选择"保持当前语言"
+              setLanguageReminderCache(prev => ({
+                ...prev,
+                [cacheKey]: {
+                  timestamp: now,
+                  dismissed: true
+                }
+              }));
+              performSearch(word);
+            }
           },
           {
             text: appLanguage === 'zh-CN' ? '切换语言' : 'Switch Language',
             onPress: () => {
+              // 记录用户选择"切换语言"
+              setLanguageReminderCache(prev => ({
+                ...prev,
+                [cacheKey]: {
+                  timestamp: now,
+                  dismissed: false
+                }
+              }));
               setSelectedLanguage(reminderCheck.detectedLanguage!.code as SupportedLanguageCode);
               // 延迟执行搜索，确保语言切换完成
               setTimeout(() => performSearch(word), 100);
