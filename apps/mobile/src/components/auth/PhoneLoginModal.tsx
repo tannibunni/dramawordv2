@@ -15,6 +15,8 @@ import { LoginButton } from './LoginButton';
 import { colors } from '../../constants/colors';
 import { t } from '../../constants/translations';
 import { useAppLanguage } from '../../context/AppLanguageContext';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { API_BASE_URL } from '../../constants/config';
 
 interface PhoneLoginModalProps {
   visible: boolean;
@@ -50,16 +52,25 @@ export const PhoneLoginModal: React.FC<PhoneLoginModalProps> = ({
 
     setLoading(true);
     try {
-      // TODO: 调用发送验证码API
-      console.log('发送验证码到:', phone);
-      
-      // 模拟API调用
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
+      const response = await fetch(`${API_BASE_URL}/auth/send-code`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ phoneNumber: phone }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || '发送验证码失败');
+      }
+
       setCountdown(60);
       setStep('code');
       Alert.alert(t('tip', appLanguage), t('code_sent', appLanguage));
     } catch (error) {
+      console.error('发送验证码失败:', error);
       Alert.alert(t('error', appLanguage), t('code_send_failed', appLanguage));
     } finally {
       setLoading(false);
@@ -74,15 +85,35 @@ export const PhoneLoginModal: React.FC<PhoneLoginModalProps> = ({
 
     setLoading(true);
     try {
-      // TODO: 调用验证码验证API
-      console.log('验证码:', verificationCode);
-      
-      // 模拟API调用
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      onLoginSuccess(phone);
-      onClose();
+      const response = await fetch(`${API_BASE_URL}/auth/phone-login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          phoneNumber: phone, 
+          code: verificationCode 
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || '登录失败');
+      }
+
+      if (data.success && data.data) {
+        // 保存用户信息到本地存储
+        await AsyncStorage.setItem('userToken', data.data.token);
+        await AsyncStorage.setItem('userData', JSON.stringify(data.data.user));
+        
+        onLoginSuccess(phone);
+        onClose();
+      } else {
+        throw new Error('登录响应格式错误');
+      }
     } catch (error) {
+      console.error('手机号登录失败:', error);
       Alert.alert(t('error', appLanguage), t('verification_failed', appLanguage));
     } finally {
       setLoading(false);
