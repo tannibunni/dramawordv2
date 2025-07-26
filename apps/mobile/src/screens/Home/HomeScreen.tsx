@@ -330,6 +330,10 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       const targetLanguage = currentLanguageConfig.code;
       console.log('🔍 历史词搜索参数:', { word: searchWord, targetLanguage, uiLanguage: appLanguage });
       
+      // 调试：显示缓存键生成过程
+      const cacheKey = `${searchWord}_${targetLanguage}_${appLanguage}`;
+      console.log('🔍 尝试查找缓存键:', cacheKey);
+      
       // 优先尝试从缓存获取数据，传递正确的语言参数
       const cachedResult = await wordService.getWordDetail(searchWord, targetLanguage, appLanguage);
       if (cachedResult) {

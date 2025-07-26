@@ -497,6 +497,7 @@ export class WordService {
       
       // 生成包含语言信息的缓存键
       const cacheKey = `${word}_${language || 'en'}_${uiLanguage || 'zh-CN'}`;
+      console.log(`🔍 生成的缓存键: ${cacheKey}`);
       
       // 1. 先查统一缓存
       const cached = await cacheService.get<WordData>(CACHE_KEYS.WORD_DETAIL, cacheKey);
@@ -504,6 +505,7 @@ export class WordService {
         console.log(`✅ 从统一缓存获取单词详情: ${cacheKey}`);
         return cached;
       }
+      console.log(`❌ 统一缓存未找到: ${cacheKey}`);
       
       // 2. 从云词库（CloudWords）获取数据
       console.log(`☁️ 尝试从云词库获取: ${word}`);
@@ -514,6 +516,7 @@ export class WordService {
         await cacheService.set(CACHE_KEYS.WORD_DETAIL, cacheKey, cloudResult);
         return cloudResult;
       }
+      console.log(`❌ 云词库未找到: ${word}`);
       
       // 3. 云词库没有数据，调用搜索API
       console.log(`📡 云词库无数据，调用搜索API: ${word}`);
