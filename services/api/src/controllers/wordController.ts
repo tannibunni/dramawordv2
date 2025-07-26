@@ -148,38 +148,13 @@ export const searchWord = async (req: Request, res: Response): Promise<void> => 
 
     const searchTerm = word.toLowerCase().trim();
     
-    // 自动检测搜索词的语言
+    // 简化语言检测逻辑：直接使用前端传递的语言参数
     let detectedLanguage = language;
-    if (language === 'en') {
-      // 如果前端传递的是 'en'，尝试检测实际语言
-      const hasChineseChars = /[\u4e00-\u9fff]/.test(searchTerm);
-      const hasPinyinTones = /[āáǎàēéěèīíǐìōóǒòūúǔùǖǘǚǜü]/.test(searchTerm);
-      
-      // 常见英文单词列表，避免误判为拼音
-      const commonEnglishWords = [
-        'hello', 'hi', 'bye', 'good', 'bad', 'yes', 'no', 'ok', 'okay', 'child', 'prodigy', 'beautiful', 'apple', 'test', 'word', 'english', 'chinese', 'japanese', 'korean', 'french', 'spanish', 'german', 'italian', 'portuguese', 'russian', 'arabic', 'hindi', 'thai', 'vietnamese', 'indonesian', 'malay', 'filipino', 'swahili', 'zulu', 'xhosa', 'afrikaans', 'dutch', 'swedish', 'norwegian', 'danish', 'finnish', 'icelandic', 'polish', 'czech', 'slovak', 'hungarian', 'romanian', 'bulgarian', 'serbian', 'croatian', 'slovenian', 'macedonian', 'albanian', 'greek', 'turkish', 'hebrew', 'persian', 'urdu', 'bengali', 'tamil', 'telugu', 'kannada', 'malayalam', 'gujarati', 'marathi', 'punjabi', 'odia', 'assamese', 'nepali', 'sinhala', 'myanmar', 'lao', 'cambodian', 'mongolian', 'kazakh', 'uzbek', 'kyrgyz', 'tajik', 'turkmen', 'azerbaijani', 'georgian', 'armenian', 'moldovan', 'belarusian', 'ukrainian', 'lithuanian', 'latvian', 'estonian',
-        // 添加更多常见英文单词
-        'success', 'excellent', 'wonderful', 'amazing', 'great', 'perfect', 'fantastic', 'brilliant', 'outstanding', 'superb', 'magnificent', 'splendid', 'marvelous', 'terrific', 'awesome', 'incredible', 'extraordinary', 'remarkable', 'exceptional', 'phenomenal', 'spectacular', 'stunning', 'breathtaking', 'gorgeous', 'lovely', 'charming', 'delightful', 'pleasant', 'nice', 'fine', 'well', 'better', 'best', 'worse', 'worst', 'good', 'bad', 'big', 'small', 'large', 'tiny', 'huge', 'enormous', 'massive', 'giant', 'little', 'mini', 'micro', 'macro', 'new', 'old', 'young', 'fresh', 'modern', 'ancient', 'classic', 'traditional', 'contemporary', 'current', 'latest', 'recent', 'previous', 'former', 'latter', 'next', 'last', 'first', 'second', 'third', 'fourth', 'fifth', 'sixth', 'seventh', 'eighth', 'ninth', 'tenth', 'hundred', 'thousand', 'million', 'billion', 'trillion', 'zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen', 'seventeen', 'eighteen', 'nineteen', 'twenty', 'thirty', 'forty', 'fifty', 'sixty', 'seventy', 'eighty', 'ninety', 'hundred', 'thousand', 'million', 'billion', 'trillion'
-      ];
-      
-      if (hasChineseChars) {
-        detectedLanguage = 'zh';
-        logger.info(`🔍 检测到中文字符，将语言从 'en' 改为 'zh': ${searchTerm}`);
-      } else if (hasPinyinTones) {
-        // 包含声调符号的拼音
-        detectedLanguage = 'zh';
-        logger.info(`🔍 检测到拼音声调，将语言从 'en' 改为 'zh': ${searchTerm}`);
-      } else if (commonEnglishWords.includes(searchTerm.toLowerCase())) {
-        // 如果是常见英文单词，保持为英文
-        logger.info(`🔍 检测到常见英文单词，保持语言为 'en': ${searchTerm}`);
-      } else {
-        // 更精确的拼音检测：只检测无声调拼音，但排除常见英文单词
-        const isPinyinLike = /^[a-z]+(\s+[a-z]+)*$/i.test(searchTerm) && searchTerm.length <= 20;
-        if (isPinyinLike) {
-          detectedLanguage = 'zh';
-          logger.info(`🔍 检测到可能的拼音模式，将语言从 'en' 改为 'zh': ${searchTerm}`);
-        }
-      }
+    
+    // 只在中文字符的情况下才改变语言检测
+    if (language === 'en' && /[\u4e00-\u9fff]/.test(searchTerm)) {
+      detectedLanguage = 'zh';
+      logger.info(`🔍 检测到中文字符，将语言从 'en' 改为 'zh': ${searchTerm}`);
     }
     
     const cacheKey = `${searchTerm}_${detectedLanguage}_${uiLanguage}`;
