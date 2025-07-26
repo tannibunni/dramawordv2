@@ -2,7 +2,7 @@
   "expo": {
     "name": "剧词记",
     "slug": "dramaword-mobile",
-    "version": "1.0.0",
+    "version": "1.52.0",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
