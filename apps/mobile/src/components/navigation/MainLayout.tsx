@@ -20,26 +20,16 @@ const MainContent: React.FC<MainLayoutProps> = ({ initialTab = 'search' }) => {
   const [activeTab, setActiveTab] = useState<TabType>(initialTab);
   const { currentScreen, params, navigate } = useNavigation();
 
-  // 新增：监听 params.tab，自动切换 tab
+  // 监听 params.tab，自动切换 tab
   useEffect(() => {
     if (currentScreen === 'main' && params.tab && params.tab !== activeTab) {
+      console.log('🔄 MainLayout - 自动切换tab:', { from: activeTab, to: params.tab });
       setActiveTab(params.tab);
-      // 清空 tab 参数，防止后续 navigate('main') 时重复切换
-      setTimeout(() => navigate('main', {}), 0);
     }
-  }, [params.tab, currentScreen, activeTab]);
+  }, [params.tab, currentScreen]);
 
   const renderCurrentPage = () => {
     switch (currentScreen) {
-      case 'main':
-        return (
-          <>
-            <View style={styles.content}>
-              {renderMainContent(activeTab)}
-            </View>
-            <BottomTabBar activeTab={activeTab} onTabPress={setActiveTab} />
-          </>
-        );
       case 'login':
         return <LoginScreen onLoginSuccess={handleLoginSuccess} onGuestLogin={handleGuestLogin} />;
       case 'wordCard':
@@ -49,6 +39,7 @@ const MainContent: React.FC<MainLayoutProps> = ({ initialTab = 'search' }) => {
         return <SubscriptionScreen />;
       case 'ReviewScreen':
         return <ReviewScreen {...params} />;
+      case 'main':
       default:
         return (
           <>

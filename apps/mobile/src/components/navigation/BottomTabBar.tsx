@@ -78,7 +78,10 @@ export const BottomTabBar: React.FC<BottomTabBarProps> = ({
                 styles.tabItem,
                 isSearchTab && styles.searchTabItem
               ]}
-              onPress={() => onTabPress(item.key)}
+              onPress={() => {
+                console.log('🔄 BottomTabBar - 点击tab:', item.key, '当前activeTab:', activeTab);
+                onTabPress(item.key);
+              }}
               activeOpacity={0.7}
             >
               <View style={[
