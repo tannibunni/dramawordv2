@@ -147,7 +147,12 @@ const WordCardContent: React.FC<WordCardContentProps> = ({ wordData, onPlayAudio
           {wordData.language && (
             <View style={styles.languageTagContainer}>
               {(() => {
+                console.log('🔍 语言标签调试:', { 
+                  wordDataLanguage: wordData.language, 
+                  appLanguage: appLanguage 
+                });
                 const languageLabel = getLanguageLabel(wordData.language, appLanguage);
+                console.log('🔍 语言标签结果:', languageLabel);
                 return (
                   <View style={styles.languageTag}>
                     <Text style={styles.languageFlag}>{languageLabel.flag}</Text>
