@@ -6,6 +6,7 @@ export const SUPPORTED_LANGUAGES = {
   ENGLISH: {
     code: 'en',
     name: '英语',
+    englishName: 'English',
     nativeName: 'English',
     flag: '🇺🇸',
     direction: 'ltr',
@@ -15,6 +16,7 @@ export const SUPPORTED_LANGUAGES = {
   CHINESE: {
     code: 'zh',
     name: '中文',
+    englishName: 'Chinese',
     nativeName: '中文',
     flag: '🇨🇳',
     direction: 'ltr',
@@ -24,6 +26,7 @@ export const SUPPORTED_LANGUAGES = {
   KOREAN: {
     code: 'ko',
     name: '韩语',
+    englishName: 'Korean',
     nativeName: '한국어',
     flag: '🇰🇷',
     direction: 'ltr',
@@ -33,6 +36,7 @@ export const SUPPORTED_LANGUAGES = {
   JAPANESE: {
     code: 'ja',
     name: '日语',
+    englishName: 'Japanese',
     nativeName: '日本語',
     flag: '🇯🇵',
     direction: 'ltr',
@@ -42,6 +46,7 @@ export const SUPPORTED_LANGUAGES = {
   FRENCH: {
     code: 'fr',
     name: '法语',
+    englishName: 'French',
     nativeName: 'Français',
     flag: '🇫🇷',
     direction: 'ltr',
@@ -51,6 +56,7 @@ export const SUPPORTED_LANGUAGES = {
   SPANISH: {
     code: 'es',
     name: '西班牙语',
+    englishName: 'Spanish',
     nativeName: 'Español',
     flag: '🇪🇸',
     direction: 'ltr',

@@ -205,7 +205,7 @@ const LanguagePicker: React.FC<LanguagePickerProps> = ({ onLanguageChange, onNav
                         {appLanguage === 'en-US' ? language.nativeName : language.name}
                       </Text>
                       <Text style={styles.languageCode}>
-                        {appLanguage === 'en-US' ? language.name : language.code.toUpperCase()}
+                        {appLanguage === 'en-US' ? language.englishName : language.code.toUpperCase()}
                       </Text>
                     </View>
                   </View>

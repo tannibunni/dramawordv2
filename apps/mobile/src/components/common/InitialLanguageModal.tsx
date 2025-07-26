@@ -175,11 +175,12 @@ export const InitialLanguageModal: React.FC<InitialLanguageModalProps> = ({
                   return true;
                 })
                 .map(language => {
-                  // 当UI语言是英语时，将中文显示为"Chinese"
+                  // 当UI语言是英语时，显示英文名称，但保持原文字符
                   const displayLanguage = {
                     ...language,
-                    name: appLanguage === 'en-US' && language.code === 'zh' ? 'Chinese' : language.name,
-                    nativeName: appLanguage === 'en-US' && language.code === 'zh' ? '中文' : language.nativeName
+                    name: appLanguage === 'en-US' ? language.englishName : language.name,
+                    // 保持原文字符不变
+                    nativeName: language.nativeName
                   };
                   return renderLanguageItem(language.code, displayLanguage);
                 })
