@@ -658,7 +658,7 @@ const ReviewIntroScreen = () => {
       'contributed_words': isChinese ? '贡献新词' : 'Contributed Words',
       'out_of': isChinese ? '共 {total}' : 'Out of {total}',
       'level_text': isChinese ? '等级' : 'Level',
-      'collected_vocabulary': isChinese ? '已收集词汇' : 'Collectedimage.png',
+      'collected_vocabulary': isChinese ? '已收集词汇' : 'Collected',
       'cumulative_review': isChinese ? '累计复习' : 'Review Times',
       'continuous_learning': isChinese ? '连续学习' : 'Streak Days',
       'words_unit': isChinese ? '个词' : ' ',
@@ -924,7 +924,7 @@ const styles = StyleSheet.create({
   // 统一信息区域样式
   unifiedInfoContainer: {
     flexDirection: 'column',
-    marginBottom: 24,
+    marginBottom: 12,
     paddingHorizontal: 10,
     marginTop: 0, // 移除顶部间距，因为挑战横幅在上面
   },
@@ -1012,7 +1012,7 @@ const styles = StyleSheet.create({
   challengeBanner: {
     backgroundColor: colors.background.secondary,
     borderRadius: 16,
-    marginBottom: 5, // 增加与剧集复习板块的距离，让挑战横幅更突出
+    marginBottom: 12, // 增加与剧集复习板块的距离，让挑战横幅更突出
     marginTop: 2,
     minHeight: 90, // 新增，提升横幅最小高度
     ...Platform.select({
@@ -1082,7 +1082,7 @@ const styles = StyleSheet.create({
   challengeCardTitle: { fontSize: 18, fontWeight: 'bold', color: colors.primary[500], marginBottom: 2 },
   challengeCardSubtitle: { fontSize: 14, color: colors.text.tertiary },
 // 剧集复习样式
-  showsSection: { marginBottom: 24 }, // 增加与单词本复习板块的距离，让两个复习板块有明显分隔
+  showsSection: { marginBottom: 12 }, // 增加与单词本复习板块的距离，让两个复习板块有明显分隔
   showsTitle: { fontSize: 18, fontWeight: 'bold', color: colors.text.primary, marginBottom: 8 }, // 减少底部间距，从12改为8
   showsScroll: { flexGrow: 0 },
   showCard: { 
@@ -1119,7 +1119,7 @@ const styles = StyleSheet.create({
   showName: { fontSize: 14, fontWeight: 'bold', color: colors.text.primary, textAlign: 'center', marginBottom: 2, width: '100%' },
   showWordCount: { fontSize: 12, color: colors.text.secondary, textAlign: 'center' },
   // 单词本复习样式
-  wordbookSection: { marginBottom: 24 }, // 增加底部间距，让最后一个板块与屏幕底部有足够距离
+  wordbookSection: { marginBottom: 12 }, // 增加底部间距，让最后一个板块与屏幕底部有足够距离
   wordbookTitle: { fontSize: 18, fontWeight: 'bold', color: colors.text.primary, marginBottom: 8 },
   wordbookScroll: { flexGrow: 0 },
   wordbookCard: { 
@@ -1214,7 +1214,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background.secondary,
     borderRadius: 16,
     padding: 20,
-    marginBottom: 24, // 增加与挑战横幅的距离，让板块之间有更明显的分隔
+    marginBottom: 8, // 增加与挑战横幅的距离，让板块之间有更明显的分隔
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
