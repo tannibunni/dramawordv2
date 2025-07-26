@@ -918,7 +918,7 @@ const styles = StyleSheet.create({
     flex: 1, 
     backgroundColor: colors.background.primary, 
     paddingHorizontal: 20,
-    paddingTop: Platform.OS === 'ios' ? 80 : 36, // 增加顶部间距，让第一个板块与顶部有足够距离
+    paddingTop: Platform.OS === 'ios' ? 50 : 36, // 增加顶部间距，让第一个板块与顶部有足够距离
     // justifyContent: 'space-between', // 移除这行，让内容自然流式排列
   },
   // 统一信息区域样式
@@ -1012,7 +1012,7 @@ const styles = StyleSheet.create({
   challengeBanner: {
     backgroundColor: colors.background.secondary,
     borderRadius: 16,
-    marginBottom: 32, // 增加与剧集复习板块的距离，让挑战横幅更突出
+    marginBottom: 5, // 增加与剧集复习板块的距离，让挑战横幅更突出
     marginTop: 2,
     minHeight: 90, // 新增，提升横幅最小高度
     ...Platform.select({

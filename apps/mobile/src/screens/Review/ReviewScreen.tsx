@@ -158,22 +158,17 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
     // 更新进度条动画
     if (words.length > 0) {
       // 修复进度计算逻辑：
-      // 1. 开始进度应该是0（swiperIndex=0时）
-      // 2. 滑完第一张卡后（swiperIndex=1时）进度应该是 1/(words.length-1) * 100
-      // 3. 滑完最后一张卡后（swiperIndex=words.length-1时）进度应该是 100%
-      let newProgress = 0;
-      if (words.length > 1) {
-        newProgress = (swiperIndex / (words.length - 1)) * 100;
-      } else if (words.length === 1) {
-        // 只有一张卡片时，开始就是100%
-        newProgress = 100;
-      }
+      // 开始状态：进度条为0%（swiperIndex=0时）
+      // 滑完第一张卡：进度条为33.33%（swiperIndex=1时，3张卡的情况下）
+      // 滑完第二张卡：进度条为66.67%（swiperIndex=2时，3张卡的情况下）
+      // 滑完最后一张卡：进度条为100%（swiperIndex=3时，3张卡的情况下）
+      const newProgress = (swiperIndex / words.length) * 100;
       console.log('🔄 进度条动画 - 当前进度:', currentProgress, '目标进度:', newProgress, 'swiperIndex:', swiperIndex, 'words.length:', words.length);
       
       // 使用更平滑的动画曲线，增加动画时长
       Animated.timing(progressAnimation, {
         toValue: newProgress,
-        duration: 800, // 增加动画时长，让用户能看到进度条变化
+        duration: 1000, // 增加动画时长，确保动画完全完成
         useNativeDriver: false,
       }).start(({ finished }) => {
         if (finished) {
@@ -289,11 +284,7 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
       setSwiperIndex(0);
       
       // 初始化进度条动画
-      let initialProgress = 0;
-      if (words.length === 1) {
-        // 只有一张卡片时，开始就是100%
-        initialProgress = 100;
-      }
+      const initialProgress = 0; // 开始总是0%
       progressAnimation.setValue(initialProgress);
       setCurrentProgress(initialProgress);
       console.log('🔄 进度条动画初始化 - 初始进度:', initialProgress);
@@ -612,37 +603,40 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
   // 移动到下一个单词
   const moveToNextWord = () => {
     console.log('ReviewScreen: moveToNextWord called - current swiperIndex:', swiperIndex, 'words.length:', words.length);
-    if (swiperIndex < words.length - 1) {
+    if (swiperIndex < words.length) {
       const newIndex = swiperIndex + 1;
       console.log('ReviewScreen: Moving to next word, new index:', newIndex);
       setSwiperIndex(newIndex);
-        setShowAnswer(false);
-      } else {
-      console.log('ReviewScreen: Review complete, calculating final stats');
-      // 复习完成 - 计算最终统计数据
-      if (!isReviewComplete) {
-        const rememberedWords = rememberedRef.current;
-        const forgottenWords = forgottenRef.current;
-        const currentStats = reviewStats;
-        const experience = rememberedWords * 15;
-        const accuracy = currentStats.totalWords > 0 ? Math.round((rememberedWords / currentStats.totalWords) * 100) : 0;
-        const finalStats = {
-          totalWords: currentStats.totalWords,
-          rememberedWords,
-          forgottenWords,
-          experience,
-          accuracy,
-        };
-        console.log('ReviewScreen: Final stats:', finalStats);
-        setReviewStats(finalStats);
-        setFinalStats(finalStats);
-        
+      setShowAnswer(false);
+      
+      // 如果是最后一张卡，延迟显示完成页面
+      if (newIndex === words.length) {
+        console.log('ReviewScreen: Last card completed, preparing to show completion screen');
         // 延迟显示完成页面，确保进度条动画完成
         setTimeout(() => {
-          setIsReviewComplete(true);
-        }, 800); // 等待进度条动画完成
+          console.log('ReviewScreen: Review complete, calculating final stats');
+          // 复习完成 - 计算最终统计数据
+          if (!isReviewComplete) {
+            const rememberedWords = rememberedRef.current;
+            const forgottenWords = forgottenRef.current;
+            const currentStats = reviewStats;
+            const experience = rememberedWords * 15;
+            const accuracy = currentStats.totalWords > 0 ? Math.round((rememberedWords / currentStats.totalWords) * 100) : 0;
+            const finalStats = {
+              totalWords: currentStats.totalWords,
+              rememberedWords,
+              forgottenWords,
+              experience,
+              accuracy,
+            };
+            console.log('ReviewScreen: Final stats:', finalStats);
+            setReviewStats(finalStats);
+            setFinalStats(finalStats);
+            setIsReviewComplete(true);
+          }
+        }, 1200); // 增加延迟时间，确保100%动画完全加载完毕
       }
-      }
+    }
   };
 
   // 处理音频播放
@@ -704,10 +698,7 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
       console.log('ReviewScreen: Updated stats after left swipe:', newStats);
       return newStats;
     });
-    // 更新当前卡片索引
-    const nextIndex = Math.min(cardIndex + 1, words.length - 1);
-    console.log('ReviewScreen: handleSwipedLeft - setting swiperIndex to:', nextIndex);
-    setSwiperIndex(nextIndex);
+    // 不在这里更新swiperIndex，让moveToNextWord()来处理
   };
   const handleSwipedRight = (cardIndex: number) => {
     console.log('ReviewScreen: handleSwipedRight called with cardIndex:', cardIndex);
@@ -720,10 +711,7 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
       console.log('ReviewScreen: Updated stats after right swipe:', newStats);
       return newStats;
     });
-    // 更新当前卡片索引
-    const nextIndex = Math.min(cardIndex + 1, words.length - 1);
-    console.log('ReviewScreen: handleSwipedRight - setting swiperIndex to:', nextIndex);
-    setSwiperIndex(nextIndex);
+    // 不在这里更新swiperIndex，让moveToNextWord()来处理
   };
 
 
@@ -733,16 +721,17 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
     console.log('ReviewScreen: handleSwiped called with cardIndex:', cardIndex);
     // 这个回调作为备用，主要依赖 handleSwipedLeft/Right/Top 来处理
     // 如果其他回调没有被触发，这里确保索引被更新
-    const nextIndex = Math.min(cardIndex + 1, words.length - 1);
+    const nextIndex = Math.min(cardIndex + 1, words.length);
     console.log('ReviewScreen: handleSwiped - setting swiperIndex to:', nextIndex);
     setSwiperIndex(nextIndex);
   };
 
   // 进度条渲染
   const renderProgressBar = () => {
-    // swiperIndex 表示当前正在查看的卡片索引（从0开始）
-    const currentCardIndex = swiperIndex + 1; // 转换为1-based索引用于显示
-    const progressText = words.length > 0 ? `${currentCardIndex} / ${words.length}` : '';
+    // 修复进度文本显示逻辑：
+    // 开始显示 0/3，滑完第一张卡显示 1/3，滑完第二张卡显示 2/3，滑完最后一张卡显示 3/3
+    // 显示当前正在查看的卡片索引（从0开始）
+    const progressText = words.length > 0 ? `${swiperIndex} / ${words.length}` : '';
     return (
     <View style={{ width: '100%', alignItems: 'center', marginTop: 16, marginBottom: 8 }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', width: '90%' }}>
@@ -831,7 +820,7 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
     // 延迟显示完成页面，确保进度条动画完成
     setTimeout(() => {
       setIsReviewComplete(true);
-    }, 800); // 等待进度条动画完成
+    }, 1200); // 增加延迟时间，确保100%动画完全加载完毕
   };
 
   // ReviewCompleteScreen 传入 actions
