@@ -157,10 +157,18 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
     
     // 更新进度条动画
     if (words.length > 0) {
-      // 计算当前卡片进度（1-based索引）
-      const currentCardIndex = swiperIndex + 1;
-      const newProgress = (currentCardIndex / words.length) * 100;
-      console.log('🔄 进度条动画 - 当前进度:', currentProgress, '目标进度:', newProgress, 'swiperIndex:', swiperIndex, 'currentCardIndex:', currentCardIndex, 'words.length:', words.length);
+      // 修复进度计算逻辑：
+      // 1. 开始进度应该是0（swiperIndex=0时）
+      // 2. 滑完第一张卡后（swiperIndex=1时）进度应该是 1/(words.length-1) * 100
+      // 3. 滑完最后一张卡后（swiperIndex=words.length-1时）进度应该是 100%
+      let newProgress = 0;
+      if (words.length > 1) {
+        newProgress = (swiperIndex / (words.length - 1)) * 100;
+      } else if (words.length === 1) {
+        // 只有一张卡片时，开始就是100%
+        newProgress = 100;
+      }
+      console.log('🔄 进度条动画 - 当前进度:', currentProgress, '目标进度:', newProgress, 'swiperIndex:', swiperIndex, 'words.length:', words.length);
       
       // 使用更平滑的动画曲线，增加动画时长
       Animated.timing(progressAnimation, {
@@ -281,7 +289,11 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
       setSwiperIndex(0);
       
       // 初始化进度条动画
-      const initialProgress = 0;
+      let initialProgress = 0;
+      if (words.length === 1) {
+        // 只有一张卡片时，开始就是100%
+        initialProgress = 100;
+      }
       progressAnimation.setValue(initialProgress);
       setCurrentProgress(initialProgress);
       console.log('🔄 进度条动画初始化 - 初始进度:', initialProgress);
@@ -730,7 +742,6 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
   const renderProgressBar = () => {
     // swiperIndex 表示当前正在查看的卡片索引（从0开始）
     const currentCardIndex = swiperIndex + 1; // 转换为1-based索引用于显示
-    const progressPercentage = words.length > 0 ? (currentCardIndex / words.length) * 100 : 0;
     const progressText = words.length > 0 ? `${currentCardIndex} / ${words.length}` : '';
     return (
     <View style={{ width: '100%', alignItems: 'center', marginTop: 16, marginBottom: 8 }}>

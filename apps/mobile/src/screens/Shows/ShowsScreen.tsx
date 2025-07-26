@@ -987,14 +987,6 @@ const ShowsScreen: React.FC = () => {
                 <>
                   <Ionicons name="book-outline" size={64} color={colors.neutral[300]} />
                   <Text style={styles.emptyText}>{t('no_wordbooks')}</Text>
-                  <TouchableOpacity 
-                    style={styles.createWordbookButton}
-                    onPress={openCreateWordbook}
-                    activeOpacity={0.8}
-                  >
-                    <Ionicons name="add" size={20} color={colors.text.inverse} />
-                    <Text style={styles.createWordbookButtonText}>{t('create_wordbook')}</Text>
-                  </TouchableOpacity>
                 </>
               ) : (
                 // 剧单空状态
@@ -1775,21 +1767,7 @@ const styles = StyleSheet.create({
     color: '#000000',
     fontWeight: '600',
   },
-  createWordbookButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.primary[500],
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: 20,
-    marginTop: 10,
-  },
-  createWordbookButtonText: {
-    color: colors.text.inverse,
-    fontSize: 16,
-    fontWeight: '500',
-    marginLeft: 8,
-  },
+
   flatAddWordbookButton: {
     flexDirection: 'row',
     alignItems: 'center',
