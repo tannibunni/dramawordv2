@@ -146,8 +146,29 @@ export const shouldShowLanguageReminder = (
     return { shouldShow: false };
   }
 
+  // 将当前语言代码转换为标准格式进行比较
+  // currentLanguage 可能是 'KOREAN', 'JAPANESE' 等，需要转换为 'ko', 'ja' 等
+  let currentLanguageCode = currentLanguage;
+  
+  // 如果 currentLanguage 是 SupportedLanguageCode 格式，转换为标准代码
+  if (currentLanguage === 'KOREAN') currentLanguageCode = 'ko';
+  else if (currentLanguage === 'JAPANESE') currentLanguageCode = 'ja';
+  else if (currentLanguage === 'ENGLISH') currentLanguageCode = 'en';
+  else if (currentLanguage === 'CHINESE') currentLanguageCode = 'zh';
+  else if (currentLanguage === 'FRENCH') currentLanguageCode = 'fr';
+  else if (currentLanguage === 'SPANISH') currentLanguageCode = 'es';
+
+  console.log('🔍 语言检测调试:', {
+    inputText,
+    currentLanguage,
+    currentLanguageCode,
+    detectedCode: detected.code,
+    detectedConfidence: detected.confidence,
+    shouldShow: detected.code !== currentLanguageCode && detected.confidence > 0.3
+  });
+
   // 如果检测到的语言与当前语言不同，且置信度较高
-  if (detected.code !== currentLanguage && detected.confidence > 0.3) {
+  if (detected.code !== currentLanguageCode && detected.confidence > 0.3) {
     return {
       shouldShow: true,
       detectedLanguage: detected
@@ -171,7 +192,18 @@ export const generateLanguageReminderMessage = (
   currentLanguage: string,
   appLanguage: string
 ): { title: string; message: string } => {
-  const currentLangInfo = LANGUAGE_PATTERNS[currentLanguage as keyof typeof LANGUAGE_PATTERNS];
+  // 将当前语言代码转换为标准格式来获取语言信息
+  let currentLanguageCode = currentLanguage;
+  
+  // 如果 currentLanguage 是 SupportedLanguageCode 格式，转换为标准代码
+  if (currentLanguage === 'KOREAN') currentLanguageCode = 'ko';
+  else if (currentLanguage === 'JAPANESE') currentLanguageCode = 'ja';
+  else if (currentLanguage === 'ENGLISH') currentLanguageCode = 'en';
+  else if (currentLanguage === 'CHINESE') currentLanguageCode = 'zh';
+  else if (currentLanguage === 'FRENCH') currentLanguageCode = 'fr';
+  else if (currentLanguage === 'SPANISH') currentLanguageCode = 'es';
+  
+  const currentLangInfo = LANGUAGE_PATTERNS[currentLanguageCode as keyof typeof LANGUAGE_PATTERNS];
   
   if (appLanguage === 'zh-CN') {
     return {
