@@ -318,8 +318,8 @@ const WordCardContent: React.FC<WordCardContentProps> = ({ wordData, onPlayAudio
 const styles = StyleSheet.create({
   container: {
     width: '100%',
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: 'flex-start', // 改为左对齐，避免内容居中
+    justifyContent: 'flex-start', // 改为顶部对齐，避免垂直居中
     backgroundColor: 'transparent',
     borderRadius: 0,
     paddingVertical: 0,

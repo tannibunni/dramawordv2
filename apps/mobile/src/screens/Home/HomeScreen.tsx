@@ -73,6 +73,13 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       navigation.navigate('main', { tab: 'profile', openLanguageSettings: true });
     }
   };
+
+  // 处理语言切换
+  const handleLanguageChange = (languageCode: string) => {
+    console.log('🔄 HomeScreen - 语言切换:', languageCode);
+    // LanguagePicker已经通过useLanguage context自动更新了selectedLanguage
+    // 这里可以添加额外的逻辑，比如重新加载数据等
+  };
   
   // 移除 getBackendLanguageCode 相关函数和调用
 
@@ -132,7 +139,13 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       return;
     }
 
-    // 语言检测和提醒
+    // 如果是中文输入，直接进入翻译功能，不触发语言提醒
+    if (isChinese(word)) {
+      await performSearch(word);
+      return;
+    }
+
+    // 语言检测和提醒（仅对非中文输入）
     const reminderCheck = shouldShowLanguageReminder(word, selectedLanguage);
     if (reminderCheck.shouldShow && reminderCheck.detectedLanguage) {
       const { title, message } = generateLanguageReminderMessage(
@@ -178,8 +191,28 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     
     try {
       if (isChinese(word)) {
-        // 中文查英文
-        const result = await wordService.translateChineseToEnglish(word);
+        // 获取当前选择的目标语言
+        const currentLanguageConfig = getCurrentLanguageConfig();
+        if (!currentLanguageConfig) {
+          console.error('❌ 无法获取当前语言配置');
+          Alert.alert('错误', '无法获取语言配置，请重试');
+          setIsLoading(false);
+          return;
+        }
+        
+        const targetLanguage = currentLanguageConfig.code;
+        console.log(`🔍 中文翻译到目标语言: ${word} -> ${targetLanguage}`);
+        
+        // 根据目标语言调用相应的翻译功能
+        let result;
+        if (targetLanguage === 'en') {
+          // 中文查英文（原有功能）
+          result = await wordService.translateChineseToEnglish(word);
+        } else {
+          // 中文翻译到其他目标语言（新功能）
+          result = await wordService.translateChineseToTargetLanguage(word, targetLanguage);
+        }
+        
         if (result.success && result.candidates.length > 0) {
           setChToEnCandidates(result.candidates);
           setChToEnQuery(word);
@@ -201,14 +234,29 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
           setIsLoading(false);
           return;
         } else {
-          Alert.alert(t('no_suitable_english_meaning', appLanguage), t('try_other_chinese_words', appLanguage));
+          const targetLanguageName = currentLanguageConfig.name;
+          Alert.alert(
+            t('no_suitable_english_meaning', appLanguage), 
+            `没有找到合适的${targetLanguageName}释义，请尝试其他中文词汇`
+          );
           setIsLoading(false);
           return;
         }
       }
       
-      // 英文查中文
-      const result = await wordService.searchWord(word.toLowerCase(), 'en', appLanguage);
+      // 使用当前选择的目标语言进行搜索
+      const currentLanguageConfig = getCurrentLanguageConfig();
+      // 添加安全检查
+      if (!currentLanguageConfig) {
+        console.error('❌ 无法获取当前语言配置');
+        Alert.alert('错误', '无法获取语言配置，请重试');
+        setIsLoading(false);
+        return;
+      }
+      
+      const targetLanguage = currentLanguageConfig.code;
+      console.log('🔍 搜索参数:', { word, targetLanguage, uiLanguage: appLanguage });
+      const result = await wordService.searchWord(word.toLowerCase(), targetLanguage, appLanguage);
       if (result.success && result.data) {
         if (result.data?.definitions) {
           result.data.definitions.forEach((def: any, idx: number) => {
@@ -263,12 +311,37 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       setSearchText('');
       return;
     }
-    // 原有英文查词逻辑
+    
+    // 使用当前选择的目标语言进行搜索
     const searchWord = word.word.trim().toLowerCase();
     setIsLoading(true);
     setSearchResult(null);
+    
     try {
-      const result = await wordService.searchWord(searchWord, 'en', appLanguage);
+      const currentLanguageConfig = getCurrentLanguageConfig();
+      // 添加安全检查
+      if (!currentLanguageConfig) {
+        console.error('❌ 无法获取当前语言配置');
+        Alert.alert('错误', '无法获取语言配置，请重试');
+        setIsLoading(false);
+        return;
+      }
+      
+      const targetLanguage = currentLanguageConfig.code;
+      console.log('🔍 历史词搜索参数:', { word: searchWord, targetLanguage, uiLanguage: appLanguage });
+      
+      // 优先尝试从缓存获取数据，传递正确的语言参数
+      const cachedResult = await wordService.getWordDetail(searchWord, targetLanguage, appLanguage);
+      if (cachedResult) {
+        console.log('✅ 从缓存获取到历史词数据:', cachedResult);
+        setSearchResult(cachedResult);
+        setIsLoading(false);
+        return;
+      }
+      
+      // 缓存中没有数据，才发送新的搜索请求
+      console.log('📡 缓存无数据，发送新的搜索请求');
+      const result = await wordService.searchWord(searchWord, targetLanguage, appLanguage);
       console.log('🔍 搜索结果:', result);
       if (result.success && result.data) {
         console.log('🔍 设置 searchResult:', result.data);
@@ -538,7 +611,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         <View style={styles.searchContainer}>
           <View style={styles.searchBox}>
             {/* 语言选择器 */}
-            <LanguagePicker onNavigateToLanguageSettings={handleNavigateToLanguageSettings} />
+            <LanguagePicker onNavigateToLanguageSettings={handleNavigateToLanguageSettings} onLanguageChange={handleLanguageChange} />
             {/* 搜索输入框 */}
             <View style={styles.searchInputContainer}>
               {searchResult ? (
@@ -587,15 +660,28 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
               <TouchableOpacity style={styles.closeButton} onPress={() => { setChToEnCandidates([]); setChToEnQuery(''); }}>
                 <Ionicons name="close" size={26} color={colors.text.secondary} />
               </TouchableOpacity>
-              <Text style={{ fontSize: 20, fontWeight: 'bold', color: colors.text.primary, marginBottom: 16, marginTop: 8 }}>"{chToEnQuery}"{t('chinese_to_english_title', appLanguage)}</Text>
+              <Text style={{ fontSize: 20, fontWeight: 'bold', color: colors.text.primary, marginBottom: 16, marginTop: 8 }}>
+                "{chToEnQuery}"中文转{getCurrentLanguageConfig()?.name || '目标语言'}
+              </Text>
               {chToEnCandidates.map((en, idx) => (
                 <TouchableOpacity key={en} onPress={async () => {
                   setIsLoading(true);
                   setChToEnCandidates([]);
                   setChToEnQuery('');
                   setSearchText(en);
-                  // 直接查英文释义
-                  const result = await wordService.searchWord(en.toLowerCase(), 'en', appLanguage);
+                  // 使用当前选择的目标语言进行搜索
+                  const currentLanguageConfig = getCurrentLanguageConfig();
+                  // 添加安全检查
+                  if (!currentLanguageConfig) {
+                    console.error('❌ 无法获取当前语言配置');
+                    Alert.alert('错误', '无法获取语言配置，请重试');
+                    setIsLoading(false);
+                    return;
+                  }
+                  
+                  const targetLanguage = currentLanguageConfig.code;
+                  console.log('🔍 候选词搜索参数:', { word: en, targetLanguage, uiLanguage: appLanguage });
+                  const result = await wordService.searchWord(en.toLowerCase(), targetLanguage, appLanguage);
                   if (result.success && result.data) {
                     setSearchResult(result.data);
                     setSearchText('');

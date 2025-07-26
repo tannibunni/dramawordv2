@@ -134,16 +134,16 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 350,
     minHeight: 600,
-    maxHeight: 700, // 设置最大高度
+    // 移除 maxHeight: 700, // 允许动态高度
     backgroundColor: colors.background.secondary,
     borderRadius: 20,
-    padding: 60,
+    padding: 32, // 减少padding从60到32
     shadowColor: colors.neutral[900],
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.15,
     shadowRadius: 16,
     elevation: 8,
-    justifyContent: 'space-between',
+    // 移除 justifyContent: 'space-between', // 避免空间分布问题
   },
   wordSection: {
     alignItems: 'center',

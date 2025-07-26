@@ -103,6 +103,16 @@ export class WordService {
     try {
       console.log(`🔍 搜索单词: ${word} (语言: ${language})`);
       
+      // 生成包含语言信息的缓存键
+      const cacheKey = `${word}_${language}_${uiLanguage || 'zh-CN'}`;
+      
+      // 1. 先查统一缓存
+      const cached = await cacheService.get<WordData>(CACHE_KEYS.WORD_DETAIL, cacheKey);
+      if (cached) {
+        console.log(`✅ 从统一缓存获取搜索结果: ${cacheKey}`);
+        return { success: true, data: cached };
+      }
+      
       const token = await getUserToken();
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
@@ -162,7 +172,11 @@ export class WordService {
             ]
           }));
           // 只返回第一个，或你可以让前端支持多卡片切换
-          return { success: true, data: mapped[0] };
+          const wordData = mapped[0];
+          // 缓存搜索结果
+          await cacheService.set(CACHE_KEYS.WORD_DETAIL, cacheKey, wordData);
+          console.log(`✅ 搜索结果已缓存: ${cacheKey}`);
+          return { success: true, data: wordData };
         }
         // 处理 Mongoose 文档结构，优先使用 _doc 字段
         const data = result.data._doc || result.data;
@@ -203,36 +217,17 @@ export class WordService {
           });
         }
         
-        // 如果 definitions 为空，使用 correctedWord 生成一个基本的定义
-        if (!wordData.definitions || wordData.definitions.length === 0) {
-          wordData.definitions = [
-            {
-              partOfSpeech: 'n.',
-              definition: `${wordData.correctedWord || wordData.word} 的释义`,
-              examples: [
-                {
-                  english: `This is an example of ${wordData.correctedWord || wordData.word}.`,
-                  chinese: `这是 ${wordData.correctedWord || wordData.word} 的例子。`
-                }
-              ]
-            }
-          ];
-        }
+        // 缓存搜索结果
+        await cacheService.set(CACHE_KEYS.WORD_DETAIL, cacheKey, wordData);
+        console.log(`✅ 搜索结果已缓存: ${cacheKey}`);
         
-        console.log('🔍 转换后的 wordData:', wordData);
-        console.log(`✅ 单词搜索成功: ${word}`);
         return { success: true, data: wordData };
       } else {
-        throw new WordServiceError(result.error || '搜索失败');
+        return { success: false, error: result.error || '搜索失败' };
       }
     } catch (error) {
-      console.error(`❌ 单词搜索错误: ${error}`);
-      
-      // 返回错误信息而不是模拟数据
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : '网络连接失败，请检查网络后重试',
-      };
+      console.error('❌ 搜索单词失败:', error);
+      return { success: false, error: error instanceof Error ? error.message : '未知错误' };
     }
   }
 
@@ -495,25 +490,28 @@ export class WordService {
   }
 
   // 获取单词详情（使用统一缓存服务）
-  async getWordDetail(word: string): Promise<WordData | null> {
+  async getWordDetail(word: string, language?: string, uiLanguage?: string): Promise<WordData | null> {
     try {
-      console.log(`🔍 获取单词详情: ${word}`);
+      console.log(`🔍 获取单词详情: ${word} (语言: ${language}, UI语言: ${uiLanguage})`);
+      
+      // 生成包含语言信息的缓存键
+      const cacheKey = `${word}_${language || 'en'}_${uiLanguage || 'zh-CN'}`;
       
       // 1. 先查统一缓存
-      const cached = await cacheService.get<WordData>(CACHE_KEYS.WORD_DETAIL, word);
+      const cached = await cacheService.get<WordData>(CACHE_KEYS.WORD_DETAIL, cacheKey);
       if (cached) {
-        console.log(`✅ 从统一缓存获取单词详情: ${word}`);
+        console.log(`✅ 从统一缓存获取单词详情: ${cacheKey}`);
         return cached;
       }
       
       // 2. 没有缓存就调用API
       console.log(`📡 缓存无数据，调用API获取单词详情: ${word}`);
-      const result = await this.searchWord(word);
+      const result = await this.searchWord(word, language, uiLanguage);
       
       if (result.success && result.data) {
         // 3. 缓存到统一缓存服务
-        await cacheService.set(CACHE_KEYS.WORD_DETAIL, word, result.data);
-        console.log(`✅ API获取成功并缓存: ${word}`);
+        await cacheService.set(CACHE_KEYS.WORD_DETAIL, cacheKey, result.data);
+        console.log(`✅ API获取成功并缓存: ${cacheKey}`);
         return result.data;
       } else {
         console.warn(`⚠️ API获取失败: ${word}`, result.error);
@@ -582,6 +580,36 @@ export class WordService {
       }
     } catch (error) {
       console.error('❌ 中文查英文错误:', error);
+      return { success: false, candidates: [], error: error instanceof Error ? error.message : '未知错误' };
+    }
+  }
+
+  // 中文翻译到指定目标语言，返回 1-3 个目标语言释义
+  async translateChineseToTargetLanguage(word: string, targetLanguage: string): Promise<{ success: boolean; candidates: string[]; error?: string }> {
+    try {
+      console.log(`🔍 中文翻译到目标语言: ${word} -> ${targetLanguage}`);
+      
+      const response = await fetch(`${API_BASE_URL}/words/translate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          word: word.trim(),
+          targetLanguage: targetLanguage // 新增目标语言参数
+        })
+      });
+      
+      if (!response.ok) {
+        throw new WordServiceError(`翻译失败: ${response.status}`, response.status);
+      }
+      
+      const result = await response.json();
+      if (result.success) {
+        return { success: true, candidates: result.candidates || [] };
+      } else {
+        return { success: false, candidates: [], error: result.error || '翻译失败' };
+      }
+    } catch (error) {
+      console.error(`❌ 中文翻译到${targetLanguage}错误:`, error);
       return { success: false, candidates: [], error: error instanceof Error ? error.message : '未知错误' };
     }
   }

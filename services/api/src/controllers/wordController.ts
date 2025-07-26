@@ -1239,46 +1239,53 @@ export const testOpenAI = async (req: Request, res: Response): Promise<void> => 
   }
 };
 
-// 中文查英文 - 返回 1-3 个英文释义
+// 中文查目标语言翻译 - 返回 1-3 个释义
 export const translateChineseToEnglish = async (req: Request, res: Response) => {
   try {
-    const { word } = req.body;
+    const { word, targetLanguage = 'en' } = req.body;
     if (!word) {
       res.status(400).json({ success: false, error: 'Word parameter is required' });
       return;
     }
+    
     const searchTerm = word.trim();
-    logger.info(`🌏 Translating Chinese to English: ${searchTerm}`);
+    const targetLang = targetLanguage || 'en';
+    logger.info(`🌏 Translating Chinese to ${targetLang}: ${searchTerm}`);
 
-    // 1. 检查内存缓存
-    if (chineseTranslationCache.has(searchTerm)) {
-      logger.info(`✅ Found in memory cache: ${searchTerm}`);
-      const candidates = chineseTranslationCache.get(searchTerm)!;
+    // 1. 检查内存缓存（使用包含目标语言的键）
+    const cacheKey = `${searchTerm}_${targetLang}`;
+    if (chineseTranslationCache.has(cacheKey)) {
+      logger.info(`✅ Found in memory cache: ${cacheKey}`);
+      const candidates = chineseTranslationCache.get(cacheKey)!;
       await updateChineseTranslationSearchStats(searchTerm);
       res.json({ success: true, query: searchTerm, candidates, source: 'memory_cache' });
       return;
     }
 
-    // 2. 检查数据库缓存
+    // 2. 检查数据库缓存（暂时保持原有逻辑，后续可以扩展数据库结构）
     let translation = await ChineseTranslation.findOne({ chineseWord: searchTerm });
-    if (translation) {
+    if (translation && targetLang === 'en') {
       logger.info(`✅ Found in database cache: ${searchTerm}`);
       await updateChineseTranslationSearchStats(searchTerm);
-      chineseTranslationCache.set(searchTerm, translation.englishCandidates);
+      chineseTranslationCache.set(cacheKey, translation.englishCandidates);
       res.json({ success: true, query: searchTerm, candidates: translation.englishCandidates, source: 'database_cache' });
       return;
     }
 
     // 3. 使用 OpenAI 生成新的翻译
-    logger.info(`🤖 Generating new translation with AI: ${searchTerm}`);
-    const prompt = `你是专业的中英词典助手。请将中文词语“${searchTerm}”翻译为1-3个常用英文单词，按相关性降序排列，严格只返回一个 JSON 数组，如 ["sky","heaven"]，不要其他内容。如果是常见名词（如“天空”、“城市”、“苹果”），务必给出最常用英文单词。如果没有合适的英文单词，才返回空数组 []。`;
+    logger.info(`🤖 Generating new translation with AI: ${searchTerm} -> ${targetLang}`);
+    
+    // 根据目标语言生成不同的提示词
+    const targetLanguageName = getLanguageName(targetLang);
+    const prompt = `你是专业的中文翻译助手。请将中文词语"${searchTerm}"翻译为1-3个常用${targetLanguageName}单词，按相关性降序排列，严格只返回一个 JSON 数组，如 ["word1","word2"]，不要其他内容。如果是常见名词，务必给出最常用${targetLanguageName}单词。如果没有合适的${targetLanguageName}单词，才返回空数组 []。`;
+    
     let candidates: string[] = [];
     let responseText = '';
     try {
       const completion = await openai.chat.completions.create({
         model: 'gpt-3.5-turbo',
         messages: [
-          { role: 'system', content: '你是中英词典助手，只返回JSON数组，不要其他内容。' },
+          { role: 'system', content: `你是中文到${targetLanguageName}翻译助手，只返回JSON数组，不要其他内容。` },
           { role: 'user', content: prompt }
         ],
         temperature: 0.2,
@@ -1292,8 +1299,8 @@ export const translateChineseToEnglish = async (req: Request, res: Response) => 
       candidates = [];
     }
 
-    // 4. fallback: 常见词典
-    if (!candidates || candidates.length === 0) {
+    // 4. fallback: 常见词典（仅对英文）
+    if (!candidates || candidates.length === 0 && targetLang === 'en') {
       const fallbackDict: Record<string, string[]> = {
         '天空': ['sky', 'heaven'],
         '城市': ['city', 'urban'],
@@ -1334,8 +1341,8 @@ export const translateChineseToEnglish = async (req: Request, res: Response) => 
       }
     }
 
-    // 5. 保存到数据库缓存
-    if (candidates && candidates.length > 0) {
+    // 5. 保存到数据库缓存（仅对英文，保持原有逻辑）
+    if (candidates && candidates.length > 0 && targetLang === 'en') {
       translation = new ChineseTranslation({
         chineseWord: searchTerm,
         englishCandidates: candidates,
@@ -1343,14 +1350,33 @@ export const translateChineseToEnglish = async (req: Request, res: Response) => 
         lastSearched: new Date()
       });
       await translation.save();
-      logger.info(`💾 Saved new translation to database: ${searchTerm} -> ${candidates}`);
-      chineseTranslationCache.set(searchTerm, candidates);
+      logger.info(`💾 Saved to database: ${searchTerm} -> ${candidates}`);
     }
 
-    res.json({ success: true, query: searchTerm, candidates, source: candidates.length > 0 ? 'ai' : 'fallback' });
+    // 6. 保存到内存缓存
+    if (candidates && candidates.length > 0) {
+      chineseTranslationCache.set(cacheKey, candidates);
+      logger.info(`💾 Saved to memory cache: ${cacheKey} -> ${candidates}`);
+    }
+
+    // 7. 更新搜索统计
+    await updateChineseTranslationSearchStats(searchTerm);
+
+    res.json({ 
+      success: true, 
+      query: searchTerm, 
+      candidates, 
+      source: 'ai_generated',
+      targetLanguage: targetLang
+    });
+
   } catch (error) {
-    logger.error('❌ translateChineseToEnglish error:', error);
-    res.status(500).json({ success: false, error: 'Failed to translate', message: error instanceof Error ? error.message : 'Unknown error' });
+    logger.error('❌ Translation error:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Translation failed', 
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
   }
 };
 

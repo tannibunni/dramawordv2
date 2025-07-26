@@ -103,7 +103,9 @@ const LanguagePicker: React.FC<LanguagePickerProps> = ({ onLanguageChange, onNav
 
   const handleLanguageSwitch = (languageCode: SupportedLanguageCode) => {
     setSelectedLanguage(languageCode);
-    onLanguageChange?.(languageCode);
+    // 传递实际的语言代码而不是SupportedLanguageCode
+    const actualLanguageCode = SUPPORTED_LANGUAGES[languageCode].code;
+    onLanguageChange?.(actualLanguageCode);
     setIsModalVisible(false);
   };
 
