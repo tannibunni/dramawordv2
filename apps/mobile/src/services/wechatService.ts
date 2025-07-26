@@ -56,7 +56,7 @@ export class WechatService {
         return result;
       } else {
         // Android 使用包名
-        const result = await WechatSDK.registerApp(this.appId, 'com.tanny.dramaword');
+        const result = await WechatSDK.registerApp(this.appId, 'com.tannibunni.dramawordmobile');
         console.log('微信SDK注册结果:', result);
         return result;
       }
