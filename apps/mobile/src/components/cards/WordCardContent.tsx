@@ -35,6 +35,19 @@ const partOfSpeechMap: Record<string, Record<string, string>> = {
     'determiner': '限定词', 'det.': '限定词', 'DETERMINER': '限定词',
     'prefix': '前缀', 'prefix.': '前缀', 'PREFIX': '前缀',
     'suffix': '后缀', 'suffix.': '后缀', 'SUFFIX': '后缀',
+    // 韩语词性映射
+    '명사': '名词', '명': '名词',
+    '동사': '动词', '동': '动词',
+    '형용사': '形容词', '형': '形容词',
+    '부사': '副词', '부': '副词',
+    '대명사': '代词', '대': '代词',
+    '전치사': '介词', '전': '介词',
+    '접속사': '连词', '접': '连词',
+    '감탄사': '感叹词', '감': '感叹词',
+    '관사': '冠词', '관': '冠词',
+    '수사': '数词', '수': '数词',
+    '조동사': '助动词', '조': '助动词',
+    '한정사': '限定词', '한': '限定词',
   },
   'en-US': {
     'verb': 'Verb', 'v.': 'Verb', 'VERB': 'Verb',
@@ -52,6 +65,19 @@ const partOfSpeechMap: Record<string, Record<string, string>> = {
     'determiner': 'Determiner', 'det.': 'Determiner', 'DETERMINER': 'Determiner',
     'prefix': 'Prefix', 'prefix.': 'Prefix', 'PREFIX': 'Prefix',
     'suffix': 'Suffix', 'suffix.': 'Suffix', 'SUFFIX': 'Suffix',
+    // 韩语词性映射（英文界面）
+    '명사': 'Noun', '명': 'Noun',
+    '동사': 'Verb', '동': 'Verb',
+    '형용사': 'Adjective', '형': 'Adjective',
+    '부사': 'Adverb', '부': 'Adverb',
+    '대명사': 'Pronoun', '대': 'Pronoun',
+    '전치사': 'Preposition', '전': 'Preposition',
+    '접속사': 'Conjunction', '접': 'Conjunction',
+    '감탄사': 'Interjection', '감': 'Interjection',
+    '관사': 'Article', '관': 'Article',
+    '수사': 'Numeral', '수': 'Numeral',
+    '조동사': 'Auxiliary', '조': 'Auxiliary',
+    '한정사': 'Determiner', '한': 'Determiner',
   }
 };
 
