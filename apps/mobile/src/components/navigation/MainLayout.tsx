@@ -55,7 +55,7 @@ const MainContent: React.FC<MainLayoutProps> = ({ initialTab = 'search' }) => {
   const renderMainContent = (tab: TabType) => {
     switch (tab) {
       case 'search':
-        return <HomeScreen />;
+        return <HomeScreen navigation={{ navigate }} />;
       case 'vocabulary':
         return <VocabularyScreen />;
       case 'review':
@@ -63,7 +63,7 @@ const MainContent: React.FC<MainLayoutProps> = ({ initialTab = 'search' }) => {
       case 'shows':
         return <ShowsScreen />;
       case 'profile':
-        return <ProfileScreen />;
+        return <ProfileScreen openLanguageSettings={params.openLanguageSettings} />;
       default:
         return <HomeScreen />;
     }

@@ -607,36 +607,36 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
       const newIndex = swiperIndex + 1;
       console.log('ReviewScreen: Moving to next word, new index:', newIndex);
       setSwiperIndex(newIndex);
-      setShowAnswer(false);
+        setShowAnswer(false);
       
       // 如果是最后一张卡，延迟显示完成页面
       if (newIndex === words.length) {
         console.log('ReviewScreen: Last card completed, preparing to show completion screen');
         // 延迟显示完成页面，确保进度条动画完成
         setTimeout(() => {
-          console.log('ReviewScreen: Review complete, calculating final stats');
-          // 复习完成 - 计算最终统计数据
-          if (!isReviewComplete) {
-            const rememberedWords = rememberedRef.current;
-            const forgottenWords = forgottenRef.current;
-            const currentStats = reviewStats;
-            const experience = rememberedWords * 15;
-            const accuracy = currentStats.totalWords > 0 ? Math.round((rememberedWords / currentStats.totalWords) * 100) : 0;
-            const finalStats = {
-              totalWords: currentStats.totalWords,
-              rememberedWords,
-              forgottenWords,
-              experience,
-              accuracy,
-            };
-            console.log('ReviewScreen: Final stats:', finalStats);
-            setReviewStats(finalStats);
-            setFinalStats(finalStats);
-            setIsReviewComplete(true);
+      console.log('ReviewScreen: Review complete, calculating final stats');
+      // 复习完成 - 计算最终统计数据
+      if (!isReviewComplete) {
+        const rememberedWords = rememberedRef.current;
+        const forgottenWords = forgottenRef.current;
+        const currentStats = reviewStats;
+        const experience = rememberedWords * 15;
+        const accuracy = currentStats.totalWords > 0 ? Math.round((rememberedWords / currentStats.totalWords) * 100) : 0;
+        const finalStats = {
+          totalWords: currentStats.totalWords,
+          rememberedWords,
+          forgottenWords,
+          experience,
+          accuracy,
+        };
+        console.log('ReviewScreen: Final stats:', finalStats);
+        setReviewStats(finalStats);
+        setFinalStats(finalStats);
+          setIsReviewComplete(true);
           }
         }, 1200); // 增加延迟时间，确保100%动画完全加载完毕
       }
-    }
+      }
   };
 
   // 处理音频播放

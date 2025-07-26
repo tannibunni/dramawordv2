@@ -153,8 +153,8 @@ export const searchWord = async (req: Request, res: Response): Promise<void> => 
     
     // 只在中文字符的情况下才改变语言检测
     if (language === 'en' && /[\u4e00-\u9fff]/.test(searchTerm)) {
-      detectedLanguage = 'zh';
-      logger.info(`🔍 检测到中文字符，将语言从 'en' 改为 'zh': ${searchTerm}`);
+        detectedLanguage = 'zh';
+        logger.info(`🔍 检测到中文字符，将语言从 'en' 改为 'zh': ${searchTerm}`);
     }
     
     const cacheKey = `${searchTerm}_${detectedLanguage}_${uiLanguage}`;
@@ -1083,7 +1083,7 @@ async function generateWordData(word: string, language: string = 'en', uiLanguag
       // 添加调试日志
       logger.info(`🔍 数据处理调试 - slangMeaning: ${typeof slangMeaning} = ${JSON.stringify(slangMeaning)}`);
       logger.info(`🔍 数据处理调试 - phraseExplanation: ${typeof phraseExplanation} = ${JSON.stringify(phraseExplanation)}`);
-      
+
       return {
         phonetic: parsedData.phonetic || `/${word}/`,
         pinyin: parsedData.pinyin || parsedData.phonetic || undefined, // 优先使用 pinyin 字段

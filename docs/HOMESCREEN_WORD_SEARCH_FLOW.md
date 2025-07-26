@@ -7,7 +7,7 @@
   - 中文查英文：
     - 调用：`wordService.translateChineseToEnglish(word)`
     - 实现：`apps/mobile/src/services/wordService.ts`
-    - 后端接口：`/translate`，由 `services/api/src/controllers/wordController.ts` 的 `translateChineseToEnglish` 处理
+    - 后端接口：`/translate`，由 `services/api/src/controllers/.wordControllerts` 的 `translateChineseToEnglish` 处理
   - 英文查中文：
     - 调用：`wordService.searchWord(word, 'en')`
     - 实现：`apps/mobile/src/services/wordService.ts`

@@ -12,6 +12,15 @@ export const SUPPORTED_LANGUAGES = {
     phoneticSystem: 'IPA',
     writingSystem: 'Latin',
   },
+  CHINESE: {
+    code: 'zh',
+    name: '中文',
+    nativeName: '中文',
+    flag: '🇨🇳',
+    direction: 'ltr',
+    phoneticSystem: 'Pinyin',
+    writingSystem: 'Hanzi',
+  },
   KOREAN: {
     code: 'ko',
     name: '韩语',
@@ -29,6 +38,24 @@ export const SUPPORTED_LANGUAGES = {
     direction: 'ltr',
     phoneticSystem: 'Hiragana/Katakana',
     writingSystem: 'Kanji + Kana',
+  },
+  FRENCH: {
+    code: 'fr',
+    name: '法语',
+    nativeName: 'Français',
+    flag: '🇫🇷',
+    direction: 'ltr',
+    phoneticSystem: 'IPA',
+    writingSystem: 'Latin',
+  },
+  SPANISH: {
+    code: 'es',
+    name: '西班牙语',
+    nativeName: 'Español',
+    flag: '🇪🇸',
+    direction: 'ltr',
+    phoneticSystem: 'IPA',
+    writingSystem: 'Latin',
   },
 } as const;
 

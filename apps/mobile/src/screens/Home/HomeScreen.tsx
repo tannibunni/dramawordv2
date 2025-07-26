@@ -29,9 +29,16 @@ import { useLanguage } from '../../context/LanguageContext';
 import { useAppLanguage } from '../../context/AppLanguageContext';
 import { t } from '../../constants/translations';
 import { SUPPORTED_LANGUAGES, SupportedLanguageCode } from '../../constants/config';
+import { shouldShowLanguageReminder, generateLanguageReminderMessage } from '../../utils/languageDetector';
 // import { LanguageDebugInfo } from '../../components/common/LanguageDebugInfo';
 
-const HomeScreen: React.FC = () => {
+interface HomeScreenProps {
+  navigation?: {
+    navigate: (screen: any, params?: any) => void;
+  };
+}
+
+const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   const [searchText, setSearchText] = useState('');
   const [recentWords, setRecentWords] = useState<RecentWord[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -56,8 +63,16 @@ const HomeScreen: React.FC = () => {
   const prevVocabCount = useRef(vocabulary.length);
   const [chToEnCandidates, setChToEnCandidates] = useState<string[]>([]); // 新增：中文查英文候选词
   const [chToEnQuery, setChToEnQuery] = useState<string>('');
-  const { selectedLanguage, getCurrentLanguageConfig } = useLanguage();
+  const { selectedLanguage, getCurrentLanguageConfig, setSelectedLanguage } = useLanguage();
   const { appLanguage } = useAppLanguage();
+  
+  // 导航到语言设置页面
+  const handleNavigateToLanguageSettings = () => {
+    if (navigation) {
+      // 先切换到profile tab，然后打开语言设置
+      navigation.navigate('main', { tab: 'profile', openLanguageSettings: true });
+    }
+  };
   
   // 移除 getBackendLanguageCode 相关函数和调用
 
@@ -116,11 +131,51 @@ const HomeScreen: React.FC = () => {
       Alert.alert(t('tip', appLanguage), t('please_enter_word', appLanguage));
       return;
     }
+
+    // 语言检测和提醒
+    const reminderCheck = shouldShowLanguageReminder(word, selectedLanguage);
+    if (reminderCheck.shouldShow && reminderCheck.detectedLanguage) {
+      const { title, message } = generateLanguageReminderMessage(
+        word,
+        reminderCheck.detectedLanguage,
+        selectedLanguage,
+        appLanguage
+      );
+
+      Alert.alert(
+        title,
+        message,
+        [
+          {
+            text: appLanguage === 'zh-CN' ? '保持当前语言' : 'Keep Current',
+            style: 'cancel',
+            onPress: () => performSearch(word)
+          },
+          {
+            text: appLanguage === 'zh-CN' ? '切换语言' : 'Switch Language',
+            onPress: () => {
+              setSelectedLanguage(reminderCheck.detectedLanguage!.code as SupportedLanguageCode);
+              // 延迟执行搜索，确保语言切换完成
+              setTimeout(() => performSearch(word), 100);
+            }
+          }
+        ]
+      );
+      return;
+    }
+
+    // 直接执行搜索
+    await performSearch(word);
+  };
+
+  // 执行实际的搜索逻辑
+  const performSearch = async (word: string) => {
     setIsLoading(true);
     setSearchResult(null);
     setSearchSuggestions([]);
     setChToEnCandidates([]);
     setChToEnQuery('');
+    
     try {
       if (isChinese(word)) {
         // 中文查英文
@@ -151,6 +206,7 @@ const HomeScreen: React.FC = () => {
           return;
         }
       }
+      
       // 英文查中文
       const result = await wordService.searchWord(word.toLowerCase(), 'en', appLanguage);
       if (result.success && result.data) {
@@ -482,7 +538,7 @@ const HomeScreen: React.FC = () => {
         <View style={styles.searchContainer}>
           <View style={styles.searchBox}>
             {/* 语言选择器 */}
-            {/* <LanguagePicker /> */}
+            <LanguagePicker onNavigateToLanguageSettings={handleNavigateToLanguageSettings} />
             {/* 搜索输入框 */}
             <View style={styles.searchInputContainer}>
               {searchResult ? (

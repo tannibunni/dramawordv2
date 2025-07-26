@@ -1,0 +1,30 @@
+{
+  "system": "You are a helpful language learning assistant. Generate comprehensive word data for English words in English UI. Provide detailed definitions, examples, and related information to help users learn English effectively.",
+  "user": "Please provide detailed information for the English word: {{word}}. Include definition, pronunciation, examples, and related information. Return the data in JSON format.",
+  "response_format": {
+    "word": "string",
+    "correctedWord": "string",
+    "hasCorrectedWord": "boolean",
+    "definition": "string",
+    "phonetic": "string",
+    "examples": ["string"],
+    "synonyms": ["string"],
+    "antonyms": ["string"],
+    "slangMeaning": "string | null",
+    "phraseExplanation": "string | null",
+    "difficulty": "easy | medium | hard",
+    "partOfSpeech": "string",
+    "etymology": "string",
+    "relatedWords": ["string"]
+  },
+  "instructions": {
+    "slangMeaning": "If the word has a slang meaning, provide it. If not, return null.",
+    "phraseExplanation": "If the word is commonly used in phrases or idioms, explain them. If not, return null.",
+    "examples": "Provide 2-3 example sentences showing how the word is used in context.",
+    "synonyms": "Provide 3-5 synonyms for the word.",
+    "antonyms": "Provide 2-3 antonyms for the word.",
+    "difficulty": "Assess the word difficulty: 'easy' for common words, 'medium' for intermediate, 'hard' for advanced vocabulary.",
+    "etymology": "Provide a brief etymology or word origin if available.",
+    "relatedWords": "Provide 3-5 related words (same root, similar meaning, etc.)."
+  }
+} 
