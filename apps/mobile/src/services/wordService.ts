@@ -504,12 +504,22 @@ export class WordService {
         return cached;
       }
       
-      // 2. 没有缓存就调用API
-      console.log(`📡 缓存无数据，调用API获取单词详情: ${word}`);
+      // 2. 从云词库（CloudWords）获取数据
+      console.log(`☁️ 尝试从云词库获取: ${word}`);
+      const cloudResult = await this.getFromCloudWords(word, language, uiLanguage);
+      if (cloudResult) {
+        console.log(`✅ 从云词库获取成功: ${word}`);
+        // 缓存到统一缓存服务
+        await cacheService.set(CACHE_KEYS.WORD_DETAIL, cacheKey, cloudResult);
+        return cloudResult;
+      }
+      
+      // 3. 云词库没有数据，调用搜索API
+      console.log(`📡 云词库无数据，调用搜索API: ${word}`);
       const result = await this.searchWord(word, language, uiLanguage);
       
       if (result.success && result.data) {
-        // 3. 缓存到统一缓存服务
+        // 4. 缓存到统一缓存服务
         await cacheService.set(CACHE_KEYS.WORD_DETAIL, cacheKey, result.data);
         console.log(`✅ API获取成功并缓存: ${cacheKey}`);
         return result.data;
@@ -519,6 +529,38 @@ export class WordService {
       }
     } catch (error) {
       console.error(`❌ 获取单词详情失败: ${word}`, error);
+      return null;
+    }
+  }
+
+  // 从云词库获取单词数据
+  private async getFromCloudWords(word: string, language?: string, uiLanguage?: string): Promise<WordData | null> {
+    try {
+      console.log(`☁️ 从云词库获取单词: ${word}`);
+      
+      const response = await fetch(`${API_BASE_URL}/words/cloud/${encodeURIComponent(word)}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept-Language': uiLanguage || 'zh-CN',
+        },
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success && result.data) {
+          console.log(`✅ 云词库返回数据: ${word}`);
+          return result.data;
+        } else {
+          console.log(`⚠️ 云词库无数据: ${word}`);
+          return null;
+        }
+      } else {
+        console.log(`⚠️ 云词库请求失败: ${response.status}`);
+        return null;
+      }
+    } catch (error) {
+      console.error(`❌ 云词库请求错误: ${word}`, error);
       return null;
     }
   }
