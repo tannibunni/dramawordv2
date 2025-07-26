@@ -158,13 +158,32 @@ const LanguagePicker: React.FC<LanguagePickerProps> = ({ onLanguageChange, onNav
             <ScrollView style={styles.languageList} showsVerticalScrollIndicator={false}>
               {(() => {
                 console.log('🎯 LanguagePicker渲染 - learningLanguages状态:', learningLanguages);
+                console.log('🎯 LanguagePicker渲染 - appLanguage状态:', appLanguage);
                 console.log('🎯 LanguagePicker渲染 - 过滤前语言数量:', Object.entries(SUPPORTED_LANGUAGES).length);
                 
                 const filteredLanguages = Object.entries(SUPPORTED_LANGUAGES)
                   .filter(([key, language]) => {
+                    // 首先检查是否在学习语言列表中
                     const isIncluded = learningLanguages.includes(language.code);
-                    console.log(`🔍 过滤语言 ${language.code}: ${isIncluded ? '✅ 包含' : '❌ 不包含'} (学习语言: ${learningLanguages.join(', ')})`);
-                    return isIncluded;
+                    
+                    // 然后检查界面语言过滤规则
+                    let shouldShow = isIncluded;
+                    
+                    // 当界面语言是英文时，隐藏English选项
+                    if (appLanguage === 'en-US' && language.code === 'en') {
+                      shouldShow = false;
+                      console.log(`🔍 过滤语言 ${language.code}: ❌ 隐藏 (界面语言为英文)`);
+                    }
+                    // 当界面语言是中文时，隐藏Chinese选项
+                    else if (appLanguage === 'zh-CN' && language.code === 'zh') {
+                      shouldShow = false;
+                      console.log(`🔍 过滤语言 ${language.code}: ❌ 隐藏 (界面语言为中文)`);
+                    }
+                    else {
+                      console.log(`🔍 过滤语言 ${language.code}: ${isIncluded ? '✅ 包含' : '❌ 不包含'} (学习语言: ${learningLanguages.join(', ')})`);
+                    }
+                    
+                    return shouldShow;
                   });
                 
                 console.log('🎯 LanguagePicker渲染 - 过滤后语言数量:', filteredLanguages.length);
