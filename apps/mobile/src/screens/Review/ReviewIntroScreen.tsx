@@ -1012,8 +1012,8 @@ const styles = StyleSheet.create({
   challengeBanner: {
     backgroundColor: colors.background.secondary,
     borderRadius: 16,
-    marginBottom: 24, // 增加与剧集复习板块的距离，让挑战横幅更突出
-    marginTop: 0,
+    marginBottom: 32, // 增加与剧集复习板块的距离，让挑战横幅更突出
+    marginTop: 2,
     minHeight: 90, // 新增，提升横幅最小高度
     ...Platform.select({
       web: {
