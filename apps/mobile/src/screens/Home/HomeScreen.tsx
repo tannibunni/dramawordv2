@@ -145,7 +145,13 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       return;
     }
 
-    // 语言检测和提醒（仅对非中文输入）
+    // 如果是英文UI且输入英文，直接进入翻译功能，不触发语言提醒
+    if (appLanguage === 'en-US' && /^[a-zA-Z\s]+$/.test(word)) {
+      await performSearch(word);
+      return;
+    }
+
+    // 语言检测和提醒（仅对非中文输入且非英文UI下的英文输入）
     const reminderCheck = shouldShowLanguageReminder(word, selectedLanguage);
     if (reminderCheck.shouldShow && reminderCheck.detectedLanguage) {
       const { title, message } = generateLanguageReminderMessage(
