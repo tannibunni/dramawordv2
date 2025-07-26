@@ -118,12 +118,12 @@ const WordCardContent: React.FC<WordCardContentProps> = ({ wordData, onPlayAudio
         <View style={styles.headerRow}>
         <View style={{ flex: 1 }}>
           <View style={styles.wordContainer}>
-            <Text style={styles.word}>{wordData.correctedWord || wordData.word}</Text>
+            <Text style={styles.word} selectable>{wordData.correctedWord || wordData.word}</Text>
             {wordData.kana && (
-              <Text style={styles.kana}>{wordData.kana}</Text>
+              <Text style={styles.kana} selectable>{wordData.kana}</Text>
             )}
           </View>
-          <Text style={styles.phonetic}>
+          <Text style={styles.phonetic} selectable>
             {wordData.pinyin || wordData.phonetic}
           </Text>
           {/* 来源 TAG 区域 */}
@@ -165,13 +165,13 @@ const WordCardContent: React.FC<WordCardContentProps> = ({ wordData, onPlayAudio
               <View style={styles.posTagWrapper}>
                 <Text style={styles.posTag}>{getPartOfSpeechLabel(def.partOfSpeech, appLanguage)}</Text>
               </View>
-              <Text style={styles.definition}>{def.definition}</Text>
+              <Text style={styles.definition} selectable>{def.definition}</Text>
               {def.examples && def.examples.length > 0 && (
                 <View style={styles.examplesBlock}>
                   {def.examples.map((ex, exIdx) => (
                     <View key={exIdx} style={styles.exampleContainer}>
-                      <Text style={styles.exampleLabelAndText}>{ex.english}</Text>
-                      <Text style={styles.exampleLabelAndText}>{ex.chinese}</Text>
+                      <Text style={styles.exampleLabelAndText} selectable>{ex.english}</Text>
+                      <Text style={styles.exampleLabelAndText} selectable>{ex.chinese}</Text>
                     </View>
                   ))}
                 </View>
@@ -186,95 +186,16 @@ const WordCardContent: React.FC<WordCardContentProps> = ({ wordData, onPlayAudio
                 <Text style={styles.posTag}>{getSpecialLabel('slang', appLanguage)}</Text>
               </View>
               {typeof wordData.slangMeaning === 'string' ? (
-                <Text style={styles.definition}>{wordData.slangMeaning}</Text>
+                <Text style={styles.definition} selectable>{wordData.slangMeaning}</Text>
               ) : (
                 <>
-                  <Text style={styles.definition}>{(wordData.slangMeaning as any).definition}</Text>
-                  {(wordData.slangMeaning as any).examples && (wordData.slangMeaning as any).examples.length > 0 && (
+                  <Text style={styles.definition} selectable>{(wordData.slangMeaning as any)?.definition}</Text>
+                  {(wordData.slangMeaning as any)?.examples && (wordData.slangMeaning as any).examples.length > 0 && (
                     <View style={styles.examplesBlock}>
-                      {(wordData.slangMeaning as any).examples.map((ex: any, exIdx: number) => {
-                        const display = getExampleDisplay(ex, 'en'); // 默认使用英文作为目标语言
-                        return (
-                          <View key={exIdx} style={styles.exampleContainer}>
-                            {display.primary && <Text style={styles.exampleLabelAndText}>{display.primary}</Text>}
-                            {display.secondary && <Text style={styles.exampleLabelAndText}>{display.secondary}</Text>}
-                          </View>
-                        );
-                      })}
-                    </View>
-                  )}
-                </>
-              )}
-            </View>
-          )}
-          
-          {/* 短语解释 */}
-          {wordData.phraseExplanation && (
-            <View style={styles.definitionBlock}>
-              <View style={styles.posTagWrapper}>
-                <Text style={styles.posTag}>{getSpecialLabel('phrase', appLanguage)}</Text>
-              </View>
-              {typeof wordData.phraseExplanation === 'string' ? (
-                <Text style={styles.definition}>{wordData.phraseExplanation}</Text>
-              ) : (
-                <>
-                  <Text style={styles.definition}>{(wordData.phraseExplanation as any).definition}</Text>
-                  {(wordData.phraseExplanation as any).examples && (wordData.phraseExplanation as any).examples.length > 0 && (
-                    <View style={styles.examplesBlock}>
-                      {(wordData.phraseExplanation as any).examples.map((ex: any, exIdx: number) => {
-                        const display = getExampleDisplay(ex, 'en'); // 默认使用英文作为目标语言
-                        return (
-                          <View key={exIdx} style={styles.exampleContainer}>
-                            {display.primary && <Text style={styles.exampleLabelAndText}>{display.primary}</Text>}
-                            {display.secondary && <Text style={styles.exampleLabelAndText}>{display.secondary}</Text>}
-                          </View>
-                        );
-                      })}
-                    </View>
-                  )}
-                </>
-              )}
-            </View>
-          )}
-        </ScrollView>
-      ) : (
-        <View style={{ marginBottom: 8 }}>
-          {wordData.definitions.map((def, idx) => (
-            <View key={idx} style={styles.definitionBlock}>
-              <View style={styles.posTagWrapper}>
-                <Text style={styles.posTag}>{getPartOfSpeechLabel(def.partOfSpeech, appLanguage)}</Text>
-              </View>
-              <Text style={styles.definition}>{def.definition}</Text>
-              {def.examples && def.examples.length > 0 && (
-                <View style={styles.examplesBlock}>
-                  {def.examples.map((ex, exIdx) => (
-                    <View key={exIdx} style={styles.exampleContainer}>
-                      <Text style={styles.exampleLabelAndText}>{ex.english}</Text>
-                      <Text style={styles.exampleLabelAndText}>{ex.chinese}</Text>
-                    </View>
-                  ))}
-                </View>
-              )}
-            </View>
-          ))}
-          
-          {/* 俚语/缩写含义 */}
-          {wordData.slangMeaning && (
-            <View style={styles.definitionBlock}>
-              <View style={styles.posTagWrapper}>
-                <Text style={styles.posTag}>{getSpecialLabel('slang', appLanguage)}</Text>
-              </View>
-              {typeof wordData.slangMeaning === 'string' ? (
-                <Text style={styles.definition}>{wordData.slangMeaning}</Text>
-              ) : (
-                <>
-                  <Text style={styles.definition}>{wordData.slangMeaning.definition}</Text>
-                  {wordData.slangMeaning.examples && wordData.slangMeaning.examples.length > 0 && (
-                    <View style={styles.examplesBlock}>
-                      {wordData.slangMeaning.examples.map((ex, exIdx) => (
+                      {(wordData.slangMeaning as any).examples.map((ex: any, exIdx: number) => (
                         <View key={exIdx} style={styles.exampleContainer}>
-                          <Text style={styles.exampleLabelAndText}>{ex.english}</Text>
-                          <Text style={styles.exampleLabelAndText}>{ex.chinese}</Text>
+                          <Text style={styles.exampleLabelAndText} selectable>{ex.english}</Text>
+                          <Text style={styles.exampleLabelAndText} selectable>{ex.chinese}</Text>
                         </View>
                       ))}
                     </View>
@@ -291,16 +212,89 @@ const WordCardContent: React.FC<WordCardContentProps> = ({ wordData, onPlayAudio
                 <Text style={styles.posTag}>{getSpecialLabel('phrase', appLanguage)}</Text>
               </View>
               {typeof wordData.phraseExplanation === 'string' ? (
-                <Text style={styles.definition}>{wordData.phraseExplanation}</Text>
+                <Text style={styles.definition} selectable>{wordData.phraseExplanation}</Text>
               ) : (
                 <>
-                  <Text style={styles.definition}>{wordData.phraseExplanation.definition}</Text>
-                  {wordData.phraseExplanation.examples && wordData.phraseExplanation.examples.length > 0 && (
+                  <Text style={styles.definition} selectable>{(wordData.phraseExplanation as any)?.definition}</Text>
+                  {(wordData.phraseExplanation as any)?.examples && (wordData.phraseExplanation as any).examples.length > 0 && (
                     <View style={styles.examplesBlock}>
-                      {wordData.phraseExplanation.examples.map((ex, exIdx) => (
+                      {(wordData.phraseExplanation as any).examples.map((ex: any, exIdx: number) => (
                         <View key={exIdx} style={styles.exampleContainer}>
-                          <Text style={styles.exampleLabelAndText}>{ex.english}</Text>
-                          <Text style={styles.exampleLabelAndText}>{ex.chinese}</Text>
+                          <Text style={styles.exampleLabelAndText} selectable>{ex.english}</Text>
+                          <Text style={styles.exampleLabelAndText} selectable>{ex.chinese}</Text>
+                        </View>
+                      ))}
+                    </View>
+                  )}
+                </>
+              )}
+            </View>
+          )}
+        </ScrollView>
+      ) : (
+        <View style={{ marginBottom: 8 }}>
+          {wordData.definitions.map((def, idx) => (
+            <View key={idx} style={styles.definitionBlock}>
+              <View style={styles.posTagWrapper}>
+                <Text style={styles.posTag}>{getPartOfSpeechLabel(def.partOfSpeech, appLanguage)}</Text>
+              </View>
+              <Text style={styles.definition} selectable>{def.definition}</Text>
+              {def.examples && def.examples.length > 0 && (
+                <View style={styles.examplesBlock}>
+                  {def.examples.map((ex, exIdx) => (
+                    <View key={exIdx} style={styles.exampleContainer}>
+                      <Text style={styles.exampleLabelAndText} selectable>{ex.english}</Text>
+                      <Text style={styles.exampleLabelAndText} selectable>{ex.chinese}</Text>
+                    </View>
+                  ))}
+                </View>
+              )}
+            </View>
+          ))}
+          
+          {/* 俚语/缩写含义 */}
+          {wordData.slangMeaning && (
+            <View style={styles.definitionBlock}>
+              <View style={styles.posTagWrapper}>
+                <Text style={styles.posTag}>{getSpecialLabel('slang', appLanguage)}</Text>
+              </View>
+              {typeof wordData.slangMeaning === 'string' ? (
+                <Text style={styles.definition} selectable>{wordData.slangMeaning}</Text>
+              ) : (
+                <>
+                  <Text style={styles.definition} selectable>{(wordData.slangMeaning as any)?.definition}</Text>
+                  {(wordData.slangMeaning as any)?.examples && (wordData.slangMeaning as any).examples.length > 0 && (
+                    <View style={styles.examplesBlock}>
+                      {(wordData.slangMeaning as any).examples.map((ex: any, exIdx: number) => (
+                        <View key={exIdx} style={styles.exampleContainer}>
+                          <Text style={styles.exampleLabelAndText} selectable>{ex.english}</Text>
+                          <Text style={styles.exampleLabelAndText} selectable>{ex.chinese}</Text>
+                        </View>
+                      ))}
+                    </View>
+                  )}
+                </>
+              )}
+            </View>
+          )}
+          
+          {/* 短语解释 */}
+          {wordData.phraseExplanation && (
+            <View style={styles.definitionBlock}>
+              <View style={styles.posTagWrapper}>
+                <Text style={styles.posTag}>{getSpecialLabel('phrase', appLanguage)}</Text>
+              </View>
+              {typeof wordData.phraseExplanation === 'string' ? (
+                <Text style={styles.definition} selectable>{wordData.phraseExplanation}</Text>
+              ) : (
+                <>
+                  <Text style={styles.definition} selectable>{(wordData.phraseExplanation as any)?.definition}</Text>
+                  {(wordData.phraseExplanation as any)?.examples && (wordData.phraseExplanation as any).examples.length > 0 && (
+                    <View style={styles.examplesBlock}>
+                      {(wordData.phraseExplanation as any).examples.map((ex: any, exIdx: number) => (
+                        <View key={exIdx} style={styles.exampleContainer}>
+                          <Text style={styles.exampleLabelAndText} selectable>{ex.english}</Text>
+                          <Text style={styles.exampleLabelAndText} selectable>{ex.chinese}</Text>
                         </View>
                       ))}
                     </View>
