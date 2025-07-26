@@ -208,9 +208,6 @@ export const searchWord = async (req: Request, res: Response): Promise<void> => 
     logger.info(`🔍 Debug: About to call generateWordData for: ${searchTerm}`);
     
     try {
-      const { template: prompt, promptPath, promptContent } = getLanguagePrompt(searchTerm, detectedLanguage, uiLanguage);
-      logger.info(`📝 本次查词引用的prompt文件: ${promptPath}`);
-      logger.info(`📝 prompt内容: ${JSON.stringify(promptContent, null, 2)}`);
       const generatedData = await generateWordData(searchTerm, dbLanguage, uiLanguage); // 传递映射后的语言值
       logger.info(`🔍 Debug: generateWordData completed for: ${searchTerm}`);
       
@@ -1063,6 +1060,26 @@ async function generateWordData(word: string, language: string = 'en', uiLanguag
         });
       }
 
+      // 处理 slangMeaning 和 phraseExplanation，确保它们是字符串
+      let slangMeaning = null;
+      let phraseExplanation = null;
+      
+      if (parsedData.slangMeaning) {
+        if (typeof parsedData.slangMeaning === 'string') {
+          slangMeaning = parsedData.slangMeaning;
+        } else if (typeof parsedData.slangMeaning === 'object' && parsedData.slangMeaning.definition) {
+          slangMeaning = parsedData.slangMeaning.definition;
+        }
+      }
+      
+      if (parsedData.phraseExplanation) {
+        if (typeof parsedData.phraseExplanation === 'string') {
+          phraseExplanation = parsedData.phraseExplanation;
+        } else if (typeof parsedData.phraseExplanation === 'object' && parsedData.phraseExplanation.definition) {
+          phraseExplanation = parsedData.phraseExplanation.definition;
+        }
+      }
+      
       return {
         phonetic: parsedData.phonetic || `/${word}/`,
         pinyin: parsedData.pinyin || parsedData.phonetic || undefined, // 优先使用 pinyin 字段
@@ -1070,8 +1087,8 @@ async function generateWordData(word: string, language: string = 'en', uiLanguag
         audioUrl: getGoogleTTSUrl(word, language),
         correctedWord: parsedData.correctedWord || word,
         kana: parsedData.kana || undefined,
-        slangMeaning: parsedData.slangMeaning || null,
-        phraseExplanation: parsedData.phraseExplanation || null
+        slangMeaning: slangMeaning,
+        phraseExplanation: phraseExplanation
       };
     } catch (parseError) {
       logger.error('❌ Failed to parse OpenAI response:', parseError);
