@@ -1080,6 +1080,10 @@ async function generateWordData(word: string, language: string = 'en', uiLanguag
         }
       }
       
+      // 添加调试日志
+      logger.info(`🔍 数据处理调试 - slangMeaning: ${typeof slangMeaning} = ${JSON.stringify(slangMeaning)}`);
+      logger.info(`🔍 数据处理调试 - phraseExplanation: ${typeof phraseExplanation} = ${JSON.stringify(phraseExplanation)}`);
+      
       return {
         phonetic: parsedData.phonetic || `/${word}/`,
         pinyin: parsedData.pinyin || parsedData.phonetic || undefined, // 优先使用 pinyin 字段
@@ -1110,7 +1114,8 @@ function getFallbackWordData(word: string, language: string = 'en') {
     ],
     audioUrl: '',
     slangMeaning: null,
-    phraseExplanation: null
+    phraseExplanation: null,
+    correctedWord: word
   };
 }
 
