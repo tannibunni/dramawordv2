@@ -5,6 +5,7 @@ import { colors } from '../../../../../packages/ui/src/tokens';
 import { useAppLanguage } from '../../context/AppLanguageContext';
 import { WordData } from './WordCard';
 import { Audio } from 'expo-av';
+import { SUPPORTED_LANGUAGES } from '../../constants/config';
 
 interface WordCardContentProps {
   wordData: WordData;
@@ -98,6 +99,31 @@ const getExampleDisplay = (example: any, targetLanguage: string) => {
   };
 };
 
+// 获取语言标签显示
+const getLanguageLabel = (languageCode: string, appLanguage: string) => {
+  // 根据语言代码找到对应的语言配置
+  const languageEntry = Object.values(SUPPORTED_LANGUAGES).find(
+    lang => lang.code === languageCode
+  );
+  
+  if (!languageEntry) {
+    return { flag: '🌐', name: languageCode.toUpperCase() };
+  }
+  
+  // 根据当前UI语言返回对应的显示文本
+  if (appLanguage === 'zh-CN') {
+    return {
+      flag: languageEntry.flag,
+      name: languageEntry.name // 中文界面显示中文名称
+    };
+  } else {
+    return {
+      flag: languageEntry.flag,
+      name: languageEntry.nativeName // 英文界面显示原生名称
+    };
+  }
+};
+
 const WordCardContent: React.FC<WordCardContentProps> = ({ wordData, onPlayAudio, style, scrollable = false, onScroll, showHeader = true }) => {
   const { appLanguage } = useAppLanguage();
   const handlePlayAudio = async () => {
@@ -117,6 +143,20 @@ const WordCardContent: React.FC<WordCardContentProps> = ({ wordData, onPlayAudio
       {showHeader && (
         <View style={styles.headerRow}>
         <View style={{ flex: 1 }}>
+          {/* 语言标签 */}
+          {wordData.language && (
+            <View style={styles.languageTagContainer}>
+              {(() => {
+                const languageLabel = getLanguageLabel(wordData.language, appLanguage);
+                return (
+                  <View style={styles.languageTag}>
+                    <Text style={styles.languageFlag}>{languageLabel.flag}</Text>
+                    <Text style={styles.languageName}>{languageLabel.name}</Text>
+                  </View>
+                );
+              })()}
+            </View>
+          )}
           <View style={styles.wordContainer}>
             <Text style={styles.word} selectable>{wordData.correctedWord || wordData.word}</Text>
             {wordData.kana && (
@@ -411,6 +451,27 @@ const styles = StyleSheet.create({
   sourceTagText: {
     fontSize: 12,
     color: '#666',
+  },
+  languageTagContainer: {
+    marginBottom: 6,
+  },
+  languageTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f8f9fa',
+    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    alignSelf: 'flex-start',
+  },
+  languageFlag: {
+    fontSize: 16,
+    marginRight: 4,
+  },
+  languageName: {
+    fontSize: 12,
+    color: '#666',
+    fontWeight: '500',
   },
   specialBlock: {
     marginTop: 12,

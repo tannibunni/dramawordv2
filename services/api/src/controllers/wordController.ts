@@ -1092,7 +1092,8 @@ async function generateWordData(word: string, language: string = 'en', uiLanguag
         correctedWord: parsedData.correctedWord || word,
         kana: parsedData.kana || undefined,
         slangMeaning: slangMeaning,
-        phraseExplanation: phraseExplanation
+        phraseExplanation: phraseExplanation,
+        language: language // 添加语言字段
       };
     } catch (parseError) {
       logger.error('❌ Failed to parse OpenAI response:', parseError);
@@ -1115,7 +1116,8 @@ function getFallbackWordData(word: string, language: string = 'en') {
     audioUrl: '',
     slangMeaning: null,
     phraseExplanation: null,
-    correctedWord: word
+    correctedWord: word,
+    language: language // 添加语言字段
   };
 }
 
@@ -1473,7 +1475,8 @@ export const getCloudWord = async (req: Request, res: Response): Promise<void> =
         phraseExplanation: cloudWord.phraseExplanation,
         searchCount: cloudWord.searchCount,
         createdAt: cloudWord.createdAt,
-        updatedAt: cloudWord.updatedAt
+        updatedAt: cloudWord.updatedAt,
+        language: cloudWord.language // 添加语言字段
       };
       
       res.json({
