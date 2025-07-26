@@ -23,6 +23,7 @@ import tmdbRoutes from './routes/tmdb';
 import debugRoutes from './routes/debug';
 import wordFeedbackRoutes from './routes/wordFeedback';
 import experienceRoutes from './routes/experience';
+import feedbackRoutes from './routes/feedback';
 import { logger } from './utils/logger';
 
 const app = express();
@@ -52,6 +53,7 @@ app.use('/api/tmdb', tmdbRoutes);
 app.use('/api/debug', debugRoutes);
 app.use('/api/word-feedback', wordFeedbackRoutes);
 app.use('/api/experience', experienceRoutes);
+app.use('/api/feedback', feedbackRoutes);
 
 // 健康检查
 app.get('/health', (req, res) => {

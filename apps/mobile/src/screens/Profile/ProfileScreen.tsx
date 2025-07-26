@@ -16,6 +16,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { EditProfileModal } from '../../components/profile/EditProfileModal';
 import AppLanguageSelector from '../../components/profile/AppLanguageSelector';
+import { FeedbackModal } from '../../components/profile/FeedbackModal';
 import { UserService } from '../../services/userService';
 import { useVocabulary } from '../../context/VocabularyContext';
 import { useShowList } from '../../context/ShowListContext';
@@ -60,6 +61,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   const [languageModalVisible, setLanguageModalVisible] = useState(false);
   const [clearingCache, setClearingCache] = useState(false);
   const [aboutModalVisible, setAboutModalVisible] = useState(false);
+  const [feedbackModalVisible, setFeedbackModalVisible] = useState(false);
   const { vocabulary, clearVocabulary } = useVocabulary();
   const { shows, clearShows } = useShowList();
   const { navigate } = useNavigation();
@@ -256,10 +258,15 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
         <Ionicons name="chevron-forward" size={20} color={colors.neutral[500]} />
       </TouchableOpacity>
 
-      <TouchableOpacity style={styles.settingItem}>
+      <TouchableOpacity 
+        style={styles.settingItem}
+        onPress={() => setFeedbackModalVisible(true)}
+      >
         <View style={styles.settingLeft}>
-          <Ionicons name="help-circle-outline" size={24} color={colors.primary[500]} />
-          <Text style={styles.settingLabel}>{t('help_feedback', appLanguage)}</Text>
+          <Ionicons name="chatbubble-ellipses-outline" size={24} color={colors.primary[500]} />
+          <Text style={styles.settingLabel}>
+            {appLanguage === 'zh-CN' ? '反馈问题' : 'Feedback'}
+          </Text>
         </View>
         <Ionicons name="chevron-forward" size={20} color={colors.neutral[500]} />
       </TouchableOpacity>
@@ -462,6 +469,12 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
       <AppLanguageSelector
         visible={languageModalVisible}
         onClose={() => setLanguageModalVisible(false)}
+      />
+      
+      {/* 反馈模态框 */}
+      <FeedbackModal
+        visible={feedbackModalVisible}
+        onClose={() => setFeedbackModalVisible(false)}
       />
       
       {/* 关于我们弹窗 */}
