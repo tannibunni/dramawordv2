@@ -39,8 +39,9 @@
     },
     "extra": {
       "eas": {
-        "projectId": "5a4a31e1-5297-45cb-a8aa-423c570d3d3f"
+        "projectId": "c25a11c6-d764-4f2a-a81d-92692409b5fa"
       }
-    }
+    },
+    "owner": "tannibunni"
   }
 }
