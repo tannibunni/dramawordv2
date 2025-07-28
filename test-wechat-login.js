@@ -7,7 +7,7 @@ const config = {
   appSecret: process.env.WECHAT_APP_SECRET || 'YOUR_WECHAT_APP_SECRET',
   bundleId: 'com.tannibunni.dramawordmobile',
   universalLinks: 'https://dramaword.com/app/',
-  apiBaseUrl: 'https://dramawordv2.onrender.com/api'
+  apiBaseUrl: 'https://dramawordv2.onrender.com'
 };
 
 console.log('🧪 微信登录配置测试');
