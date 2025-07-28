@@ -2,8 +2,28 @@ import express from 'express';
 import { WechatController } from '../controllers/wechatController';
 import { authenticateToken } from '../middleware/auth';
 import { validateRequest } from '../middleware/validateRequest';
+import { wechatConfig } from '../config/wechat';
 
 const router = express.Router();
+
+/**
+ * @route GET /api/wechat/config
+ * @desc 获取微信配置信息（用于调试）
+ * @access Public
+ */
+router.get('/config', (req, res) => {
+  res.json({
+    success: true,
+    data: {
+      appId: wechatConfig.appId ? '已配置' : '未配置',
+      appSecret: wechatConfig.appSecret ? '已配置' : '未配置',
+      bundleId: wechatConfig.bundleId,
+      universalLinks: wechatConfig.universalLinks,
+      scope: wechatConfig.scope,
+      hasValidConfig: !!(wechatConfig.appId && wechatConfig.appSecret)
+    }
+  });
+});
 
 /**
  * @route POST /api/wechat/login

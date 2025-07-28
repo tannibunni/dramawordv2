@@ -15,15 +15,13 @@ class RealWechatSDK implements WechatSDKInterface {
 
   async registerApp(appId: string, universalLink: string): Promise<boolean> {
     try {
-      // 这里需要集成真实的微信SDK
-      // 例如：react-native-wechat-lib
+      // 使用真实的微信SDK
+      const { Wechat } = require('react-native-wechat-lib');
       console.log('注册微信应用:', { appId, universalLink });
       
-      // TODO: 替换为真实的SDK调用
-      // import { Wechat } from 'react-native-wechat-lib';
-      // return await Wechat.registerApp(appId, universalLink);
-      
-      return true;
+      const result = await Wechat.registerApp(appId, universalLink);
+      console.log('微信SDK注册结果:', result);
+      return result;
     } catch (error) {
       console.error('微信SDK注册失败:', error);
       return false;
@@ -32,11 +30,10 @@ class RealWechatSDK implements WechatSDKInterface {
 
   async isWXAppInstalled(): Promise<boolean> {
     try {
-      // TODO: 替换为真实的SDK调用
-      // return await Wechat.isWXAppInstalled();
-      
-      // 模拟检查结果
-      return true;
+      const { Wechat } = require('react-native-wechat-lib');
+      const result = await Wechat.isWXAppInstalled();
+      console.log('微信安装状态:', result);
+      return result;
     } catch (error) {
       console.error('检查微信安装状态失败:', error);
       return false;
@@ -45,14 +42,10 @@ class RealWechatSDK implements WechatSDKInterface {
 
   async sendAuthRequest(scope: string, state: string): Promise<{ code: string; state: string }> {
     try {
-      // TODO: 替换为真实的SDK调用
-      // return await Wechat.sendAuthRequest(scope, state);
-      
-      // 模拟授权结果
-      return {
-        code: 'mock_wechat_code_' + Date.now(),
-        state: state,
-      };
+      const { Wechat } = require('react-native-wechat-lib');
+      const result = await Wechat.sendAuthRequest(scope, state);
+      console.log('微信授权请求结果:', result);
+      return result;
     } catch (error) {
       console.error('微信授权请求失败:', error);
       throw error;
@@ -61,9 +54,10 @@ class RealWechatSDK implements WechatSDKInterface {
 
   async handleOpenURL(url: string): Promise<boolean> {
     try {
-      // TODO: 处理微信回调URL
-      console.log('处理微信回调URL:', url);
-      return true;
+      const { Wechat } = require('react-native-wechat-lib');
+      const result = await Wechat.handleOpenURL(url);
+      console.log('处理微信回调URL结果:', result);
+      return result;
     } catch (error) {
       console.error('处理微信回调URL失败:', error);
       return false;

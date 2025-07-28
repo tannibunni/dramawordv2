@@ -2,7 +2,7 @@
 export const wechatConfig = {
   appId: process.env.WECHAT_APP_ID || '',
   appSecret: process.env.WECHAT_APP_SECRET || '',
-  bundleId: process.env.WECHAT_BUNDLE_ID || 'com.tanny.dramaword',
+  bundleId: process.env.WECHAT_BUNDLE_ID || 'com.tannibunni.dramawordmobile',
   universalLinks: process.env.WECHAT_UNIVERSAL_LINKS || 'https://dramaword.com/app/',
   
   // API端点
