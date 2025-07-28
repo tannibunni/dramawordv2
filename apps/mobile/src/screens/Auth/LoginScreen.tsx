@@ -138,7 +138,71 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
   };
 
   const handleAppleLogin = async () => {
-    await testLogin('apple');
+    try {
+      setLoading(true);
+      
+      // 检查苹果登录是否可用
+      const isAvailable = await AppleAuthentication.isAvailableAsync();
+      if (!isAvailable) {
+        Alert.alert('提示', '您的设备不支持苹果登录');
+        return;
+      }
+
+      console.log('🍎 开始苹果登录流程...');
+      
+      // 执行苹果登录
+      const credential = await AppleAuthentication.signInAsync({
+        requestedScopes: [
+          AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+          AppleAuthentication.AppleAuthenticationScope.EMAIL,
+        ],
+      });
+
+      console.log('🍎 苹果登录成功，获取到凭证:', {
+        user: credential.user,
+        email: credential.email,
+        fullName: credential.fullName,
+        hasIdentityToken: !!credential.identityToken
+      });
+
+      if (!credential.identityToken) {
+        throw new Error('未获取到身份令牌');
+      }
+
+      // 调用后端登录API
+      const result = await AppleService.login(credential.identityToken);
+      
+      if (result.success && result.data) {
+        // 保存用户信息到本地存储
+        const userData = {
+          id: result.data.user.id,
+          nickname: result.data.user.nickname,
+          avatar: result.data.user.avatar,
+          loginType: 'apple',
+          token: result.data.token,
+        };
+        
+        // 清除旧缓存，确保新用户看到正确的数据
+        const { DataSyncService } = require('../../services/dataSyncService');
+        const dataSyncService = DataSyncService.getInstance();
+        await dataSyncService.clearAllCache();
+        
+        onLoginSuccess(userData);
+      } else {
+        throw new Error(result.message || '苹果登录失败');
+      }
+    } catch (error: any) {
+      console.error('❌ 苹果登录失败:', error);
+      
+      if (error.code === 'ERR_CANCELED') {
+        console.log('用户取消了苹果登录');
+        return;
+      }
+      
+      Alert.alert('登录失败', error instanceof Error ? error.message : '苹果登录失败，请重试');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleGuestLogin = () => {

@@ -1,5 +1,5 @@
 export const appleConfig = {
-  clientId: process.env.APPLE_CLIENT_ID || 'com.tanny.dramaword',
+  clientId: process.env.APPLE_CLIENT_ID || 'com.tannibunni.dramawordmobile',
   teamId: process.env.APPLE_TEAM_ID || '',
   keyId: process.env.APPLE_KEY_ID || '',
   privateKey: process.env.APPLE_PRIVATE_KEY || '',
