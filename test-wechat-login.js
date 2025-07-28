@@ -36,7 +36,7 @@ async function testBackendConnection() {
 async function testWechatConfig() {
   try {
     console.log('\n🔍 测试微信配置...');
-    const response = await axios.get(`${config.apiBaseUrl}/wechat/config`);
+    const response = await axios.get(`${config.apiBaseUrl}/api/wechat/config`);
     console.log('✅ 微信配置检查成功:', response.data);
     return true;
   } catch (error) {
@@ -53,7 +53,7 @@ async function testWechatLogin() {
     // 模拟授权码（实际应该从微信SDK获取）
     const mockCode = 'test_wechat_code_' + Date.now();
     
-    const response = await axios.post(`${config.apiBaseUrl}/wechat/login`, {
+    const response = await axios.post(`${config.apiBaseUrl}/api/wechat/login`, {
       code: mockCode,
       state: 'test_state'
     });
