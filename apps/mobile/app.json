@@ -2,7 +2,7 @@
   "expo": {
     "name": "剧词记",
     "slug": "dramaword-mobile",
-    "version": "1.52.0",
+                "version": "1.57.0",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
@@ -23,14 +23,16 @@
       ],
       "expo-localization"
     ],
-    "ios": {
-      "supportsTablet": true,
-      "bundleIdentifier": "com.tannibunni.dramawordmobile",
-      "buildNumber": "2",
-      "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
-      }
-    },
+                "ios": {
+              "supportsTablet": true,
+              "bundleIdentifier": "com.tannibunni.dramawordmobile",
+              "buildNumber": "8",
+              "infoPlist": {
+                "ITSAppUsesNonExemptEncryption": false,
+                "UIFileSharingEnabled": false,
+                "LSSupportsOpeningDocumentsInPlace": false
+              }
+            },
     "android": {
       "adaptiveIcon": {
         "backgroundColor": "#ffffff"

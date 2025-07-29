@@ -139,7 +139,7 @@ class AuthService {
         type: 'guest',
         userInfo: {
           id: `guest_${Date.now()}`,
-          nickname: '游客用户',
+          nickname: `guest_${Date.now()}`, // 直接使用用户ID作为昵称
         },
       },
     };

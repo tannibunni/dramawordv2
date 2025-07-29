@@ -58,6 +58,15 @@ export interface IUserAuth {
   isActive: boolean;
 }
 
+// 用户订阅信息接口
+export interface IUserSubscription {
+  type: 'monthly' | 'yearly' | 'lifetime';
+  isActive: boolean;
+  startDate: Date;
+  expiryDate: Date;
+  autoRenew: boolean;
+}
+
 // 用户文档接口
 export interface IUser extends Document {
   username: string;
@@ -68,6 +77,7 @@ export interface IUser extends Document {
   learningStats: IUserLearningStats;
   contributedWords: number;
   settings: IUserSettings;
+  subscription?: IUserSubscription;
   createdAt: Date;
   updatedAt: Date;
   // === 实例方法声明 ===
@@ -299,6 +309,29 @@ const UserSchema = new Schema<IUser>({
       type: String,
       enum: ['zh-CN', 'en-US'],
       default: 'zh-CN'
+    }
+  },
+  subscription: {
+    type: {
+      type: String,
+      enum: ['monthly', 'yearly', 'lifetime'],
+      required: true
+    },
+    isActive: {
+      type: Boolean,
+      default: true
+    },
+    startDate: {
+      type: Date,
+      required: true
+    },
+    expiryDate: {
+      type: Date,
+      required: true
+    },
+    autoRenew: {
+      type: Boolean,
+      default: true
     }
   }
 }, {

@@ -60,7 +60,7 @@ export class LearningStatsService {
       // 保存临时游客信息到本地存储
       const tempUserData = {
         id: guestId,
-        nickname: '游客用户',
+        nickname: guestId, // 直接使用用户ID作为昵称
         loginType: 'guest',
         isTemporary: true,
       };

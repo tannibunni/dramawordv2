@@ -42,7 +42,8 @@ const ReviewCompleteScreen: React.FC<{
   stats: ReviewStats;
   actions: { word: string; remembered: boolean }[];
   onBack: () => void;
-}> = ({ stats, actions, onBack }) => {
+  onContinueReview?: () => void;
+}> = ({ stats, actions, onBack, onContinueReview }) => {
   return (
     <View style={{ flex: 1, padding: 24, justifyContent: 'flex-start', backgroundColor: colors.background.primary }}>
       {/* 记住统计 */}
@@ -70,8 +71,27 @@ const ReviewCompleteScreen: React.FC<{
           ))}
         </ScrollView>
       </View>
-      {/* 确定按钮 */}
+      {/* 按钮组 */}
       <View style={{ alignItems: 'center', marginBottom: 16 }}>
+        {onContinueReview && (
+          <TouchableOpacity
+            style={{
+              backgroundColor: colors.success[500],
+              paddingHorizontal: 48,
+              paddingVertical: 16,
+              borderRadius: 25,
+              shadowColor: colors.success[200],
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: 0.1,
+              shadowRadius: 4,
+              elevation: 3,
+              marginBottom: 12,
+            }}
+            onPress={onContinueReview}
+          >
+            <Text style={{ color: 'white', fontSize: 18, fontWeight: 'bold' }}>继续复习</Text>
+          </TouchableOpacity>
+        )}
         <TouchableOpacity
           style={{
             backgroundColor: colors.primary[500],
@@ -86,7 +106,7 @@ const ReviewCompleteScreen: React.FC<{
           }}
           onPress={onBack}
         >
-          <Text style={{ color: 'white', fontSize: 18, fontWeight: 'bold' }}>确定</Text>
+          <Text style={{ color: 'white', fontSize: 18, fontWeight: 'bold' }}>完成</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -209,20 +229,73 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
 
   const MIN_REVIEW_BATCH = 10;
   const [isEbbinghaus, setIsEbbinghaus] = useState(false);
+  const [reviewMode, setReviewMode] = useState<'smart' | 'all'>('smart'); // 智能模式 vs 全部模式
 
   const getReviewBatch = (words: any[], filterFn: (w: any) => boolean) => {
     const all = words.filter(filterFn);
+    
+    // 如果单词数量不多，直接返回所有单词
     if (all.length <= MIN_REVIEW_BATCH) {
       setIsEbbinghaus(false);
       return all;
     }
-    let dueWords = all.filter((w: any) => dayjs(w.nextReviewAt).isBefore(dayjs()));
-    if (dueWords.length < MIN_REVIEW_BATCH) {
-      const extra = all.filter((w: any) => dayjs(w.nextReviewAt).isAfter(dayjs()));
-      dueWords = dueWords.concat(extra.slice(0, MIN_REVIEW_BATCH - dueWords.length));
+    
+    // 判断是否为挑战词卡（随机复习或错词挑战）
+    const isChallengeMode = !type || (type === 'shuffle' || type === 'random' || type === 'wrong_words');
+    
+    if (isChallengeMode) {
+      // 错词挑战：专门显示用户之前不记得的单词
+      if (type === 'wrong_words') {
+        setIsEbbinghaus(false);
+        // 筛选出有错误记录的单词
+        const wrongWords = all.filter((w: any) => {
+          return w.incorrectCount > 0 || w.consecutiveIncorrect > 0;
+        });
+        
+        if (wrongWords.length > 0) {
+          return wrongWords.slice(0, MIN_REVIEW_BATCH);
+        } else {
+          // 如果没有错词，显示所有单词
+          return all.slice(0, MIN_REVIEW_BATCH);
+        }
+      }
+      
+      // 其他挑战词卡：使用艾宾斯记忆法
+      if (reviewMode === 'all') {
+        // 全部模式：显示所有单词，不限制时间
+        setIsEbbinghaus(false);
+        return all.slice(0, MIN_REVIEW_BATCH);
+      }
+      
+      // 智能模式：优先显示需要复习的单词（艾宾斯记忆法推荐）
+      const dueWords = all.filter((w: any) => {
+        // 检查是否有 nextReviewAt 字段，如果没有则使用 nextReviewDate
+        const nextReview = w.nextReviewAt || w.nextReviewDate;
+        return nextReview ? dayjs(nextReview).isBefore(dayjs()) : true;
+      });
+      
+      // 如果到期的单词足够多，优先显示这些
+      if (dueWords.length >= MIN_REVIEW_BATCH) {
+        setIsEbbinghaus(true);
+        return dueWords.slice(0, MIN_REVIEW_BATCH);
+      }
+      
+      // 如果到期的单词不够，补充其他单词
+      const otherWords = all.filter((w: any) => {
+        const nextReview = w.nextReviewAt || w.nextReviewDate;
+        return nextReview ? dayjs(nextReview).isAfter(dayjs()) : true;
+      });
+      
+      // 混合显示：优先显示到期的单词，然后补充其他单词
+      const mixedWords = [...dueWords, ...otherWords];
+      setIsEbbinghaus(dueWords.length > 0);
+      
+      return mixedWords.slice(0, MIN_REVIEW_BATCH);
+    } else {
+      // 剧单/单词本：显示所有单词，不使用艾宾斯记忆法
+      setIsEbbinghaus(false);
+      return all.slice(0, MIN_REVIEW_BATCH);
     }
-    setIsEbbinghaus(true);
-    return dueWords.slice(0, MIN_REVIEW_BATCH);
   };
 
   // 合并 loadReviewWords 实现
@@ -830,6 +903,24 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
         <ReviewCompleteScreen 
           stats={finalStats || reviewStats}
           actions={reviewActions}
+          onContinueReview={() => {
+            // 重置复习状态，重新开始
+            setIsReviewComplete(false);
+            setReviewStats({
+              totalWords: 0,
+              rememberedWords: 0,
+              forgottenWords: 0,
+              experience: 0,
+              accuracy: 0,
+            });
+            setFinalStats(null);
+            setReviewActions([]);
+            rememberedRef.current = 0;
+            forgottenRef.current = 0;
+            setSwiperIndex(0);
+            // 重新加载复习单词
+            loadReviewWords();
+          }}
           onBack={async () => {
             // 增加复习次数统计
             try {
@@ -906,10 +997,60 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background.primary }}>
-      {isEbbinghaus && (
-        <View style={{padding: 12, backgroundColor: colors.success[50], borderRadius: 8, margin: 12}}>
+      {/* 复习模式指示器 - 只在智能挑战词卡模式下显示 */}
+      {(!type || type === 'shuffle' || type === 'random') && type !== 'wrong_words' && (
+        <View style={{padding: 12, backgroundColor: colors.primary[50], borderRadius: 8, margin: 12, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center'}}>
+          <View style={{flex: 1}}>
+            <Text style={{color: colors.primary[700], fontWeight: 'bold'}}>
+              {reviewMode === 'smart' ? '🧠 智能复习模式' : '📚 全部复习模式'}
+            </Text>
+            <Text style={{color: colors.primary[600], fontSize: 12, marginTop: 2}}>
+              {reviewMode === 'smart' ? '优先显示需要复习的单词' : '显示所有单词，不受时间限制'}
+            </Text>
+          </View>
+          <TouchableOpacity 
+            style={{
+              backgroundColor: colors.primary[500],
+              paddingHorizontal: 12,
+              paddingVertical: 6,
+              borderRadius: 16,
+            }}
+            onPress={() => {
+              setReviewMode(reviewMode === 'smart' ? 'all' : 'smart');
+              // 重新加载复习单词
+              setTimeout(() => loadReviewWords(), 100);
+            }}
+          >
+            <Text style={{color: 'white', fontSize: 12, fontWeight: 'bold'}}>
+              {reviewMode === 'smart' ? '切换全部' : '切换智能'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      )}
+      
+      {/* 艾宾斯记忆法提示 - 只在挑战词卡智能模式下显示 */}
+      {isEbbinghaus && reviewMode === 'smart' && (!type || type === 'shuffle' || type === 'random') && (
+        <View style={{padding: 12, backgroundColor: colors.success[50], borderRadius: 8, marginHorizontal: 12, marginBottom: 12}}>
           <Text style={{color: colors.success[700], fontWeight: 'bold'}}>
             ☑️已切入艾宾浩斯记忆法
+          </Text>
+        </View>
+      )}
+      
+      {/* 错词挑战提示 */}
+      {type === 'wrong_words' && (
+        <View style={{padding: 12, backgroundColor: colors.error[50], borderRadius: 8, marginHorizontal: 12, marginBottom: 12}}>
+          <Text style={{color: colors.error[700], fontWeight: 'bold'}}>
+            ⚠️ 错词挑战 - 专注记忆不熟悉的单词
+          </Text>
+        </View>
+      )}
+      
+      {/* 剧单/单词本复习提示 */}
+      {(type === 'show' || type === 'wordbook') && (
+        <View style={{padding: 12, backgroundColor: colors.accent[50], borderRadius: 8, marginHorizontal: 12, marginBottom: 12}}>
+          <Text style={{color: colors.accent[700], fontWeight: 'bold'}}>
+            📚 {type === 'show' ? '剧集复习' : '单词本复习'} - 显示所有单词
           </Text>
         </View>
       )}

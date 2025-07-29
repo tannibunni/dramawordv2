@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, FlatList, SafeAreaView } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, FlatList, SafeAreaView, Alert } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '../../components/navigation/NavigationContext';
 import { FontAwesome } from '@expo/vector-icons';
+import { PaymentService } from '../../services/paymentService';
 
 const plans = [
   {
@@ -161,13 +162,21 @@ const SubscriptionScreen = () => {
   };
 
   // 按钮点击逻辑
-  const handleCtaPress = () => {
+  const handleCtaPress = async () => {
     if (ctaStep === 'select') {
-      scrollToPaySection();
-      setCtaStep('pay');
-    } else {
-      // 这里可接入支付逻辑
-      // alert('支付功能开发中');
+      // 暂时隐藏支付功能，显示开发中提示
+      Alert.alert(
+        '功能开发中',
+        '支付功能正在开发中，敬请期待！\n\n当前版本支持免费使用所有核心功能。',
+        [
+          { text: '知道了', style: 'default' },
+          { 
+            text: '返回', 
+            style: 'cancel',
+            onPress: () => navigate('main', { tab: 'profile' })
+          }
+        ]
+      );
     }
   };
 
@@ -210,8 +219,54 @@ const SubscriptionScreen = () => {
         </View>
         {/* 权益对比表格 */}
         {renderFeatureTable()}
+        
+        {/* 支付方式选择区域 */}
+        {ctaStep === 'pay' && (
+          <View 
+            style={styles.paySection}
+            onLayout={(event) => setPaySectionY(event.nativeEvent.layout.y)}
+          >
+            <Text style={styles.payTitle}>选择支付方式</Text>
+            <View style={styles.payRow}>
+              {paymentMethods.map(method => (
+                <TouchableOpacity
+                  key={method.key}
+                  style={[
+                    styles.payIconBox,
+                    selectedPay === method.key && styles.payIconBoxSelected
+                  ]}
+                  onPress={() => setSelectedPay(method.key)}
+                  activeOpacity={0.8}
+                >
+                  <Image source={method.icon} style={styles.payIcon} />
+                  <Text style={styles.payName}>{method.name}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            <Text style={styles.safeTip}>🔒 支付安全由微信/支付宝保障</Text>
+          </View>
+        )}
       </ScrollView>
-      {/* 主按钮吸底已移至 tab 内容区 */}
+      
+      {/* 主按钮吸底 */}
+      <View style={styles.ctaFixedWrapNew}>
+        <View style={styles.ctaWrapNew}>
+          <TouchableOpacity
+            style={[
+              styles.ctaBtnNew,
+              {
+                backgroundColor: ctaStep === 'select' ? '#3A8DFF' : '#FF9800'
+              }
+            ]}
+            onPress={handleCtaPress}
+            activeOpacity={0.9}
+          >
+            <Text style={styles.ctaTextNew}>
+              功能开发中
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </View>
     </SafeAreaView>
   );
 };

@@ -50,7 +50,7 @@ const LANGUAGE_PATTERNS = {
   },
   // 日文 - 平假名、片假名、汉字
   ja: {
-    pattern: /[\u3040-\u309f\u30a0-\u30ff]/,
+    pattern: /[\u3040-\u309f\u30a0-\u30ff\u4e00-\u9fff]/,
     name: '日文',
     flag: '🇯🇵'
   },
@@ -115,23 +115,6 @@ export const detectLanguage = (text: string): DetectedLanguage | null => {
         flag: lang.flag,
         confidence
       });
-    }
-  }
-
-  // 特殊处理：如果同时检测到日文和中文，优先选择日文
-  const hasJapanese = results.find(r => r.code === 'ja');
-  const hasChinese = results.find(r => r.code === 'zh');
-  
-  if (hasJapanese && hasChinese) {
-    // 如果文本包含平假名或片假名，优先认为是日文
-    const hasKana = /[\u3040-\u309f\u30a0-\u30ff]/.test(cleanText);
-    if (hasKana) {
-      // 移除中文结果，保留日文结果
-      const filteredResults = results.filter(r => r.code !== 'zh');
-      if (filteredResults.length > 0) {
-        results.length = 0;
-        results.push(...filteredResults);
-      }
     }
   }
 

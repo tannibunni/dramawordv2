@@ -21,6 +21,8 @@ const ReviewIntroScreen = () => {
   const { user } = useAuth();
   
   const todayCount = vocabulary?.length || 0;
+  // 错词数量暂时使用固定值，后续可以从学习记录中获取
+  const wrongWordsCount = Math.min(todayCount, 5); // 临时逻辑
   
   // 状态管理
   const [userStats, setUserStats] = useState({
@@ -670,7 +672,11 @@ const ReviewIntroScreen = () => {
       'exp_gained': isChinese ? '经验值' : 'EXP',
       'congratulations_exp': isChinese ? '恭喜获得经验值！' : 'Congratulations! You gained experience!',
       'add_shows': isChinese ? '请添加剧集吧！' : ' Add some shows!',
-      'add_wordbook': isChinese ? '去添加自己的单词本吧！' : 'Go add your own wordbook!'
+      'add_wordbook': isChinese ? '去添加自己的单词本吧！' : 'Go add your own wordbook!',
+      'challenge_cards': isChinese ? '挑战词卡' : 'Challenge Cards',
+      'smart_challenge': isChinese ? '智能挑战' : 'Smart Challenge',
+      'wrong_words_challenge': isChinese ? '错词挑战' : 'Wrong Words Challenge',
+      'wrong_words_count': isChinese ? '有 {count} 个错词待复习' : '{count} wrong words to review'
     };
     
     let text = translations[key as keyof typeof translations] || key;
@@ -697,7 +703,9 @@ const ReviewIntroScreen = () => {
   // 点击挑战横幅，切换到 review Tab（swiper 页面）
   const handlePressChallenge = (key: string) => {
     if (key === 'shuffle') {
-      navigate('ReviewScreen');
+      navigate('ReviewScreen', { type: 'shuffle' });
+    } else if (key === 'wrong_words') {
+      navigate('ReviewScreen', { type: 'wrong_words' });
     }
     // 其他挑战可在此扩展
   };
@@ -819,21 +827,53 @@ const ReviewIntroScreen = () => {
         </View>
       </View>
       
-      {/* 挑战横幅 */}
-      <View style={styles.challengeBanner}>
-        <View style={styles.bannerContent}>
-          <View style={styles.bannerTextContainer}>
-            <Text style={styles.bannerTitle}>
-              {t('ready_to_challenge')}
-            </Text>
-            <Text style={styles.bannerSubtitle}>
+      {/* 挑战词卡SLIDER */}
+      <View style={styles.challengeSliderContainer}>
+        <Text style={styles.challengeSliderTitle}>{t('challenge_cards')}</Text>
+        <ScrollView 
+          horizontal 
+          showsHorizontalScrollIndicator={false} 
+          style={styles.challengeSlider}
+          contentContainerStyle={styles.challengeSliderContent}
+        >
+          {/* 智能挑战词卡 */}
+          <TouchableOpacity 
+            style={styles.challengeCard} 
+            activeOpacity={0.8} 
+            onPress={() => handlePressChallenge('shuffle')}
+          >
+            <View style={styles.challengeCardHeader}>
+              <Ionicons name="bulb" size={24} color={colors.primary[500]} />
+              <Text style={styles.challengeCardTitle}>{t('smart_challenge')}</Text>
+            </View>
+            <Text style={styles.challengeCardSubtitle}>
               {t('mastered_cards', { count: todayCount })}
             </Text>
-          </View>
-          <TouchableOpacity style={styles.expButton} onPress={() => handlePressChallenge('shuffle')}>
-            <Text style={styles.expButtonText}>{t('exp_gained')}15</Text>
+            <View style={styles.challengeCardFooter}>
+              <Text style={styles.challengeCardExp}>+15 {t('exp_gained')}</Text>
+              <Ionicons name="chevron-forward" size={16} color={colors.primary[500]} />
+            </View>
           </TouchableOpacity>
-        </View>
+
+          {/* 错词挑战词卡 */}
+          <TouchableOpacity 
+            style={[styles.challengeCard, styles.wrongWordsCard]} 
+            activeOpacity={0.8} 
+            onPress={() => handlePressChallenge('wrong_words')}
+          >
+            <View style={styles.challengeCardHeader}>
+              <Ionicons name="alert-circle" size={24} color={colors.error[500]} />
+              <Text style={[styles.challengeCardTitle, { color: colors.error[500] }]}>{t('wrong_words_challenge')}</Text>
+            </View>
+            <Text style={styles.challengeCardSubtitle}>
+              {t('wrong_words_count', { count: wrongWordsCount })}
+            </Text>
+            <View style={styles.challengeCardFooter}>
+              <Text style={[styles.challengeCardExp, { color: colors.error[500] }]}>+20 {t('exp_gained')}</Text>
+              <Ionicons name="chevron-forward" size={16} color={colors.error[500]} />
+            </View>
+          </TouchableOpacity>
+        </ScrollView>
       </View>
       
       {/* 第二行：剧集复习 */}
@@ -1257,6 +1297,69 @@ const styles = StyleSheet.create({
     color: colors.text.inverse,
     fontSize: 14,
     fontWeight: '700',
+  },
+  // 挑战词卡SLIDER样式
+  challengeSliderContainer: {
+    marginBottom: 16,
+  },
+  challengeSliderTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: colors.text.primary,
+    marginBottom: 12,
+    marginLeft: 4,
+  },
+  challengeSlider: {
+    flexGrow: 0,
+  },
+  challengeSliderContent: {
+    paddingHorizontal: 4,
+  },
+  challengeCard: {
+    backgroundColor: colors.background.secondary,
+    borderRadius: 16,
+    padding: 16,
+    marginRight: 12,
+    width: 200,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  wrongWordsCard: {
+    backgroundColor: colors.error[50],
+    borderWidth: 1,
+    borderColor: colors.error[200],
+  },
+  challengeCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  challengeCardTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: colors.text.primary,
+    marginLeft: 8,
+  },
+  challengeCardSubtitle: {
+    fontSize: 14,
+    color: colors.text.secondary,
+    marginBottom: 12,
+  },
+  challengeCardFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  challengeCardExp: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.primary[500],
   },
 });
 

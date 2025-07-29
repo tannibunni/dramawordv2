@@ -114,6 +114,11 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
       return t('guest_user', appLanguage);
     }
 
+    // 游客用户直接显示用户ID
+    if (loginType === 'guest' && user.nickname) {
+      return user.nickname; // 这里显示的是用户ID
+    }
+
     if (user.nickname) {
       return user.nickname;
     }
@@ -192,13 +197,14 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
     accuracy: 87,
   };
 
-  const handleLoginPress = () => {
-    // 使用自定义导航跳转到登录页面
-    navigate('login');
-  };
+  // 暂时隐藏登录功能
+  // const handleLoginPress = () => {
+  //   // 使用自定义导航跳转到登录页面
+  //   navigate('login');
+  // };
 
   const renderUserInfo = () => {
-    // 游客登录时也显示"登录"按钮，让用户可以切换到正式登录
+    // 当前版本使用自动生成的游客ID，无需登录按钮
     const isGuest = !isAuthenticated || !user || loginType === 'guest';
     
     return (
@@ -214,8 +220,8 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
             <Text style={styles.userLevel}>{t('intermediate_learner', appLanguage)}</Text>
             <Text style={styles.userEmail}>{user?.email || 'user@example.com'}</Text>
             
-            {/* 登录/退出登录按钮 - 放在邮箱下面 */}
-            {isGuest ? (
+            {/* 登录/退出登录按钮 - 暂时隐藏 */}
+            {/* {isGuest ? (
               <TouchableOpacity 
                 style={styles.userActionButton} 
                 onPress={handleLoginPress}
@@ -231,11 +237,12 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                 <Ionicons name="log-out-outline" size={18} color={colors.text.inverse} />
                 <Text style={styles.userActionButtonText}>{t('logout', appLanguage)}</Text>
               </TouchableOpacity>
-            )}
+            )} */}
           </View>
-          <TouchableOpacity style={styles.editButton} onPress={handleEditProfile}>
+          {/* 暂时隐藏编辑按钮 */}
+          {/* <TouchableOpacity style={styles.editButton} onPress={handleEditProfile}>
             <Ionicons name="pencil" size={20} color={colors.primary[500]} />
-          </TouchableOpacity>
+          </TouchableOpacity> */}
         </View>
       </View>
     );
@@ -441,9 +448,8 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   };
 
   const renderSubscriptionEntry = () => (
-    <TouchableOpacity style={styles.subscriptionBtn} onPress={handleGoToSubscription} activeOpacity={0.85}>
-      <Text style={styles.subscriptionBtnText}>{t('member_subscription', appLanguage)}</Text>
-    </TouchableOpacity>
+    // 暂时隐藏订阅入口
+    null
   );
 
   if (loading) {

@@ -202,8 +202,6 @@ export type TranslationKey =
   
   // 欢迎页面
   | 'welcome_to_dramaword'
-  | 'free_trial_description'
-  | 'try_for_free'
   | 'welcome_user'
   | 'all_languages'
   | 'english_language'
@@ -412,8 +410,6 @@ export const translations: Record<AppLanguage, Record<TranslationKey, string>> =
     
     // 欢迎页面
     welcome_to_dramaword: '欢迎来到剧词记',
-    free_trial_description: '免费试用期为14天，期间你可以享受所有功能。',
-    try_for_free: '立即免费试用',
     welcome_user: '欢迎回来，{username}！',
     all_languages: '全部',
     english_language: '英语',
@@ -622,8 +618,6 @@ export const translations: Record<AppLanguage, Record<TranslationKey, string>> =
     
     // 欢迎页面
     welcome_to_dramaword: 'Welcome to DramaWord',
-    free_trial_description: 'Your free trial period is 14 days. During this time, you can enjoy all features.',
-    try_for_free: 'Try for free now',
     welcome_user: 'Welcome back, {username}!',
     all_languages: 'All',
     english_language: 'English',
