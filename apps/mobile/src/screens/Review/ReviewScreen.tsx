@@ -285,13 +285,38 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
       // 错词挑战：专门显示用户之前不记得的单词
       if (type === 'wrong_words') {
         setIsEbbinghaus(false);
-        // 使用本地vocabulary数据，确保与挑战卡显示的数量一致
+        
+        // 从后端API获取最新的错词数据，确保与挑战卡显示的数量一致
+        try {
+          const userId = user?.id;
+          if (userId) {
+            const response = await fetch(`${API_BASE_URL}/words/user/vocabulary?userId=${userId}`);
+            if (response.ok) {
+              const result = await response.json();
+              if (result.success && result.data) {
+                // 筛选出有错误记录的单词
+                const wrongWords = result.data.filter((word: any) => 
+                  word.incorrectCount > 0 || word.consecutiveIncorrect > 0
+                );
+                
+                if (wrongWords.length > 0) {
+                  console.log(`🔍 错词挑战: 从后端API获取到 ${wrongWords.length} 个错词`);
+                  return wrongWords.slice(0, MIN_REVIEW_BATCH);
+                }
+              }
+            }
+          }
+        } catch (error) {
+          console.error('获取错词数据失败，使用本地数据:', error);
+        }
+        
+        // 如果后端获取失败，使用本地数据作为fallback
         const wrongWords = all.filter((w: any) => {
           return w.incorrectCount > 0 || w.consecutiveIncorrect > 0;
         });
         
         if (wrongWords.length > 0) {
-          console.log(`🔍 错词挑战: 使用本地数据，找到 ${wrongWords.length} 个错词`);
+          console.log(`🔍 错词挑战: 使用本地数据fallback，找到 ${wrongWords.length} 个错词`);
           return wrongWords.slice(0, MIN_REVIEW_BATCH);
         } else {
           // 如果没有错词，显示所有单词

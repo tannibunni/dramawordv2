@@ -43,23 +43,13 @@ const ReviewIntroScreen = () => {
   useEffect(() => {
     const fetchWrongWordsCount = async () => {
       try {
-        // 优先使用本地vocabulary数据，确保与ReviewScreen一致
-        if (vocabulary && vocabulary.length > 0) {
-          const wrongWords = vocabulary.filter((word: any) => 
-            word.incorrectCount > 0 || word.consecutiveIncorrect > 0
-          );
-          console.log(`🔍 错词挑战卡: 使用本地数据，找到 ${wrongWords.length} 个错词`);
-          setWrongWordsCount(wrongWords.length);
-          return;
-        }
-
-        // 如果本地数据为空，则从后端API获取
         const userId = await getUserId();
         if (!userId) {
           setWrongWordsCount(0);
           return;
         }
 
+        // 直接从后端API获取最新的学习进度数据
         const response = await fetch(`${API_BASE_URL}/words/user/vocabulary?userId=${userId}`);
         if (response.ok) {
           const result = await response.json();
@@ -68,7 +58,7 @@ const ReviewIntroScreen = () => {
             const wrongWords = result.data.filter((word: any) => 
               word.incorrectCount > 0 || word.consecutiveIncorrect > 0
             );
-            console.log(`🔍 错词挑战卡: 使用后端API数据，找到 ${wrongWords.length} 个错词`);
+            console.log(`🔍 错词挑战卡: 从后端API获取到 ${wrongWords.length} 个错词`);
             setWrongWordsCount(wrongWords.length);
           }
         }
@@ -79,7 +69,7 @@ const ReviewIntroScreen = () => {
     };
 
     fetchWrongWordsCount();
-  }, [vocabulary]); // 添加vocabulary作为依赖，当本地数据更新时重新计算
+  }, []); // 只在组件挂载时获取一次，避免频繁请求
   
   // 状态管理
   const [userStats, setUserStats] = useState({

@@ -8,6 +8,22 @@ import { API_BASE_URL } from '../constants/config';
 export interface WordWithSource extends WordData {
   sourceShow?: Show;
   collectedAt: string;
+  // 学习进度字段
+  mastery?: number;
+  reviewCount?: number;
+  correctCount?: number;
+  incorrectCount?: number;
+  consecutiveCorrect?: number;
+  consecutiveIncorrect?: number;
+  lastReviewDate?: string;
+  nextReviewDate?: string;
+  interval?: number;
+  easeFactor?: number;
+  totalStudyTime?: number;
+  averageResponseTime?: number;
+  confidence?: number;
+  notes?: string;
+  tags?: string[];
 }
 
 interface VocabularyContextType {
@@ -56,6 +72,13 @@ export const VocabularyProvider = ({ children }: { children: ReactNode }) => {
     loadVocabularyFromStorage();
   }, []);
 
+  // 同步后端学习进度数据
+  useEffect(() => {
+    if (isLoaded && vocabulary.length > 0) {
+      syncLearningProgress();
+    }
+  }, [isLoaded, vocabulary.length]);
+
   // 当词汇数据变化时保存到本地存储
   useEffect(() => {
     if (isLoaded) {
@@ -89,6 +112,54 @@ export const VocabularyProvider = ({ children }: { children: ReactNode }) => {
       console.log('💾 保存词汇数据到本地存储:', vocabulary.length, '个单词');
     } catch (error) {
       console.error('❌ 保存词汇数据失败:', error);
+    }
+  };
+
+  const syncLearningProgress = async () => {
+    try {
+      const userId = await getUserId();
+      if (!userId) {
+        console.log('⚠️ 用户未登录，跳过学习进度同步');
+        return;
+      }
+
+      const response = await fetch(`${API_BASE_URL}/words/user/vocabulary?userId=${userId}`);
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success && result.data) {
+          // 将后端数据与本地数据合并
+          setVocabulary(prev => {
+            const updatedVocabulary = prev.map(localWord => {
+              const backendWord = result.data.find((bw: any) => bw.word === localWord.word);
+              if (backendWord) {
+                return {
+                  ...localWord,
+                  mastery: backendWord.mastery || 0,
+                  reviewCount: backendWord.reviewCount || 0,
+                  correctCount: backendWord.correctCount || 0,
+                  incorrectCount: backendWord.incorrectCount || 0,
+                  consecutiveCorrect: backendWord.consecutiveCorrect || 0,
+                  consecutiveIncorrect: backendWord.consecutiveIncorrect || 0,
+                  lastReviewDate: backendWord.lastReviewDate,
+                  nextReviewDate: backendWord.nextReviewDate,
+                  interval: backendWord.interval || 24,
+                  easeFactor: backendWord.easeFactor || 2.5,
+                  totalStudyTime: backendWord.totalStudyTime || 0,
+                  averageResponseTime: backendWord.averageResponseTime || 0,
+                  confidence: backendWord.confidence || 1,
+                  notes: backendWord.notes || '',
+                  tags: backendWord.tags || []
+                };
+              }
+              return localWord;
+            });
+            console.log('🔄 学习进度同步完成，更新了', updatedVocabulary.length, '个单词');
+            return updatedVocabulary;
+          });
+        }
+      }
+    } catch (error) {
+      console.error('❌ 同步学习进度失败:', error);
     }
   };
 
