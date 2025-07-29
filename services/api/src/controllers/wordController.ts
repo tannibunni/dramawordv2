@@ -717,18 +717,35 @@ export const updateWordProgress = async (req: Request, res: Response) => {
     const searchTerm = word.toLowerCase().trim();
     logger.info(`📊 Updating progress for word: ${searchTerm}`);
 
-    // 查找用户单词本记录
-    const userWord = await UserVocabulary.findOne({
+    // 查找用户单词本记录，如果不存在则创建
+    let userWord = await UserVocabulary.findOne({
       userId: userId,
       word: searchTerm
     });
 
     if (!userWord) {
-      res.status(404).json({
-        success: false,
-        error: 'Word not found in user vocabulary'
+      logger.info(`📝 Creating new vocabulary entry for word: ${searchTerm}`);
+      // 创建新的用户词汇表记录
+      userWord = new UserVocabulary({
+        userId: userId,
+        word: searchTerm,
+        wordId: searchTerm, // 使用单词本身作为ID
+        reviewCount: 0,
+        correctCount: 0,
+        incorrectCount: 0,
+        consecutiveCorrect: 0,
+        consecutiveIncorrect: 0,
+        mastery: 1,
+        interval: 24, // 默认24小时
+        easeFactor: 2.5,
+        totalStudyTime: 0,
+        averageResponseTime: 0,
+        confidence: 1,
+        lastReviewDate: new Date(),
+        nextReviewDate: new Date(),
+        createdAt: new Date(),
+        updatedAt: new Date()
       });
-      return;
     }
 
     // 更新学习进度 - 只更新特定字段，避免覆盖其他重要字段

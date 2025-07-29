@@ -159,41 +159,43 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
       const records = await learningDataService.getLearningRecords();
       const record = records.find(r => r.word === word);
       
-      if (record) {
-        const progress = {
-          reviewCount: record.reviewCount,
-          correctCount: record.correctCount,
-          incorrectCount: record.incorrectCount,
-          consecutiveCorrect: record.consecutiveCorrect,
-          consecutiveIncorrect: record.consecutiveIncorrect,
-          mastery: record.masteryLevel,
-          lastReviewDate: new Date().toISOString(),
-          nextReviewDate: record.nextReviewDate ? new Date(record.nextReviewDate).toISOString() : new Date().toISOString(),
-          interval: record.intervalDays * 24, // 转换为小时
-          easeFactor: 2.5, // 默认值
-          totalStudyTime: record.timeSpent,
-          averageResponseTime: 0, // 暂时设为0
-          confidence: record.confidenceLevel,
-        };
-        
-        const response = await fetch(`${API_BASE_URL}/words/user/progress`, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            userId,
-            word,
-            progress,
-            isSuccessfulReview: isCorrect
-          }),
-        });
-        
-        if (response.ok) {
-          console.log('✅ 后端用户词汇表更新成功');
-        } else {
-          console.error('❌ 后端用户词汇表更新失败:', response.status);
-        }
+      // 构建进度数据 - 即使没有找到记录也要发送请求
+      const progress = {
+        reviewCount: record?.reviewCount || 1,
+        correctCount: record?.correctCount || (isCorrect ? 1 : 0),
+        incorrectCount: record?.incorrectCount || (isCorrect ? 0 : 1),
+        consecutiveCorrect: record?.consecutiveCorrect || (isCorrect ? 1 : 0),
+        consecutiveIncorrect: record?.consecutiveIncorrect || (isCorrect ? 0 : 1),
+        mastery: record?.masteryLevel || 1,
+        lastReviewDate: new Date().toISOString(),
+        nextReviewDate: record?.nextReviewDate ? new Date(record.nextReviewDate).toISOString() : new Date().toISOString(),
+        interval: (record?.intervalDays || 1) * 24, // 转换为小时
+        easeFactor: 2.5, // 默认值
+        totalStudyTime: record?.timeSpent || 0,
+        averageResponseTime: 0, // 暂时设为0
+        confidence: record?.confidenceLevel || 1,
+      };
+      
+      console.log('📤 发送进度更新请求:', { userId, word, isCorrect, progress });
+      
+      const response = await fetch(`${API_BASE_URL}/words/user/progress`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId,
+          word,
+          progress,
+          isSuccessfulReview: isCorrect
+        }),
+      });
+      
+      if (response.ok) {
+        console.log('✅ 后端用户词汇表更新成功');
+      } else {
+        const errorText = await response.text();
+        console.error('❌ 后端用户词汇表更新失败:', response.status, errorText);
       }
     } catch (error) {
       console.error('❌ 更新后端用户词汇表失败:', error);
