@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import OpenAI from 'openai';
+import mongoose from 'mongoose';
 import { Word, IWord } from '../models/Word';
 import { SearchHistory, ISearchHistory } from '../models/SearchHistory';
 import { CloudWord } from '../models/CloudWord';
@@ -729,7 +730,8 @@ export const updateWordProgress = async (req: Request, res: Response) => {
       userWord = new UserVocabulary({
         userId: userId,
         word: searchTerm,
-        wordId: searchTerm, // 使用单词本身作为ID
+        wordId: new mongoose.Types.ObjectId(), // 生成新的ObjectId
+        language: 'en', // 默认英语
         reviewCount: 0,
         correctCount: 0,
         incorrectCount: 0,
@@ -743,8 +745,7 @@ export const updateWordProgress = async (req: Request, res: Response) => {
         confidence: 1,
         lastReviewDate: new Date(),
         nextReviewDate: new Date(),
-        createdAt: new Date(),
-        updatedAt: new Date()
+        tags: [] // 空标签数组
       });
     }
 
