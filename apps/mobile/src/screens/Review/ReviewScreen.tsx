@@ -43,8 +43,7 @@ const ReviewCompleteScreen: React.FC<{
   stats: ReviewStats;
   actions: { word: string; remembered: boolean }[];
   onBack: () => void;
-  onContinueReview?: () => void;
-}> = ({ stats, actions, onBack, onContinueReview }) => {
+}> = ({ stats, actions, onBack }) => {
   return (
     <View style={{ flex: 1, padding: 24, justifyContent: 'flex-start', backgroundColor: colors.background.primary }}>
       {/* 记住统计 */}
@@ -59,7 +58,7 @@ const ReviewCompleteScreen: React.FC<{
       </View>
       {/* 单词列表 */}
       <View style={{ flex: 1, marginBottom: 24 }}>
-        <ScrollView style={{ maxHeight: 260 }}>
+        <ScrollView style={{ maxHeight: 1000 }}>
           {actions.map((item, idx) => (
             <View key={item.word + idx} style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: colors.background.tertiary }}>
               <Text style={{ fontSize: 18, color: colors.text.primary, flex: 1 }}>{item.word}</Text>
@@ -74,25 +73,6 @@ const ReviewCompleteScreen: React.FC<{
       </View>
       {/* 按钮组 */}
       <View style={{ alignItems: 'center', marginBottom: 16 }}>
-        {onContinueReview && (
-          <TouchableOpacity
-            style={{
-              backgroundColor: colors.success[500],
-              paddingHorizontal: 48,
-              paddingVertical: 16,
-              borderRadius: 25,
-              shadowColor: colors.success[200],
-              shadowOffset: { width: 0, height: 2 },
-              shadowOpacity: 0.1,
-              shadowRadius: 4,
-              elevation: 3,
-              marginBottom: 12,
-            }}
-            onPress={onContinueReview}
-          >
-            <Text style={{ color: 'white', fontSize: 18, fontWeight: 'bold' }}>继续复习</Text>
-          </TouchableOpacity>
-        )}
         <TouchableOpacity
           style={{
             backgroundColor: colors.primary[500],
@@ -809,20 +789,7 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
     setCardMode(prev => prev === 'swipe' ? 'flip' : 'swipe');
   };
 
-  const startNewSession = () => {
-    setSwiperIndex(0);
-    setShowAnswer(false);
-    setIsReviewComplete(false);
-    setSession({
-      totalWords: words.length,
-      currentIndex: 0,
-      correctCount: 0,
-      incorrectCount: 0,
-      skippedCount: 0,
-      collectedCount: 0,
-      startTime: new Date(),
-    });
-  };
+
 
   // Swiper 事件处理 - 现在由 SwipeableWordCard 处理手势
   const handleSwipedLeft = (cardIndex: number) => {
@@ -968,24 +935,6 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
         <ReviewCompleteScreen 
           stats={finalStats || reviewStats}
           actions={reviewActions}
-          onContinueReview={() => {
-            // 重置复习状态，重新开始
-            setIsReviewComplete(false);
-            setReviewStats({
-              totalWords: 0,
-              rememberedWords: 0,
-              forgottenWords: 0,
-              experience: 0,
-              accuracy: 0,
-            });
-            setFinalStats(null);
-            setReviewActions([]);
-            rememberedRef.current = 0;
-            forgottenRef.current = 0;
-            setSwiperIndex(0);
-            // 重新加载复习单词
-            loadReviewWords();
-          }}
           onBack={async () => {
             // 增加复习次数统计
             try {

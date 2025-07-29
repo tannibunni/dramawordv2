@@ -731,8 +731,20 @@ export const updateWordProgress = async (req: Request, res: Response) => {
       return;
     }
 
-    // 更新学习进度
-    Object.assign(userWord, progress);
+    // 更新学习进度 - 只更新特定字段，避免覆盖其他重要字段
+    if (progress.reviewCount !== undefined) userWord.reviewCount = progress.reviewCount;
+    if (progress.correctCount !== undefined) userWord.correctCount = progress.correctCount;
+    if (progress.incorrectCount !== undefined) userWord.incorrectCount = progress.incorrectCount;
+    if (progress.consecutiveCorrect !== undefined) userWord.consecutiveCorrect = progress.consecutiveCorrect;
+    if (progress.consecutiveIncorrect !== undefined) userWord.consecutiveIncorrect = progress.consecutiveIncorrect;
+    if (progress.mastery !== undefined) userWord.mastery = progress.mastery;
+    if (progress.interval !== undefined) userWord.interval = progress.interval;
+    if (progress.easeFactor !== undefined) userWord.easeFactor = progress.easeFactor;
+    if (progress.totalStudyTime !== undefined) userWord.totalStudyTime = progress.totalStudyTime;
+    if (progress.averageResponseTime !== undefined) userWord.averageResponseTime = progress.averageResponseTime;
+    if (progress.confidence !== undefined) userWord.confidence = progress.confidence;
+    if (progress.nextReviewDate !== undefined) userWord.nextReviewDate = new Date(progress.nextReviewDate);
+    
     userWord.lastReviewDate = new Date();
     
     await userWord.save();
