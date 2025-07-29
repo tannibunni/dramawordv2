@@ -565,6 +565,8 @@ export const getUserVocabulary = async (req: Request, res: Response) => {
           reviewCount: 1,
           correctCount: 1,
           incorrectCount: 1,
+          consecutiveCorrect: 1,
+          consecutiveIncorrect: 1,
           lastReviewDate: 1,
           nextReviewDate: 1,
           notes: 1,
