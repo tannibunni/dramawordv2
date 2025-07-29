@@ -269,7 +269,7 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
   const [isEbbinghaus, setIsEbbinghaus] = useState(false);
   const [reviewMode, setReviewMode] = useState<'smart' | 'all'>('smart'); // 智能模式 vs 全部模式
 
-  const getReviewBatch = (words: any[], filterFn: (w: any) => boolean) => {
+  const getReviewBatch = async (words: any[], filterFn: (w: any) => boolean) => {
     const all = words.filter(filterFn);
     
     // 如果单词数量不多，直接返回所有单词
@@ -285,15 +285,41 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
       // 错词挑战：专门显示用户之前不记得的单词
       if (type === 'wrong_words') {
         setIsEbbinghaus(false);
-        // 筛选出有错误记录的单词
+        // 从后端API获取错词数据，确保与挑战卡显示的数量一致
+        try {
+          const userId = user?.id;
+          if (userId) {
+            const response = await fetch(`${API_BASE_URL}/words/user/vocabulary?userId=${userId}`);
+            if (response.ok) {
+              const result = await response.json();
+              if (result.success && result.data) {
+                // 筛选出有错误记录的单词
+                const wrongWords = result.data.filter((word: any) => 
+                  word.incorrectCount > 0 || word.consecutiveIncorrect > 0
+                );
+                
+                if (wrongWords.length > 0) {
+                  console.log(`🔍 错词挑战: 从后端获取到 ${wrongWords.length} 个错词`);
+                  return wrongWords.slice(0, MIN_REVIEW_BATCH);
+                }
+              }
+            }
+          }
+        } catch (error) {
+          console.error('获取错词数据失败，使用本地数据:', error);
+        }
+        
+        // 如果后端获取失败，使用本地数据作为fallback
         const wrongWords = all.filter((w: any) => {
           return w.incorrectCount > 0 || w.consecutiveIncorrect > 0;
         });
         
         if (wrongWords.length > 0) {
+          console.log(`🔍 错词挑战: 使用本地数据，找到 ${wrongWords.length} 个错词`);
           return wrongWords.slice(0, MIN_REVIEW_BATCH);
         } else {
           // 如果没有错词，显示所有单词
+          console.log(`🔍 错词挑战: 没有错词，显示所有单词`);
           return all.slice(0, MIN_REVIEW_BATCH);
         }
       }
@@ -337,7 +363,7 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
   };
 
   // 合并 loadReviewWords 实现
-  const loadReviewWords = () => {
+  const loadReviewWords = async () => {
     let filterFn: (w: any) => boolean = () => true;
     if (type === 'show' && id !== undefined) {
       filterFn = (w: any) => {
@@ -375,7 +401,7 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
       type: type,
       targetId: id
     })));
-    const batch = getReviewBatch(vocabulary, filterFn);
+    const batch = await getReviewBatch(vocabulary, filterFn);
     console.log('review batch:', batch);
     setWords(batch);
     setTimeout(() => {
@@ -385,7 +411,9 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
 
   useEffect(() => {
     console.log('ReviewScreen: useEffect triggered - vocabulary length:', vocabulary.length, 'type:', type, 'id:', id);
-    loadReviewWords();
+    loadReviewWords().catch(error => {
+      console.error('加载复习单词失败:', error);
+    });
   }, [vocabulary, type, id]);
 
   // 当 words 数组加载完成后，确保 swiperIndex 正确初始化
