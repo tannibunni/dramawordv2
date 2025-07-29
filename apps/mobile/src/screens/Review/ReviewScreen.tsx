@@ -167,8 +167,8 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
           consecutiveCorrect: record.consecutiveCorrect,
           consecutiveIncorrect: record.consecutiveIncorrect,
           mastery: record.masteryLevel,
-          lastReviewDate: new Date(),
-          nextReviewDate: record.nextReviewDate,
+          lastReviewDate: new Date().toISOString(),
+          nextReviewDate: record.nextReviewDate ? new Date(record.nextReviewDate).toISOString() : new Date().toISOString(),
           interval: record.intervalDays * 24, // 转换为小时
           easeFactor: 2.5, // 默认值
           totalStudyTime: record.timeSpent,
