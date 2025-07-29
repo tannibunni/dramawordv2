@@ -21,8 +21,53 @@ const ReviewIntroScreen = () => {
   const { user } = useAuth();
   
   const todayCount = vocabulary?.length || 0;
-  // 错词数量暂时使用固定值，后续可以从学习记录中获取
-  const wrongWordsCount = Math.min(todayCount, 5); // 临时逻辑
+  // 计算真实的错词数量 - 从用户词汇表中获取学习记录数据
+  const [wrongWordsCount, setWrongWordsCount] = useState(0);
+  
+  // 获取用户ID的辅助函数
+  const getUserId = async (): Promise<string | null> => {
+    try {
+      const userData = await AsyncStorage.getItem('userData');
+      if (userData) {
+        const parsed = JSON.parse(userData);
+        return parsed.id || null;
+      }
+      return null;
+    } catch (error) {
+      console.error('获取用户ID失败:', error);
+      return null;
+    }
+  };
+  
+  // 获取用户词汇表的学习记录数据
+  useEffect(() => {
+    const fetchWrongWordsCount = async () => {
+      try {
+        const userId = await getUserId();
+        if (!userId) {
+          setWrongWordsCount(0);
+          return;
+        }
+        
+        const response = await fetch(`${API_BASE_URL}/words/user/vocabulary?userId=${userId}`);
+        if (response.ok) {
+          const result = await response.json();
+          if (result.success && result.data) {
+            // 计算有错误记录的单词数量
+            const wrongWords = result.data.filter((word: any) => 
+              word.incorrectCount > 0 || word.consecutiveIncorrect > 0
+            );
+            setWrongWordsCount(wrongWords.length);
+          }
+        }
+      } catch (error) {
+        console.error('获取错词数量失败:', error);
+        setWrongWordsCount(0);
+      }
+    };
+    
+    fetchWrongWordsCount();
+  }, []);
   
   // 状态管理
   const [userStats, setUserStats] = useState({
@@ -857,20 +902,20 @@ const ReviewIntroScreen = () => {
 
           {/* 错词挑战词卡 */}
           <TouchableOpacity 
-            style={[styles.challengeCard, styles.wrongWordsCard]} 
+            style={styles.challengeCard} 
             activeOpacity={0.8} 
             onPress={() => handlePressChallenge('wrong_words')}
           >
             <View style={styles.challengeCardHeader}>
-              <Ionicons name="alert-circle" size={24} color={colors.error[500]} />
-              <Text style={[styles.challengeCardTitle, { color: colors.error[500] }]}>{t('wrong_words_challenge')}</Text>
+              <Ionicons name="alert-circle" size={24} color={colors.primary[500]} />
+              <Text style={styles.challengeCardTitle}>{t('wrong_words_challenge')}</Text>
             </View>
             <Text style={styles.challengeCardSubtitle}>
               {t('wrong_words_count', { count: wrongWordsCount })}
             </Text>
             <View style={styles.challengeCardFooter}>
-              <Text style={[styles.challengeCardExp, { color: colors.error[500] }]}>+20 {t('exp_gained')}</Text>
-              <Ionicons name="chevron-forward" size={16} color={colors.error[500]} />
+              <Text style={styles.challengeCardExp}>+20 {t('exp_gained')}</Text>
+              <Ionicons name="chevron-forward" size={16} color={colors.primary[500]} />
             </View>
           </TouchableOpacity>
         </ScrollView>
@@ -1330,11 +1375,7 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 2,
   },
-  wrongWordsCard: {
-    backgroundColor: colors.error[50],
-    borderWidth: 1,
-    borderColor: colors.error[200],
-  },
+
   challengeCardHeader: {
     flexDirection: 'row',
     alignItems: 'center',

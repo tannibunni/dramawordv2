@@ -194,7 +194,7 @@ export class PaymentService {
    */
   static async updateUserSubscription(
     userId: string, 
-    subscriptionType: string, 
+    subscriptionType: 'monthly' | 'yearly' | 'lifetime', 
     duration: number
   ): Promise<void> {
     try {

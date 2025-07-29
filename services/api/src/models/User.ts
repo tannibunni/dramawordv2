@@ -584,7 +584,20 @@ UserSchema.methods.addContinuousLearningReward = function() {
     console.log(`🎁 连续学习奖励: +${rewardXP}XP (${rewardMessage})`);
   }
   
-  return this.save();
+  // 使用 findOneAndUpdate 避免并行保存冲突
+  return User.findByIdAndUpdate(
+    this._id,
+    { 
+      $set: { 
+        'learningStats.experience': this.learningStats.experience,
+        'learningStats.level': this.learningStats.level,
+        'learningStats.currentStreak': this.learningStats.currentStreak,
+        'learningStats.longestStreak': this.learningStats.longestStreak,
+        'learningStats.lastStudyDate': this.learningStats.lastStudyDate
+      }
+    },
+    { new: true }
+  );
 };
 
 // 方法：检查连续学习状态

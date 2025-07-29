@@ -21,6 +21,7 @@ import { SwipeableWordCard } from '../../components/cards';
 import { UserService } from '../../services/userService';
 import { useVocabulary } from '../../context/VocabularyContext';
 import { useNavigation } from '../../components/navigation/NavigationContext';
+import { useAuth } from '../../context/AuthContext';
 import dayjs from 'dayjs';
 import { wordService } from '../../services/wordService';
 import { useAppLanguage } from '../../context/AppLanguageContext';
@@ -162,7 +163,62 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
   const { vocabulary } = useVocabulary();
   const { navigate } = useNavigation();
   const { appLanguage } = useAppLanguage();
+  const { user } = useAuth();
   const swiperRef = useRef<any>(null);
+  
+  // 更新后端用户词汇表进度的函数
+  const updateBackendWordProgress = async (word: string, isCorrect: boolean) => {
+    try {
+      const userId = user?.id;
+      if (!userId) {
+        console.log('⚠️ 用户未登录，跳过后端更新');
+        return;
+      }
+      
+      // 获取当前单词的学习记录
+      const records = await learningDataService.getLearningRecords();
+      const record = records.find(r => r.word === word);
+      
+      if (record) {
+        const progress = {
+          reviewCount: record.reviewCount,
+          correctCount: record.correctCount,
+          incorrectCount: record.incorrectCount,
+          consecutiveCorrect: record.consecutiveCorrect,
+          consecutiveIncorrect: record.consecutiveIncorrect,
+          mastery: record.masteryLevel,
+          lastReviewDate: new Date(),
+          nextReviewDate: record.nextReviewDate,
+          interval: record.intervalDays * 24, // 转换为小时
+          easeFactor: 2.5, // 默认值
+          totalStudyTime: record.timeSpent,
+          averageResponseTime: 0, // 暂时设为0
+          confidence: record.confidenceLevel,
+        };
+        
+        const response = await fetch(`${API_BASE_URL}/words/user/progress`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            userId,
+            word,
+            progress,
+            isSuccessfulReview: isCorrect
+          }),
+        });
+        
+        if (response.ok) {
+          console.log('✅ 后端用户词汇表更新成功');
+        } else {
+          console.error('❌ 后端用户词汇表更新失败:', response.status);
+        }
+      }
+    } catch (error) {
+      console.error('❌ 更新后端用户词汇表失败:', error);
+    }
+  };
   const [swiperIndex, setSwiperIndex] = useState(0);
   const rememberedRef = useRef(0);
   const forgottenRef = useRef(0);
@@ -575,12 +631,15 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
     const wordObj = convertReviewWordToWord(words[swiperIndex]);
     const updatedWord = updateWordReview(wordObj, false);
     try {
-      // 2. 只做存储
+      // 2. 更新本地学习记录
       await learningDataService.updateLearningRecord(
         updatedWord.word,
         updatedWord.word,
         false // 不正确
       );
+      
+      // 3. 更新后端用户词汇表
+      await updateBackendWordProgress(word, false);
     } catch (error) {
       console.error('更新学习记录失败:', error);
     }
@@ -610,12 +669,15 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
     const wordObj = convertReviewWordToWord(words[swiperIndex]);
     const updatedWord = updateWordReview(wordObj, true);
     try {
-      // 2. 只做存储
+      // 2. 更新本地学习记录
       await learningDataService.updateLearningRecord(
         updatedWord.word,
         word,
         true // 正确
       );
+      
+      // 3. 更新后端用户词汇表
+      await updateBackendWordProgress(word, true);
     } catch (error) {
       console.error('更新学习记录失败:', error);
     }
@@ -652,6 +714,9 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
         word,
         false // 跳过视为不正确
       );
+      
+      // 更新后端用户词汇表
+      await updateBackendWordProgress(word, false);
     } catch (error) {
       console.error('更新学习记录失败:', error);
     }

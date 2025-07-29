@@ -292,8 +292,10 @@ export class SyncService {
       );
     }
 
-    // 合并标签
-    const allTags = new Set([...remoteRecord.tags, ...localRecord.tags]);
+    // 合并标签 - 添加安全检查
+    const remoteTags = Array.isArray(remoteRecord.tags) ? remoteRecord.tags : [];
+    const localTags = Array.isArray(localRecord.tags) ? localRecord.tags : [];
+    const allTags = new Set([...remoteTags, ...localTags]);
     merged.tags = Array.from(allTags);
 
     // 合并笔记（使用较长的笔记）
