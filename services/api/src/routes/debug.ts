@@ -1,6 +1,9 @@
 import express from 'express';
 import mongoose from 'mongoose';
 import { logger } from '../utils/logger';
+import { UserVocabulary } from '../models/UserVocabulary';
+import { CloudWord } from '../models/CloudWord';
+import { User } from '../models/User';
 
 const router = express.Router();
 
@@ -29,6 +32,60 @@ router.get('/db-status', async (req, res) => {
     res.status(500).json({
       success: false,
       error: '数据库状态检查失败',
+      message: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+// 查询集合数据
+router.get('/collection/:collectionName', async (req, res) => {
+  try {
+    const { collectionName } = req.params;
+    const { userId, word } = req.query;
+    
+    logger.info(`查询集合: ${collectionName}`, { userId, word });
+    
+    let data = [];
+    
+    switch (collectionName) {
+      case 'uservocabularies':
+        const query = {};
+        if (userId) query.userId = userId;
+        if (word) query.word = word;
+        data = await UserVocabulary.find(query).limit(10);
+        break;
+        
+      case 'cloudwords':
+        const cloudQuery = {};
+        if (word) cloudQuery.word = word;
+        data = await CloudWord.find(cloudQuery).limit(10);
+        break;
+        
+      case 'users':
+        const userQuery = {};
+        if (userId) userQuery.id = userId;
+        data = await User.find(userQuery).limit(10);
+        break;
+        
+      default:
+        return res.status(400).json({
+          success: false,
+          error: '不支持的集合名称'
+        });
+    }
+    
+    logger.info(`查询结果: ${collectionName}`, { count: data.length });
+    
+    res.json({
+      success: true,
+      data: data,
+      count: data.length
+    });
+  } catch (error) {
+    logger.error('查询集合失败:', error);
+    res.status(500).json({
+      success: false,
+      error: '查询集合失败',
       message: error instanceof Error ? error.message : 'Unknown error'
     });
   }
