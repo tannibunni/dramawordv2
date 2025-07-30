@@ -1,6 +1,16 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_BASE_URL } from '../constants/config';
 
+// 获取认证token的辅助函数
+async function getAuthToken(): Promise<string | null> {
+  try {
+    return await AsyncStorage.getItem('authToken');
+  } catch (error) {
+    console.error('获取认证token失败:', error);
+    return null;
+  }
+}
+
 // 数据同步项类型
 interface SyncItem {
   id: string;
@@ -144,11 +154,25 @@ class SyncQueue {
   }
 
   private async uploadRealtimeData(data: RealtimeData): Promise<void> {
+    const token = await getAuthToken();
+    
+    // 游客模式跳过同步
+    if (!token) {
+      console.log('游客模式，跳过实时数据同步');
+      return;
+    }
+    
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
+    
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
     const response = await fetch(`${API_BASE_URL}/sync/realtime`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers,
       body: JSON.stringify(data),
     });
 
@@ -158,11 +182,25 @@ class SyncQueue {
   }
 
   private async uploadBatchData(data: BatchData): Promise<void> {
+    const token = await getAuthToken();
+    
+    // 游客模式跳过同步
+    if (!token) {
+      console.log('游客模式，跳过批量数据同步');
+      return;
+    }
+    
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
+    
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
     const response = await fetch(`${API_BASE_URL}/sync/batch`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers,
       body: JSON.stringify(data),
     });
 
@@ -172,11 +210,25 @@ class SyncQueue {
   }
 
   private async uploadCacheData(data: CacheData): Promise<void> {
+    const token = await getAuthToken();
+    
+    // 游客模式跳过同步
+    if (!token) {
+      console.log('游客模式，跳过缓存数据同步');
+      return;
+    }
+    
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
+    
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
     const response = await fetch(`${API_BASE_URL}/sync/cache`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers,
       body: JSON.stringify(data),
     });
 

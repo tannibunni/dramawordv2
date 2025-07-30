@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Animated } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import optimizedDataSyncService from '../../services/optimizedDataSyncService';
 
 interface SyncStatusIndicatorProps {
@@ -20,10 +21,25 @@ export const SyncStatusIndicator: React.FC<SyncStatusIndicatorProps> = ({ visibl
 
   const [statusText, setStatusText] = useState('');
   const [statusColor, setStatusColor] = useState('#4CAF50');
+  const [isGuestMode, setIsGuestMode] = useState(false);
   const pulseAnimation = new Animated.Value(1);
 
   useEffect(() => {
-    if (!visible) return;
+    // 检查是否为游客模式
+    const checkGuestMode = async () => {
+      try {
+        const token = await AsyncStorage.getItem('authToken');
+        setIsGuestMode(!token);
+      } catch (error) {
+        setIsGuestMode(true);
+      }
+    };
+    
+    checkGuestMode();
+  }, []);
+
+  useEffect(() => {
+    if (!visible || isGuestMode) return;
 
     const updateSyncStatus = async () => {
       try {
@@ -71,7 +87,7 @@ export const SyncStatusIndicator: React.FC<SyncStatusIndicatorProps> = ({ visibl
     const interval = setInterval(updateSyncStatus, 5000);
 
     return () => clearInterval(interval);
-  }, [visible]);
+  }, [visible, isGuestMode]);
 
   const startPulseAnimation = () => {
     Animated.loop(
@@ -95,7 +111,8 @@ export const SyncStatusIndicator: React.FC<SyncStatusIndicatorProps> = ({ visibl
     pulseAnimation.setValue(1);
   };
 
-  if (!visible || (!syncStatus.isProcessing && syncStatus.queueLength === 0 && syncStatus.lastSyncTime)) {
+  // 游客模式或不需要显示时隐藏
+  if (!visible || isGuestMode || (!syncStatus.isProcessing && syncStatus.queueLength === 0 && syncStatus.lastSyncTime)) {
     return null;
   }
 
