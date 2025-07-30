@@ -49,4 +49,7 @@ router.post('/force', authenticateToken, SyncController.forceSync);
 // 获取同步历史
 router.get('/history', authenticateToken, SyncController.getSyncHistory);
 
+// 下载数据
+router.get('/download', authenticateToken, SyncController.downloadData);
+
 export default router; 
