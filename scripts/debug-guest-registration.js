@@ -109,26 +109,43 @@ class GuestRegistrationTester {
     
     console.log('\n🔍 测试同步端点...');
     
-    const syncData = {
-      learningRecords: [
-        {
-          word: 'test',
-          mastery: 0.8,
-          lastReviewDate: new Date().toISOString(),
-          reviewCount: 1
+          const syncData = {
+        learningRecords: [
+          {
+            word: 'test',
+            mastery: 0.8,
+            lastReviewDate: new Date().toISOString(),
+            nextReviewDate: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(), // 明天复习
+            reviewCount: 1
+          }
+        ],
+              searchHistory: [
+          {
+            word: 'hello',
+            language: 'en',
+            definition: '你好',
+            searchTime: new Date().toISOString()
+          }
+        ],
+              userSettings: {
+          notifications: {
+            dailyReminder: true,
+            reviewReminder: true,
+            achievementNotification: true
+          },
+          learning: {
+            dailyGoal: 10,
+            reviewInterval: 24,
+            autoPlayAudio: true,
+            showPhonetic: true
+          },
+          privacy: {
+            shareProgress: false,
+            showInLeaderboard: true
+          },
+          theme: 'light',
+          language: 'zh-CN'
         }
-      ],
-      searchHistory: [
-        {
-          word: 'hello',
-          language: 'en',
-          searchTime: new Date().toISOString()
-        }
-      ],
-      userSettings: {
-        language: 'zh-CN',
-        theme: 'light'
-      }
     };
 
     try {
