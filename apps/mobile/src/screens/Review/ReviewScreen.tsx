@@ -74,14 +74,27 @@ const ReviewCompleteScreen: React.FC<{
                   </Text>
                 )}
               </View>
-              {item.remembered ? (
-                <Ionicons name="checkmark-circle" size={24} color={colors.success[500]} />
-              ) : (
-                <Ionicons name="close-circle" size={24} color={colors.error[500]} />
-              )}
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                {item.remembered ? (
+                  <>
+                    <Ionicons name="checkmark-circle" size={24} color={colors.success[500]} />
+                    <Text style={{ fontSize: 14, color: colors.success[500], fontWeight: 'bold', marginLeft: 4 }}>+2XP</Text>
+                  </>
+                ) : (
+                  <>
+                    <Ionicons name="close-circle" size={24} color={colors.error[500]} />
+                    <Text style={{ fontSize: 14, color: colors.error[500], fontWeight: 'bold', marginLeft: 4 }}>+1XP</Text>
+                  </>
+                )}
+              </View>
             </View>
           ))}
         </ScrollView>
+      </View>
+      {/* 总经验值 */}
+      <View style={{ alignItems: 'center', marginBottom: 16, paddingVertical: 12, backgroundColor: colors.background.secondary, borderRadius: 12 }}>
+        <Text style={{ fontSize: 16, color: colors.text.secondary, marginBottom: 4 }}>本次复习获得</Text>
+        <Text style={{ fontSize: 24, fontWeight: 'bold', color: colors.primary[500] }}>+{stats.experience} XP</Text>
       </View>
       {/* 按钮组 */}
       <View style={{ alignItems: 'center', marginBottom: 16 }}>
