@@ -538,48 +538,32 @@ export const getUserVocabulary = async (req: Request, res: Response) => {
 
     logger.info(`📚 Getting vocabulary for user: ${userId}`);
     
-    // 联表查询用户单词本和云单词表
-    const userVocabulary = await UserVocabulary.aggregate([
-      {
-        $match: { userId: userId }
-      },
-      {
-        $lookup: {
-          from: 'cloudwords',
-          localField: 'wordId',
-          foreignField: '_id',
-          as: 'cloudWord'
-        }
-      },
-      {
-        $unwind: '$cloudWord'
-      },
-      {
-        $project: {
-          _id: 1,
-          word: '$cloudWord.word',
-          phonetic: '$cloudWord.phonetic',
-          definitions: '$cloudWord.definitions',
-          audioUrl: '$cloudWord.audioUrl',
-          mastery: 1,
-          reviewCount: 1,
-          correctCount: 1,
-          incorrectCount: 1,
-          consecutiveCorrect: 1,
-          consecutiveIncorrect: 1,
-          lastReviewDate: 1,
-          nextReviewDate: 1,
-          notes: 1,
-          tags: 1,
-          sourceShow: 1,
-          collectedAt: 1
-        }
-      }
-    ]);
+    // 直接查询UserVocabulary，不依赖$lookup
+    const userVocabulary = await UserVocabulary.find({ userId: userId });
+    
+    logger.info(`📊 Found ${userVocabulary.length} vocabulary records for user: ${userId}`);
+    
+    // 转换为前端需要的格式
+    const formattedVocabulary = userVocabulary.map(record => ({
+      _id: record._id,
+      word: record.word, // 直接使用UserVocabulary中的word字段
+      mastery: record.mastery,
+      reviewCount: record.reviewCount,
+      correctCount: record.correctCount,
+      incorrectCount: record.incorrectCount,
+      consecutiveCorrect: record.consecutiveCorrect,
+      consecutiveIncorrect: record.consecutiveIncorrect,
+      lastReviewDate: record.lastReviewDate,
+      nextReviewDate: record.nextReviewDate,
+      notes: record.notes,
+      tags: record.tags,
+      sourceShow: record.sourceShow,
+      collectedAt: record.collectedAt
+    }));
     
     res.json({
       success: true,
-      data: userVocabulary
+      data: formattedVocabulary
     });
 
   } catch (error) {

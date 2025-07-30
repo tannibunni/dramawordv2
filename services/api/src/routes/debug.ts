@@ -1,7 +1,7 @@
 import express from 'express';
 import mongoose from 'mongoose';
 import { logger } from '../utils/logger';
-import { UserVocabulary } from '../models/UserVocabulary';
+import UserVocabulary from '../models/UserVocabulary';
 import { CloudWord } from '../models/CloudWord';
 import { User } from '../models/User';
 
@@ -49,20 +49,20 @@ router.get('/collection/:collectionName', async (req, res) => {
     
     switch (collectionName) {
       case 'uservocabularies':
-        const query = {};
+        const query: any = {};
         if (userId) query.userId = userId;
         if (word) query.word = word;
         data = await UserVocabulary.find(query).limit(10);
         break;
         
       case 'cloudwords':
-        const cloudQuery = {};
+        const cloudQuery: any = {};
         if (word) cloudQuery.word = word;
         data = await CloudWord.find(cloudQuery).limit(10);
         break;
         
       case 'users':
-        const userQuery = {};
+        const userQuery: any = {};
         if (userId) userQuery.id = userId;
         data = await User.find(userQuery).limit(10);
         break;
