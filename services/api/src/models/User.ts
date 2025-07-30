@@ -435,19 +435,22 @@ UserSchema.methods.addExperienceForNewWord = function() {
   return this.addExperience(5, '收集新单词');
 };
 
-// 方法：成功复习单词获得经验值
-UserSchema.methods.addExperienceForReview = function() {
+// 方法：复习单词获得经验值（记得+2，不记得+1）
+UserSchema.methods.addExperienceForReview = function(isCorrect = true) {
   // 检查每日复习XP限制
-  const dailyLimit = 60; // 每日上限60点，允许30次复习
+  const dailyLimit = 90; // 每日上限90点，允许更多复习
   if (this.learningStats.dailyReviewXP >= dailyLimit) {
-    console.log('⚠️ 今日复习XP已达上限60点');
+    console.log('⚠️ 今日复习XP已达上限90点');
     return this.save();
   }
   
-  const xpToAdd = Math.min(2, dailyLimit - this.learningStats.dailyReviewXP);
-  this.learningStats.dailyReviewXP += xpToAdd;
+  // 根据是否正确给予不同经验值
+  const xpToAdd = isCorrect ? 2 : 1;
+  const actualXpToAdd = Math.min(xpToAdd, dailyLimit - this.learningStats.dailyReviewXP);
+  this.learningStats.dailyReviewXP += actualXpToAdd;
   
-  return this.addExperience(xpToAdd, '成功复习单词');
+  const message = isCorrect ? '成功复习单词' : '复习单词';
+  return this.addExperience(actualXpToAdd, message);
 };
 
 // 方法：连续学习打卡获得经验值

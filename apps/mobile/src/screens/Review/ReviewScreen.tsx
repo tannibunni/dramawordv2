@@ -685,7 +685,7 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
       const forgotten = prev.forgottenWords + 1;
       const remembered = prev.rememberedWords;
       const total = prev.totalWords;
-      const experience = remembered * 2;
+      const experience = (remembered * 2) + (forgotten * 1);
       const accuracy = total > 0 ? Math.round((remembered / total) * 100) : 0;
       return {
         ...prev,
@@ -724,8 +724,9 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
     rememberedRef.current += 1;
     setReviewStats(prev => {
       const remembered = prev.rememberedWords + 1;
+      const forgotten = prev.forgottenWords;
       const total = prev.totalWords;
-      const experience = remembered * 2;
+      const experience = (remembered * 2) + (forgotten * 1);
       const accuracy = total > 0 ? Math.round((remembered / total) * 100) : 0;
       return {
         ...prev,
@@ -800,7 +801,7 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
         const rememberedWords = rememberedRef.current;
         const forgottenWords = forgottenRef.current;
         const currentStats = reviewStats;
-        const experience = rememberedWords * 2;
+        const experience = (rememberedWords * 2) + (forgottenWords * 1);
         const accuracy = currentStats.totalWords > 0 ? Math.round((rememberedWords / currentStats.totalWords) * 100) : 0;
         const finalStats = {
           totalWords: currentStats.totalWords,
@@ -1013,7 +1014,7 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
     
     // 使用当前的 reviewStats，确保 totalWords 正确
     const currentStats = reviewStats;
-    const experience = rememberedWords * 2;
+    const experience = (rememberedWords * 2) + (forgottenWords * 1);
     const accuracy = currentStats.totalWords > 0 ? Math.round((rememberedWords / currentStats.totalWords) * 100) : 0;
     const finalStats = {
       totalWords: currentStats.totalWords,

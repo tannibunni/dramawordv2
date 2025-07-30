@@ -784,16 +784,14 @@ export const updateWordProgress = async (req: Request, res: Response) => {
     await userWord.save();
     logger.info(`✅ Updated progress for word: ${searchTerm}`);
 
-    // 如果是成功复习，添加经验值
+    // 添加经验值（记得+2，不记得+1）
     let experienceResult = null;
-    if (isSuccessfulReview) {
-      try {
-        experienceResult = await ExperienceService.addExperienceForReview(userId);
-        logger.info(`🎯 Experience gained for review: ${experienceResult.xpGained} XP`);
-      } catch (xpError) {
-        logger.error('❌ Failed to add experience for review:', xpError);
-        // 不中断流程，继续执行
-      }
+    try {
+      experienceResult = await ExperienceService.addExperienceForReview(userId, isSuccessfulReview);
+      logger.info(`🎯 Experience gained for review: ${experienceResult.xpGained} XP (${isSuccessfulReview ? 'correct' : 'incorrect'})`);
+    } catch (xpError) {
+      logger.error('❌ Failed to add experience for review:', xpError);
+      // 不中断流程，继续执行
     }
 
     res.json({

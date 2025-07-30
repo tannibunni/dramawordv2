@@ -53,9 +53,9 @@ export class ExperienceService {
   }
 
   /**
-   * 成功复习单词获得经验值
+   * 复习单词获得经验值（记得+2，不记得+1）
    */
-  static async addExperienceForReview(userId: string): Promise<ExperienceGainResult> {
+  static async addExperienceForReview(userId: string, isCorrect: boolean = true): Promise<ExperienceGainResult> {
     try {
       const user = await User.findById(userId);
       if (!user) {
@@ -71,13 +71,14 @@ export class ExperienceService {
       const oldLevel = user.learningStats.level;
       const oldDailyReviewXP = user.learningStats.dailyReviewXP;
       
-      await user.addExperienceForReview();
+      await user.addExperienceForReview(isCorrect);
       
       const xpGained = user.learningStats.dailyReviewXP - oldDailyReviewXP;
       const leveledUp = user.learningStats.level > oldLevel;
       
       if (xpGained > 0) {
-        logger.info(`用户 ${user.username} 复习单词获得 ${xpGained} XP`);
+        const action = isCorrect ? '成功复习' : '复习';
+        logger.info(`用户 ${user.username} ${action}单词获得 ${xpGained} XP`);
       }
       
       return {
