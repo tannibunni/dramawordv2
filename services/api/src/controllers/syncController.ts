@@ -3,6 +3,9 @@ import syncService, { ISyncData, ConflictResolution } from '../services/syncServ
 import { logger } from '../utils/logger';
 import { updateWordProgress, addToUserVocabulary } from './wordController';
 
+// 从 wordController 导入 generateWordData 函数
+// 由于 generateWordData 是 wordController 中的私有函数，我们需要复制其逻辑
+
 // 同步控制器类
 export class SyncController {
   // 上传本地数据到云端
@@ -116,7 +119,7 @@ export class SyncController {
     isSuccessfulReview: boolean;
   }) {
     try {
-      // 调用现有的单词进度更新API
+      // 直接调用现有的 wordController 方法
       const mockReq = {
         body: {
           userId: data.userId,
@@ -128,11 +131,11 @@ export class SyncController {
       
       const mockRes = {
         status: (code: number) => ({
-          json: (data: any) => {
+          json: (responseData: any) => {
             if (code === 200) {
-              logger.info(`单词进度更新成功: ${data.word}`);
+              logger.info(`✅ 同步单词进度更新成功: ${data.word}`);
             } else {
-              logger.error(`单词进度更新失败: ${data.word}`, data);
+              logger.error(`❌ 同步单词进度更新失败: ${data.word}`, responseData);
             }
           }
         })
@@ -140,7 +143,8 @@ export class SyncController {
       
       await updateWordProgress(mockReq, mockRes);
     } catch (error) {
-      logger.error(`更新单词进度失败: ${data.word}`, error);
+      logger.error(`❌ 同步更新单词进度失败: ${data.word}`, error);
+      throw error;
     }
   }
 
@@ -152,23 +156,23 @@ export class SyncController {
     language?: string;
   }) {
     try {
-      // 调用现有的词汇表添加API
+      // 直接调用现有的 wordController 方法
       const mockReq = {
         body: {
           userId: data.userId,
           word: data.word,
           sourceShow: data.sourceShow,
-          language: data.language
+          language: data.language || 'en'
         }
       } as Request;
       
       const mockRes = {
         status: (code: number) => ({
-          json: (data: any) => {
+          json: (responseData: any) => {
             if (code === 200) {
-              logger.info(`词汇表添加成功: ${data.word}`);
+              logger.info(`✅ 同步词汇表添加成功: ${data.word}`);
             } else {
-              logger.error(`词汇表添加失败: ${data.word}`, data);
+              logger.error(`❌ 同步词汇表添加失败: ${data.word}`, responseData);
             }
           }
         })
@@ -176,7 +180,8 @@ export class SyncController {
       
       await addToUserVocabulary(mockReq, mockRes);
     } catch (error) {
-      logger.error(`添加到词汇表失败: ${data.word}`, error);
+      logger.error(`❌ 同步添加到词汇表失败: ${data.word}`, error);
+      throw error;
     }
   }
 
