@@ -25,10 +25,16 @@ export const SyncStatusIndicator: React.FC<SyncStatusIndicatorProps> = ({ visibl
   // 检查网络连接
   const checkNetworkStatus = async (): Promise<boolean> => {
     try {
+      // 使用传统的setTimeout方式替代AbortSignal.timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5秒超时
+      
       const response = await fetch(`${API_BASE_URL}/health`, {
         method: 'GET',
-        signal: AbortSignal.timeout(5000) // 5秒超时
+        signal: controller.signal
       });
+      
+      clearTimeout(timeoutId);
       return response.ok;
     } catch (error) {
       console.error('网络连接检查失败:', error);
