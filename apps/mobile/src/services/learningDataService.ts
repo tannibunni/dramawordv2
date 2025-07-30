@@ -5,7 +5,9 @@ import {
   LearningStats,
   learningAlgorithm 
 } from './learningAlgorithm';
+// 移除未使用的导入
 import { API_BASE_URL } from '../constants/config';
+import optimizedDataSyncService from './optimizedDataSyncService';
 
 async function getUserToken() {
   try {
@@ -85,21 +87,25 @@ class LearningDataService {
       records[index] = updatedRecord;
 
       await this.saveLearningRecords(records);
-      // 云端同步
-      const token = await getUserToken();
-      if (token) {
+      
+      // 使用优化的同步服务 - 批量同步学习记录
+      const userId = await this.getUserId();
+      if (userId) {
         try {
-          await fetch(`${API_BASE_URL}/sync/upload`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              Authorization: `Bearer ${token}`,
-            },
-            body: JSON.stringify({ learningRecords: records }),
+          await optimizedDataSyncService.syncBatchData({
+            type: 'learning_record',
+            userId,
+            data: [{
+              wordId,
+              word,
+              wasCorrect,
+              timestamp: Date.now(),
+              record: updatedRecord
+            }]
           });
-          console.log('✅ 学习记录已同步到云端');
+          console.log('✅ 学习记录已加入同步队列');
         } catch (e) {
-          console.error('❌ 学习记录同步云端失败:', e);
+          console.error('❌ 学习记录同步失败:', e);
         }
       }
     } catch (error) {
@@ -120,23 +126,23 @@ class LearningDataService {
         let record = records.find(r => r.wordId === update.wordId);
 
         if (!record) {
-                  record = {
-          wordId: update.wordId,
-          word: update.word,
-          reviewCount: 0,
-          correctCount: 0,
-          incorrectCount: 0,
-          lastReviewed: new Date(),
-          nextReviewDate: new Date(),
-          masteryLevel: 0,
-          difficulty: 'medium',
-          intervalDays: 1,
-          consecutiveCorrect: 0,
-          consecutiveIncorrect: 0,
-          learningEfficiency: 0,
-          timeSpent: 0,
-          confidenceLevel: 0,
-        };
+          record = {
+            wordId: update.wordId,
+            word: update.word,
+            reviewCount: 0,
+            correctCount: 0,
+            incorrectCount: 0,
+            lastReviewed: new Date(),
+            nextReviewDate: new Date(),
+            masteryLevel: 0,
+            difficulty: 'medium',
+            intervalDays: 1,
+            consecutiveCorrect: 0,
+            consecutiveIncorrect: 0,
+            learningEfficiency: 0,
+            timeSpent: 0,
+            confidenceLevel: 0,
+          };
           records.push(record);
         }
 
@@ -146,21 +152,26 @@ class LearningDataService {
       }
 
       await this.saveLearningRecords(records);
-      // 云端同步
-      const token = await getUserToken();
-      if (token) {
+      
+      // 使用优化的同步服务 - 批量同步学习记录
+      const userId = await this.getUserId();
+      if (userId) {
         try {
-          await fetch(`${API_BASE_URL}/sync/upload`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              Authorization: `Bearer ${token}`,
-            },
-            body: JSON.stringify({ learningRecords: records }),
+          const batchData = updates.map(update => ({
+            wordId: update.wordId,
+            word: update.word,
+            wasCorrect: update.wasCorrect,
+            timestamp: Date.now()
+          }));
+          
+          await optimizedDataSyncService.syncBatchData({
+            type: 'learning_record',
+            userId,
+            data: batchData
           });
-          console.log('✅ 批量学习记录已同步到云端');
+          console.log('✅ 批量学习记录已加入同步队列');
         } catch (e) {
-          console.error('❌ 批量学习记录同步云端失败:', e);
+          console.error('❌ 批量学习记录同步失败:', e);
         }
       }
     } catch (error) {
@@ -434,6 +445,21 @@ class LearningDataService {
     } catch (error) {
       console.error('获取已掌握单词失败:', error);
       return [];
+    }
+  }
+
+  // 获取用户ID的辅助方法
+  private async getUserId(): Promise<string | null> {
+    try {
+      const userData = await AsyncStorage.getItem('userData');
+      if (userData) {
+        const parsed = JSON.parse(userData);
+        return parsed.id || null;
+      }
+      return null;
+    } catch (error) {
+      console.error('获取用户ID失败:', error);
+      return null;
     }
   }
 }

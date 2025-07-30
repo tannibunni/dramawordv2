@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   View,
   Text,
@@ -9,6 +9,7 @@ import {
   Dimensions,
   Alert,
   ScrollView,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../constants/colors';
@@ -29,6 +30,8 @@ import { t, TranslationKey } from '../../constants/translations';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_BASE_URL } from '../../constants/config';
 import Toast from '../../components/common/Toast';
+import { reviewLogger, wrongWordLogger, apiLogger } from '../../utils/logger';
+import optimizedDataSyncService from '../../services/optimizedDataSyncService';
 
 // 复习完成统计接口
 interface ReviewStats {
@@ -171,12 +174,12 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
   const { user } = useAuth();
   const swiperRef = useRef<any>(null);
   
-  // 更新后端用户词汇表进度的函数
+  // 优化的后端用户词汇表进度更新函数
   const updateBackendWordProgress = async (word: string, isCorrect: boolean) => {
     try {
       const userId = user?.id;
       if (!userId) {
-        console.log('⚠️ 用户未登录，跳过后端更新');
+        apiLogger.warn('用户未登录，跳过后端更新');
         return;
       }
       
@@ -184,13 +187,29 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
       const records = await learningDataService.getLearningRecords();
       const record = records.find(r => r.word === word);
       
-      // 构建进度数据 - 即使没有找到记录也要发送请求
+      // 构建进度数据 - 基于当前操作更新，而不是依赖可能过时的本地记录
+      const currentReviewCount = (record?.reviewCount || 0) + 1;
+      const currentCorrectCount = (record?.correctCount || 0) + (isCorrect ? 1 : 0);
+      const currentIncorrectCount = (record?.incorrectCount || 0) + (isCorrect ? 0 : 1);
+      
+      // 更新连续计数
+      let currentConsecutiveCorrect = 0;
+      let currentConsecutiveIncorrect = 0;
+      
+      if (isCorrect) {
+        currentConsecutiveCorrect = (record?.consecutiveCorrect || 0) + 1;
+        currentConsecutiveIncorrect = 0; // 重置连续错误计数
+      } else {
+        currentConsecutiveIncorrect = (record?.consecutiveIncorrect || 0) + 1;
+        currentConsecutiveCorrect = 0; // 重置连续正确计数
+      }
+      
       const progress = {
-        reviewCount: record?.reviewCount || 1,
-        correctCount: record?.correctCount || (isCorrect ? 1 : 0),
-        incorrectCount: record?.incorrectCount || (isCorrect ? 0 : 1),
-        consecutiveCorrect: record?.consecutiveCorrect || (isCorrect ? 1 : 0),
-        consecutiveIncorrect: record?.consecutiveIncorrect || (isCorrect ? 0 : 1),
+        reviewCount: currentReviewCount,
+        correctCount: currentCorrectCount,
+        incorrectCount: currentIncorrectCount,
+        consecutiveCorrect: currentConsecutiveCorrect,
+        consecutiveIncorrect: currentConsecutiveIncorrect,
         mastery: record?.masteryLevel || 1,
         lastReviewDate: new Date().toISOString(),
         nextReviewDate: record?.nextReviewDate ? new Date(record.nextReviewDate).toISOString() : new Date().toISOString(),
@@ -201,29 +220,36 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
         confidence: record?.confidenceLevel || 1,
       };
       
-      console.log('📤 发送进度更新请求:', { userId, word, isCorrect, progress });
-      
-      const response = await fetch(`${API_BASE_URL}/words/user/progress`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          userId,
-          word,
-          progress,
-          isSuccessfulReview: isCorrect
-        }),
+      apiLogger.debug('发送进度更新请求', { 
+        userId, 
+        word, 
+        isCorrect, 
+        progress,
+        debug: {
+          originalRecord: record,
+          currentReviewCount,
+          currentCorrectCount,
+          currentIncorrectCount,
+          currentConsecutiveCorrect,
+          currentConsecutiveIncorrect
+        }
       });
       
-      if (response.ok) {
-        console.log('✅ 后端用户词汇表更新成功');
-      } else {
-        const errorText = await response.text();
-        console.error('❌ 后端用户词汇表更新失败:', response.status, errorText);
-      }
+      // 使用优化的同步服务 - 批量同步学习记录
+      await optimizedDataSyncService.syncBatchData({
+        type: 'learning_record',
+        userId,
+        data: [{
+          word,
+          progress,
+          isSuccessfulReview: isCorrect,
+          timestamp: Date.now()
+        }]
+      });
+      
+      apiLogger.info('学习记录已加入同步队列');
     } catch (error) {
-      console.error('❌ 更新后端用户词汇表失败:', error);
+      apiLogger.error('更新后端用户词汇表失败', error);
     }
   };
   const [swiperIndex, setSwiperIndex] = useState(0);
@@ -236,31 +262,25 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
   
   // 监控 swiperIndex 变化
   useEffect(() => {
-    console.log('ReviewScreen: swiperIndex changed to:', swiperIndex);
+    // 修复进度计算逻辑：
+    // 开始状态：进度条为0%（swiperIndex=0时）
+    // 滑完第一张卡：进度条为33.33%（swiperIndex=1时，3张卡的情况下）
+    // 滑完第二张卡：进度条为66.67%（swiperIndex=2时，3张卡的情况下）
+    // 滑完最后一张卡：进度条为100%（swiperIndex=3时，3张卡的情况下）
+    const newProgress = (swiperIndex / words.length) * 100;
     
-    // 更新进度条动画
-    if (words.length > 0) {
-      // 修复进度计算逻辑：
-      // 开始状态：进度条为0%（swiperIndex=0时）
-      // 滑完第一张卡：进度条为33.33%（swiperIndex=1时，3张卡的情况下）
-      // 滑完第二张卡：进度条为66.67%（swiperIndex=2时，3张卡的情况下）
-      // 滑完最后一张卡：进度条为100%（swiperIndex=3时，3张卡的情况下）
-      const newProgress = (swiperIndex / words.length) * 100;
-      console.log('🔄 进度条动画 - 当前进度:', currentProgress, '目标进度:', newProgress, 'swiperIndex:', swiperIndex, 'words.length:', words.length);
-      
-      // 使用更平滑的动画曲线，增加动画时长
-      Animated.timing(progressAnimation, {
-        toValue: newProgress,
-        duration: 1000, // 增加动画时长，确保动画完全完成
-        useNativeDriver: false,
-      }).start(({ finished }) => {
-        if (finished) {
-          console.log('✅ 进度条动画完成 - 最终进度:', newProgress);
-        }
-      });
-      
-      setCurrentProgress(newProgress);
-    }
+    // 使用更平滑的动画曲线，增加动画时长
+    Animated.timing(progressAnimation, {
+      toValue: newProgress,
+      duration: 1000, // 增加动画时长，确保动画完全完成
+      useNativeDriver: false,
+    }).start(({ finished }) => {
+      if (finished) {
+        // 进度条动画完成
+      }
+    });
+    
+    setCurrentProgress(newProgress);
   }, [swiperIndex, words.length]);
   
   // 监控 words 数组变化，初始化统计数据
@@ -332,15 +352,26 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
         
         // 优先使用本地vocabulary数据，如果本地为空则返回空数组
         if (vocabulary && vocabulary.length > 0) {
+          wrongWordLogger.debug('vocabulary详情', vocabulary.map(w => ({
+            word: w.word,
+            incorrectCount: w.incorrectCount,
+            consecutiveIncorrect: w.consecutiveIncorrect
+          })));
+          
           const localWrongWords = vocabulary.filter((word: any) => 
             (word.incorrectCount && word.incorrectCount > 0) || 
             (word.consecutiveIncorrect && word.consecutiveIncorrect > 0)
           );
           
-          console.log(`🔍 错词挑战: 从本地vocabulary获取到 ${localWrongWords.length} 个错词`);
+          wrongWordLogger.info(`从本地vocabulary获取到 ${localWrongWords.length} 个错词`);
+          wrongWordLogger.debug('错词详情', localWrongWords.map(w => ({
+            word: w.word,
+            incorrectCount: w.incorrectCount,
+            consecutiveIncorrect: w.consecutiveIncorrect
+          })));
           return localWrongWords.slice(0, MIN_REVIEW_BATCH);
         } else {
-          console.log('🔍 错词挑战: 本地vocabulary为空，返回空数组');
+          wrongWordLogger.info('本地vocabulary为空，返回空数组');
           return [];
         }
       }
@@ -465,7 +496,6 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
       const initialProgress = 0; // 开始总是0%
       progressAnimation.setValue(initialProgress);
       setCurrentProgress(initialProgress);
-      console.log('🔄 进度条动画初始化 - 初始进度:', initialProgress);
       
       // 延迟一点时间，确保 Swiper 组件完全初始化
       setTimeout(() => {
@@ -683,20 +713,22 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
       // 2. 更新本地学习记录
       await learningDataService.updateLearningRecord(
         updatedWord.word,
-        updatedWord.word,
+        word,
         false // 不正确
       );
       
-      // 3. 更新后端用户词汇表
-      await updateBackendWordProgress(word, false);
+      // 3. 延迟更新后端用户词汇表（避免立即冲突）
+      setTimeout(async () => {
+        await updateBackendWordProgress(word, false);
+      }, 1000);
     } catch (error) {
       console.error('更新学习记录失败:', error);
     }
     
     forgottenRef.current += 1;
     setReviewStats(prev => {
-      const forgotten = prev.forgottenWords + 1;
       const remembered = prev.rememberedWords;
+      const forgotten = prev.forgottenWords + 1;
       const total = prev.totalWords;
       const experience = (remembered * 2) + (forgotten * 1);
       const accuracy = total > 0 ? Math.round((remembered / total) * 100) : 0;
@@ -712,7 +744,6 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
     const translation = currentWord?.translation || '';
     addReviewAction(word, false, translation);
     updateSession('incorrect');
-
     moveToNextWord();
   };
 
@@ -728,8 +759,10 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
         true // 正确
       );
       
-      // 3. 更新后端用户词汇表
-      await updateBackendWordProgress(word, true);
+      // 3. 延迟更新后端用户词汇表（避免立即冲突）
+      setTimeout(async () => {
+        await updateBackendWordProgress(word, true);
+      }, 1000);
     } catch (error) {
       console.error('更新学习记录失败:', error);
     }
@@ -1099,6 +1132,9 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
             // 经验值已在复习过程中通过 updateWordProgress 同步到后端
             // 不需要额外调用经验值API，避免重复计算
             console.log('✅ 复习经验值已在复习过程中同步到后端');
+            
+            // 标记需要刷新vocabulary数据
+            await AsyncStorage.setItem('refreshVocabulary', 'true');
             
             // 导航回review intro页面
             navigate('main', { tab: 'review' });
