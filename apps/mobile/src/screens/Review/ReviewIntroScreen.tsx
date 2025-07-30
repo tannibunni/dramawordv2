@@ -174,12 +174,6 @@ const ReviewIntroScreen = () => {
           
           // 延迟刷新用户数据，确保后端数据已更新
           setTimeout(async () => {
-            // 先更新本地经验值，确保动画使用正确的起始值
-            const currentStats = { ...userStats };
-            currentStats.experience += params.experienceGained;
-            setUserStats(currentStats);
-            setPreviousExperience(currentStats.experience);
-            
             // 清理经验值增益标记，防止重复计算
             await AsyncStorage.removeItem('experienceGain');
             
@@ -202,14 +196,14 @@ const ReviewIntroScreen = () => {
     }
   }, [userStats.experience, hasInitializedProgressBar, hasCheckedExperience]);
   
-  // 当经验值变化时触发进度条动画 - 简化逻辑，避免重复动画
+  // 当经验值变化时触发进度条动画 - 修复重复动画问题
   useEffect(() => {
     // 只在经验值实际增长且没有其他动画运行时触发
     if (userStats.experience > 0 && !showExperienceAnimation && !isProgressBarAnimating && hasInitializedProgressBar) {
       const currentExp = userStats.experience;
       const previousExp = previousExperience || 0;
       
-      if (currentExp > previousExp) {
+      if (currentExp > previousExp && !hasCheckedExperience) {
         const progressPercentage = getExperienceProgress() / 100;
         console.log('🎯 经验值增长，触发进度条动画:', {
           previousExp,
@@ -222,6 +216,7 @@ const ReviewIntroScreen = () => {
         
         // 设置动画标志，防止重复触发
         setIsProgressBarAnimating(true);
+        setHasCheckedExperience(true); // 标记已检查，防止重复触发
         
         Animated.timing(progressBarAnimation, {
           toValue: progressPercentage,
@@ -232,7 +227,7 @@ const ReviewIntroScreen = () => {
         });
       }
     }
-  }, [userStats.experience, hasInitializedProgressBar, showExperienceAnimation, isProgressBarAnimating]);
+  }, [userStats.experience, hasInitializedProgressBar, showExperienceAnimation, isProgressBarAnimating, hasCheckedExperience]);
 
   // 进度条增长动画
   const animateProgressBar = (fromProgress: number, toProgress: number, duration: number = 1500) => {
@@ -320,21 +315,6 @@ const ReviewIntroScreen = () => {
                   console.log('🎯 检测到经验值增益，保持 previousExperience 不变');
                 }
               });
-              
-              // 静默初始化进度条 - 不触发动画
-              const progressPercentage = getExperienceProgressFromStats(stats);
-              const progressValue = progressPercentage / 100;
-              console.log('🎯 初始化进度条:', {
-                experience: stats.experience,
-                level: stats.level,
-                progressPercentage,
-                progressValue
-              });
-              progressBarAnimation.setValue(progressValue);
-              setProgressBarValue(progressValue); // 更新状态
-              
-              // 标记进度条已初始化
-              setHasInitializedProgressBar(true);
               
               // 保存到本地存储作为缓存
               await AsyncStorage.setItem('userStats', JSON.stringify(stats));

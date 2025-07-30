@@ -46,7 +46,7 @@ const Toast: React.FC<ToastProps> = ({
         clearTimeout(autoHideTimer.current);
       }
     };
-  }, [duration]); // 只依赖duration，避免无限循环
+  }, []); // 只在组件挂载时执行一次
 
   // 隐藏Toast的函数
   const hideToast = useCallback(() => {
