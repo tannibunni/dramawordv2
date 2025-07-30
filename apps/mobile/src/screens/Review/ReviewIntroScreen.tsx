@@ -38,30 +38,47 @@ const ReviewIntroScreen = () => {
       return null;
     }
   };
+
+  // 手动刷新错词数量的函数
+  const refreshWrongWordsCount = async () => {
+    try {
+      // 优先使用本地vocabulary数据计算错词数量
+      if (vocabulary && vocabulary.length > 0) {
+        const localWrongWords = vocabulary.filter((word: any) => 
+          (word.incorrectCount && word.incorrectCount > 0) || 
+          (word.consecutiveIncorrect && word.consecutiveIncorrect > 0)
+        );
+        console.log(`🔍 手动刷新: 从本地vocabulary获取到 ${localWrongWords.length} 个错词`);
+        setWrongWordsCount(localWrongWords.length);
+        return;
+      }
+
+      // 如果本地vocabulary为空，直接设置为0，不依赖云端数据
+      console.log('🔍 手动刷新: 本地vocabulary为空，设置为0个错词');
+      setWrongWordsCount(0);
+    } catch (error) {
+      console.error('手动刷新错词数量失败:', error);
+    }
+  };
   
   // 获取用户词汇表的学习记录数据
   useEffect(() => {
     const fetchWrongWordsCount = async () => {
       try {
-        const userId = await getUserId();
-        if (!userId) {
-          setWrongWordsCount(0);
+        // 优先使用本地vocabulary数据计算错词数量
+        if (vocabulary && vocabulary.length > 0) {
+          const localWrongWords = vocabulary.filter((word: any) => 
+            (word.incorrectCount && word.incorrectCount > 0) || 
+            (word.consecutiveIncorrect && word.consecutiveIncorrect > 0)
+          );
+          console.log(`🔍 错词挑战卡: 从本地vocabulary获取到 ${localWrongWords.length} 个错词`);
+          setWrongWordsCount(localWrongWords.length);
           return;
         }
 
-        // 直接从后端API获取最新的学习进度数据
-        const response = await fetch(`${API_BASE_URL}/words/user/vocabulary?userId=${userId}`);
-        if (response.ok) {
-          const result = await response.json();
-          if (result.success && result.data) {
-            // 计算有错误记录的单词数量
-            const wrongWords = result.data.filter((word: any) => 
-              word.incorrectCount > 0 || word.consecutiveIncorrect > 0
-            );
-            console.log(`🔍 错词挑战卡: 从后端API获取到 ${wrongWords.length} 个错词`);
-            setWrongWordsCount(wrongWords.length);
-          }
-        }
+        // 如果本地vocabulary为空，直接设置为0，不依赖云端数据
+        console.log('🔍 错词挑战卡: 本地vocabulary为空，设置为0个错词');
+        setWrongWordsCount(0);
       } catch (error) {
         console.error('获取错词数量失败:', error);
         setWrongWordsCount(0);
@@ -69,7 +86,7 @@ const ReviewIntroScreen = () => {
     };
 
     fetchWrongWordsCount();
-  }, []); // 只在组件挂载时获取一次，避免频繁请求
+  }, [vocabulary]); // 当vocabulary变化时重新获取，确保数据同步
   
   // 状态管理
   const [userStats, setUserStats] = useState({
@@ -156,8 +173,18 @@ const ReviewIntroScreen = () => {
           }
           
           // 延迟刷新用户数据，确保后端数据已更新
-          setTimeout(() => {
-            loadUserStats();
+          setTimeout(async () => {
+            // 先更新本地经验值，确保动画使用正确的起始值
+            const currentStats = { ...userStats };
+            currentStats.experience += params.experienceGained;
+            setUserStats(currentStats);
+            setPreviousExperience(currentStats.experience);
+            
+            // 清理经验值增益标记，防止重复计算
+            await AsyncStorage.removeItem('experienceGain');
+            
+            // 然后从后端刷新数据
+            await loadUserStats();
           }, 2000);
         }
       }
@@ -175,11 +202,10 @@ const ReviewIntroScreen = () => {
     }
   }, [userStats.experience, hasInitializedProgressBar, hasCheckedExperience]);
   
-  // 当经验值变化时触发进度条动画
+  // 当经验值变化时触发进度条动画 - 简化逻辑，避免重复动画
   useEffect(() => {
-    // 只在经验值实际增长时触发动画，而不是页面加载时
+    // 只在经验值实际增长且没有其他动画运行时触发
     if (userStats.experience > 0 && !showExperienceAnimation && !isProgressBarAnimating && hasInitializedProgressBar) {
-      // 检查经验值是否真的增长了（通过比较当前值和之前的值）
       const currentExp = userStats.experience;
       const previousExp = previousExperience || 0;
       
@@ -194,39 +220,19 @@ const ReviewIntroScreen = () => {
           requiredExp: getCurrentLevelRequiredExp()
         });
         
-        // 检查是否有待处理的经验值增益
-        AsyncStorage.getItem('experienceGain').then((gainData) => {
-          if (gainData) {
-            // 如果有待处理的经验值增益，说明这是从复习完成后的经验值增长
-            console.log('🎯 检测到复习完成后的经验值增长，触发进度条动画');
-            Animated.timing(progressBarAnimation, {
-              toValue: progressPercentage,
-              duration: 1000,
-              useNativeDriver: false,
-            }).start();
-            
-            // 清理经验值增益标记
-            AsyncStorage.removeItem('experienceGain');
-          } else if (currentExp > previousExp) {
-            // 只有在没有待处理的经验值增益时才执行初始进度条动画
-            console.log('🎯 普通经验值增长，触发进度条动画');
-            Animated.timing(progressBarAnimation, {
-              toValue: progressPercentage,
-              duration: 1000,
-              useNativeDriver: false,
-            }).start();
-          } else {
-            console.log('🎯 检测到待处理的经验值增益，跳过初始进度条动画');
-          }
-        });
-      } else {
-        console.log('🎯 经验值未增长，跳过进度条动画:', {
-          previousExp,
-          currentExp
+        // 设置动画标志，防止重复触发
+        setIsProgressBarAnimating(true);
+        
+        Animated.timing(progressBarAnimation, {
+          toValue: progressPercentage,
+          duration: 1000,
+          useNativeDriver: false,
+        }).start(() => {
+          setIsProgressBarAnimating(false);
         });
       }
     }
-  }, [userStats.experience, userStats.level, showExperienceAnimation, isProgressBarAnimating, hasInitializedProgressBar, previousExperience]);
+  }, [userStats.experience, hasInitializedProgressBar, showExperienceAnimation, isProgressBarAnimating]);
 
   // 进度条增长动画
   const animateProgressBar = (fromProgress: number, toProgress: number, duration: number = 1500) => {
@@ -265,8 +271,28 @@ const ReviewIntroScreen = () => {
                 contributedWords: userData.contributedWords,
                 vocabularyLength: vocabulary?.length
               });
+              // 检查是否有待处理的经验值增益
+              const gainData = await AsyncStorage.getItem('experienceGain');
+              let finalExperience = userData.experience || 0;
+              
+              if (gainData) {
+                const gainedExp = JSON.parse(gainData);
+                finalExperience += gainedExp;
+                console.log('🎯 检测到经验值增益，使用更新后的经验值:', {
+                  originalExp: userData.experience,
+                  gainedExp,
+                  finalExperience
+                });
+                // 立即清理经验值增益标记，防止重复计算
+                await AsyncStorage.removeItem('experienceGain');
+              } else {
+                // 如果没有经验值增益标记，直接使用后端数据
+                // 这确保我们使用后端的最新经验值，而不是前端的旧值
+                console.log('🎯 使用后端经验值:', userData.experience);
+              }
+              
               const stats = {
-                experience: userData.experience || 0,
+                experience: finalExperience,
                 level: userData.level || 1,
                 collectedWords: vocabulary?.length || 0,
                 contributedWords: userData.contributedWords || 0,
@@ -329,10 +355,32 @@ const ReviewIntroScreen = () => {
       const statsData = await AsyncStorage.getItem('userStats');
       if (statsData) {
         const stats = JSON.parse(statsData);
-        console.log('📱 从本地存储加载统计数据:', stats);
-        setUserStats(stats);
+        
+        // 检查是否有待处理的经验值增益
+        const gainData = await AsyncStorage.getItem('experienceGain');
+        let finalExperience = stats.experience || 0;
+        
+        if (gainData) {
+          const gainedExp = JSON.parse(gainData);
+          finalExperience += gainedExp;
+          console.log('🎯 从本地存储检测到经验值增益，使用更新后的经验值:', {
+            originalExp: stats.experience,
+            gainedExp,
+            finalExperience
+          });
+          // 立即清理经验值增益标记，防止重复计算
+          await AsyncStorage.removeItem('experienceGain');
+        }
+        
+        const updatedStats = {
+          ...stats,
+          experience: finalExperience
+        };
+        
+        console.log('📱 从本地存储加载统计数据:', updatedStats);
+        setUserStats(updatedStats);
         // 初始化动画状态
-        setAnimatedExperience(stats.experience);
+        setAnimatedExperience(updatedStats.experience);
         setAnimatedCollectedWords(vocabulary?.length || 0);
         setAnimatedContributedWords(stats.contributedWords);
         
@@ -459,7 +507,25 @@ const ReviewIntroScreen = () => {
     const oldExperience = currentExperience; // 修复：使用当前经验值作为起始值
     const newExperience = oldExperience + gainedExp;
     const oldLevel = userStats.level;
-    const newLevel = Math.floor(newExperience / 100) + 1;
+    
+    // 正确的等级计算：根据经验值计算等级
+    const calculateLevel = (exp: number) => {
+      let level = 1;
+      let totalExpForLevel = 0;
+      while (true) {
+        const totalExpForNextLevel = 50 * Math.pow(level + 1, 2);
+        const totalExpForCurrentLevel = 50 * Math.pow(level, 2);
+        const expNeededForCurrentLevel = totalExpForNextLevel - totalExpForCurrentLevel;
+        
+        if (exp < totalExpForNextLevel) {
+          break;
+        }
+        level++;
+      }
+      return level;
+    };
+    
+    const newLevel = calculateLevel(newExperience);
     
     // 设置初始动画经验值
     setAnimatedExperience(oldExperience); // 显示总经验值，而不是当前等级内的经验值
@@ -468,8 +534,8 @@ const ReviewIntroScreen = () => {
     const oldProgress = getExperienceProgress() / 100;
     const newProgress = ((newExperience % getCurrentLevelRequiredExp()) / getCurrentLevelRequiredExp());
     
-    // 设置进度条初始值
-    progressBarAnimation.setValue(oldProgress);
+    // 检查是否升级
+    const isLevelUp = newLevel > oldLevel;
     
     console.log('🎯 开始经验值动画:', {
       oldExperience,
@@ -478,7 +544,8 @@ const ReviewIntroScreen = () => {
       oldProgress,
       newProgress,
       oldLevel,
-      newLevel
+      newLevel,
+      isLevelUp
     });
     
     // 显示经验值增加提示
@@ -514,7 +581,7 @@ const ReviewIntroScreen = () => {
         }),
       ]),
       // 等级提升动画（如果有）
-      ...(newLevel > oldLevel ? [
+      ...(isLevelUp ? [
         Animated.sequence([
           Animated.timing(levelAnimation, {
             toValue: 1.3,
@@ -575,7 +642,15 @@ const ReviewIntroScreen = () => {
       setAnimatedExperience(currentExp);
       
       // 同步进度条动画 - 使用相同的动画进度
-      const currentProgress = oldProgress + (value * (newProgress - oldProgress));
+      let currentProgress;
+      if (isLevelUp) {
+        // 如果升级了，进度条从0开始增长到新进度
+        currentProgress = value * newProgress;
+      } else {
+        // 如果没有升级，正常从旧进度增长到新进度
+        currentProgress = oldProgress + (value * (newProgress - oldProgress));
+      }
+      
       progressBarAnimation.setValue(currentProgress);
       setProgressBarValue(currentProgress); // 更新状态值
       
@@ -584,7 +659,8 @@ const ReviewIntroScreen = () => {
         console.log('🎯 动画同步:', {
           progress: value.toFixed(2),
           currentExp,
-          currentProgress: currentProgress.toFixed(3)
+          currentProgress: currentProgress.toFixed(3),
+          isLevelUp
         });
       }
     });
@@ -596,16 +672,6 @@ const ReviewIntroScreen = () => {
         console.log('🎯 进度条:', { value: value.toFixed(3) });
       }
     });
-    
-    // 更新用户经验值
-    // const updatedStats = {
-    //   ...userStats,
-    //   experience: newExperience,
-    //   level: newLevel,
-    // };
-    
-    // setUserStats(updatedStats);
-    // AsyncStorage.setItem('userStats', JSON.stringify(updatedStats));
   };
   
   // 更新统计数字
@@ -718,6 +784,7 @@ const ReviewIntroScreen = () => {
       'review_subtitle': isChinese ? '最近都收集了啥单词？我们来回顾一下吧' : 'What words have you collected recently? Let\'s review them',
       'exp_gained': isChinese ? '经验值' : 'EXP',
       'congratulations_exp': isChinese ? '恭喜获得经验值！' : 'Congratulations! You gained experience!',
+      'level_up_congratulations': isChinese ? '恭喜升级！' : 'Congratulations! Level Up!',
       'add_shows': isChinese ? '请添加剧集吧！' : ' Add some shows!',
       'add_wordbook': isChinese ? '去添加自己的单词本吧！' : 'Go add your own wordbook!',
       'challenge_cards': isChinese ? '挑战词卡' : 'Challenge Cards',
@@ -797,6 +864,15 @@ const ReviewIntroScreen = () => {
               <Text style={styles.experienceAnimationSubtext}>
                 {t('congratulations_exp')}
               </Text>
+              {/* 升级时显示额外的恭喜信息 */}
+              {userStats.level < Math.floor((userStats.experience + experienceGained) / 100) + 1 && (
+                <View style={styles.levelUpContainer}>
+                  <Ionicons name="trophy" size={24} color="#FFD700" />
+                  <Text style={styles.levelUpText}>
+                    {t('level_up_congratulations')}
+                  </Text>
+                </View>
+              )}
             </View>
           </LinearGradient>
         </Animated.View>
@@ -903,23 +979,31 @@ const ReviewIntroScreen = () => {
           </TouchableOpacity>
 
           {/* 错词挑战词卡 */}
-          <TouchableOpacity 
-            style={styles.challengeCard} 
-            activeOpacity={0.8} 
-            onPress={() => handlePressChallenge('wrong_words')}
-          >
+          <View style={styles.challengeCard}>
             <View style={styles.challengeCardHeader}>
               <Ionicons name="alert-circle" size={24} color={colors.primary[500]} />
               <Text style={styles.challengeCardTitle}>{t('wrong_words_challenge')}</Text>
+              <TouchableOpacity 
+                onPress={refreshWrongWordsCount}
+                style={{ marginLeft: 'auto', padding: 4 }}
+              >
+                <Ionicons name="refresh" size={16} color={colors.primary[500]} />
+              </TouchableOpacity>
             </View>
             <Text style={styles.challengeCardSubtitle}>
               {t('wrong_words_count', { count: wrongWordsCount })}
+              {/* 调试信息 */}
+              <Text style={{ fontSize: 10, color: 'red' }}> (Debug: {wrongWordsCount})</Text>
             </Text>
-            <View style={styles.challengeCardFooter}>
+            <TouchableOpacity 
+              style={styles.challengeCardFooter}
+              activeOpacity={0.8} 
+              onPress={() => handlePressChallenge('wrong_words')}
+            >
               <Text style={styles.challengeCardExp}>+20 {t('exp_gained')}</Text>
               <Ionicons name="chevron-forward" size={16} color={colors.primary[500]} />
-            </View>
-          </TouchableOpacity>
+            </TouchableOpacity>
+          </View>
         </ScrollView>
       </View>
       
@@ -1281,6 +1365,33 @@ const styles = StyleSheet.create({
     color: '#FFF',
     marginTop: 8,
     opacity: 0.9,
+    ...Platform.select({
+      web: {
+        textShadow: '0 1px 2px rgba(0,0,0,0.3)',
+      },
+      default: {
+        textShadowColor: 'rgba(0,0,0,0.3)',
+        textShadowOffset: { width: 0, height: 1 },
+        textShadowRadius: 2,
+      },
+    }),
+  },
+  levelUpContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 12,
+    backgroundColor: 'rgba(255, 215, 0, 0.2)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#FFD700',
+  },
+  levelUpText: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#FFD700',
+    marginLeft: 6,
     ...Platform.select({
       web: {
         textShadow: '0 1px 2px rgba(0,0,0,0.3)',

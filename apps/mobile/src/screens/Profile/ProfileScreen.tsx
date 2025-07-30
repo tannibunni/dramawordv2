@@ -398,6 +398,71 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
           style: 'destructive', 
           onPress: async () => {
             try {
+              // 清除云端数据
+              if (user?.id) {
+                console.log('🗑️ 开始清除云端数据，用户ID:', user.id);
+                
+                // 清除云端用户词汇表
+                try {
+                  const response = await fetch(`${process.env.EXPO_PUBLIC_API_BASE_URL || 'https://dramawordv2.onrender.com'}/api/words/user/clear-vocabulary`, {
+                    method: 'DELETE',
+                    headers: {
+                      'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ userId: user.id })
+                  });
+                  
+                  if (response.ok) {
+                    console.log('✅ 云端用户词汇表清除成功');
+                  } else {
+                    console.warn('⚠️ 云端用户词汇表清除失败:', response.status);
+                  }
+                } catch (error) {
+                  console.error('❌ 清除云端用户词汇表失败:', error);
+                }
+                
+                // 清除云端用户学习统计
+                try {
+                  const statsResponse = await fetch(`${process.env.EXPO_PUBLIC_API_BASE_URL || 'https://dramawordv2.onrender.com'}/api/users/clear-stats`, {
+                    method: 'DELETE',
+                    headers: {
+                      'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ userId: user.id })
+                  });
+                  
+                  if (statsResponse.ok) {
+                    console.log('✅ 云端用户学习统计清除成功');
+                  } else {
+                    console.warn('⚠️ 云端用户学习统计清除失败:', statsResponse.status);
+                  }
+                } catch (error) {
+                  console.error('❌ 清除云端用户学习统计失败:', error);
+                }
+                
+                // 清除云端搜索历史
+                try {
+                  const historyResponse = await fetch(`${process.env.EXPO_PUBLIC_API_BASE_URL || 'https://dramawordv2.onrender.com'}/api/words/clear-search-history`, {
+                    method: 'DELETE',
+                    headers: {
+                      'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ userId: user.id })
+                  });
+                  
+                  if (historyResponse.ok) {
+                    console.log('✅ 云端搜索历史清除成功');
+                  } else {
+                    console.warn('⚠️ 云端搜索历史清除失败:', historyResponse.status);
+                  }
+                } catch (error) {
+                  console.error('❌ 清除云端搜索历史失败:', error);
+                }
+              }
+              
+              // 清除本地数据
+              console.log('🗑️ 开始清除本地数据...');
+              
               // 清除词汇数据
               await clearVocabulary();
               

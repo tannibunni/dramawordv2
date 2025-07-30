@@ -28,6 +28,7 @@ import { useAppLanguage } from '../../context/AppLanguageContext';
 import { t, TranslationKey } from '../../constants/translations';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_BASE_URL } from '../../constants/config';
+import Toast from '../../components/common/Toast';
 
 // 复习完成统计接口
 interface ReviewStats {
@@ -41,7 +42,7 @@ interface ReviewStats {
 // 复习完成页面组件
 const ReviewCompleteScreen: React.FC<{
   stats: ReviewStats;
-  actions: { word: string; remembered: boolean }[];
+  actions: { word: string; remembered: boolean; translation?: string }[];
   onBack: () => void;
 }> = ({ stats, actions, onBack }) => {
   return (
@@ -61,7 +62,18 @@ const ReviewCompleteScreen: React.FC<{
         <ScrollView style={{ maxHeight: 1000 }}>
           {actions.map((item, idx) => (
             <View key={item.word + idx} style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: colors.background.tertiary }}>
-              <Text style={{ fontSize: 18, color: colors.text.primary, flex: 1 }}>{item.word}</Text>
+              <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}>
+                <Text style={{ fontSize: 18, color: colors.text.primary, marginRight: 8 }}>{item.word}</Text>
+                {item.translation && (
+                  <Text 
+                    style={{ fontSize: 16, color: colors.text.secondary, flex: 1 }}
+                    numberOfLines={1}
+                    ellipsizeMode="tail"
+                  >
+                    - {item.translation.length > 20 ? item.translation.substring(0, 20) + '...' : item.translation}
+                  </Text>
+                )}
+              </View>
               {item.remembered ? (
                 <Ionicons name="checkmark-circle" size={24} color={colors.success[500]} />
               ) : (
@@ -262,21 +274,40 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
     console.log('ReviewScreen: reviewStats changed:', reviewStats);
   }, [reviewStats]);
 
+
+
   // 获取筛选参数
   // const { type, id } = (route.params || {}) as { type?: string; id?: number };
 
   const MIN_REVIEW_BATCH = 10;
   const [isEbbinghaus, setIsEbbinghaus] = useState(false);
   const [reviewMode, setReviewMode] = useState<'smart' | 'all'>('smart'); // 智能模式 vs 全部模式
+  const [showEbbinghausTip, setShowEbbinghausTip] = useState(true);
+  const [showToast, setShowToast] = useState(false);
+
+  // 监控艾宾浩斯记忆法状态变化，显示Toast提示
+  useEffect(() => {
+    if (isEbbinghaus && reviewMode === 'smart' && (!type || type === 'shuffle' || type === 'random') && showEbbinghausTip) {
+      setShowToast(true);
+      setShowEbbinghausTip(false); // 显示Toast后不再显示横幅
+    }
+  }, [isEbbinghaus, reviewMode, type, showEbbinghausTip]);
 
   const getReviewBatch = async (words: any[], filterFn: (w: any) => boolean) => {
     const all = words.filter(filterFn);
     
-    // 如果单词数量不多，直接返回所有单词
-    if (all.length <= MIN_REVIEW_BATCH) {
-      setIsEbbinghaus(false);
-      return all;
-    }
+    console.log(`🔍 getReviewBatch: 过滤后单词数量: ${all.length}, 类型: ${type}, 模式: ${reviewMode}`);
+    
+    // 去重：基于单词名称去重，保留第一个出现的
+    const uniqueWords = all.reduce((acc: any[], word: any) => {
+      const exists = acc.find(w => w.word === word.word);
+      if (!exists) {
+        acc.push(word);
+      }
+      return acc;
+    }, []);
+    
+    console.log(`🔍 getReviewBatch: 去重后单词数量: ${uniqueWords.length}`);
     
     // 判断是否为挑战词卡（随机复习或错词挑战）
     const isChallengeMode = !type || (type === 'shuffle' || type === 'random' || type === 'wrong_words');
@@ -286,42 +317,18 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
       if (type === 'wrong_words') {
         setIsEbbinghaus(false);
         
-        // 从后端API获取最新的错词数据，确保与挑战卡显示的数量一致
-        try {
-          const userId = user?.id;
-          if (userId) {
-            const response = await fetch(`${API_BASE_URL}/words/user/vocabulary?userId=${userId}`);
-            if (response.ok) {
-              const result = await response.json();
-              if (result.success && result.data) {
-                // 筛选出有错误记录的单词
-                const wrongWords = result.data.filter((word: any) => 
-                  word.incorrectCount > 0 || word.consecutiveIncorrect > 0
-                );
-                
-                if (wrongWords.length > 0) {
-                  console.log(`🔍 错词挑战: 从后端API获取到 ${wrongWords.length} 个错词`);
-                  return wrongWords.slice(0, MIN_REVIEW_BATCH);
-                }
-              }
-            }
-          }
-        } catch (error) {
-          console.error('获取错词数据失败，使用本地数据:', error);
-        }
-        
-        // 如果后端获取失败，使用本地数据作为fallback
-        const wrongWords = all.filter((w: any) => {
-          return w.incorrectCount > 0 || w.consecutiveIncorrect > 0;
-        });
-        
-        if (wrongWords.length > 0) {
-          console.log(`🔍 错词挑战: 使用本地数据fallback，找到 ${wrongWords.length} 个错词`);
-          return wrongWords.slice(0, MIN_REVIEW_BATCH);
+        // 优先使用本地vocabulary数据，如果本地为空则返回空数组
+        if (vocabulary && vocabulary.length > 0) {
+          const localWrongWords = vocabulary.filter((word: any) => 
+            (word.incorrectCount && word.incorrectCount > 0) || 
+            (word.consecutiveIncorrect && word.consecutiveIncorrect > 0)
+          );
+          
+          console.log(`🔍 错词挑战: 从本地vocabulary获取到 ${localWrongWords.length} 个错词`);
+          return localWrongWords.slice(0, MIN_REVIEW_BATCH);
         } else {
-          // 如果没有错词，显示所有单词
-          console.log(`🔍 错词挑战: 没有错词，显示所有单词`);
-          return all.slice(0, MIN_REVIEW_BATCH);
+          console.log('🔍 错词挑战: 本地vocabulary为空，返回空数组');
+          return [];
         }
       }
       
@@ -329,15 +336,18 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
       if (reviewMode === 'all') {
         // 全部模式：显示所有单词，不限制时间
         setIsEbbinghaus(false);
-        return all.slice(0, MIN_REVIEW_BATCH);
+        console.log(`🔍 全部模式: 返回 ${uniqueWords.length} 个单词`);
+        return uniqueWords; // 不限制数量，返回所有可用单词
       }
       
       // 智能模式：优先显示需要复习的单词（艾宾斯记忆法推荐）
-      const dueWords = all.filter((w: any) => {
+      const dueWords = uniqueWords.filter((w: any) => {
         // 检查是否有 nextReviewAt 字段，如果没有则使用 nextReviewDate
         const nextReview = w.nextReviewAt || w.nextReviewDate;
         return nextReview ? dayjs(nextReview).isBefore(dayjs()) : true;
       });
+      
+      console.log(`🔍 智能模式: 到期单词 ${dueWords.length} 个, 总单词 ${uniqueWords.length} 个`);
       
       // 如果到期的单词足够多，优先显示这些
       if (dueWords.length >= MIN_REVIEW_BATCH) {
@@ -345,21 +355,25 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
         return dueWords.slice(0, MIN_REVIEW_BATCH);
       }
       
-      // 如果到期的单词不够，补充其他单词
-      const otherWords = all.filter((w: any) => {
+      // 如果到期的单词不够，补充其他单词（排除已经在dueWords中的单词）
+      const otherWords = uniqueWords.filter((w: any) => {
         const nextReview = w.nextReviewAt || w.nextReviewDate;
-        return nextReview ? dayjs(nextReview).isAfter(dayjs()) : true;
+        const isNotDue = nextReview ? dayjs(nextReview).isAfter(dayjs()) : true;
+        const isNotInDueWords = !dueWords.some(dueWord => dueWord.word === w.word);
+        return isNotDue && isNotInDueWords;
       });
       
       // 混合显示：优先显示到期的单词，然后补充其他单词
       const mixedWords = [...dueWords, ...otherWords];
       setIsEbbinghaus(dueWords.length > 0);
       
-      return mixedWords.slice(0, MIN_REVIEW_BATCH);
+      console.log(`🔍 智能模式: 到期单词 ${dueWords.length} 个, 其他单词 ${otherWords.length} 个, 混合单词 ${mixedWords.length} 个`);
+      return mixedWords; // 不限制数量，返回所有可用单词
     } else {
       // 剧单/单词本：显示所有单词，不使用艾宾斯记忆法
       setIsEbbinghaus(false);
-      return all.slice(0, MIN_REVIEW_BATCH);
+      console.log(`🔍 剧单/单词本模式: 返回 ${uniqueWords.length} 个单词`);
+      return uniqueWords; // 不限制数量，返回所有可用单词
     }
   };
 
@@ -402,6 +416,17 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
       type: type,
       targetId: id
     })));
+    
+    // 检查vocabulary中是否有重复单词
+    const wordCounts = vocabulary.reduce((acc: any, word: any) => {
+      acc[word.word] = (acc[word.word] || 0) + 1;
+      return acc;
+    }, {});
+    
+    const duplicates = Object.entries(wordCounts).filter(([word, count]) => (count as number) > 1);
+    if (duplicates.length > 0) {
+      console.log('⚠️ 发现重复单词:', duplicates);
+    }
     const batch = await getReviewBatch(vocabulary, filterFn);
     console.log('review batch:', batch);
     setWords(batch);
@@ -617,8 +642,8 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
   };
 
   // 统一封装添加 action 的逻辑，避免遗漏
-  const addReviewAction = (word: string, remembered: boolean) => {
-    setReviewActions(prev => ([...prev, { word, remembered }]));
+  const addReviewAction = (word: string, remembered: boolean, translation?: string) => {
+    setReviewActions(prev => ([...prev, { word, remembered, translation }]));
   };
 
   // 将 ReviewWord 转换为 Word 类型的适配器函数
@@ -660,7 +685,7 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
       const forgotten = prev.forgottenWords + 1;
       const remembered = prev.rememberedWords;
       const total = prev.totalWords;
-      const experience = remembered * 15;
+      const experience = remembered * 2;
       const accuracy = total > 0 ? Math.round((remembered / total) * 100) : 0;
       return {
         ...prev,
@@ -669,7 +694,10 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
         accuracy,
       };
     });
-    addReviewAction(word, false);
+    // 获取当前单词的释义
+    const currentWord = words[swiperIndex];
+    const translation = currentWord?.translation || '';
+    addReviewAction(word, false, translation);
     updateSession('incorrect');
 
     moveToNextWord();
@@ -697,7 +725,7 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
     setReviewStats(prev => {
       const remembered = prev.rememberedWords + 1;
       const total = prev.totalWords;
-      const experience = remembered * 15;
+      const experience = remembered * 2;
       const accuracy = total > 0 ? Math.round((remembered / total) * 100) : 0;
       return {
         ...prev,
@@ -706,7 +734,10 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
         accuracy,
       };
     });
-    addReviewAction(word, true);
+    // 获取当前单词的释义
+    const currentWord = words[swiperIndex];
+    const translation = currentWord?.translation || '';
+    addReviewAction(word, true, translation);
     updateSession('correct');
     moveToNextWord();
   };
@@ -769,7 +800,7 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
         const rememberedWords = rememberedRef.current;
         const forgottenWords = forgottenRef.current;
         const currentStats = reviewStats;
-        const experience = rememberedWords * 15;
+        const experience = rememberedWords * 2;
         const accuracy = currentStats.totalWords > 0 ? Math.round((rememberedWords / currentStats.totalWords) * 100) : 0;
         const finalStats = {
           totalWords: currentStats.totalWords,
@@ -869,29 +900,57 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
     // 显示当前正在查看的卡片索引（从0开始）
     const progressText = words.length > 0 ? `${swiperIndex} / ${words.length}` : '';
     return (
-    <View style={{ width: '100%', alignItems: 'center', marginTop: 16, marginBottom: 8 }}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', width: '90%' }}>
-        <TouchableOpacity 
-          style={{ padding: 8, marginRight: 12 }}
-          onPress={() => navigate('main', { tab: 'review' })}
-        >
-          <Ionicons name="arrow-back" size={24} color={colors.text.primary} />
-        </TouchableOpacity>
-        <View style={{ flex: 1, height: 8, backgroundColor: colors.background.tertiary, borderRadius: 4, marginRight: 8 }}>
-          <Animated.View style={{
-            height: 8,
-            backgroundColor: colors.primary[500],
-            borderRadius: 4,
-            width: progressAnimation.interpolate({
-              inputRange: [0, 100],
-              outputRange: ['0%', '100%'],
-            }),
-          }} />
+      <View style={{ 
+        width: '100%', 
+        paddingHorizontal: 16, 
+        paddingVertical: 4,
+        backgroundColor: colors.background.primary
+      }}>
+        <View style={{ 
+          flexDirection: 'row', 
+          alignItems: 'center', 
+          width: '100%'
+        }}>
+          <TouchableOpacity 
+            style={{ 
+              padding: 8, 
+              marginRight: 16,
+              borderRadius: 8,
+              backgroundColor: colors.background.secondary
+            }}
+            onPress={() => navigate('main', { tab: 'review' })}
+          >
+            <Ionicons name="arrow-back" size={20} color={colors.text.primary} />
+          </TouchableOpacity>
+          <View style={{ 
+            flex: 1, 
+            height: 6, 
+            backgroundColor: colors.background.tertiary, 
+            borderRadius: 3, 
+            marginRight: 12 
+          }}>
+            <Animated.View style={{
+              height: 6,
+              backgroundColor: colors.primary[500],
+              borderRadius: 3,
+              width: progressAnimation.interpolate({
+                inputRange: [0, 100],
+                outputRange: ['0%', '100%'],
+              }),
+            }} />
+          </View>
+          <Text style={{ 
+            fontSize: 14, 
+            fontWeight: '600', 
+            color: colors.text.primary,
+            minWidth: 40,
+            textAlign: 'center'
+          }}>
+            {progressText}
+          </Text>
         </View>
-          <Text style={{ fontSize: 16, fontWeight: '600', color: colors.text.primary }}>{progressText}</Text>
       </View>
-    </View>
-  );
+    );
   };
 
 
@@ -904,19 +963,33 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
     return (
       <SafeAreaView style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.background.primary }}>
         <View style={{ alignItems: 'center', padding: 20 }}>
-          <Ionicons name="book-outline" size={64} color={colors.text.tertiary} style={{ marginBottom: 16 }} />
-          <Text style={styles.emptyText}>{t('no_review_words' as TranslationKey, appLanguage)}</Text>
+          <Ionicons name="book-outline" size={80} color={colors.text.tertiary} style={{ marginBottom: 24 }} />
+          <Text style={{ fontSize: 24, fontWeight: 'bold', color: colors.text.primary, marginBottom: 12, textAlign: 'center' }}>
+            {t('no_review_words' as TranslationKey, appLanguage)}
+          </Text>
+          <Text style={{ fontSize: 16, color: colors.text.secondary, textAlign: 'center', marginBottom: 32, lineHeight: 22 }}>
+            {appLanguage === 'zh-CN' 
+              ? '快去搜索并收藏一些单词吧！\n积累词汇量，提升学习效果。'
+              : 'Go search and collect some words!\nBuild your vocabulary and improve learning.'
+            }
+          </Text>
           <TouchableOpacity
             style={{
-              marginTop: 24,
               backgroundColor: colors.primary[500],
               paddingHorizontal: 48,
               paddingVertical: 16,
               borderRadius: 25,
+              shadowColor: colors.primary[200],
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: 0.1,
+              shadowRadius: 4,
+              elevation: 3,
             }}
             onPress={() => navigate('main', { tab: 'home' })}
           >
-            <Text style={{ color: 'white', fontSize: 18, fontWeight: 'bold' }}>确定</Text>
+            <Text style={{ color: 'white', fontSize: 18, fontWeight: 'bold' }}>
+              {appLanguage === 'zh-CN' ? '去搜索单词' : 'Search Words'}
+            </Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -940,7 +1013,7 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
     
     // 使用当前的 reviewStats，确保 totalWords 正确
     const currentStats = reviewStats;
-    const experience = rememberedWords * 15;
+    const experience = rememberedWords * 2;
     const accuracy = currentStats.totalWords > 0 ? Math.round((rememberedWords / currentStats.totalWords) * 100) : 0;
     const finalStats = {
       totalWords: currentStats.totalWords,
@@ -1009,25 +1082,9 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
             };
             await AsyncStorage.setItem('navigationParams', JSON.stringify(params));
             
-            // 确保经验值同步到后端
-            if (finalStats?.experience && finalStats.experience > 0) {
-              try {
-                const token = await AsyncStorage.getItem('authToken');
-                if (token) {
-                  // 调用后端API更新经验值
-                  await fetch(`${API_BASE_URL}/experience/checkin`, {
-                    method: 'POST',
-                    headers: {
-                      'Content-Type': 'application/json',
-                      'Authorization': `Bearer ${token}`,
-                    },
-                  });
-                  console.log('✅ 复习经验值已同步到后端');
-                }
-              } catch (error) {
-                console.error('❌ 同步复习经验值失败:', error);
-              }
-            }
+            // 经验值已在复习过程中通过 updateWordProgress 同步到后端
+            // 不需要额外调用经验值API，避免重复计算
+            console.log('✅ 复习经验值已在复习过程中同步到后端');
             
             // 导航回review intro页面
             navigate('main', { tab: 'review' });
@@ -1042,50 +1099,86 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background.primary }}>
+      {/* Toast提示 */}
+      {showToast && (
+        <Toast
+          message="☑️ 已切入艾宾浩斯记忆法"
+          type="success"
+          duration={3000}
+          onHide={() => setShowToast(false)}
+        />
+      )}
       {/* 复习模式指示器 - 只在智能挑战词卡模式下显示 */}
       {(!type || type === 'shuffle' || type === 'random') && type !== 'wrong_words' && (
-        <View style={{padding: 12, backgroundColor: colors.primary[50], borderRadius: 8, margin: 12, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center'}}>
+        <View style={{
+          padding: 16, 
+          backgroundColor: colors.primary[50], 
+          borderRadius: 12, 
+          marginHorizontal: 16, 
+          marginTop: 8,
+          marginBottom: 8,
+          flexDirection: 'row', 
+          justifyContent: 'space-between', 
+          alignItems: 'center',
+          shadowColor: colors.primary[200],
+          shadowOffset: { width: 0, height: 1 },
+          shadowOpacity: 0.1,
+          shadowRadius: 2,
+          elevation: 2
+        }}>
           <View style={{flex: 1}}>
-            <Text style={{color: colors.primary[700], fontWeight: 'bold'}}>
+            <Text style={{color: colors.primary[700], fontWeight: '600', fontSize: 15}}>
               {reviewMode === 'smart' ? '🧠 智能复习模式' : '📚 全部复习模式'}
             </Text>
-            <Text style={{color: colors.primary[600], fontSize: 12, marginTop: 2}}>
+            <Text style={{color: colors.primary[600], fontSize: 13, marginTop: 4, lineHeight: 18}}>
               {reviewMode === 'smart' ? '优先显示需要复习的单词' : '显示所有单词，不受时间限制'}
             </Text>
           </View>
           <TouchableOpacity 
             style={{
               backgroundColor: colors.primary[500],
-              paddingHorizontal: 12,
-              paddingVertical: 6,
-              borderRadius: 16,
+              paddingHorizontal: 16,
+              paddingVertical: 8,
+              borderRadius: 20,
+              shadowColor: colors.primary[300],
+              shadowOffset: { width: 0, height: 1 },
+              shadowOpacity: 0.2,
+              shadowRadius: 2,
+              elevation: 2
             }}
             onPress={() => {
               setReviewMode(reviewMode === 'smart' ? 'all' : 'smart');
+              // 重新显示艾宾斯记忆法提示
+              setShowEbbinghausTip(true);
+              setShowToast(false); // 重置Toast状态
               // 重新加载复习单词
               setTimeout(() => loadReviewWords(), 100);
             }}
           >
-            <Text style={{color: 'white', fontSize: 12, fontWeight: 'bold'}}>
+            <Text style={{color: 'white', fontSize: 13, fontWeight: '600'}}>
               {reviewMode === 'smart' ? '切换全部' : '切换智能'}
             </Text>
           </TouchableOpacity>
         </View>
       )}
       
-      {/* 艾宾斯记忆法提示 - 只在挑战词卡智能模式下显示 */}
-      {isEbbinghaus && reviewMode === 'smart' && (!type || type === 'shuffle' || type === 'random') && (
-        <View style={{padding: 12, backgroundColor: colors.success[50], borderRadius: 8, marginHorizontal: 12, marginBottom: 12}}>
-          <Text style={{color: colors.success[700], fontWeight: 'bold'}}>
-            ☑️已切入艾宾浩斯记忆法
-          </Text>
-        </View>
-      )}
+
       
       {/* 错词挑战提示 */}
       {type === 'wrong_words' && (
-        <View style={{padding: 12, backgroundColor: colors.error[50], borderRadius: 8, marginHorizontal: 12, marginBottom: 12}}>
-          <Text style={{color: colors.error[700], fontWeight: 'bold'}}>
+        <View style={{
+          padding: 16, 
+          backgroundColor: colors.error[50], 
+          borderRadius: 12, 
+          marginHorizontal: 16, 
+          marginBottom: 8,
+          shadowColor: colors.error[200],
+          shadowOffset: { width: 0, height: 1 },
+          shadowOpacity: 0.1,
+          shadowRadius: 2,
+          elevation: 2
+        }}>
+          <Text style={{color: colors.error[700], fontWeight: '600', fontSize: 15}}>
             ⚠️ 错词挑战 - 专注记忆不熟悉的单词
           </Text>
         </View>
@@ -1093,14 +1186,25 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
       
       {/* 剧单/单词本复习提示 */}
       {(type === 'show' || type === 'wordbook') && (
-        <View style={{padding: 12, backgroundColor: colors.accent[50], borderRadius: 8, marginHorizontal: 12, marginBottom: 12}}>
-          <Text style={{color: colors.accent[700], fontWeight: 'bold'}}>
+        <View style={{
+          padding: 16, 
+          backgroundColor: colors.accent[50], 
+          borderRadius: 12, 
+          marginHorizontal: 16, 
+          marginBottom: 8,
+          shadowColor: colors.accent[200],
+          shadowOffset: { width: 0, height: 1 },
+          shadowOpacity: 0.1,
+          shadowRadius: 2,
+          elevation: 2
+        }}>
+          <Text style={{color: colors.accent[700], fontWeight: '600', fontSize: 15}}>
             📚 {type === 'show' ? '剧集复习' : '单词本复习'} - 显示所有单词
           </Text>
         </View>
       )}
       {renderProgressBar()}
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', paddingTop: 2 }}>
         <Swiper
           ref={swiperRef}
           cards={words}
@@ -1131,7 +1235,7 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
             // 兜底，不做统计
             handleSwiped(cardIndex);
           }}
-          cardVerticalMargin={32}
+          cardVerticalMargin={8}
           cardHorizontalMargin={0}
           containerStyle={{ flex: 1, width: '100%' }}
         />

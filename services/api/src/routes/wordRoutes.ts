@@ -11,6 +11,8 @@ import {
   addToUserVocabulary,
   updateWordProgress,
   removeFromUserVocabulary,
+  clearUserVocabulary,
+  clearUserSearchHistory,
   checkEnvironment,
   testOpenAI,
   translateChineseToEnglish, // 新增
@@ -42,6 +44,8 @@ router.get('/user/vocabulary', getUserVocabulary); // ?userId=xxx
 router.post('/user/vocabulary', addToUserVocabulary);
 router.put('/user/progress', updateWordProgress);
 router.delete('/user/vocabulary', removeFromUserVocabulary);
+router.delete('/user/clear-vocabulary', clearUserVocabulary);
+router.delete('/clear-search-history', clearUserSearchHistory);
 
 // 测试路由
 router.get('/test', (req, res) => {

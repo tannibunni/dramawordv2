@@ -102,6 +102,9 @@ router.post('/avatar',
   UserController.uploadAvatar
 );
 
+// 清除用户学习统计
+router.delete('/clear-stats', UserController.clearUserStats);
+
 // 用户剧集清单 API
 router.get('/showlist', authenticateToken, UserShowListController.getShowList);
 router.post('/showlist', authenticateToken, UserShowListController.addShow);

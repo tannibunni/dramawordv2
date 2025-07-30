@@ -630,4 +630,68 @@ export class UserController {
       });
     }
   }
+
+  // 清除用户学习统计
+  static async clearUserStats(req: Request, res: Response) {
+    try {
+      const { userId } = req.body;
+      
+      if (!userId) {
+        return res.status(400).json({
+          success: false,
+          message: '用户ID是必需的'
+        });
+      }
+
+      logger.info(`🗑️ 清除用户学习统计: ${userId}`);
+
+      // 重置用户的学习统计
+      const updatedUser = await User.findByIdAndUpdate(
+        userId,
+        {
+          $set: {
+            'learningStats.experience': 0,
+            'learningStats.level': 1,
+            'learningStats.currentStreak': 0,
+            'learningStats.longestStreak': 0,
+            'learningStats.lastStudyDate': null,
+            'learningStats.totalStudyTime': 0,
+            'learningStats.totalReviews': 0,
+            'learningStats.accuracy': 0,
+            'learningStats.masteredWords': 0,
+            'learningStats.collectedWords': 0,
+            'learningStats.contributedWords': 0
+          }
+        },
+        { new: true }
+      );
+
+      if (!updatedUser) {
+        return res.status(404).json({
+          success: false,
+          message: '用户不存在'
+        });
+      }
+
+      // 清除用户学习记录
+      const deletedRecords = await UserLearningRecord.deleteMany({ userId: userId });
+
+      logger.info(`✅ 用户学习统计已清除: ${userId}, 删除了 ${deletedRecords.deletedCount} 条学习记录`);
+
+      res.json({
+        success: true,
+        message: '用户学习统计清除成功',
+        data: {
+          userId: userId,
+          deletedRecordsCount: deletedRecords.deletedCount
+        }
+      });
+    } catch (error) {
+      logger.error('❌ 清除用户学习统计失败:', error);
+      res.status(500).json({
+        success: false,
+        message: '清除用户学习统计失败'
+      });
+    }
+  }
 } 

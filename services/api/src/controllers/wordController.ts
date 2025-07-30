@@ -1558,6 +1558,82 @@ export const getCloudWord = async (req: Request, res: Response): Promise<void> =
   }
 };
 
+// 清除用户词汇表
+export const clearUserVocabulary = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { userId } = req.body;
+    
+    if (!userId) {
+      res.status(400).json({
+        success: false,
+        error: 'User ID is required'
+      });
+      return;
+    }
+
+    logger.info(`🗑️ Clearing vocabulary for user: ${userId}`);
+
+    // 删除用户词汇表中的所有记录
+    const result = await UserVocabulary.deleteMany({ userId: userId });
+
+    logger.info(`✅ Cleared ${result.deletedCount} vocabulary records for user: ${userId}`);
+
+    res.json({
+      success: true,
+      message: 'User vocabulary cleared successfully',
+      data: {
+        userId: userId,
+        deletedCount: result.deletedCount
+      }
+    });
+
+  } catch (error) {
+    logger.error('❌ Clear user vocabulary error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to clear user vocabulary'
+    });
+  }
+};
+
+// 清除用户搜索历史
+export const clearUserSearchHistory = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { userId } = req.body;
+    
+    if (!userId) {
+      res.status(400).json({
+        success: false,
+        error: 'User ID is required'
+      });
+      return;
+    }
+
+    logger.info(`🗑️ Clearing search history for user: ${userId}`);
+
+    // 删除搜索历史表中的所有记录
+    const result = await SearchHistory.deleteMany({});
+
+    logger.info(`✅ Cleared ${result.deletedCount} search history records`);
+
+    res.json({
+      success: true,
+      message: 'Search history cleared successfully',
+      data: {
+        userId: userId,
+        deletedCount: result.deletedCount
+      }
+    });
+
+  } catch (error) {
+    logger.error('❌ Clear search history error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to clear search history'
+    });
+  }
+};
+
 export const wordController = {
   searchWord,
   getPopularWords,
@@ -1568,6 +1644,8 @@ export const wordController = {
   updateWordProgress,
   clearAllData,
   clearUserHistory,
+  clearUserVocabulary,
+  clearUserSearchHistory,
   checkEnvironment,
   testOpenAI,
   translateChineseToEnglish,

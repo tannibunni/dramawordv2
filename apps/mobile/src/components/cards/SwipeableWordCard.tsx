@@ -133,7 +133,7 @@ const styles = StyleSheet.create({
   card: {
     width: '100%',
     maxWidth: 350,
-    minHeight: 600,
+    minHeight: 550,
     // 移除 maxHeight: 700, // 允许动态高度
     backgroundColor: colors.background.secondary,
     borderRadius: 20,

@@ -438,12 +438,13 @@ UserSchema.methods.addExperienceForNewWord = function() {
 // 方法：成功复习单词获得经验值
 UserSchema.methods.addExperienceForReview = function() {
   // 检查每日复习XP限制
-  if (this.learningStats.dailyReviewXP >= 30) {
-    console.log('⚠️ 今日复习XP已达上限30点');
+  const dailyLimit = 60; // 每日上限60点，允许30次复习
+  if (this.learningStats.dailyReviewXP >= dailyLimit) {
+    console.log('⚠️ 今日复习XP已达上限60点');
     return this.save();
   }
   
-  const xpToAdd = Math.min(2, 30 - this.learningStats.dailyReviewXP);
+  const xpToAdd = Math.min(2, dailyLimit - this.learningStats.dailyReviewXP);
   this.learningStats.dailyReviewXP += xpToAdd;
   
   return this.addExperience(xpToAdd, '成功复习单词');

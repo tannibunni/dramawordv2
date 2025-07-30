@@ -98,6 +98,7 @@ export type TranslationKey =
   | 'not_found'
   | 'validation_error'
   | 'upload_error'
+  | 'no_review_words'
   | 'unknown_error'
   | 'please_retry'
   | 'check_network'
@@ -306,6 +307,7 @@ export const translations: Record<AppLanguage, Record<TranslationKey, string>> =
     not_found: '请求的资源不存在',
     validation_error: '输入数据格式错误',
     upload_error: '文件上传失败',
+    no_review_words: '还没有复习单词',
     unknown_error: '未知错误，请稍后重试',
     please_retry: '请稍后重试',
     check_network: '请检查网络连接',
@@ -514,6 +516,7 @@ export const translations: Record<AppLanguage, Record<TranslationKey, string>> =
     not_found: 'The requested resource does not exist',
     validation_error: 'Input data format error',
     upload_error: 'File upload failed',
+    no_review_words: 'No words to review yet',
     unknown_error: 'Unknown error, please try again later',
     please_retry: 'Please try again later',
     check_network: 'Please check your network connection',
