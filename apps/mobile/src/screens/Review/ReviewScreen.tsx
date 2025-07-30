@@ -235,6 +235,45 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
         }
       });
       
+      // 调用经验值API
+      try {
+        const token = await AsyncStorage.getItem('userData');
+        if (token) {
+          const userData = JSON.parse(token);
+          const response = await fetch(`${API_BASE_URL}/words/user/progress`, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${userData.token}`,
+            },
+            body: JSON.stringify({
+              userId: userId,
+              word: word,
+              isSuccessfulReview: isCorrect,
+              progress: progress
+            }),
+          });
+          
+          if (response.ok) {
+            const result = await response.json();
+            if (result.data?.experience) {
+              apiLogger.info('经验值更新成功', {
+                word,
+                isCorrect,
+                xpGained: result.data.experience.xpGained,
+                newLevel: result.data.experience.newLevel,
+                leveledUp: result.data.experience.leveledUp
+              });
+            }
+          } else {
+            apiLogger.warn('经验值API调用失败', { status: response.status });
+          }
+        }
+      } catch (xpError) {
+        apiLogger.error('调用经验值API失败', xpError);
+        // 不中断流程，继续执行
+      }
+      
       // 使用优化的同步服务 - 批量同步学习记录
       await optimizedDataSyncService.syncBatchData({
         type: 'learning_record',

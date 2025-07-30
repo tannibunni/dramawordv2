@@ -67,6 +67,26 @@ const LanguagePicker: React.FC<LanguagePickerProps> = ({ onLanguageChange, onNav
     return () => clearTimeout(timer);
   }, [selectedLanguage]); // 添加selectedLanguage作为依赖
 
+  // 添加实时监听AsyncStorage变化
+  useEffect(() => {
+    const interval = setInterval(async () => {
+      const saved = await AsyncStorage.getItem('learningLanguages');
+      if (saved) {
+        const languages = JSON.parse(saved);
+        setLearningLanguages(prev => {
+          // 只有当数据真正发生变化时才更新
+          if (JSON.stringify(prev) !== JSON.stringify(languages)) {
+            console.log('LanguagePicker - 检测到学习语言变化:', languages);
+            return languages;
+          }
+          return prev;
+        });
+      }
+    }, 500); // 每500ms检查一次
+
+    return () => clearInterval(interval);
+  }, []);
+
   const loadLearningLanguages = async () => {
     try {
       const saved = await AsyncStorage.getItem('learningLanguages');

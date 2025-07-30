@@ -54,10 +54,16 @@ const ReviewIntroScreen = () => {
           consecutiveCorrect: w.consecutiveCorrect
         })));
         
-        const localWrongWords = vocabulary.filter((word: any) => 
-          (word.incorrectCount && word.incorrectCount > 0) || 
-          (word.consecutiveIncorrect && word.consecutiveIncorrect > 0)
-        );
+        // 错词卡逻辑：连续答对3次后从错词卡移除，否则保持在错词卡中
+        const localWrongWords = vocabulary.filter((word: any) => {
+          // 如果连续答对次数 >= 3，则从错词卡移除
+          if (word.consecutiveCorrect && word.consecutiveCorrect >= 3) {
+            return false;
+          }
+          // 否则保持在错词卡中（有答错记录）
+          return (word.incorrectCount && word.incorrectCount > 0) || 
+                 (word.consecutiveIncorrect && word.consecutiveIncorrect > 0);
+        });
         wrongWordLogger.info(`从本地vocabulary获取到 ${localWrongWords.length} 个错词`);
         wrongWordLogger.debug('错词详情', localWrongWords.map(w => ({
           word: w.word,
@@ -90,10 +96,16 @@ const ReviewIntroScreen = () => {
             consecutiveCorrect: w.consecutiveCorrect
           })));
           
-          const localWrongWords = vocabulary.filter((word: any) => 
-            (word.incorrectCount && word.incorrectCount > 0) || 
-            (word.consecutiveIncorrect && word.consecutiveIncorrect > 0)
-          );
+          // 错词卡逻辑：连续答对3次后从错词卡移除，否则保持在错词卡中
+          const localWrongWords = vocabulary.filter((word: any) => {
+            // 如果连续答对次数 >= 3，则从错词卡移除
+            if (word.consecutiveCorrect && word.consecutiveCorrect >= 3) {
+              return false;
+            }
+            // 否则保持在错词卡中（有答错记录）
+            return (word.incorrectCount && word.incorrectCount > 0) || 
+                   (word.consecutiveIncorrect && word.consecutiveIncorrect > 0);
+          });
           wrongWordLogger.info(`从本地vocabulary获取到 ${localWrongWords.length} 个错词`);
           wrongWordLogger.debug('错词详情', localWrongWords.map(w => ({
             word: w.word,
@@ -149,7 +161,22 @@ const ReviewIntroScreen = () => {
   const levelAnimation = new Animated.Value(1);
   const collectedWordsAnimation = new Animated.Value(0);
   const contributedWordsAnimation = new Animated.Value(0);
-  const progressBarAnimation = new Animated.Value(0); // 新增进度条动画
+  const progressBarAnimation = new Animated.Value(0);
+  
+  // 组件初始化时重置经验值检查状态
+  useEffect(() => {
+    setHasCheckedExperience(false);
+    setIsProgressBarAnimating(false); // 同时重置动画状态
+    experienceLogger.info('重置经验值检查状态和动画状态');
+    
+    // 延迟检查经验值动画，确保所有状态都已加载
+    const timer = setTimeout(() => {
+      experienceLogger.info('延迟检查经验值动画');
+      checkForExperienceGain();
+    }, 1000);
+    
+    return () => clearTimeout(timer);
+  }, []);
   
   // 加载用户统计数据
   useEffect(() => {
@@ -174,10 +201,19 @@ const ReviewIntroScreen = () => {
   
   // 当词汇表变化时，刷新用户统计数据（可能包含新的贡献数据）
   useEffect(() => {
+    let retryCount = 0;
+    const maxRetries = 10; // 最大重试10次，避免无限循环
+    
     const refreshUserStats = async () => {
       // 如果正在进行经验值动画，延迟刷新
       if (isProgressBarAnimating) {
-        experienceLogger.info('经验值动画进行中，延迟刷新用户统计');
+        retryCount++;
+        if (retryCount >= maxRetries) {
+          experienceLogger.warn('达到最大重试次数，强制刷新用户统计');
+          await loadUserStats();
+          return;
+        }
+        experienceLogger.info(`经验值动画进行中，延迟刷新用户统计 (${retryCount}/${maxRetries})`);
         setTimeout(refreshUserStats, 1000);
         return;
       }
@@ -207,44 +243,82 @@ const ReviewIntroScreen = () => {
       
       // 检查是否有经验值增加的参数
       const navigationParams = await AsyncStorage.getItem('navigationParams');
+      experienceLogger.info('检查navigationParams:', navigationParams);
+      
       if (navigationParams) {
         const params = JSON.parse(navigationParams);
+        experienceLogger.info('解析的params:', params);
+        
         if (params.showExperienceAnimation && params.experienceGained > 0) {
+          experienceLogger.info('满足经验值动画条件，开始处理');
+          
           // 清除参数
           await AsyncStorage.removeItem('navigationParams');
           
+          // 直接从后端获取最新的用户统计数据
+          let currentExperience = 0;
+          try {
+            const userDataStr = await AsyncStorage.getItem('userData');
+            if (userDataStr) {
+              const userData = JSON.parse(userDataStr);
+              const token = userData.token;
+              
+              if (token) {
+                const response = await fetch(`${API_BASE_URL}/users/stats`, {
+                  headers: {
+                    'Authorization': `Bearer ${token}`,
+                  },
+                });
+                
+                if (response.ok) {
+                  const result = await response.json();
+                  if (result.success && result.data) {
+                    currentExperience = result.data.experience || 0;
+                    experienceLogger.info('从后端获取到当前经验值', { currentExperience });
+                  }
+                }
+              }
+            }
+          } catch (error) {
+            experienceLogger.warn('获取后端经验值失败，使用本地数据', error);
+            currentExperience = userStats.experience;
+          }
+          
           // 确保 userStats 已加载后再开始动画
-          if (userStats.experience >= 0) {
+          if (currentExperience >= 0) {
             experienceLogger.info('开始经验值动画', {
-              currentExperience: userStats.experience,
+              currentExperience: currentExperience,
               gainedExperience: params.experienceGained,
-              targetExperience: userStats.experience + params.experienceGained
+              targetExperience: currentExperience + params.experienceGained
             });
             
             // 设置经验值增益标记
             await AsyncStorage.setItem('experienceGain', JSON.stringify(params.experienceGained));
             
-            // 开始动画
+            // 开始动画，传入当前经验值
             setExperienceGained(params.experienceGained);
             setShowExperienceAnimation(true);
-            startExperienceAnimation(params.experienceGained);
+            startExperienceAnimationWithCurrentExp(params.experienceGained, currentExperience);
             
             // 延迟刷新用户数据，确保后端数据已更新
             setTimeout(async () => {
-              // 先更新本地经验值，确保动画使用正确的起始值
-              const currentStats = { ...userStats };
-              currentStats.experience += params.experienceGained;
-              setUserStats(currentStats);
-              setPreviousExperience(currentStats.experience);
-              
               // 清理经验值增益标记，防止重复计算
               await AsyncStorage.removeItem('experienceGain');
               
               // 然后从后端刷新数据
               await loadUserStats();
             }, 2000);
+          } else {
+            experienceLogger.warn('currentExperience < 0，跳过动画', { currentExperience });
           }
+        } else {
+          experienceLogger.info('不满足经验值动画条件', {
+            showExperienceAnimation: params.showExperienceAnimation,
+            experienceGained: params.experienceGained
+          });
         }
+      } else {
+        experienceLogger.info('没有找到navigationParams');
       }
       
       // 标记已检查过经验值
@@ -255,12 +329,17 @@ const ReviewIntroScreen = () => {
     }
   };
 
-  // 当 userStats 加载完成且进度条初始化后，检查经验值增益
+  // 当 userStats 加载完成后，检查经验值增益
   useEffect(() => {
-    if (userStats.experience >= 0 && hasInitializedProgressBar && !hasCheckedExperience) {
+    if (userStats.experience >= 0 && !hasCheckedExperience) {
+      experienceLogger.info('触发经验值检查', {
+        userStatsExperience: userStats.experience,
+        hasCheckedExperience,
+        hasInitializedProgressBar
+      });
       checkForExperienceGain();
     }
-  }, [userStats.experience, hasInitializedProgressBar, hasCheckedExperience]);
+  }, [userStats.experience, hasCheckedExperience]);
   
   // 进度条增长动画
   const animateProgressBar = (fromProgress: number, toProgress: number, duration: number = 1500) => {
@@ -377,64 +456,69 @@ const ReviewIntroScreen = () => {
       
       // 尝试从后端获取用户数据
       try {
-        const token = await AsyncStorage.getItem('authToken');
-        if (token) {
-          const response = await fetch(`${API_BASE_URL}/users/profile`, {
-            headers: {
-              'Authorization': `Bearer ${token}`,
-            },
-          });
+        const userDataStr = await AsyncStorage.getItem('userData');
+        if (userDataStr) {
+          const userData = JSON.parse(userDataStr);
+          const token = userData.token;
           
-          if (response.ok) {
-            const result = await response.json();
-            if (result.success && result.data) {
-              // 检查是否有待处理的经验值增益
-              const gainData = await AsyncStorage.getItem('experienceGain');
-              let finalExperience = result.data.learningStats?.experience || 0;
-              
-              if (gainData) {
-                const gainedExp = JSON.parse(gainData);
-                finalExperience += gainedExp;
-                userDataLogger.info('从后端检测到经验值增益，使用更新后的经验值', {
-                  originalExp: result.data.learningStats?.experience,
-                  gainedExp,
-                  finalExperience
-                });
-                // 立即清理经验值增益标记，防止重复计算
-                await AsyncStorage.removeItem('experienceGain');
+          if (token) {
+            const response = await fetch(`${API_BASE_URL}/users/stats`, {
+              headers: {
+                'Authorization': `Bearer ${token}`,
+              },
+            });
+            
+            if (response.ok) {
+              const result = await response.json();
+              if (result.success && result.data) {
+                // 检查是否有待处理的经验值增益
+                const gainData = await AsyncStorage.getItem('experienceGain');
+                let finalExperience = result.data.experience || 0;
+                
+                if (gainData) {
+                  const gainedExp = JSON.parse(gainData);
+                  finalExperience += gainedExp;
+                  userDataLogger.info('从后端检测到经验值增益，使用更新后的经验值', {
+                    originalExp: result.data.experience,
+                    gainedExp,
+                    finalExperience
+                  });
+                  // 立即清理经验值增益标记，防止重复计算
+                  await AsyncStorage.removeItem('experienceGain');
+                }
+                
+                const backendStats = {
+                  experience: finalExperience,
+                  level: result.data.level || 1,
+                  collectedWords: vocabulary?.length || 0,
+                  contributedWords: result.data.contributedWords || 0,
+                  totalReviews: result.data.totalReviews || 0,
+                  currentStreak: result.data.currentStreak || 0
+                };
+                
+                userDataLogger.info('从后端加载统计数据', backendStats);
+                setUserStats(backendStats);
+                setAnimatedExperience(backendStats.experience);
+                setAnimatedCollectedWords(vocabulary?.length || 0);
+                setAnimatedContributedWords(backendStats.contributedWords);
+                
+                // 初始化进度条 - 只有在没有动画进行时才初始化
+                if (!isProgressBarAnimating) {
+                  const progressPercentage = getExperienceProgressFromStats(backendStats);
+                  const progressValue = progressPercentage / 100;
+                  progressBarAnimation.setValue(progressValue);
+                  setProgressBarValue(progressValue);
+                  setHasInitializedProgressBar(true);
+                }
+                
+                await AsyncStorage.setItem('userStats', JSON.stringify(backendStats));
+                return;
               }
-              
-              const backendStats = {
-                experience: finalExperience,
-                level: result.data.learningStats?.level || 1,
-                collectedWords: vocabulary?.length || 0,
-                contributedWords: result.data.learningStats?.contributedWords || 0,
-                totalReviews: result.data.learningStats?.totalReviews || 0,
-                currentStreak: result.data.learningStats?.currentStreak || 0
-              };
-              
-              userDataLogger.info('从后端加载统计数据', backendStats);
-              setUserStats(backendStats);
-              setAnimatedExperience(backendStats.experience);
-              setAnimatedCollectedWords(vocabulary?.length || 0);
-              setAnimatedContributedWords(backendStats.contributedWords);
-              
-              // 初始化进度条 - 只有在没有动画进行时才初始化
-              if (!isProgressBarAnimating) {
-                const progressPercentage = getExperienceProgressFromStats(backendStats);
-                const progressValue = progressPercentage / 100;
-                progressBarAnimation.setValue(progressValue);
-                setProgressBarValue(progressValue);
-                setHasInitializedProgressBar(true);
-              }
-              
-              await AsyncStorage.setItem('userStats', JSON.stringify(backendStats));
-              return;
             }
           }
         }
       } catch (error) {
-        userDataLogger.warn('未找到认证token，使用本地数据');
+        userDataLogger.warn('获取后端数据失败，使用本地数据', error);
       }
     } catch (error) {
       userDataLogger.error('加载用户统计数据失败', error);
@@ -635,6 +719,9 @@ const ReviewIntroScreen = () => {
         finalProgress
       });
       
+      // 重置动画状态，允许后续动画
+      setIsProgressBarAnimating(false);
+      
       // 标记动画已完成，防止后续重置
       setHasCheckedExperience(true);
     });
@@ -659,7 +746,161 @@ const ReviewIntroScreen = () => {
       setProgressBarValue(currentProgress); // 更新状态值
     });
   };
-  
+
+  // 开始经验值动画（使用指定的当前经验值）
+  const startExperienceAnimationWithCurrentExp = (gainedExp: number, currentExp: number) => {
+    // 防止重复动画
+    if (isProgressBarAnimating) {
+      experienceLogger.info('动画正在进行中，跳过重复动画');
+      return;
+    }
+    
+    // 设置动画标志
+    setIsProgressBarAnimating(true);
+    
+    // 清理之前的动画监听器
+    numberAnimation.removeAllListeners();
+    progressBarAnimation.removeAllListeners();
+    
+    // 重置动画值
+    experienceAnimation.setValue(0);
+    scaleAnimation.setValue(1);
+    opacityAnimation.setValue(0);
+    progressAnimation.setValue(0);
+    numberAnimation.setValue(0);
+    levelAnimation.setValue(1);
+    collectedWordsAnimation.setValue(0);
+    contributedWordsAnimation.setValue(0);
+    
+    // 使用传入的当前经验值
+    const oldExperience = currentExp;
+    const newExperience = oldExperience + gainedExp;
+    const oldLevel = userStats.level;
+    
+    // 正确的等级计算：根据经验值计算等级
+    const calculateLevel = (exp: number) => {
+      let level = 1;
+      let totalExpForLevel = 0;
+      while (true) {
+        const totalExpForNextLevel = 50 * Math.pow(level + 1, 2);
+        const totalExpForCurrentLevel = 50 * Math.pow(level, 2);
+        const expNeededForCurrentLevel = totalExpForNextLevel - totalExpForCurrentLevel;
+        
+        if (exp < totalExpForNextLevel) {
+          break;
+        }
+        level++;
+      }
+      return level;
+    };
+    
+    const newLevel = calculateLevel(newExperience);
+    
+    // 设置初始动画经验值
+    setAnimatedExperience(oldExperience);
+    
+    // 计算进度变化 - 使用正确的进度计算方法
+    const oldProgress = getExperienceProgressFromStats({
+      ...userStats,
+      experience: oldExperience
+    }) / 100;
+    const newProgress = getExperienceProgressFromStats({
+      ...userStats,
+      experience: newExperience,
+      level: newLevel
+    }) / 100;
+    
+    // 检查是否升级
+    const isLevelUp = newLevel > oldLevel;
+    
+    experienceLogger.info('开始经验值动画（指定当前经验值）', {
+      oldExperience,
+      newExperience,
+      gainedExp,
+      oldProgress,
+      newProgress,
+      oldLevel,
+      newLevel,
+      isLevelUp
+    });
+    
+    // 显示经验值增加提示
+    Animated.sequence([
+      // 淡入弹窗
+      Animated.timing(opacityAnimation, {
+        toValue: 1,
+        duration: 300,
+        useNativeDriver: true,
+      }),
+      // 弹窗缩放动画
+      Animated.sequence([
+        Animated.timing(scaleAnimation, {
+          toValue: 1.2,
+          duration: 200,
+          useNativeDriver: true,
+        }),
+        Animated.timing(scaleAnimation, {
+          toValue: 1,
+          duration: 200,
+          useNativeDriver: true,
+        }),
+      ]),
+      // 经验值数字动画
+      Animated.timing(numberAnimation, {
+        toValue: gainedExp,
+        duration: 1000,
+        useNativeDriver: false,
+      }),
+      // 经验值增长动画
+      Animated.timing(experienceAnimation, {
+        toValue: newExperience,
+        duration: 1000,
+        useNativeDriver: false,
+      }),
+      // 进度条动画
+      Animated.timing(progressAnimation, {
+        toValue: newProgress,
+        duration: 1000,
+        useNativeDriver: false,
+      }),
+      // 等级动画（如果升级）
+      ...(isLevelUp ? [
+        Animated.timing(levelAnimation, {
+          toValue: 1.3,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+        Animated.timing(levelAnimation, {
+          toValue: 1,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+      ] : []),
+      // 淡出弹窗
+      Animated.timing(opacityAnimation, {
+        toValue: 0,
+        duration: 300,
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      // 动画完成后的处理
+      setShowExperienceAnimation(false);
+      setExperienceGained(0);
+      setIsProgressBarAnimating(false);
+      setHasCheckedExperience(true);
+      
+      // 更新最终状态
+      setAnimatedExperience(newExperience);
+      setProgressBarValue(newProgress);
+      
+      experienceLogger.info('动画完成，最终状态', {
+        newExperience,
+        newLevel,
+        finalProgress: newProgress
+      });
+    });
+  };
+
   // 更新统计数字
   const updateStatistics = () => {
     console.log('🔄 更新统计数字...');
