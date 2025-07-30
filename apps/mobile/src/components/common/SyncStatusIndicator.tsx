@@ -59,11 +59,22 @@ export const SyncStatusIndicator: React.FC<SyncStatusIndicatorProps> = ({ visibl
         return;
       }
 
-      const token = await AsyncStorage.getItem('authToken');
+      // 从userData中获取令牌
+      const userDataString = await AsyncStorage.getItem('userData');
+      let token = null;
+      if (userDataString) {
+        try {
+          const userData = JSON.parse(userDataString);
+          token = userData.token;
+        } catch (error) {
+          console.error('解析用户数据失败:', error);
+        }
+      }
+      
       if (!token) {
         setSyncStatus({
           status: 'idle',
-          message: '未登录，使用本地模式'
+          message: '游客模式，仅本地存储'
         });
         return;
       }
@@ -115,13 +126,24 @@ export const SyncStatusIndicator: React.FC<SyncStatusIndicatorProps> = ({ visibl
         message: '正在同步...'
       });
 
-      const token = await AsyncStorage.getItem('authToken');
+      // 从userData中获取令牌
+      const userDataString = await AsyncStorage.getItem('userData');
+      let token = null;
+      if (userDataString) {
+        try {
+          const userData = JSON.parse(userDataString);
+          token = userData.token;
+        } catch (error) {
+          console.error('解析用户数据失败:', error);
+        }
+      }
+      
       if (!token) {
-        Alert.alert('同步失败', '请先登录后再同步');
+        Alert.alert('同步失败', '游客模式无法同步，请登录后重试');
         setSyncStatus({
           status: 'error',
-          message: '需要登录',
-          errorDetails: '请先登录后再同步数据'
+          message: '游客模式',
+          errorDetails: '请登录后同步数据'
         });
         return;
       }
