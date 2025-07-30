@@ -3,6 +3,8 @@ import { UserLearningRecord } from '../models/UserLearningRecord';
 import { Word } from '../models/Word';
 import { Show } from '../models/Show';
 import { SearchHistory } from '../models/SearchHistory';
+import mongoose from 'mongoose';
+import { logger } from '../utils/logger';
 
 // 同步数据类型
 export interface ISyncData {
@@ -46,14 +48,29 @@ export class SyncService {
   // 上传本地数据到云端
   async uploadData(userId: string, syncData: ISyncData): Promise<ISyncResult> {
     try {
+      logger.info(`🔄 开始同步用户 ${userId} 的数据`);
+      
+      // 检查数据库连接状态
+      if (mongoose.connection.readyState !== 1) {
+        logger.error(`❌ 数据库连接异常，状态: ${mongoose.connection.readyState}`);
+        return {
+          success: false,
+          message: '数据库连接异常',
+          errors: ['Database connection error']
+        };
+      }
+
       const user = await User.findById(userId);
       if (!user) {
+        logger.error(`❌ 用户不存在: ${userId}`);
         return {
           success: false,
           message: '用户不存在',
           errors: ['User not found']
         };
       }
+
+      logger.info(`✅ 用户验证成功: ${userId}`);
 
       const result: ISyncResult = {
         success: true,
@@ -67,30 +84,78 @@ export class SyncService {
 
       // 同步学习记录
       if (syncData.learningRecords && syncData.learningRecords.length > 0) {
-        const learningResult = await this.syncLearningRecords(userId, syncData.learningRecords);
-        result.data!.learningRecords = learningResult;
+        logger.info(`📚 同步 ${syncData.learningRecords.length} 条学习记录`);
+        try {
+          const learningResult = await this.syncLearningRecords(userId, syncData.learningRecords);
+          result.data!.learningRecords = learningResult;
+          logger.info(`✅ 学习记录同步成功: ${learningResult.length} 条`);
+        } catch (error) {
+          logger.error(`❌ 学习记录同步失败:`, error);
+          return {
+            success: false,
+            message: '学习记录同步失败',
+            errors: [error instanceof Error ? error.message : 'Unknown error']
+          };
+        }
       }
 
       // 同步搜索历史
       if (syncData.searchHistory && syncData.searchHistory.length > 0) {
-        const historyResult = await this.syncSearchHistory(userId, syncData.searchHistory);
-        result.data!.searchHistory = historyResult;
+        logger.info(`🔍 同步 ${syncData.searchHistory.length} 条搜索历史`);
+        try {
+          const historyResult = await this.syncSearchHistory(userId, syncData.searchHistory);
+          result.data!.searchHistory = historyResult;
+          logger.info(`✅ 搜索历史同步成功: ${historyResult.length} 条`);
+        } catch (error) {
+          logger.error(`❌ 搜索历史同步失败:`, error);
+          return {
+            success: false,
+            message: '搜索历史同步失败',
+            errors: [error instanceof Error ? error.message : 'Unknown error']
+          };
+        }
       }
 
       // 同步用户设置
       if (syncData.userSettings) {
-        const settingsResult = await this.syncUserSettings(userId, syncData.userSettings);
-        result.data!.userSettings = settingsResult;
+        logger.info(`⚙️ 同步用户设置`);
+        try {
+          const settingsResult = await this.syncUserSettings(userId, syncData.userSettings);
+          result.data!.userSettings = settingsResult;
+          logger.info(`✅ 用户设置同步成功`);
+        } catch (error) {
+          logger.error(`❌ 用户设置同步失败:`, error);
+          return {
+            success: false,
+            message: '用户设置同步失败',
+            errors: [error instanceof Error ? error.message : 'Unknown error']
+          };
+        }
       }
 
       // 更新用户最后同步时间
-      await User.findByIdAndUpdate(
-        userId,
-        { 'auth.lastLoginAt': new Date() }
-      );
+      try {
+        await User.findByIdAndUpdate(
+          userId,
+          { 'auth.lastLoginAt': new Date() }
+        );
+        logger.info(`✅ 用户同步时间更新成功`);
+      } catch (error) {
+        logger.error(`❌ 用户同步时间更新失败:`, error);
+        // 不返回错误，因为这不是关键操作
+      }
 
+      logger.info(`🎉 用户 ${userId} 数据同步完成`);
       return result;
     } catch (error) {
+      logger.error(`❌ 数据上传失败:`, error);
+      logger.error(`❌ 错误详情:`, {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
+        userId,
+        syncDataSize: JSON.stringify(syncData).length
+      });
+      
       return {
         success: false,
         message: '数据上传失败',
@@ -140,62 +205,99 @@ export class SyncService {
 
   // 同步学习记录
   private async syncLearningRecords(userId: string, localRecords: any[]): Promise<any[]> {
-    let userLearningRecord = await UserLearningRecord.findOne({ userId });
-    
-    if (!userLearningRecord) {
-      userLearningRecord = new UserLearningRecord({
-        userId,
-        records: [],
-        totalWords: 0,
-        totalReviews: 0,
-        averageMastery: 0,
-        lastStudyDate: new Date()
-      });
-    }
-
-    const conflicts: any[] = [];
-    const syncedRecords: any[] = [];
-
-    for (const localRecord of localRecords) {
-      const existingRecord = userLearningRecord.records.find(
-        (r: any) => r.word === localRecord.word
-      );
-
-      if (existingRecord) {
-        // 检查冲突
-        if (this.hasConflict(existingRecord, localRecord)) {
-          conflicts.push({
-            word: localRecord.word,
-            local: localRecord,
-            remote: existingRecord
-          });
-          // 默认使用最新的数据
-          const mergedRecord = this.mergeRecords(existingRecord, localRecord);
-          Object.assign(existingRecord, mergedRecord);
-        } else {
-          // 无冲突，使用最新的数据
-          const mergedRecord = this.mergeRecords(existingRecord, localRecord);
-          Object.assign(existingRecord, mergedRecord);
-        }
+    try {
+      logger.info(`📚 开始同步学习记录，用户: ${userId}, 记录数: ${localRecords.length}`);
+      
+      let userLearningRecord = await UserLearningRecord.findOne({ userId });
+      
+      if (!userLearningRecord) {
+        logger.info(`📝 为用户 ${userId} 创建新的学习记录文档`);
+        userLearningRecord = new UserLearningRecord({
+          userId,
+          records: [],
+          totalWords: 0,
+          totalReviews: 0,
+          averageMastery: 0,
+          lastStudyDate: new Date()
+        });
       } else {
-        // 新记录，直接添加
-        userLearningRecord.records.push(localRecord);
-        userLearningRecord.totalWords += 1;
+        logger.info(`📖 找到现有学习记录，当前记录数: ${userLearningRecord.records.length}`);
       }
 
-      syncedRecords.push(localRecord);
-    }
+      const conflicts: any[] = [];
+      const syncedRecords: any[] = [];
 
-    // 更新统计信息
-    if (userLearningRecord.records.length > 0) {
-      const totalMastery = userLearningRecord.records.reduce((sum: number, record: any) => sum + record.mastery, 0);
-      userLearningRecord.averageMastery = Math.round(totalMastery / userLearningRecord.records.length);
-    } else {
-      userLearningRecord.averageMastery = 0;
-    }
-    await userLearningRecord.save();
+      for (let i = 0; i < localRecords.length; i++) {
+        const localRecord = localRecords[i];
+        logger.debug(`🔄 处理第 ${i + 1}/${localRecords.length} 条记录: ${localRecord.word}`);
+        
+        try {
+          // 验证记录格式
+          if (!localRecord.word) {
+            logger.warn(`⚠️ 跳过无效记录（缺少word字段）:`, localRecord);
+            continue;
+          }
 
-    return syncedRecords;
+          const existingRecord = userLearningRecord.records.find(
+            (r: any) => r.word === localRecord.word
+          );
+
+          if (existingRecord) {
+            logger.debug(`🔄 更新现有记录: ${localRecord.word}`);
+            // 检查冲突
+            if (this.hasConflict(existingRecord, localRecord)) {
+              conflicts.push({
+                word: localRecord.word,
+                local: localRecord,
+                remote: existingRecord
+              });
+              logger.debug(`⚠️ 检测到冲突: ${localRecord.word}`);
+            }
+            // 默认使用最新的数据
+            const mergedRecord = this.mergeRecords(existingRecord, localRecord);
+            Object.assign(existingRecord, mergedRecord);
+          } else {
+            logger.debug(`➕ 添加新记录: ${localRecord.word}`);
+            // 新记录，直接添加
+            userLearningRecord.records.push(localRecord);
+            userLearningRecord.totalWords += 1;
+          }
+
+          syncedRecords.push(localRecord);
+        } catch (recordError) {
+          logger.error(`❌ 处理记录失败: ${localRecord.word}`, recordError);
+          // 继续处理其他记录，不中断整个同步过程
+        }
+      }
+
+      // 更新统计信息
+      if (userLearningRecord.records.length > 0) {
+        const totalMastery = userLearningRecord.records.reduce((sum: number, record: any) => sum + (record.mastery || 0), 0);
+        userLearningRecord.averageMastery = Math.round(totalMastery / userLearningRecord.records.length);
+        logger.debug(`📊 更新统计信息: 平均掌握度 ${userLearningRecord.averageMastery}%`);
+      } else {
+        userLearningRecord.averageMastery = 0;
+      }
+
+      logger.info(`💾 保存学习记录到数据库...`);
+      await userLearningRecord.save();
+      logger.info(`✅ 学习记录保存成功，总记录数: ${userLearningRecord.records.length}`);
+
+      if (conflicts.length > 0) {
+        logger.warn(`⚠️ 检测到 ${conflicts.length} 个数据冲突`);
+      }
+
+      return syncedRecords;
+    } catch (error) {
+      logger.error(`❌ 同步学习记录失败:`, error);
+      logger.error(`❌ 错误详情:`, {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
+        userId,
+        recordCount: localRecords.length
+      });
+      throw error;
+    }
   }
 
   // 同步搜索历史

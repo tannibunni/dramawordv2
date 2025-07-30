@@ -198,14 +198,45 @@ class SyncQueue {
       headers['Authorization'] = `Bearer ${token}`;
     }
 
-    const response = await fetch(`${API_BASE_URL}/sync/batch`, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify(data),
-    });
+    try {
+      console.log('🔄 开始批量数据上传...');
+      
+      const response = await fetch(`${API_BASE_URL}/sync/batch`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(data),
+        // 增加超时时间
+        signal: AbortSignal.timeout(30000) // 30秒超时
+      });
 
-    if (!response.ok) {
-      throw new Error(`批量数据上传失败: ${response.status}`);
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`❌ 批量数据上传失败: ${response.status}`, errorText);
+        
+        // 根据错误类型处理
+        if (response.status === 401) {
+          console.error('❌ 认证失败，token可能已过期');
+          // 可以在这里触发重新登录
+          throw new Error('认证失败，请重新登录');
+        } else if (response.status === 500) {
+          console.error('❌ 服务器内部错误，可能是数据库连接问题');
+          throw new Error('服务器内部错误，请稍后重试');
+        } else {
+          throw new Error(`批量数据上传失败: ${response.status} - ${errorText}`);
+        }
+      }
+
+      const result = await response.json();
+      console.log('✅ 批量数据上传成功:', result);
+    } catch (error) {
+      console.error('❌ 批量数据上传异常:', error);
+      
+      // 如果是网络错误，记录详细信息
+      if (error instanceof TypeError && error.message.includes('fetch')) {
+        console.error('❌ 网络连接错误，请检查网络连接');
+      }
+      
+      throw error;
     }
   }
 

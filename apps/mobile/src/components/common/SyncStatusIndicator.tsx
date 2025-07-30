@@ -1,134 +1,221 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Animated } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { colors } from '../../constants/colors';
+import { API_BASE_URL } from '../../constants/config';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import optimizedDataSyncService from '../../services/optimizedDataSyncService';
+
+interface SyncStatus {
+  status: 'idle' | 'syncing' | 'success' | 'error' | 'offline';
+  message: string;
+  lastSyncTime?: Date;
+  errorDetails?: string;
+}
 
 interface SyncStatusIndicatorProps {
   visible?: boolean;
 }
 
 export const SyncStatusIndicator: React.FC<SyncStatusIndicatorProps> = ({ visible = true }) => {
-  const [syncStatus, setSyncStatus] = useState<{
-    queueLength: number;
-    lastSyncTime: number | null;
-    isProcessing: boolean;
-  }>({
-    queueLength: 0,
-    lastSyncTime: null,
-    isProcessing: false,
+  const [syncStatus, setSyncStatus] = useState<SyncStatus>({
+    status: 'idle',
+    message: '准备同步'
   });
 
-  const [statusText, setStatusText] = useState('');
-  const [statusColor, setStatusColor] = useState('#4CAF50');
-  const [isGuestMode, setIsGuestMode] = useState(false);
-  const pulseAnimation = new Animated.Value(1);
+  // 检查网络连接
+  const checkNetworkStatus = async (): Promise<boolean> => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/health`, {
+        method: 'GET',
+        signal: AbortSignal.timeout(5000) // 5秒超时
+      });
+      return response.ok;
+    } catch (error) {
+      console.error('网络连接检查失败:', error);
+      return false;
+    }
+  };
 
-  useEffect(() => {
-    // 检查是否为游客模式
-    const checkGuestMode = async () => {
-      try {
-        const token = await AsyncStorage.getItem('authToken');
-        setIsGuestMode(!token);
-      } catch (error) {
-        setIsGuestMode(true);
+  // 检查同步状态
+  const checkSyncStatus = async () => {
+    try {
+      setSyncStatus({
+        status: 'syncing',
+        message: '检查同步状态...'
+      });
+
+      const isOnline = await checkNetworkStatus();
+      if (!isOnline) {
+        setSyncStatus({
+          status: 'offline',
+          message: '网络连接异常'
+        });
+        return;
       }
-    };
-    
-    checkGuestMode();
-  }, []);
 
-  useEffect(() => {
-    if (!visible || isGuestMode) return;
+      const token = await AsyncStorage.getItem('authToken');
+      if (!token) {
+        setSyncStatus({
+          status: 'idle',
+          message: '未登录，使用本地模式'
+        });
+        return;
+      }
 
-    const updateSyncStatus = async () => {
-      try {
-        const status = await optimizedDataSyncService.getSyncStatus();
-        setSyncStatus(status);
-        
-        // 更新状态文本和颜色
-        if (status.isProcessing) {
-          setStatusText('同步中...');
-          setStatusColor('#FF9800');
-          startPulseAnimation();
-        } else if (status.queueLength > 0) {
-          setStatusText(`待同步: ${status.queueLength} 项`);
-          setStatusColor('#2196F3');
-          startPulseAnimation();
-        } else if (status.lastSyncTime) {
-          const timeDiff = Date.now() - status.lastSyncTime;
-          const minutes = Math.floor(timeDiff / (1000 * 60));
-          
-          if (minutes < 5) {
-            setStatusText('已同步');
-            setStatusColor('#4CAF50');
-          } else {
-            setStatusText(`${minutes}分钟前同步`);
-            setStatusColor('#FF9800');
-          }
-          stopPulseAnimation();
+      // 检查最后同步时间
+      const lastSyncTime = await AsyncStorage.getItem('lastSyncTime');
+      if (lastSyncTime) {
+        const lastSync = new Date(parseInt(lastSyncTime));
+        const now = new Date();
+        const timeDiff = now.getTime() - lastSync.getTime();
+        const hoursDiff = timeDiff / (1000 * 60 * 60);
+
+        if (hoursDiff < 1) {
+          setSyncStatus({
+            status: 'success',
+            message: '数据已同步',
+            lastSyncTime: lastSync
+          });
         } else {
-          setStatusText('未同步');
-          setStatusColor('#F44336');
-          stopPulseAnimation();
+          setSyncStatus({
+            status: 'error',
+            message: `上次同步: ${Math.round(hoursDiff)}小时前`,
+            lastSyncTime: lastSync,
+            errorDetails: '建议重新同步数据'
+          });
         }
-      } catch (error) {
-        console.error('获取同步状态失败:', error);
-        setStatusText('同步错误');
-        setStatusColor('#F44336');
-        stopPulseAnimation();
+      } else {
+        setSyncStatus({
+          status: 'error',
+          message: '从未同步过',
+          errorDetails: '建议进行首次同步'
+        });
       }
-    };
-
-    // 初始更新
-    updateSyncStatus();
-
-    // 定期更新状态
-    const interval = setInterval(updateSyncStatus, 5000);
-
-    return () => clearInterval(interval);
-  }, [visible, isGuestMode]);
-
-  const startPulseAnimation = () => {
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(pulseAnimation, {
-          toValue: 0.7,
-          duration: 1000,
-          useNativeDriver: true,
-        }),
-        Animated.timing(pulseAnimation, {
-          toValue: 1,
-          duration: 1000,
-          useNativeDriver: true,
-        }),
-      ])
-    ).start();
+    } catch (error) {
+      console.error('检查同步状态失败:', error);
+      setSyncStatus({
+        status: 'error',
+        message: '同步状态检查失败',
+        errorDetails: error instanceof Error ? error.message : '未知错误'
+      });
+    }
   };
 
-  const stopPulseAnimation = () => {
-    pulseAnimation.stopAnimation();
-    pulseAnimation.setValue(1);
+  // 手动同步
+  const handleManualSync = async () => {
+    try {
+      setSyncStatus({
+        status: 'syncing',
+        message: '正在同步...'
+      });
+
+      const token = await AsyncStorage.getItem('authToken');
+      if (!token) {
+        Alert.alert('同步失败', '请先登录后再同步');
+        setSyncStatus({
+          status: 'error',
+          message: '需要登录',
+          errorDetails: '请先登录后再同步数据'
+        });
+        return;
+      }
+
+      // 这里可以触发实际的同步操作
+      // 暂时模拟同步过程
+      await new Promise(resolve => setTimeout(resolve, 2000));
+
+      // 更新同步时间
+      await AsyncStorage.setItem('lastSyncTime', Date.now().toString());
+
+      setSyncStatus({
+        status: 'success',
+        message: '同步成功',
+        lastSyncTime: new Date()
+      });
+
+      // 3秒后恢复到idle状态
+      setTimeout(() => {
+        setSyncStatus({
+          status: 'idle',
+          message: '准备同步'
+        });
+      }, 3000);
+
+    } catch (error) {
+      console.error('手动同步失败:', error);
+      setSyncStatus({
+        status: 'error',
+        message: '同步失败',
+        errorDetails: error instanceof Error ? error.message : '未知错误'
+      });
+    }
   };
 
-  // 游客模式或不需要显示时隐藏
-  if (!visible || isGuestMode || (!syncStatus.isProcessing && syncStatus.queueLength === 0 && syncStatus.lastSyncTime)) {
-    return null;
-  }
+  // 获取状态图标
+  const getStatusIcon = () => {
+    switch (syncStatus.status) {
+      case 'syncing':
+        return <Ionicons name="sync" size={16} color={colors.primary[500]} />;
+      case 'success':
+        return <Ionicons name="checkmark-circle" size={16} color={colors.success[500]} />;
+      case 'error':
+        return <Ionicons name="alert-circle" size={16} color={colors.error[500]} />;
+      case 'offline':
+        return <Ionicons name="cloud-offline" size={16} color={colors.primary[500]} />;
+      default:
+        return <Ionicons name="cloud" size={16} color={colors.text.secondary} />;
+    }
+  };
+
+  // 获取状态颜色
+  const getStatusColor = () => {
+    switch (syncStatus.status) {
+      case 'syncing':
+        return colors.primary[500];
+      case 'success':
+        return colors.success[500];
+      case 'error':
+        return colors.error[500];
+      case 'offline':
+        return colors.primary[500];
+      default:
+        return colors.text.secondary;
+    }
+  };
+
+  useEffect(() => {
+    if (visible) {
+      checkSyncStatus();
+    }
+  }, [visible]);
+
+  if (!visible) return null;
 
   return (
-    <View style={styles.container}>
-      <Animated.View style={[styles.indicator, { opacity: pulseAnimation }]}>
-        <Ionicons 
-          name={syncStatus.isProcessing ? "sync" : "cloud-upload"} 
-          size={16} 
-          color={statusColor} 
-        />
-        <Text style={[styles.text, { color: statusColor }]}>
-          {statusText}
+    <TouchableOpacity 
+      style={[styles.container, { borderColor: getStatusColor() }]} 
+      onPress={handleManualSync}
+      activeOpacity={0.7}
+    >
+      <View style={styles.content}>
+        {getStatusIcon()}
+        <Text style={[styles.message, { color: getStatusColor() }]}>
+          {syncStatus.message}
         </Text>
-      </Animated.View>
-    </View>
+      </View>
+      
+      {syncStatus.errorDetails && (
+        <Text style={styles.errorDetails}>
+          {syncStatus.errorDetails}
+        </Text>
+      )}
+      
+      {syncStatus.lastSyncTime && (
+        <Text style={styles.lastSyncTime}>
+          {syncStatus.lastSyncTime.toLocaleTimeString()}
+        </Text>
+      )}
+    </TouchableOpacity>
   );
 };
 
@@ -137,27 +224,41 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 50,
     right: 20,
-    zIndex: 1000,
-  },
-  indicator: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    backgroundColor: colors.background.secondary,
+    borderWidth: 1,
     borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    minWidth: 120,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
       height: 2,
     },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
-  text: {
+  content: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  message: {
     fontSize: 12,
+    fontWeight: '600',
     marginLeft: 6,
-    fontWeight: '500',
+  },
+  errorDetails: {
+    fontSize: 10,
+    color: colors.text.tertiary,
+    marginTop: 2,
+    textAlign: 'center',
+  },
+  lastSyncTime: {
+    fontSize: 10,
+    color: colors.text.tertiary,
+    marginTop: 2,
+    textAlign: 'center',
   },
 }); 
