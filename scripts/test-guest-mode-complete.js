@@ -198,7 +198,25 @@ class GuestModeTester {
       const syncData = {
         learningRecords: [],
         searchHistory: searchHistory,
-        userSettings: {}
+        userSettings: {
+          notifications: {
+            dailyReminder: true,
+            reviewReminder: true,
+            achievementNotification: true
+          },
+          learning: {
+            dailyGoal: 10,
+            reviewInterval: 24,
+            autoPlayAudio: true,
+            showPhonetic: true
+          },
+          privacy: {
+            shareProgress: false,
+            showInLeaderboard: true
+          },
+          theme: 'light',
+          language: 'zh-CN'
+        }
       };
 
       const response = await axios.post(`${this.baseURL}/api/sync/batch`, syncData, {
