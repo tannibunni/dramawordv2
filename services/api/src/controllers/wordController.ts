@@ -728,11 +728,40 @@ export const updateWordProgress = async (req: Request, res: Response) => {
 
     if (!userWord) {
       logger.info(`📝 Creating new vocabulary entry for word: ${searchTerm}`);
-      // 创建新的用户词汇表记录
+      
+      // 先查找或创建对应的CloudWord记录
+      let cloudWord = await CloudWord.findOne({ 
+        word: searchTerm, 
+        language: 'en', 
+        uiLanguage: 'zh-CN' 
+      });
+      
+      if (!cloudWord) {
+        logger.info(`📝 Creating new cloud word for: ${searchTerm}`);
+        // 生成单词数据
+        const generatedData = await generateWordData(searchTerm, 'en', 'zh-CN');
+        cloudWord = new CloudWord({
+          word: searchTerm,
+          language: 'en',
+          uiLanguage: 'zh-CN',
+          phonetic: generatedData.phonetic,
+          definitions: generatedData.definitions,
+          audioUrl: generatedData.audioUrl || '',
+          slangMeaning: generatedData.slangMeaning || null,
+          phraseExplanation: generatedData.phraseExplanation || null,
+          correctedWord: generatedData.correctedWord || searchTerm,
+          searchCount: 1,
+          lastSearched: new Date()
+        });
+        await cloudWord.save();
+        logger.info(`✅ Created new cloud word: ${searchTerm}`);
+      }
+      
+      // 创建新的用户词汇表记录，使用正确的wordId
       userWord = new UserVocabulary({
         userId: userId,
         word: searchTerm,
-        wordId: new mongoose.Types.ObjectId(), // 生成新的ObjectId
+        wordId: cloudWord._id, // 使用正确的CloudWord ID
         language: 'en', // 默认英语
         reviewCount: 0,
         correctCount: 0,
