@@ -1180,14 +1180,14 @@ const ShowsScreen: React.FC = () => {
         
         {/* 内容区域 */}
         <View style={styles.recommendationContent}>
-          {/* 剧集名 */}
-          <Text style={styles.recommendationTitle} numberOfLines={1}>
-            {item.title}
+          {/* 推荐文案作为标题 */}
+          <Text style={styles.recommendationTitle} numberOfLines={2}>
+            {item.recommendation.text}
           </Text>
           
-          {/* 简要介绍 */}
-          <Text style={styles.recommendationDescription} numberOfLines={2}>
-            {item.recommendation.text}
+          {/* 剧集名作为副标题 */}
+          <Text style={styles.recommendationSubtitle} numberOfLines={1}>
+            {item.title}
           </Text>
           
           {/* 类型标签 */}
@@ -2292,6 +2292,13 @@ const styles = StyleSheet.create({
     color: '#1a1a1a',
     marginBottom: 4, // 减小间距
     fontFamily: Platform.OS === 'ios' ? 'SF Pro Display' : 'sans-serif',
+  },
+  recommendationSubtitle: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#666666',
+    marginBottom: 6,
+    fontFamily: Platform.OS === 'ios' ? 'SF Pro Text' : 'sans-serif',
   },
   recommendationDescription: {
     fontSize: 13, // 减小字体大小
