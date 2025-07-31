@@ -1191,8 +1191,6 @@ const ReviewIntroScreen = () => {
             </View>
             <Text style={styles.challengeCardSubtitle}>
               {t('wrong_words_count', { count: wrongWordsCount })}
-              {/* 调试信息 */}
-              <Text style={{ fontSize: 10, color: 'red' }}> (Debug: {wrongWordsCount})</Text>
             </Text>
             <TouchableOpacity 
               style={styles.challengeCardFooter}
