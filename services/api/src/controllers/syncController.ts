@@ -28,7 +28,7 @@ export class SyncController {
                 for (const record of syncData.data) {
                   if (record.word && record.progress) {
                     // 调用现有的单词进度更新API
-                    await this.updateWordProgress({
+                    await SyncController.updateWordProgress({
                       userId,
                       word: record.word,
                       progress: record.progress,
@@ -43,7 +43,7 @@ export class SyncController {
               // 处理词汇表数据
               if (syncData.data && syncData.data.word) {
                 // 调用现有的词汇表添加API
-                await this.addToVocabulary({
+                await SyncController.addToVocabulary({
                   userId,
                   word: syncData.data.word,
                   sourceShow: syncData.data.sourceShow,
