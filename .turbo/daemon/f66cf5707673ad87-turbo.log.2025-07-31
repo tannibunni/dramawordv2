@@ -271,3 +271,33 @@
 2025-07-31T21:10:11.700733Z  WARN turborepo_lib::package_changes_watcher: changed_packages: Ok(Some({WorkspacePackage { name: Root, path: AnchoredSystemPathBuf("") }}))
 2025-07-31T21:10:19.400324Z  WARN turborepo_lib::package_changes_watcher: changed_files: {AnchoredSystemPathBuf("services/api/src/controllers/recommendationController.ts")}
 2025-07-31T21:10:19.400340Z  WARN turborepo_lib::package_changes_watcher: changed_packages: Ok(Some({WorkspacePackage { name: Root, path: AnchoredSystemPathBuf("") }}))
+2025-07-31T21:11:20.898842Z  WARN turborepo_lib::package_changes_watcher: changed_files: {AnchoredSystemPathBuf("scripts/test-recommendations-api.js")}
+2025-07-31T21:11:20.898859Z  WARN turborepo_lib::package_changes_watcher: changed_packages: Ok(Some({WorkspacePackage { name: Root, path: AnchoredSystemPathBuf("") }}))
+2025-07-31T21:11:21.599375Z  WARN turborepo_lib::package_changes_watcher: changed_files: {AnchoredSystemPathBuf("scripts/test-recommendations-api.js")}
+2025-07-31T21:11:21.599398Z  WARN turborepo_lib::package_changes_watcher: changed_packages: Ok(Some({WorkspacePackage { name: Root, path: AnchoredSystemPathBuf("") }}))
+2025-07-31T21:11:44.498705Z  WARN turborepo_lib::package_changes_watcher: changed_files: {AnchoredSystemPathBuf("scripts/test-simple-recommendation.js")}
+2025-07-31T21:11:44.498727Z  WARN turborepo_lib::package_changes_watcher: changed_packages: Ok(Some({WorkspacePackage { name: Root, path: AnchoredSystemPathBuf("") }}))
+2025-07-31T21:11:45.297593Z  WARN turborepo_lib::package_changes_watcher: changed_files: {AnchoredSystemPathBuf("scripts/test-simple-recommendation.js")}
+2025-07-31T21:11:45.297609Z  WARN turborepo_lib::package_changes_watcher: changed_packages: Ok(Some({WorkspacePackage { name: Root, path: AnchoredSystemPathBuf("") }}))
+2025-07-31T21:12:26.497422Z  WARN turborepo_lib::package_changes_watcher: changed_files: {AnchoredSystemPathBuf("docs/RECOMMENDATION_SYSTEM_GUIDE.md")}
+2025-07-31T21:12:26.497446Z  WARN turborepo_lib::package_changes_watcher: changed_packages: Ok(Some({WorkspacePackage { name: Root, path: AnchoredSystemPathBuf("") }}))
+2025-07-31T21:12:27.698418Z  WARN turborepo_lib::package_changes_watcher: changed_files: {AnchoredSystemPathBuf("docs/RECOMMENDATION_SYSTEM_GUIDE.md")}
+2025-07-31T21:12:27.698441Z  WARN turborepo_lib::package_changes_watcher: changed_packages: Ok(Some({WorkspacePackage { name: Root, path: AnchoredSystemPathBuf("") }}))
+2025-07-31T21:12:47.599428Z  WARN turborepo_lib::package_changes_watcher: changed_files: {AnchoredSystemPathBuf("scripts/test-recommendations-api.js"), AnchoredSystemPathBuf("scripts/test-simple-recommendation.js"), AnchoredSystemPathBuf("docs/RECOMMENDATION_SYSTEM_GUIDE.md")}
+2025-07-31T21:12:47.599467Z  WARN turborepo_lib::package_changes_watcher: changed_packages: Ok(Some({WorkspacePackage { name: Root, path: AnchoredSystemPathBuf("") }}))
+2025-07-31T21:38:12.575512Z  WARN turborepo_lib::package_changes_watcher: changed_files: {AnchoredSystemPathBuf("apps/mobile/src/screens/Shows/ShowsScreen.tsx")}
+2025-07-31T21:38:12.579025Z  WARN turborepo_lib::package_changes_watcher: changed_packages: Ok(Some({WorkspacePackage { name: Other("temp-mobile"), path: AnchoredSystemPathBuf("apps/mobile") }}))
+2025-07-31T21:39:00.264346Z  WARN turborepo_lib::package_changes_watcher: changed_files: {AnchoredSystemPathBuf("scripts/manage-recommendations.js")}
+2025-07-31T21:39:00.264373Z  WARN turborepo_lib::package_changes_watcher: changed_packages: Ok(Some({WorkspacePackage { name: Root, path: AnchoredSystemPathBuf("") }}))
+2025-07-31T21:39:01.564661Z  WARN turborepo_lib::package_changes_watcher: changed_files: {AnchoredSystemPathBuf("scripts/manage-recommendations.js")}
+2025-07-31T21:39:01.564685Z  WARN turborepo_lib::package_changes_watcher: changed_packages: Ok(Some({WorkspacePackage { name: Root, path: AnchoredSystemPathBuf("") }}))
+2025-07-31T21:39:26.062661Z  WARN turborepo_lib::package_changes_watcher: changed_files: {AnchoredSystemPathBuf("apps/mobile/src/screens/Shows/ShowsScreen.tsx"), AnchoredSystemPathBuf("scripts/manage-recommendations.js")}
+2025-07-31T21:39:26.062677Z  WARN turborepo_lib::package_changes_watcher: changed_packages: Ok(Some({WorkspacePackage { name: Other("temp-mobile"), path: AnchoredSystemPathBuf("apps/mobile") }, WorkspacePackage { name: Root, path: AnchoredSystemPathBuf("") }}))
+2025-07-31T21:39:26.085329Z  WARN turborepo_lib::package_changes_watcher: hashes are the same, no need to rerun
+2025-07-31T21:40:30.561687Z  WARN turborepo_lib::package_changes_watcher: changed_files: {AnchoredSystemPathBuf("apps/mobile/src/screens/Shows/ShowsScreen.tsx")}
+2025-07-31T21:40:30.561710Z  WARN turborepo_lib::package_changes_watcher: changed_packages: Ok(Some({WorkspacePackage { name: Other("temp-mobile"), path: AnchoredSystemPathBuf("apps/mobile") }}))
+2025-07-31T21:40:30.679764Z  WARN turborepo_lib::package_changes_watcher: hashes are the same, no need to rerun
+2025-07-31T21:41:54.559335Z  WARN turborepo_lib::package_changes_watcher: changed_files: {AnchoredSystemPathBuf("scripts/generate-recommendations-with-chatgpt.js")}
+2025-07-31T21:41:54.559378Z  WARN turborepo_lib::package_changes_watcher: changed_packages: Ok(Some({WorkspacePackage { name: Root, path: AnchoredSystemPathBuf("") }}))
+2025-07-31T21:41:55.960048Z  WARN turborepo_lib::package_changes_watcher: changed_files: {AnchoredSystemPathBuf("scripts/generate-recommendations-with-chatgpt.js")}
+2025-07-31T21:41:55.960063Z  WARN turborepo_lib::package_changes_watcher: changed_packages: Ok(Some({WorkspacePackage { name: Root, path: AnchoredSystemPathBuf("") }}))

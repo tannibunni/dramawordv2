@@ -26,6 +26,7 @@ import WordbookEditModal from '../../components/wordbook/WordbookEditModal';
 import { Swipeable } from 'react-native-gesture-handler';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAppLanguage } from '../../context/AppLanguageContext';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // 推荐内容类型定义
 interface RecommendationCard {
@@ -96,6 +97,8 @@ const ShowsScreen: React.FC = () => {
       'ongoing': isChinese ? '连载中' : 'Ongoing',
       'finished': isChinese ? '已完结' : 'Finished',
       'no_overview': isChinese ? '暂无剧情简介' : 'No overview available',
+      'overview': isChinese ? '剧情简介' : 'Overview',
+      'loading_overview': isChinese ? '加载剧情简介中...' : 'Loading overview...',
       'collected_words': isChinese ? '收藏的单词' : 'Collected Words',
       'no_collected_words': isChinese ? '暂无收藏单词' : 'No collected words',
       'word_details': isChinese ? '单词详情' : 'Word Details',
@@ -227,6 +230,8 @@ const ShowsScreen: React.FC = () => {
   // 推荐详情页面状态
   const [selectedRecommendation, setSelectedRecommendation] = useState<RecommendationCard | null>(null);
   const [showRecommendationDetail, setShowRecommendationDetail] = useState(false);
+  const [recommendationOverview, setRecommendationOverview] = useState<string>('');
+  const [recommendationLoading, setRecommendationLoading] = useState(false);
 
   // 初始化推荐数据
   useEffect(() => {
@@ -236,21 +241,36 @@ const ShowsScreen: React.FC = () => {
   }, [filter]);
 
   // 打开推荐详情页面
-  const openRecommendationDetail = (recommendation: RecommendationCard) => {
+  const openRecommendationDetail = async (recommendation: RecommendationCard) => {
     setSelectedRecommendation(recommendation);
     setShowRecommendationDetail(true);
+    setRecommendationLoading(true);
+    setRecommendationOverview('');
+    
+    try {
+      // 获取TMDB剧集详情，包括剧情简介
+      const showDetails = await TMDBService.getShowDetails(recommendation.tmdbShowId, appLanguage === 'zh-CN' ? 'zh-CN' : 'en-US');
+      setRecommendationOverview(showDetails.overview || '');
+    } catch (error) {
+      console.error('Failed to get show overview:', error);
+      setRecommendationOverview('');
+    } finally {
+      setRecommendationLoading(false);
+    }
   };
 
   // 关闭推荐详情页面
   const closeRecommendationDetail = () => {
     setShowRecommendationDetail(false);
     setSelectedRecommendation(null);
+    setRecommendationOverview('');
+    setRecommendationLoading(false);
   };
 
   const initializeRecommendations = async () => {
     setRecommendationsLoading(true);
     try {
-      // 优先从数据库获取推荐内容
+      // 优先从数据库获取推荐内容（限制数量，避免数据量过大）
       const response = await fetch(`${process.env.EXPO_PUBLIC_API_URL || 'https://dramawordv2.onrender.com'}/api/recommendations/smart?language=${appLanguage === 'zh-CN' ? 'zh-CN' : 'en-US'}&limit=12`);
       
       if (response.ok) {
@@ -273,14 +293,44 @@ const ShowsScreen: React.FC = () => {
           setRecommendations(recommendations);
           setFilteredRecommendations(recommendations);
           arrangeWaterfallLayout(recommendations);
+          
+          // 缓存推荐数据到本地存储
+          try {
+            await AsyncStorage.setItem('cachedRecommendations', JSON.stringify({
+              data: recommendations,
+              timestamp: Date.now(),
+              language: appLanguage
+            }));
+          } catch (cacheError) {
+            console.log('缓存推荐数据失败:', cacheError);
+          }
+          
           return;
         }
       }
       
-      // 如果数据库没有数据，从TMDB获取热门剧集作为备用
+      // 如果数据库没有数据，尝试从本地缓存获取
+      try {
+        const cachedData = await AsyncStorage.getItem('cachedRecommendations');
+        if (cachedData) {
+          const parsed = JSON.parse(cachedData);
+          // 检查缓存是否过期（24小时）
+          if (Date.now() - parsed.timestamp < 24 * 60 * 60 * 1000 && parsed.language === appLanguage) {
+            console.log('使用缓存的推荐数据');
+            setRecommendations(parsed.data);
+            setFilteredRecommendations(parsed.data);
+            arrangeWaterfallLayout(parsed.data);
+            return;
+          }
+        }
+      } catch (cacheError) {
+        console.log('读取缓存失败:', cacheError);
+      }
+      
+      // 如果数据库没有数据且缓存过期，从TMDB获取热门剧集作为备用
       console.log('数据库中没有推荐内容，使用TMDB备用数据');
       const popularShowsResponse = await TMDBService.getPopularShows(1, appLanguage === 'zh-CN' ? 'zh-CN' : 'en-US');
-      const popularShows = popularShowsResponse.results.slice(0, 12);
+      const popularShows = popularShowsResponse.results.slice(0, 12); // 限制数量
       
       const recommendations: RecommendationCard[] = popularShows.map((show, index) => {
         const baseTexts = [
@@ -338,7 +388,7 @@ const ShowsScreen: React.FC = () => {
       
     } catch (error) {
       console.error('Failed to fetch recommendations:', error);
-      // 使用硬编码备用数据
+      // 使用硬编码备用数据（最小化数据量）
       const fallbackRecommendations: RecommendationCard[] = [
         {
           id: '1',
@@ -354,18 +404,6 @@ const ShowsScreen: React.FC = () => {
         },
         {
           id: '2',
-          tmdbShowId: 1399,
-          title: 'Game of Thrones',
-          originalTitle: '权力的游戏',
-          backdropUrl: 'https://image.tmdb.org/t/p/w780/u3bZgnGQ9T01sWNhyveQz0wH0Hl.jpg',
-          posterUrl: 'https://image.tmdb.org/t/p/w92/u3bZgnGQ9T01sWNhyveQz0wH0Hl.jpg',
-          recommendation: {
-            text: '看完后我的英语口语突飞猛进，姐妹们冲！史诗级奇幻巨作，每一集都让人欲罢不能！',
-            difficulty: 'hard'
-          }
-        },
-        {
-          id: '3',
           tmdbShowId: 1668,
           title: 'Friends',
           originalTitle: '老友记',
@@ -1421,6 +1459,29 @@ const ShowsScreen: React.FC = () => {
                 {selectedRecommendation.recommendation.text}
               </Text>
               
+              {/* 剧情简介 */}
+              <View style={styles.recommendationOverviewSection}>
+                <Text style={styles.recommendationOverviewTitle}>
+                  {t('overview')}
+                </Text>
+                {recommendationLoading ? (
+                  <View style={styles.recommendationOverviewLoading}>
+                    <ActivityIndicator size="small" color="#7C3AED" />
+                    <Text style={styles.recommendationOverviewLoadingText}>
+                      {t('loading_overview')}
+                    </Text>
+                  </View>
+                ) : recommendationOverview ? (
+                  <Text style={styles.recommendationOverviewText}>
+                    {recommendationOverview}
+                  </Text>
+                ) : (
+                  <Text style={styles.recommendationOverviewEmpty}>
+                    {t('no_overview')}
+                  </Text>
+                )}
+              </View>
+              
               {/* 类型标签 */}
               <View style={styles.recommendationDetailTags}>
                 {(() => {
@@ -2376,6 +2437,40 @@ const styles = StyleSheet.create({
   },
   recommendationDetailAddButtonTextAdded: {
     color: '#64748B',
+  },
+  // 推荐详情剧情简介样式
+  recommendationOverviewSection: {
+    marginBottom: 20,
+  },
+  recommendationOverviewTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#1a1a1a',
+    marginBottom: 12,
+    fontFamily: Platform.OS === 'ios' ? 'SF Pro Display' : 'sans-serif',
+  },
+  recommendationOverviewLoading: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 16,
+  },
+  recommendationOverviewLoadingText: {
+    fontSize: 14,
+    color: '#666666',
+    marginLeft: 8,
+    fontFamily: Platform.OS === 'ios' ? 'SF Pro Text' : 'sans-serif',
+  },
+  recommendationOverviewText: {
+    fontSize: 16,
+    color: '#666666',
+    lineHeight: 24,
+    fontFamily: Platform.OS === 'ios' ? 'SF Pro Text' : 'sans-serif',
+  },
+  recommendationOverviewEmpty: {
+    fontSize: 14,
+    color: '#999999',
+    fontStyle: 'italic',
+    fontFamily: Platform.OS === 'ios' ? 'SF Pro Text' : 'sans-serif',
   },
   showHeaderButtons: {
     flexDirection: 'row',
