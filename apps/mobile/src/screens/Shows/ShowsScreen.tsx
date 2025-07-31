@@ -221,88 +221,133 @@ const ShowsScreen: React.FC = () => {
     closeWordbookEdit();
   };
 
+  // 推荐内容加载状态
+  const [recommendationsLoading, setRecommendationsLoading] = useState(false);
+
   // 初始化推荐数据
-  const initializeRecommendations = () => {
-    const mockRecommendations: RecommendationCard[] = [
-      {
-        id: '1',
-        tmdbShowId: 1396,
-        title: 'Breaking Bad',
-        originalTitle: '绝命毒师',
-        backdropUrl: 'https://image.tmdb.org/t/p/w780/ggFHVNu6YYI5L9pCfOacjizRGt.jpg',
-        posterUrl: 'https://image.tmdb.org/t/p/w92/ggFHVNu6YYI5L9pCfOacjizRGt.jpg',
-        recommendation: {
-          text: '这部剧真的绝了！学英语必备，强烈安利！2024年必看犯罪剧巅峰之作！',
-          difficulty: 'hard'
+  useEffect(() => {
+    if (filter === 'recommendations' && recommendations.length === 0) {
+      initializeRecommendations();
+    }
+  }, [filter]);
+
+  const initializeRecommendations = async () => {
+    setRecommendationsLoading(true);
+    try {
+      // 从TMDB获取热门剧集
+      const popularShowsResponse = await TMDBService.getPopularShows(1, appLanguage === 'zh-CN' ? 'zh-CN' : 'en-US');
+      const popularShows = popularShowsResponse.results.slice(0, 12); // 取前12个热门剧集
+      
+      // 生成推荐内容
+      const recommendations: RecommendationCard[] = popularShows.map((show, index) => {
+        // 根据剧集类型和热度生成推荐文案
+        const getRecommendationText = (show: TMDBShow) => {
+          const baseTexts = [
+            '这部剧真的绝了！学英语必备，强烈安利！',
+            '看完后我的英语口语突飞猛进，姐妹们冲！',
+            '学英语必看！对话简单清晰，新手友好！',
+            '这部剧拯救了我的英语听力，强烈推荐！',
+            '被这部剧治愈了，顺便还学了超多实用词汇！',
+            '商务英语必备，职场对话太实用了！',
+            '2024年必看神剧，每一集都让人欲罢不能！',
+            '经典神作，看完后久久不能平静！',
+            '治愈系必看剧集，轻松愉快的下饭剧！',
+            '悬疑氛围感拉满，紧张刺激的剧情！',
+            '家庭喜剧神作，温暖人心的故事！',
+            '律政剧经典之作，智慧与正义的较量！'
+          ];
+          
+          // 根据剧集类型添加特定描述
+          let specificText = '';
+          if (show.genre_ids?.includes(35)) { // 喜剧
+            specificText = '，轻松幽默的喜剧神作！';
+          } else if (show.genre_ids?.includes(80)) { // 犯罪
+            specificText = '，犯罪剧巅峰之作！';
+          } else if (show.genre_ids?.includes(18)) { // 剧情
+            specificText = '，剧情深度探讨人性！';
+          } else if (show.genre_ids?.includes(9648)) { // 悬疑
+            specificText = '，悬疑推理烧脑神作！';
+          } else {
+            specificText = '，不容错过的经典剧集！';
+          }
+          
+          return baseTexts[index % baseTexts.length] + specificText;
+        };
+        
+        // 根据剧集类型和评分确定难度
+        const getDifficulty = (show: TMDBShow): 'easy' | 'medium' | 'hard' => {
+          if (show.genre_ids?.includes(35)) return 'easy'; // 喜剧通常较简单
+          if (show.vote_average > 8.5) return 'hard'; // 高分剧集通常较复杂
+          if (show.vote_average > 7.5) return 'medium';
+          return 'easy';
+        };
+        
+        return {
+          id: show.id.toString(),
+          tmdbShowId: show.id,
+          title: show.name,
+          originalTitle: show.original_name,
+          backdropUrl: TMDBService.getImageUrl(show.backdrop_path, 'w780'),
+          posterUrl: TMDBService.getImageUrl(show.poster_path, 'w92'),
+          recommendation: {
+            text: getRecommendationText(show),
+            difficulty: getDifficulty(show)
+          }
+        };
+      });
+      
+      setRecommendations(recommendations);
+      setFilteredRecommendations(recommendations);
+      arrangeWaterfallLayout(recommendations);
+      
+    } catch (error) {
+      console.error('Failed to fetch recommendations from TMDB:', error);
+      // 如果TMDB API失败，使用备用数据
+      const fallbackRecommendations: RecommendationCard[] = [
+        {
+          id: '1',
+          tmdbShowId: 1396,
+          title: 'Breaking Bad',
+          originalTitle: '绝命毒师',
+          backdropUrl: 'https://image.tmdb.org/t/p/w780/ggFHVNu6YYI5L9pCfOacjizRGt.jpg',
+          posterUrl: 'https://image.tmdb.org/t/p/w92/ggFHVNu6YYI5L9pCfOacjizRGt.jpg',
+          recommendation: {
+            text: '这部剧真的绝了！学英语必备，强烈安利！2024年必看犯罪剧巅峰之作！',
+            difficulty: 'hard'
+          }
+        },
+        {
+          id: '2',
+          tmdbShowId: 1399,
+          title: 'Game of Thrones',
+          originalTitle: '权力的游戏',
+          backdropUrl: 'https://image.tmdb.org/t/p/w780/u3bZgnGQ9T01sWNhyveQz0wH0Hl.jpg',
+          posterUrl: 'https://image.tmdb.org/t/p/w92/u3bZgnGQ9T01sWNhyveQz0wH0Hl.jpg',
+          recommendation: {
+            text: '看完后我的英语口语突飞猛进，姐妹们冲！史诗级奇幻巨作，每一集都让人欲罢不能！',
+            difficulty: 'hard'
+          }
+        },
+        {
+          id: '3',
+          tmdbShowId: 1668,
+          title: 'Friends',
+          originalTitle: '老友记',
+          backdropUrl: 'https://image.tmdb.org/t/p/w780/f496cm9enuEsZkSPzCwnTESEK5s.jpg',
+          posterUrl: 'https://image.tmdb.org/t/p/w92/f496cm9enuEsZkSPzCwnTESEK5s.jpg',
+          recommendation: {
+            text: '学英语必看！对话简单清晰，新手友好，治愈系经典神剧！',
+            difficulty: 'medium'
+          }
         }
-      },
-      {
-        id: '2',
-        tmdbShowId: 1399,
-        title: 'Game of Thrones',
-        originalTitle: '权力的游戏',
-        backdropUrl: 'https://image.tmdb.org/t/p/w780/u3bZgnGQ9T01sWNhyveQz0wH0Hl.jpg',
-        posterUrl: 'https://image.tmdb.org/t/p/w92/u3bZgnGQ9T01sWNhyveQz0wH0Hl.jpg',
-        recommendation: {
-          text: '看完后我的英语口语突飞猛进，姐妹们冲！史诗级奇幻巨作，每一集都让人欲罢不能！',
-          difficulty: 'hard'
-        }
-      },
-      {
-        id: '3',
-        tmdbShowId: 1668,
-        title: 'Friends',
-        originalTitle: '老友记',
-        backdropUrl: 'https://image.tmdb.org/t/p/w780/f496cm9enuEsZkSPzCwnTESEK5s.jpg',
-        posterUrl: 'https://image.tmdb.org/t/p/w92/f496cm9enuEsZkSPzCwnTESEK5s.jpg',
-        recommendation: {
-          text: '学英语必看！对话简单清晰，新手友好，治愈系经典神剧！',
-          difficulty: 'medium'
-        }
-      },
-      {
-        id: '4',
-        tmdbShowId: 1398,
-        title: 'The Office',
-        originalTitle: '办公室',
-        backdropUrl: 'https://via.placeholder.com/780x439/4A5568/FFFFFF?text=The+Office',
-        posterUrl: 'https://via.placeholder.com/92x138/4A5568/FFFFFF?text=Office',
-        recommendation: {
-          text: '这部剧拯救了我的英语听力，强烈推荐，轻松愉快的下饭剧！',
-          difficulty: 'easy'
-        }
-      },
-      {
-        id: '5',
-        tmdbShowId: 1397,
-        title: 'Modern Family',
-        originalTitle: '摩登家庭',
-        backdropUrl: 'https://via.placeholder.com/780x439/805AD5/FFFFFF?text=Modern+Family',
-        posterUrl: 'https://via.placeholder.com/92x138/805AD5/FFFFFF?text=Modern',
-        recommendation: {
-          text: '被这部剧治愈了，顺便还学了超多实用词汇，家庭喜剧神作！',
-          difficulty: 'medium'
-        }
-      },
-      {
-        id: '6',
-        tmdbShowId: 1395,
-        title: 'Suits',
-        originalTitle: '金装律师',
-        backdropUrl: 'https://via.placeholder.com/780x439/38A169/FFFFFF?text=Suits',
-        posterUrl: 'https://via.placeholder.com/92x138/38A169/FFFFFF?text=Suits',
-        recommendation: {
-          text: '商务英语必备，职场对话太实用了，律政剧经典之作！',
-          difficulty: 'hard'
-        }
-      }
-    ];
-    
-    setRecommendations(mockRecommendations);
-    setFilteredRecommendations(mockRecommendations);
-    
-    // 初始化瀑布流布局
-    arrangeWaterfallLayout(mockRecommendations);
+      ];
+      
+      setRecommendations(fallbackRecommendations);
+      setFilteredRecommendations(fallbackRecommendations);
+      arrangeWaterfallLayout(fallbackRecommendations);
+    } finally {
+      setRecommendationsLoading(false);
+    }
   };
   
   // 瀑布流布局函数
@@ -1084,29 +1129,41 @@ const ShowsScreen: React.FC = () => {
               styles.addToShowlistButton,
               isAlreadyAdded && styles.addToShowlistButtonAdded
             ]}
-            onPress={() => {
+            onPress={async () => {
               if (!isAlreadyAdded) {
-                // 创建TMDBShow对象并添加到剧单
-                const tmdbShow: TMDBShow = {
-                  id: item.tmdbShowId,
-                  name: item.title,
-                  original_name: item.originalTitle,
-                  overview: '',
-                  poster_path: item.posterUrl.split('/').pop() || '',
-                  backdrop_path: item.backdropUrl.split('/').pop() || '',
-                  vote_average: 0,
-                  vote_count: 0,
-                  first_air_date: '',
-                  last_air_date: '',
-                  status: 'Returning Series',
-                  type: 'show',
-                  genre_ids: [],
-                  popularity: 0,
-                  original_language: 'en',
-                  origin_country: ['US'],
-                };
-                addShowToWatching(tmdbShow);
-                Alert.alert('成功', '已添加到剧单！');
+                try {
+                  // 从TMDB获取完整的剧集信息
+                  const showDetails = await TMDBService.getShowDetails(item.tmdbShowId, appLanguage === 'zh-CN' ? 'zh-CN' : 'en-US');
+                  
+                  // 使用完整的TMDB数据添加到剧单
+                  addShowToWatching(showDetails, () => {
+                    Alert.alert('成功', '已添加到剧单！');
+                  });
+                } catch (error) {
+                  console.error('Failed to get show details:', error);
+                  // 如果获取详情失败，使用推荐卡片的基本信息
+                  const basicShow: TMDBShow = {
+                    id: item.tmdbShowId,
+                    name: item.title,
+                    original_name: item.originalTitle,
+                    overview: item.recommendation.text,
+                    poster_path: item.posterUrl.split('/').pop() || '',
+                    backdrop_path: item.backdropUrl.split('/').pop() || '',
+                    vote_average: 0,
+                    vote_count: 0,
+                    first_air_date: '',
+                    last_air_date: '',
+                    status: 'Returning Series',
+                    type: 'show',
+                    genre_ids: [],
+                    popularity: 0,
+                    original_language: 'en',
+                    origin_country: ['US'],
+                  };
+                  addShowToWatching(basicShow, () => {
+                    Alert.alert('成功', '已添加到剧单！');
+                  });
+                }
               } else {
                 Alert.alert('提示', '该剧集已在剧单中');
               }
@@ -1281,7 +1338,12 @@ const ShowsScreen: React.FC = () => {
       {/* 推荐内容瀑布流 */}
       {filter === 'recommendations' && searchResults.length === 0 && searchText.length === 0 && (
         <ScrollView style={styles.list} contentContainerStyle={styles.listContent}>
-          {filteredRecommendations.length > 0 ? (
+          {recommendationsLoading ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color={colors.primary[500]} />
+              <Text style={styles.loadingText}>正在加载推荐内容...</Text>
+            </View>
+          ) : filteredRecommendations.length > 0 ? (
             renderWaterfallLayout()
           ) : (
             <View style={styles.emptyContainer}>
@@ -2107,6 +2169,19 @@ const styles = StyleSheet.create({
   },
   addToShowlistButtonTextAdded: {
     color: '#718096',
+  },
+  // 加载状态样式
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 60,
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: colors.neutral[600],
+    fontFamily: Platform.OS === 'ios' ? 'SF Pro Text' : 'sans-serif',
   },
   showHeaderButtons: {
     flexDirection: 'row',
