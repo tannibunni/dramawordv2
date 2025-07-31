@@ -333,33 +333,76 @@ const ShowsScreen: React.FC = () => {
       const popularShows = popularShowsResponse.results.slice(0, 12); // 限制数量
       
       const recommendations: RecommendationCard[] = popularShows.map((show, index) => {
-        const baseTexts = [
-          '这部剧真的绝了！学英语必备，强烈安利！',
-          '看完后我的英语口语突飞猛进，姐妹们冲！',
-          '学英语必看！对话简单清晰，新手友好！',
-          '这部剧拯救了我的英语听力，强烈推荐！',
-          '被这部剧治愈了，顺便还学了超多实用词汇！',
-          '商务英语必备，职场对话太实用了！',
-          '2024年必看神剧，每一集都让人欲罢不能！',
-          '经典神作，看完后久久不能平静！',
-          '治愈系必看剧集，轻松愉快的下饭剧！',
-          '悬疑氛围感拉满，紧张刺激的剧情！',
-          '家庭喜剧神作，温暖人心的故事！',
-          '律政剧经典之作，智慧与正义的较量！'
-        ];
-        
-        let specificText = '';
-        if (show.genre_ids?.includes(35)) {
-          specificText = '，轻松幽默的喜剧神作！';
-        } else if (show.genre_ids?.includes(80)) {
-          specificText = '，犯罪剧巅峰之作！';
-        } else if (show.genre_ids?.includes(18)) {
-          specificText = '，剧情深度探讨人性！';
-        } else if (show.genre_ids?.includes(9648)) {
-          specificText = '，悬疑推理烧脑神作！';
-        } else {
-          specificText = '，不容错过的经典剧集！';
-        }
+        // 智能生成推荐文案
+        const generateRecommendationText = (show: TMDBShow, language: string): string => {
+          const isChinese = language === 'zh-CN';
+          
+          // 根据评分和类型生成个性化推荐
+          const rating = show.vote_average;
+          const genres = show.genre_ids || [];
+          const year = new Date(show.first_air_date).getFullYear();
+          
+          // 评分等级
+          let ratingLevel = '';
+          if (rating >= 9.0) {
+            ratingLevel = isChinese ? '神级' : 'Masterpiece';
+          } else if (rating >= 8.5) {
+            ratingLevel = isChinese ? '高分' : 'Highly Rated';
+          } else if (rating >= 8.0) {
+            ratingLevel = isChinese ? '优秀' : 'Excellent';
+          } else {
+            ratingLevel = isChinese ? '值得一看' : 'Worth Watching';
+          }
+          
+          // 根据类型生成推荐文案
+          let genreRecommendation = '';
+          if (genres.includes(35)) { // 喜剧
+            genreRecommendation = isChinese 
+              ? '轻松幽默的喜剧，学英语必备！对话简单清晰，新手友好'
+              : 'Light-hearted comedy perfect for English learning! Simple dialogues, beginner-friendly';
+          } else if (genres.includes(80)) { // 犯罪
+            genreRecommendation = isChinese 
+              ? '犯罪剧巅峰之作，紧张刺激的剧情！学英语的同时体验精彩故事'
+              : 'Crime drama masterpiece with thrilling plots! Learn English while enjoying amazing stories';
+          } else if (genres.includes(18)) { // 剧情
+            genreRecommendation = isChinese 
+              ? '深度剧情剧，探讨人性！英语表达丰富，适合进阶学习'
+              : 'Deep drama exploring human nature! Rich English expressions, perfect for advanced learners';
+          } else if (genres.includes(9648)) { // 悬疑
+            genreRecommendation = isChinese 
+              ? '悬疑推理神作，烧脑剧情！英语词汇专业，挑战你的理解能力'
+              : 'Mystery thriller masterpiece with mind-bending plots! Professional vocabulary, challenges your comprehension';
+          } else if (genres.includes(10751)) { // 家庭
+            genreRecommendation = isChinese 
+              ? '温暖家庭剧，治愈系必看！日常英语对话，实用性强'
+              : 'Heartwarming family drama, must-watch! Daily English conversations, highly practical';
+          } else {
+            genreRecommendation = isChinese 
+              ? '不容错过的经典剧集！学英语的同时享受精彩内容'
+              : 'Classic series not to be missed! Enjoy great content while learning English';
+          }
+          
+          // 年份标签
+          const yearLabel = isChinese ? `${year}年` : `${year}`;
+          
+          // 组合推荐文案
+          const templates = [
+            isChinese 
+              ? `${ratingLevel}${yearLabel}必看！${genreRecommendation}`
+              : `${ratingLevel} ${yearLabel} Must-Watch! ${genreRecommendation}`,
+            isChinese 
+              ? `${genreRecommendation}，${ratingLevel}评分${rating.toFixed(1)}分！`
+              : `${genreRecommendation}, ${ratingLevel} rating ${rating.toFixed(1)}!`,
+            isChinese 
+              ? `学英语必备神剧！${genreRecommendation}，强烈安利`
+              : `Essential for English learning! ${genreRecommendation}, highly recommended`,
+            isChinese 
+              ? `${yearLabel}年度神作！${genreRecommendation}，看完英语突飞猛进`
+              : `${yearLabel} Masterpiece! ${genreRecommendation}, boost your English skills`
+          ];
+          
+          return templates[index % templates.length];
+        };
         
         const getDifficulty = (show: TMDBShow): 'easy' | 'medium' | 'hard' => {
           if (show.genre_ids?.includes(35)) return 'easy';
@@ -376,7 +419,7 @@ const ShowsScreen: React.FC = () => {
           backdropUrl: TMDBService.getImageUrl(show.backdrop_path, 'w780'),
           posterUrl: TMDBService.getImageUrl(show.poster_path, 'w92'),
           recommendation: {
-            text: baseTexts[index % baseTexts.length] + specificText,
+            text: generateRecommendationText(show, appLanguage),
             difficulty: getDifficulty(show)
           }
         };
@@ -394,11 +437,13 @@ const ShowsScreen: React.FC = () => {
           id: '1',
           tmdbShowId: 1396,
           title: 'Breaking Bad',
-          originalTitle: '绝命毒师',
+          originalTitle: 'Breaking Bad',
           backdropUrl: 'https://image.tmdb.org/t/p/w780/ggFHVNu6YYI5L9pCfOacjizRGt.jpg',
           posterUrl: 'https://image.tmdb.org/t/p/w92/ggFHVNu6YYI5L9pCfOacjizRGt.jpg',
           recommendation: {
-            text: '这部剧真的绝了！学英语必备，强烈安利！2024年必看犯罪剧巅峰之作！',
+            text: appLanguage === 'zh-CN' 
+              ? '神级2008年必看！犯罪剧巅峰之作，紧张刺激的剧情！学英语的同时体验精彩故事'
+              : 'Masterpiece 2008 Must-Watch! Crime drama masterpiece with thrilling plots! Learn English while enjoying amazing stories',
             difficulty: 'hard'
           }
         },
@@ -406,12 +451,14 @@ const ShowsScreen: React.FC = () => {
           id: '2',
           tmdbShowId: 1668,
           title: 'Friends',
-          originalTitle: '老友记',
+          originalTitle: 'Friends',
           backdropUrl: 'https://image.tmdb.org/t/p/w780/f496cm9enuEsZkSPzCwnTESEK5s.jpg',
           posterUrl: 'https://image.tmdb.org/t/p/w92/f496cm9enuEsZkSPzCwnTESEK5s.jpg',
           recommendation: {
-            text: '学英语必看！对话简单清晰，新手友好，治愈系经典神剧！',
-            difficulty: 'medium'
+            text: appLanguage === 'zh-CN'
+              ? '学英语必备神剧！轻松幽默的喜剧，学英语必备！对话简单清晰，新手友好，强烈安利'
+              : 'Essential for English learning! Light-hearted comedy perfect for English learning! Simple dialogues, beginner-friendly, highly recommended',
+            difficulty: 'easy'
           }
         }
       ];
