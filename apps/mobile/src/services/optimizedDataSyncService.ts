@@ -241,6 +241,12 @@ class SyncQueue {
     });
 
     if (!response.ok) {
+      if (response.status === 401) {
+        console.error('❌ 认证失败，清除无效token');
+        await AsyncStorage.removeItem('authToken');
+        await AsyncStorage.removeItem('userData');
+        throw new Error('认证失败，请重新登录');
+      }
       throw new Error(`实时数据上传失败: ${response.status}`);
     }
   }
@@ -284,8 +290,10 @@ class SyncQueue {
         
         // 根据错误类型处理
         if (response.status === 401) {
-          console.error('❌ 认证失败，token可能已过期');
-          // 可以在这里触发重新登录
+          console.error('❌ 认证失败，token可能已过期，清除无效token');
+          // 清除无效的token
+          await AsyncStorage.removeItem('authToken');
+          await AsyncStorage.removeItem('userData');
           throw new Error('认证失败，请重新登录');
         } else if (response.status === 500) {
           console.error('❌ 服务器内部错误，可能是数据库连接问题');
@@ -333,6 +341,12 @@ class SyncQueue {
     });
 
     if (!response.ok) {
+      if (response.status === 401) {
+        console.error('❌ 认证失败，清除无效token');
+        await AsyncStorage.removeItem('authToken');
+        await AsyncStorage.removeItem('userData');
+        throw new Error('认证失败，请重新登录');
+      }
       throw new Error(`缓存数据上传失败: ${response.status}`);
     }
 
