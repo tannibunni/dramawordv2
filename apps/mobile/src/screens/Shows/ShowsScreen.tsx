@@ -63,7 +63,6 @@ const ShowsScreen: React.FC = () => {
     const translations = {
       'search_shows': isChinese ? '搜索剧集...' : 'Search shows...',
       'search_wordbooks': isChinese ? '搜索单词本...' : 'Search wordbooks...',
-      'search_recommendations': isChinese ? '搜索推荐...' : 'Search recommendations...',
       'all': isChinese ? '全部' : 'All',
       'plan_to_watch': isChinese ? '想看' : 'Plan to Watch',
       'watching': isChinese ? '观看中' : 'Watching',
@@ -511,40 +510,7 @@ const ShowsScreen: React.FC = () => {
       try {
         setSearchLoading(true);
         
-        if (filter === 'recommendations') {
-          // 推荐模式：搜索推荐内容
-          const filteredRecommendations = recommendations.filter(rec => 
-            rec.title.toLowerCase().includes(query.toLowerCase()) ||
-            rec.originalTitle.toLowerCase().includes(query.toLowerCase()) ||
-            rec.recommendation.text.toLowerCase().includes(query.toLowerCase())
-          );
-          
-          setFilteredRecommendations(filteredRecommendations);
-          // 更新瀑布流布局
-          arrangeWaterfallLayout(filteredRecommendations);
-          
-          // 将推荐转换为TMDBShow格式以保持兼容性
-          const searchResults = filteredRecommendations.map(rec => ({
-            id: rec.tmdbShowId,
-            name: rec.title,
-            original_name: rec.originalTitle,
-            overview: rec.recommendation.text,
-            poster_path: rec.posterUrl.split('/').pop() || '',
-            backdrop_path: rec.backdropUrl.split('/').pop() || '',
-            vote_average: 0,
-            vote_count: 0,
-            first_air_date: '',
-            last_air_date: '',
-            status: 'Returning Series',
-            type: 'show',
-            genre_ids: [],
-            popularity: 0,
-            original_language: 'en',
-            origin_country: ['US'],
-          } as TMDBShow));
-          
-          setSearchResults(searchResults);
-        } else if (filter === 'wordbooks') {
+        if (filter === 'wordbooks') {
           // 单词本模式：搜索现有的单词本
           const wordbooks = shows.filter(show => show.type === 'wordbook');
           const filteredWordbooks = wordbooks.filter(wordbook => 
@@ -575,7 +541,7 @@ const ShowsScreen: React.FC = () => {
           
           setSearchResults(searchResults);
         } else {
-          // 剧单模式：搜索TMDB剧集
+          // 剧单模式和推荐模式：都搜索TMDB剧集
           const response = await TMDBService.searchShows(query, 1, appLanguage === 'zh-CN' ? 'zh-CN' : 'en-US');
           setSearchResults(response.results);
         }
@@ -599,6 +565,7 @@ const ShowsScreen: React.FC = () => {
     setSearchText('');
     setSearchResults([]);
     if (filter === 'recommendations') {
+      // 恢复显示所有推荐内容
       setFilteredRecommendations(recommendations);
       arrangeWaterfallLayout(recommendations);
     }
@@ -689,7 +656,7 @@ const ShowsScreen: React.FC = () => {
         
         setSearchResults(searchResults);
       } else {
-        // 剧单模式：搜索TMDB剧集
+        // 剧单模式和推荐模式：都搜索TMDB剧集
         const response = await TMDBService.searchShows(query, 1, appLanguage === 'zh-CN' ? 'zh-CN' : 'en-US');
         setSearchResults(response.results);
       }
@@ -1334,7 +1301,6 @@ const ShowsScreen: React.FC = () => {
               ref={searchInputRef}
               style={styles.searchInput}
               placeholder={
-                filter === 'recommendations' ? t('search_recommendations') :
                 filter === 'wordbooks' ? t('search_wordbooks') : 
                 t('search_shows')
               }
@@ -1378,14 +1344,12 @@ const ShowsScreen: React.FC = () => {
         <View style={styles.searchEmptyContainer}>
           <Ionicons name="search-outline" size={64} color={colors.neutral[300]} />
           <Text style={styles.searchEmptyText}>
-            {filter === 'recommendations' ? t('no_recommendations') :
-             filter === 'wordbooks' ? t('no_wordbook_results') : 
+            {filter === 'wordbooks' ? t('no_wordbook_results') : 
              t('no_results')}
           </Text>
           <TouchableOpacity style={styles.searchEmptyButton}>
             <Text style={styles.searchEmptyButtonText}>
-              {filter === 'recommendations' ? t('try_other_keywords') :
-               filter === 'wordbooks' ? t('try_other_wordbook_keywords') : 
+              {filter === 'wordbooks' ? t('try_other_wordbook_keywords') : 
                t('try_other_keywords')}
             </Text>
           </TouchableOpacity>

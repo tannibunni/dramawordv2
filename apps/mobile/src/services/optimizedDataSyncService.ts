@@ -4,7 +4,25 @@ import { API_BASE_URL } from '../constants/config';
 // 获取认证token的辅助函数
 async function getAuthToken(): Promise<string | null> {
   try {
-    return await AsyncStorage.getItem('authToken');
+    // 首先尝试从userData中获取token
+    const userDataString = await AsyncStorage.getItem('userData');
+    if (userDataString) {
+      const userData = JSON.parse(userDataString);
+      if (userData.token) {
+        console.log('✅ 从userData中获取到token');
+        return userData.token;
+      }
+    }
+    
+    // 如果没有找到，尝试从authToken中获取（向后兼容）
+    const authToken = await AsyncStorage.getItem('authToken');
+    if (authToken) {
+      console.log('✅ 从authToken中获取到token');
+      return authToken;
+    }
+    
+    console.log('❌ 未找到认证token');
+    return null;
   } catch (error) {
     console.error('获取认证token失败:', error);
     return null;
@@ -68,7 +86,6 @@ class SyncQueue {
       // 立即处理实时数据
       for (const item of realtimeItems) {
         await this.processItem(item);
-        this.removeFromQueue(item.id);
       }
 
       // 批量处理批量数据
@@ -76,7 +93,6 @@ class SyncQueue {
         const batches = this.chunkArray(batchItems, this.BATCH_SIZE);
         for (const batch of batches) {
           await Promise.all(batch.map(item => this.processItem(item)));
-          batch.forEach(item => this.removeFromQueue(item.id));
         }
       }
 
@@ -84,7 +100,6 @@ class SyncQueue {
       for (const item of cacheItems) {
         if (await this.shouldSyncCache(item)) {
           await this.processItem(item);
-          this.removeFromQueue(item.id);
         }
       }
     } catch (error) {
@@ -100,6 +115,8 @@ class SyncQueue {
   }
 
   private async processItem(item: SyncItem): Promise<void> {
+    console.log(`🔄 开始处理同步项: ${item.id} (类型: ${item.type}, 重试次数: ${item.retryCount}/${item.maxRetries})`);
+    
     try {
       switch (item.type) {
         case 'realtime':
@@ -111,9 +128,15 @@ class SyncQueue {
         case 'cache':
           await this.uploadCacheData(item.data);
           break;
+        default:
+          throw new Error(`未知的同步类型: ${item.type}`);
       }
+      
+      console.log(`✅ 同步项处理成功: ${item.id}`);
+      // 成功后从队列中移除
+      this.removeFromQueue(item.id);
     } catch (error) {
-      console.error(`处理同步项失败: ${item.id}`, error);
+      console.error(`❌ 处理同步项失败: ${item.id} (类型: ${item.type})`, error);
       
       // 重试机制
       if (item.retryCount < item.maxRetries) {
@@ -121,9 +144,21 @@ class SyncQueue {
         item.timestamp = Date.now();
         // 指数退避
         const delay = Math.pow(2, item.retryCount) * 1000;
-        setTimeout(() => this.add(item), delay);
+        console.log(`🔄 准备重试同步项: ${item.id} (第${item.retryCount}次重试，延迟${delay}ms)`);
+        
+        // 先移除当前项，然后重新添加
+        this.removeFromQueue(item.id);
+        setTimeout(() => {
+          console.log(`🔄 重新添加同步项到队列: ${item.id}`);
+          this.add(item);
+        }, delay);
       } else {
-        console.error(`同步项 ${item.id} 达到最大重试次数`);
+        console.error(`❌ 同步项 ${item.id} 达到最大重试次数 (${item.maxRetries})，从队列中移除`);
+        // 达到最大重试次数后，从队列中移除
+        this.removeFromQueue(item.id);
+        
+        // 记录失败的同步项到本地存储，以便后续分析
+        this.logFailedSyncItem(item, error);
       }
     }
   }
@@ -132,6 +167,35 @@ class SyncQueue {
     const index = this.queue.findIndex(item => item.id === id);
     if (index > -1) {
       this.queue.splice(index, 1);
+    }
+  }
+
+  private async logFailedSyncItem(item: SyncItem, error: any): Promise<void> {
+    try {
+      const failedItems = await AsyncStorage.getItem('failed_sync_items');
+      const failedItemsArray = failedItems ? JSON.parse(failedItems) : [];
+      
+      const failedItem = {
+        id: item.id,
+        type: item.type,
+        timestamp: Date.now(),
+        retryCount: item.retryCount,
+        maxRetries: item.maxRetries,
+        error: error?.message || error?.toString() || 'Unknown error',
+        data: item.data
+      };
+      
+      failedItemsArray.push(failedItem);
+      
+      // 只保留最近100个失败的同步项
+      if (failedItemsArray.length > 100) {
+        failedItemsArray.splice(0, failedItemsArray.length - 100);
+      }
+      
+      await AsyncStorage.setItem('failed_sync_items', JSON.stringify(failedItemsArray));
+      console.log(`📝 已记录失败的同步项: ${item.id}`);
+    } catch (logError) {
+      console.error('记录失败同步项时出错:', logError);
     }
   }
 
@@ -201,13 +265,18 @@ class SyncQueue {
     try {
       console.log('🔄 开始批量数据上传...');
       
+      // 使用兼容的超时机制
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30秒超时
+      
       const response = await fetch(`${API_BASE_URL}/sync/batch`, {
         method: 'POST',
         headers,
         body: JSON.stringify(data),
-        // 增加超时时间
-        signal: AbortSignal.timeout(30000) // 30秒超时
+        signal: controller.signal
       });
+      
+      clearTimeout(timeoutId);
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -411,6 +480,27 @@ export class OptimizedDataSyncService {
   // 清除同步队列
   async clearSyncQueue(): Promise<void> {
     await AsyncStorage.removeItem(this.STORAGE_KEYS.SYNC_QUEUE);
+  }
+
+  // 获取失败的同步项列表（用于调试）
+  async getFailedSyncItems(): Promise<any[]> {
+    try {
+      const failedItems = await AsyncStorage.getItem('failed_sync_items');
+      return failedItems ? JSON.parse(failedItems) : [];
+    } catch (error) {
+      console.error('获取失败同步项时出错:', error);
+      return [];
+    }
+  }
+
+  // 清除失败的同步项记录
+  async clearFailedSyncItems(): Promise<void> {
+    try {
+      await AsyncStorage.removeItem('failed_sync_items');
+      console.log('已清除失败的同步项记录');
+    } catch (error) {
+      console.error('清除失败同步项记录时出错:', error);
+    }
   }
 }
 
