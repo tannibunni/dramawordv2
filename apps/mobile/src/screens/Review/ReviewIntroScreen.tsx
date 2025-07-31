@@ -194,6 +194,13 @@ const ReviewIntroScreen = () => {
         return;
       }
       
+      // 检查是否有经验值增益标记，如果有则跳过刷新
+      const gainData = await AsyncStorage.getItem('experienceGain');
+      if (gainData) {
+        experienceLogger.info('检测到经验值增益标记，跳过用户统计刷新');
+        return;
+      }
+      
       await loadUserStats();
     };
     
@@ -455,6 +462,34 @@ const ReviewIntroScreen = () => {
                   });
                   // 立即清理经验值增益标记，防止重复计算
                   await AsyncStorage.removeItem('experienceGain');
+                  
+                  // 设置状态并返回，避免后续重复处理
+                  const backendStats = {
+                    experience: finalExperience,
+                    level: result.data.level || 1,
+                    collectedWords: vocabulary?.length || 0,
+                    contributedWords: result.data.contributedWords || 0,
+                    totalReviews: result.data.totalReviews || 0,
+                    currentStreak: result.data.currentStreak || 0
+                  };
+                  
+                  userDataLogger.info('从后端加载统计数据（经验值增益处理）', backendStats);
+                  setUserStats(backendStats);
+                  setAnimatedExperience(backendStats.experience);
+                  setAnimatedCollectedWords(vocabulary?.length || 0);
+                  setAnimatedContributedWords(backendStats.contributedWords);
+                  
+                  // 初始化进度条 - 只有在没有动画进行时才初始化
+                  if (!isProgressBarAnimating) {
+                    const progressPercentage = getExperienceProgressFromStats(backendStats);
+                    const progressValue = progressPercentage / 100;
+                    progressBarAnimation.setValue(progressValue);
+                    setProgressBarValue(progressValue);
+                    setHasInitializedProgressBar(true);
+                  }
+                  
+                  await AsyncStorage.setItem('userStats', JSON.stringify(backendStats));
+                  return;
                 }
                 
                 const backendStats = {
