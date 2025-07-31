@@ -27,6 +27,19 @@ import { Swipeable } from 'react-native-gesture-handler';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAppLanguage } from '../../context/AppLanguageContext';
 
+// 推荐内容类型定义
+interface RecommendationCard {
+  id: string;
+  tmdbShowId: number;
+  title: string;
+  originalTitle: string;
+  backdropUrl: string;
+  posterUrl: string;
+  recommendation: {
+    text: string;
+    difficulty: 'easy' | 'medium' | 'hard';
+  };
+}
 
 const { width } = Dimensions.get('window');
 
@@ -49,6 +62,7 @@ const ShowsScreen: React.FC = () => {
     const translations = {
       'search_shows': isChinese ? '搜索剧集...' : 'Search shows...',
       'search_wordbooks': isChinese ? '搜索单词本...' : 'Search wordbooks...',
+      'search_recommendations': isChinese ? '搜索推荐...' : 'Search recommendations...',
       'all': isChinese ? '全部' : 'All',
       'plan_to_watch': isChinese ? '想看' : 'Plan to Watch',
       'watching': isChinese ? '观看中' : 'Watching',
@@ -57,6 +71,7 @@ const ShowsScreen: React.FC = () => {
       'no_results': isChinese ? '没有找到相关剧集' : 'No shows found',
       'try_other_keywords': isChinese ? '尝试其他关键词' : 'Try other keywords',
       'no_shows': isChinese ? '暂无剧集数据，请搜索添加' : 'No shows yet, search to add',
+      'no_recommendations': isChinese ? '暂无推荐内容' : 'No recommendations yet',
       'current_filter': isChinese ? '当前筛选' : 'Current filter',
       'shows_count': isChinese ? '{count} 个剧集' : '{count} shows',
       'watching_status': isChinese ? '观看中' : 'Watching',
@@ -76,6 +91,7 @@ const ShowsScreen: React.FC = () => {
       'search_failed': isChinese ? '搜索剧集失败，请稍后重试' : 'Search failed, please try again later',
       'error': isChinese ? '错误' : 'Error',
       'add': isChinese ? '添加' : 'Add',
+      'add_to_showlist': isChinese ? '加入剧单' : 'Add to Showlist',
       'already_added': isChinese ? '已添加' : 'Already Added',
       'ongoing': isChinese ? '连载中' : 'Ongoing',
       'finished': isChinese ? '已完结' : 'Finished',
@@ -87,6 +103,7 @@ const ShowsScreen: React.FC = () => {
       'create_wordbook': isChinese ? '创建单词本' : 'Create Wordbook',
       'no_wordbook_results': isChinese ? '没有找到相关单词本' : 'No wordbooks found',
       'try_other_wordbook_keywords': isChinese ? '尝试其他关键词' : 'Try other keywords',
+      'recommendations_tab': isChinese ? '推荐' : 'Recommendations',
       'shows_tab': isChinese ? '剧单' : 'Shows',
       'wordbooks_tab': isChinese ? '单词本' : 'Wordbooks',
       'not_completed': isChinese ? '未看' : 'Not Watched',
@@ -107,7 +124,7 @@ const ShowsScreen: React.FC = () => {
   const [searchResults, setSearchResults] = useState<TMDBShow[]>([]);
   const [selectedShow, setSelectedShow] = useState<Show | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
-  const [filter, setFilter] = useState<'shows' | 'wordbooks'>('shows');
+  const [filter, setFilter] = useState<'recommendations' | 'shows' | 'wordbooks'>('recommendations');
   const [showStatusFilter, setShowStatusFilter] = useState<'all' | 'not_completed' | 'completed'>('all');
   const [searchLoading, setSearchLoading] = useState(false);
   const [isOverviewExpanded, setIsOverviewExpanded] = useState(false);
@@ -124,6 +141,10 @@ const ShowsScreen: React.FC = () => {
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const searchInputRef = useRef<TextInput>(null);
   const [showCheckmark, setShowCheckmark] = useState(false);
+  
+  // 推荐相关状态
+  const [recommendations, setRecommendations] = useState<RecommendationCard[]>([]);
+  const [filteredRecommendations, setFilteredRecommendations] = useState<RecommendationCard[]>([]);
 
   // Robust modal close handlers
   const closeShowDetailModal = () => {
@@ -196,7 +217,89 @@ const ShowsScreen: React.FC = () => {
     closeWordbookEdit();
   };
 
+  // 初始化推荐数据
+  const initializeRecommendations = () => {
+    const mockRecommendations: RecommendationCard[] = [
+      {
+        id: '1',
+        tmdbShowId: 1396,
+        title: 'Breaking Bad',
+        originalTitle: '绝命毒师',
+        backdropUrl: 'https://image.tmdb.org/t/p/w780/ggFHVNu6YYI5L9pCfOacjizRGt.jpg',
+        posterUrl: 'https://image.tmdb.org/t/p/w92/ggFHVNu6YYI5L9pCfOacjizRGt.jpg',
+        recommendation: {
+          text: '这部剧真的绝了！学英语必备，强烈安利！',
+          difficulty: 'hard'
+        }
+      },
+      {
+        id: '2',
+        tmdbShowId: 1399,
+        title: 'Game of Thrones',
+        originalTitle: '权力的游戏',
+        backdropUrl: 'https://image.tmdb.org/t/p/w780/u3bZgnGQ9T01sWNhyveQz0wH0Hl.jpg',
+        posterUrl: 'https://image.tmdb.org/t/p/w92/u3bZgnGQ9T01sWNhyveQz0wH0Hl.jpg',
+        recommendation: {
+          text: '看完后我的英语口语突飞猛进，姐妹们冲！',
+          difficulty: 'hard'
+        }
+      },
+      {
+        id: '3',
+        tmdbShowId: 1668,
+        title: 'Friends',
+        originalTitle: '老友记',
+        backdropUrl: 'https://image.tmdb.org/t/p/w780/f496cm9enuEsZkSPzCwnTESEK5s.jpg',
+        posterUrl: 'https://image.tmdb.org/t/p/w92/f496cm9enuEsZkSPzCwnTESEK5s.jpg',
+        recommendation: {
+          text: '学英语必看！对话简单清晰，新手友好',
+          difficulty: 'medium'
+        }
+      },
+      {
+        id: '4',
+        tmdbShowId: 1398,
+        title: 'The Office',
+        originalTitle: '办公室',
+        backdropUrl: 'https://via.placeholder.com/780x439/4A5568/FFFFFF?text=The+Office',
+        posterUrl: 'https://via.placeholder.com/92x138/4A5568/FFFFFF?text=Office',
+        recommendation: {
+          text: '这部剧拯救了我的英语听力，强烈推荐',
+          difficulty: 'easy'
+        }
+      },
+      {
+        id: '5',
+        tmdbShowId: 1397,
+        title: 'Modern Family',
+        originalTitle: '摩登家庭',
+        backdropUrl: 'https://via.placeholder.com/780x439/805AD5/FFFFFF?text=Modern+Family',
+        posterUrl: 'https://via.placeholder.com/92x138/805AD5/FFFFFF?text=Modern',
+        recommendation: {
+          text: '被这部剧治愈了，顺便还学了超多实用词汇',
+          difficulty: 'medium'
+        }
+      },
+      {
+        id: '6',
+        tmdbShowId: 1395,
+        title: 'Suits',
+        originalTitle: '金装律师',
+        backdropUrl: 'https://via.placeholder.com/780x439/38A169/FFFFFF?text=Suits',
+        posterUrl: 'https://via.placeholder.com/92x138/38A169/FFFFFF?text=Suits',
+        recommendation: {
+          text: '商务英语必备，职场对话太实用了',
+          difficulty: 'hard'
+        }
+      }
+    ];
+    
+    setRecommendations(mockRecommendations);
+    setFilteredRecommendations(mockRecommendations);
+  };
+
   useEffect(() => {
+    initializeRecommendations();
     filterShows();
     // 测试单词匹配逻辑
     testWordMatching();
@@ -217,7 +320,36 @@ const ShowsScreen: React.FC = () => {
       try {
         setSearchLoading(true);
         
-        if (filter === 'wordbooks') {
+        if (filter === 'recommendations') {
+          // 推荐模式：搜索推荐内容
+          const filteredRecommendations = recommendations.filter(rec => 
+            rec.title.toLowerCase().includes(query.toLowerCase()) ||
+            rec.originalTitle.toLowerCase().includes(query.toLowerCase()) ||
+            rec.recommendation.text.toLowerCase().includes(query.toLowerCase())
+          );
+          
+          // 将推荐转换为TMDBShow格式以保持兼容性
+          const searchResults = filteredRecommendations.map(rec => ({
+            id: rec.tmdbShowId,
+            name: rec.title,
+            original_name: rec.originalTitle,
+            overview: rec.recommendation.text,
+            poster_path: rec.posterUrl.split('/').pop() || '',
+            backdrop_path: rec.backdropUrl.split('/').pop() || '',
+            vote_average: 0,
+            vote_count: 0,
+            first_air_date: '',
+            last_air_date: '',
+            status: 'Returning Series',
+            type: 'show',
+            genre_ids: [],
+            popularity: 0,
+            original_language: 'en',
+            origin_country: ['US'],
+          } as TMDBShow));
+          
+          setSearchResults(searchResults);
+        } else if (filter === 'wordbooks') {
           // 单词本模式：搜索现有的单词本
           const wordbooks = shows.filter(show => show.type === 'wordbook');
           const filteredWordbooks = wordbooks.filter(wordbook => 
@@ -395,7 +527,11 @@ const ShowsScreen: React.FC = () => {
 
   const filterShows = () => {
     let filtered = shows;
-    if (filter === 'shows') {
+    if (filter === 'recommendations') {
+      // 推荐模式：不需要筛选剧集，推荐内容由单独的state管理
+      console.log('🔍 筛选条件: 推荐模式');
+      return;
+    } else if (filter === 'shows') {
       // 先筛选出剧集，排除单词本
       filtered = shows.filter(show => show.type !== 'wordbook');
       
@@ -678,12 +814,31 @@ const ShowsScreen: React.FC = () => {
 
   // 新的iOS风格分段控制器
   const renderSegmentedControl = () => {
+    const isRecommendationsActive = filter === 'recommendations';
     const isShowsActive = filter === 'shows';
     const isWordbooksActive = filter === 'wordbooks';
 
     return (
       <View style={styles.segmentedControlContainer}>
         <View style={styles.segmentedControlBackground}>
+          <TouchableOpacity
+            style={[
+              styles.segmentedControlButton,
+              isRecommendationsActive && styles.segmentedControlButtonActive
+            ]}
+            onPress={() => {
+              setFilter('recommendations');
+            }}
+            activeOpacity={0.8}
+          >
+            <Text style={[
+              styles.segmentedControlText,
+              isRecommendationsActive && styles.segmentedControlTextActive
+            ]}>
+              {t('recommendations_tab')}
+            </Text>
+          </TouchableOpacity>
+          
           <TouchableOpacity
             style={[
               styles.segmentedControlButton,
@@ -814,6 +969,78 @@ const ShowsScreen: React.FC = () => {
 
   const renderFooter = () => null; // 不需要分页
 
+  // 渲染推荐卡片
+  const renderRecommendationCard = ({ item }: { item: RecommendationCard }) => {
+    const isAlreadyAdded = shows.some(s => s.id === item.tmdbShowId);
+    
+    return (
+      <View style={styles.recommendationCard}>
+        {/* 背景图片 */}
+        <Image
+          source={{ uri: item.backdropUrl }}
+          style={styles.recommendationBackdrop}
+          resizeMode="cover"
+        />
+        
+        {/* 海报小图 */}
+        <Image
+          source={{ uri: item.posterUrl }}
+          style={styles.recommendationPoster}
+          resizeMode="cover"
+        />
+        
+        {/* 内容区域 */}
+        <View style={styles.recommendationContent}>
+          <Text style={styles.recommendationTitle}>{item.title}</Text>
+          <Text style={styles.recommendationText}>{item.recommendation.text}</Text>
+          
+          {/* 添加按钮 */}
+          <TouchableOpacity
+            style={[
+              styles.addToShowlistButton,
+              isAlreadyAdded && styles.addToShowlistButtonAdded
+            ]}
+            onPress={() => {
+              if (!isAlreadyAdded) {
+                // 创建TMDBShow对象并添加到剧单
+                const tmdbShow: TMDBShow = {
+                  id: item.tmdbShowId,
+                  name: item.title,
+                  original_name: item.originalTitle,
+                  overview: '',
+                  poster_path: item.posterUrl.split('/').pop() || '',
+                  backdrop_path: item.backdropUrl.split('/').pop() || '',
+                  vote_average: 0,
+                  vote_count: 0,
+                  first_air_date: '',
+                  last_air_date: '',
+                  status: 'Returning Series',
+                  type: 'show',
+                  genre_ids: [],
+                  popularity: 0,
+                  original_language: 'en',
+                  origin_country: ['US'],
+                };
+                addShowToWatching(tmdbShow);
+                Alert.alert('成功', '已添加到剧单！');
+              } else {
+                Alert.alert('提示', '该剧集已在剧单中');
+              }
+            }}
+            activeOpacity={0.8}
+          >
+            <Text style={[
+              styles.addToShowlistButtonText,
+              isAlreadyAdded && styles.addToShowlistButtonTextAdded
+            ]}>
+              {isAlreadyAdded ? t('already_added') : t('add_to_showlist')}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  };
+
 
 
   // 搜索结果渲染
@@ -897,7 +1124,11 @@ const ShowsScreen: React.FC = () => {
             <TextInput
               ref={searchInputRef}
               style={styles.searchInput}
-              placeholder={filter === 'wordbooks' ? t('search_wordbooks') : t('search_shows')}
+              placeholder={
+                filter === 'recommendations' ? t('search_recommendations') :
+                filter === 'wordbooks' ? t('search_wordbooks') : 
+                t('search_shows')
+              }
               placeholderTextColor={colors.neutral[500]}
               value={searchText}
               onChangeText={handleSearchTextChange}
@@ -938,11 +1169,15 @@ const ShowsScreen: React.FC = () => {
         <View style={styles.searchEmptyContainer}>
           <Ionicons name="search-outline" size={64} color={colors.neutral[300]} />
           <Text style={styles.searchEmptyText}>
-            {filter === 'wordbooks' ? t('no_wordbook_results') : t('no_results')}
+            {filter === 'recommendations' ? t('no_recommendations') :
+             filter === 'wordbooks' ? t('no_wordbook_results') : 
+             t('no_results')}
           </Text>
           <TouchableOpacity style={styles.searchEmptyButton}>
             <Text style={styles.searchEmptyButtonText}>
-              {filter === 'wordbooks' ? t('try_other_wordbook_keywords') : t('try_other_keywords')}
+              {filter === 'recommendations' ? t('try_other_keywords') :
+               filter === 'wordbooks' ? t('try_other_wordbook_keywords') : 
+               t('try_other_keywords')}
             </Text>
           </TouchableOpacity>
         </View>
@@ -959,8 +1194,25 @@ const ShowsScreen: React.FC = () => {
         />
       )}
 
+      {/* 推荐内容列表 */}
+      {filter === 'recommendations' && searchResults.length === 0 && searchText.length === 0 && (
+        <FlatList
+          data={filteredRecommendations}
+          renderItem={renderRecommendationCard}
+          keyExtractor={item => item.id}
+          style={styles.list}
+          contentContainerStyle={styles.listContent}
+          ListEmptyComponent={
+            <View style={styles.emptyContainer}>
+              <Ionicons name="heart-outline" size={64} color={colors.neutral[300]} />
+              <Text style={styles.emptyText}>{t('no_recommendations')}</Text>
+            </View>
+          }
+        />
+      )}
+
       {/* 用户剧单列表 */}
-      {searchResults.length === 0 && searchText.length === 0 && (
+      {filter !== 'recommendations' && searchResults.length === 0 && searchText.length === 0 && (
       <FlatList
         data={filteredShows}
         renderItem={renderShowItem}
@@ -1682,6 +1934,76 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: colors.neutral[500],
     marginBottom: 4,
+  },
+  // 推荐卡片样式
+  recommendationCard: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    marginBottom: 12,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 6,
+  },
+  recommendationBackdrop: {
+    width: '100%',
+    height: 200,
+  },
+  recommendationPoster: {
+    position: 'absolute',
+    bottom: 12,
+    right: 12,
+    width: 50,
+    height: 75,
+    borderRadius: 6,
+    borderWidth: 2,
+    borderColor: '#fff',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  recommendationContent: {
+    padding: 16,
+    backgroundColor: '#fff',
+  },
+  recommendationTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 8,
+  },
+  recommendationText: {
+    fontSize: 14,
+    color: '#666',
+    lineHeight: 20,
+    marginBottom: 12,
+  },
+  addToShowlistButton: {
+    backgroundColor: '#7C3AED',
+    borderRadius: 20,
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    alignItems: 'center',
+    shadowColor: '#7C3AED',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  addToShowlistButtonAdded: {
+    backgroundColor: '#E2E8F0',
+  },
+  addToShowlistButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  addToShowlistButtonTextAdded: {
+    color: '#64748B',
   },
   showHeaderButtons: {
     flexDirection: 'row',
