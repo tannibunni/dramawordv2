@@ -1178,12 +1178,19 @@ const ReviewIntroScreen = () => {
           </TouchableOpacity>
 
           {/* 错词挑战词卡 */}
-          <View style={styles.challengeCard}>
+          <TouchableOpacity 
+            style={styles.challengeCard}
+            activeOpacity={0.8} 
+            onPress={() => handlePressChallenge('wrong_words')}
+          >
             <View style={styles.challengeCardHeader}>
               <Ionicons name="alert-circle" size={24} color={colors.primary[500]} />
               <Text style={styles.challengeCardTitle}>{t('wrong_words_challenge')}</Text>
               <TouchableOpacity 
-                onPress={refreshWrongWordsCount}
+                onPress={(e) => {
+                  e.stopPropagation();
+                  refreshWrongWordsCount();
+                }}
                 style={{ marginLeft: 'auto', padding: 4 }}
               >
                 <Ionicons name="refresh" size={16} color={colors.primary[500]} />
@@ -1192,15 +1199,11 @@ const ReviewIntroScreen = () => {
             <Text style={styles.challengeCardSubtitle}>
               {t('wrong_words_count', { count: wrongWordsCount })}
             </Text>
-            <TouchableOpacity 
-              style={styles.challengeCardFooter}
-              activeOpacity={0.8} 
-              onPress={() => handlePressChallenge('wrong_words')}
-            >
+            <View style={styles.challengeCardFooter}>
               <Text style={styles.challengeCardExp}>+20 {t('exp_gained')}</Text>
               <Ionicons name="chevron-forward" size={16} color={colors.primary[500]} />
-            </TouchableOpacity>
-          </View>
+            </View>
+          </TouchableOpacity>
         </ScrollView>
       </View>
       
