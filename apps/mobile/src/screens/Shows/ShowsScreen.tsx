@@ -223,6 +223,10 @@ const ShowsScreen: React.FC = () => {
 
   // 推荐内容加载状态
   const [recommendationsLoading, setRecommendationsLoading] = useState(false);
+  
+  // 推荐详情页面状态
+  const [selectedRecommendation, setSelectedRecommendation] = useState<RecommendationCard | null>(null);
+  const [showRecommendationDetail, setShowRecommendationDetail] = useState(false);
 
   // 初始化推荐数据
   useEffect(() => {
@@ -230,6 +234,18 @@ const ShowsScreen: React.FC = () => {
       initializeRecommendations();
     }
   }, [filter]);
+
+  // 打开推荐详情页面
+  const openRecommendationDetail = (recommendation: RecommendationCard) => {
+    setSelectedRecommendation(recommendation);
+    setShowRecommendationDetail(true);
+  };
+
+  // 关闭推荐详情页面
+  const closeRecommendationDetail = () => {
+    setShowRecommendationDetail(false);
+    setSelectedRecommendation(null);
+  };
 
   const initializeRecommendations = async () => {
     setRecommendationsLoading(true);
@@ -1074,8 +1090,6 @@ const ShowsScreen: React.FC = () => {
 
   // 渲染推荐卡片
   const renderRecommendationCard = ({ item }: { item: RecommendationCard }) => {
-    const isAlreadyAdded = shows.some(s => s.id === item.tmdbShowId);
-    
     // 根据难度生成类型标签
     const getTags = (difficulty: string) => {
       const baseTags = ['剧情'];
@@ -1092,7 +1106,11 @@ const ShowsScreen: React.FC = () => {
     };
     
     return (
-      <View style={styles.recommendationCard}>
+      <TouchableOpacity 
+        style={styles.recommendationCard}
+        onPress={() => openRecommendationDetail(item)}
+        activeOpacity={0.9}
+      >
         {/* 图片区域 - 3:4 纵向比例 */}
         <View style={styles.recommendationImageContainer}>
           <Image
@@ -1122,63 +1140,8 @@ const ShowsScreen: React.FC = () => {
               </View>
             ))}
           </View>
-          
-          {/* 添加到剧单按钮 */}
-          <TouchableOpacity
-            style={[
-              styles.addToShowlistButton,
-              isAlreadyAdded && styles.addToShowlistButtonAdded
-            ]}
-            onPress={async () => {
-              if (!isAlreadyAdded) {
-                try {
-                  // 从TMDB获取完整的剧集信息
-                  const showDetails = await TMDBService.getShowDetails(item.tmdbShowId, appLanguage === 'zh-CN' ? 'zh-CN' : 'en-US');
-                  
-                  // 使用完整的TMDB数据添加到剧单
-                  addShowToWatching(showDetails, () => {
-                    Alert.alert('成功', '已添加到剧单！');
-                  });
-                } catch (error) {
-                  console.error('Failed to get show details:', error);
-                  // 如果获取详情失败，使用推荐卡片的基本信息
-                  const basicShow: TMDBShow = {
-                    id: item.tmdbShowId,
-                    name: item.title,
-                    original_name: item.originalTitle,
-                    overview: item.recommendation.text,
-                    poster_path: item.posterUrl.split('/').pop() || '',
-                    backdrop_path: item.backdropUrl.split('/').pop() || '',
-                    vote_average: 0,
-                    vote_count: 0,
-                    first_air_date: '',
-                    last_air_date: '',
-                    status: 'Returning Series',
-                    type: 'show',
-                    genre_ids: [],
-                    popularity: 0,
-                    original_language: 'en',
-                    origin_country: ['US'],
-                  };
-                  addShowToWatching(basicShow, () => {
-                    Alert.alert('成功', '已添加到剧单！');
-                  });
-                }
-              } else {
-                Alert.alert('提示', '该剧集已在剧单中');
-              }
-            }}
-            activeOpacity={0.8}
-          >
-            <Text style={[
-              styles.addToShowlistButtonText,
-              isAlreadyAdded && styles.addToShowlistButtonTextAdded
-            ]}>
-              {isAlreadyAdded ? t('already_added') : t('add_to_showlist')}
-            </Text>
-          </TouchableOpacity>
         </View>
-      </View>
+      </TouchableOpacity>
     );
   };
 
@@ -1398,6 +1361,129 @@ const ShowsScreen: React.FC = () => {
         }
       />
       )}
+
+      {/* 推荐详情模态框 */}
+      <Modal
+        visible={showRecommendationDetail}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={closeRecommendationDetail}
+      >
+        {selectedRecommendation && (
+          <SafeAreaView style={styles.recommendationDetailContainer}>
+            {/* 关闭按钮 */}
+            <TouchableOpacity
+              style={styles.recommendationDetailCloseButton}
+              onPress={closeRecommendationDetail}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="close" size={24} color="#fff" />
+            </TouchableOpacity>
+            
+            {/* 图片区域 */}
+            <View style={styles.recommendationDetailImageContainer}>
+              <Image
+                source={{ uri: selectedRecommendation.backdropUrl }}
+                style={styles.recommendationDetailImage}
+                resizeMode="cover"
+              />
+            </View>
+            
+            {/* 内容区域 */}
+            <ScrollView style={styles.recommendationDetailContent}>
+              {/* 剧集标题 */}
+              <Text style={styles.recommendationDetailTitle}>
+                {selectedRecommendation.title}
+              </Text>
+              
+              {/* 推荐文案 */}
+              <Text style={styles.recommendationDetailDescription}>
+                {selectedRecommendation.recommendation.text}
+              </Text>
+              
+              {/* 类型标签 */}
+              <View style={styles.recommendationDetailTags}>
+                {(() => {
+                  const baseTags = ['剧情'];
+                  let tags = baseTags;
+                  switch (selectedRecommendation.recommendation.difficulty) {
+                    case 'easy':
+                      tags = [...baseTags, '轻松', '入门'];
+                      break;
+                    case 'medium':
+                      tags = [...baseTags, '悬疑', '推理'];
+                      break;
+                    case 'hard':
+                      tags = [...baseTags, '复杂', '烧脑'];
+                      break;
+                  }
+                  return tags.map((tag, index) => (
+                    <View key={index} style={styles.recommendationDetailTag}>
+                      <Text style={styles.recommendationDetailTagText}>#{tag}</Text>
+                    </View>
+                  ));
+                })()}
+              </View>
+              
+              {/* 添加按钮 */}
+              <TouchableOpacity
+                style={[
+                  styles.recommendationDetailAddButton,
+                  shows.some(s => s.id === selectedRecommendation.tmdbShowId) && styles.recommendationDetailAddButtonAdded
+                ]}
+                onPress={async () => {
+                  const isAlreadyAdded = shows.some(s => s.id === selectedRecommendation.tmdbShowId);
+                  if (!isAlreadyAdded) {
+                    try {
+                      // 从TMDB获取完整的剧集信息
+                      const showDetails = await TMDBService.getShowDetails(selectedRecommendation.tmdbShowId, appLanguage === 'zh-CN' ? 'zh-CN' : 'en-US');
+                      
+                      // 使用完整的TMDB数据添加到剧单
+                      addShowToWatching(showDetails, () => {
+                        Alert.alert('成功', '已添加到剧单！');
+                      });
+                    } catch (error) {
+                      console.error('Failed to get show details:', error);
+                      // 如果获取详情失败，使用推荐卡片的基本信息
+                      const basicShow: TMDBShow = {
+                        id: selectedRecommendation.tmdbShowId,
+                        name: selectedRecommendation.title,
+                        original_name: selectedRecommendation.originalTitle,
+                        overview: selectedRecommendation.recommendation.text,
+                        poster_path: selectedRecommendation.posterUrl.split('/').pop() || '',
+                        backdrop_path: selectedRecommendation.backdropUrl.split('/').pop() || '',
+                        vote_average: 0,
+                        vote_count: 0,
+                        first_air_date: '',
+                        last_air_date: '',
+                        status: 'Returning Series',
+                        type: 'show',
+                        genre_ids: [],
+                        popularity: 0,
+                        original_language: 'en',
+                        origin_country: ['US'],
+                      };
+                      addShowToWatching(basicShow, () => {
+                        Alert.alert('成功', '已添加到剧单！');
+                      });
+                    }
+                  } else {
+                    Alert.alert('提示', '该剧集已在剧单中');
+                  }
+                }}
+                activeOpacity={0.8}
+              >
+                <Text style={[
+                  styles.recommendationDetailAddButtonText,
+                  shows.some(s => s.id === selectedRecommendation.tmdbShowId) && styles.recommendationDetailAddButtonTextAdded
+                ]}>
+                  {shows.some(s => s.id === selectedRecommendation.tmdbShowId) ? t('already_added') : t('add_to_showlist')}
+                </Text>
+              </TouchableOpacity>
+            </ScrollView>
+          </SafeAreaView>
+        )}
+      </Modal>
 
       {/* 剧集详情模态框 */}
       <Modal
@@ -2186,6 +2272,90 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: colors.neutral[600],
     fontFamily: Platform.OS === 'ios' ? 'SF Pro Text' : 'sans-serif',
+  },
+  // 推荐详情页面样式
+  recommendationDetailContainer: {
+    flex: 1,
+    backgroundColor: '#fff',
+  },
+  recommendationDetailCloseButton: {
+    position: 'absolute',
+    top: 50,
+    right: 20,
+    zIndex: 10,
+    backgroundColor: 'rgba(0,0,0,0.3)',
+    borderRadius: 20,
+    padding: 8,
+  },
+  recommendationDetailImageContainer: {
+    width: '100%',
+    height: 300,
+  },
+  recommendationDetailImage: {
+    width: '100%',
+    height: '100%',
+  },
+  recommendationDetailContent: {
+    flex: 1,
+    padding: 20,
+  },
+  recommendationDetailTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#1a1a1a',
+    marginBottom: 16,
+    fontFamily: Platform.OS === 'ios' ? 'SF Pro Display' : 'sans-serif',
+  },
+  recommendationDetailDescription: {
+    fontSize: 16,
+    color: '#666666',
+    lineHeight: 24,
+    marginBottom: 20,
+    fontFamily: Platform.OS === 'ios' ? 'SF Pro Text' : 'sans-serif',
+  },
+  recommendationDetailTags: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginBottom: 30,
+  },
+  recommendationDetailTag: {
+    backgroundColor: '#f0f4f8',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    marginRight: 8,
+    marginBottom: 8,
+  },
+  recommendationDetailTagText: {
+    fontSize: 14,
+    color: '#4a5568',
+    fontWeight: '500',
+    fontFamily: Platform.OS === 'ios' ? 'SF Pro Text' : 'sans-serif',
+  },
+  recommendationDetailAddButton: {
+    backgroundColor: '#7C3AED',
+    borderRadius: 24,
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    alignItems: 'center',
+    shadowColor: '#7C3AED',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  recommendationDetailAddButtonAdded: {
+    backgroundColor: '#e2e8f0',
+    shadowColor: '#cbd5e0',
+  },
+  recommendationDetailAddButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+    fontFamily: Platform.OS === 'ios' ? 'SF Pro Text' : 'sans-serif',
+  },
+  recommendationDetailAddButtonTextAdded: {
+    color: '#64748B',
   },
   showHeaderButtons: {
     flexDirection: 'row',
