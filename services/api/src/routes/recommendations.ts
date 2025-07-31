@@ -1,6 +1,6 @@
 import express from 'express';
 import { RecommendationController } from '../controllers/recommendationController';
-import { auth } from '../middleware/auth';
+import { authenticateToken } from '../middleware/auth';
 
 const router = express.Router();
 
@@ -11,9 +11,9 @@ router.get('/stats', RecommendationController.getRecommendationStats);
 router.get('/:id', RecommendationController.getRecommendationById);
 
 // 管理接口 - 需要认证
-router.post('/', auth, RecommendationController.createRecommendation);
-router.put('/:id', auth, RecommendationController.updateRecommendation);
-router.delete('/:id', auth, RecommendationController.deleteRecommendation);
-router.post('/batch-import', auth, RecommendationController.batchImportRecommendations);
+router.post('/', authenticateToken, RecommendationController.createRecommendation);
+router.put('/:id', authenticateToken, RecommendationController.updateRecommendation);
+router.delete('/:id', authenticateToken, RecommendationController.deleteRecommendation);
+router.post('/batch-import', authenticateToken, RecommendationController.batchImportRecommendations);
 
 export default router; 
