@@ -232,7 +232,7 @@ const ShowsScreen: React.FC = () => {
         backdropUrl: 'https://image.tmdb.org/t/p/w780/ggFHVNu6YYI5L9pCfOacjizRGt.jpg',
         posterUrl: 'https://image.tmdb.org/t/p/w92/ggFHVNu6YYI5L9pCfOacjizRGt.jpg',
         recommendation: {
-          text: '这部剧真的绝了！学英语必备，强烈安利！',
+          text: '这部剧真的绝了！学英语必备，强烈安利！2024年必看犯罪剧巅峰之作！',
           difficulty: 'hard'
         }
       },
@@ -244,7 +244,7 @@ const ShowsScreen: React.FC = () => {
         backdropUrl: 'https://image.tmdb.org/t/p/w780/u3bZgnGQ9T01sWNhyveQz0wH0Hl.jpg',
         posterUrl: 'https://image.tmdb.org/t/p/w92/u3bZgnGQ9T01sWNhyveQz0wH0Hl.jpg',
         recommendation: {
-          text: '看完后我的英语口语突飞猛进，姐妹们冲！',
+          text: '看完后我的英语口语突飞猛进，姐妹们冲！史诗级奇幻巨作，每一集都让人欲罢不能！',
           difficulty: 'hard'
         }
       },
@@ -256,7 +256,7 @@ const ShowsScreen: React.FC = () => {
         backdropUrl: 'https://image.tmdb.org/t/p/w780/f496cm9enuEsZkSPzCwnTESEK5s.jpg',
         posterUrl: 'https://image.tmdb.org/t/p/w92/f496cm9enuEsZkSPzCwnTESEK5s.jpg',
         recommendation: {
-          text: '学英语必看！对话简单清晰，新手友好',
+          text: '学英语必看！对话简单清晰，新手友好，治愈系经典神剧！',
           difficulty: 'medium'
         }
       },
@@ -268,7 +268,7 @@ const ShowsScreen: React.FC = () => {
         backdropUrl: 'https://via.placeholder.com/780x439/4A5568/FFFFFF?text=The+Office',
         posterUrl: 'https://via.placeholder.com/92x138/4A5568/FFFFFF?text=Office',
         recommendation: {
-          text: '这部剧拯救了我的英语听力，强烈推荐',
+          text: '这部剧拯救了我的英语听力，强烈推荐，轻松愉快的下饭剧！',
           difficulty: 'easy'
         }
       },
@@ -280,7 +280,7 @@ const ShowsScreen: React.FC = () => {
         backdropUrl: 'https://via.placeholder.com/780x439/805AD5/FFFFFF?text=Modern+Family',
         posterUrl: 'https://via.placeholder.com/92x138/805AD5/FFFFFF?text=Modern',
         recommendation: {
-          text: '被这部剧治愈了，顺便还学了超多实用词汇',
+          text: '被这部剧治愈了，顺便还学了超多实用词汇，家庭喜剧神作！',
           difficulty: 'medium'
         }
       },
@@ -292,7 +292,7 @@ const ShowsScreen: React.FC = () => {
         backdropUrl: 'https://via.placeholder.com/780x439/38A169/FFFFFF?text=Suits',
         posterUrl: 'https://via.placeholder.com/92x138/38A169/FFFFFF?text=Suits',
         recommendation: {
-          text: '商务英语必备，职场对话太实用了',
+          text: '商务英语必备，职场对话太实用了，律政剧经典之作！',
           difficulty: 'hard'
         }
       }
@@ -1031,29 +1031,54 @@ const ShowsScreen: React.FC = () => {
   const renderRecommendationCard = ({ item }: { item: RecommendationCard }) => {
     const isAlreadyAdded = shows.some(s => s.id === item.tmdbShowId);
     
+    // 根据难度生成类型标签
+    const getTags = (difficulty: string) => {
+      const baseTags = ['剧情'];
+      switch (difficulty) {
+        case 'easy':
+          return [...baseTags, '轻松', '入门'];
+        case 'medium':
+          return [...baseTags, '悬疑', '推理'];
+        case 'hard':
+          return [...baseTags, '复杂', '烧脑'];
+        default:
+          return baseTags;
+      }
+    };
+    
     return (
       <View style={styles.recommendationCard}>
-        {/* 图片区域 */}
+        {/* 图片区域 - 3:4 纵向比例 */}
         <View style={styles.recommendationImageContainer}>
           <Image
             source={{ uri: item.backdropUrl }}
             style={styles.recommendationImage}
             resizeMode="cover"
           />
-          {/* 海报小图叠加 */}
-          <Image
-            source={{ uri: item.posterUrl }}
-            style={styles.recommendationPoster}
-            resizeMode="cover"
-          />
         </View>
         
         {/* 内容区域 */}
         <View style={styles.recommendationContent}>
-          <Text style={styles.recommendationTitle} numberOfLines={1}>{item.title}</Text>
-          <Text style={styles.recommendationText} numberOfLines={2}>{item.recommendation.text}</Text>
+          {/* 剧集名 */}
+          <Text style={styles.recommendationTitle} numberOfLines={1}>
+            {item.title}
+          </Text>
           
-          {/* 添加按钮 */}
+          {/* 简要介绍 */}
+          <Text style={styles.recommendationDescription} numberOfLines={2}>
+            {item.recommendation.text}
+          </Text>
+          
+          {/* 类型标签 */}
+          <View style={styles.recommendationTags}>
+            {getTags(item.recommendation.difficulty).map((tag, index) => (
+              <View key={index} style={styles.recommendationTag}>
+                <Text style={styles.recommendationTagText}>#{tag}</Text>
+              </View>
+            ))}
+          </View>
+          
+          {/* 添加到剧单按钮 */}
           <TouchableOpacity
             style={[
               styles.addToShowlistButton,
@@ -1567,21 +1592,21 @@ const ShowsScreen: React.FC = () => {
 };
 
 const styles = StyleSheet.create({
-  // 瀑布流布局样式
+  // 瀑布流布局样式 - 小红书风格
   waterfallContainer: {
     flexDirection: 'row',
-    paddingHorizontal: 12,
+    paddingHorizontal: 16,
   },
   waterfallColumn: {
     flex: 1,
-    marginHorizontal: 6,
+    marginHorizontal: 8,
   },
   waterfallItem: {
-    marginBottom: 12,
+    marginBottom: 16,
   },
   container: {
     flex: 1,
-    backgroundColor: colors.background.primary,
+    backgroundColor: '#fafafa', // 浅灰色背景，更符合小红书风格
   },
   searchContainer: {
     paddingHorizontal: 20,
@@ -2003,79 +2028,85 @@ const styles = StyleSheet.create({
     color: colors.neutral[500],
     marginBottom: 4,
   },
-  // 推荐卡片样式
+  // 推荐卡片样式 - 小红书风格
   recommendationCard: {
     backgroundColor: '#fff',
-    borderRadius: 12,
+    borderRadius: 16,
     overflow: 'hidden',
+    marginBottom: 16,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 6,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 3,
   },
   recommendationImageContainer: {
-    position: 'relative',
     width: '100%',
-    height: 180,
+    aspectRatio: 3/4, // 3:4 纵向比例
+    position: 'relative',
   },
   recommendationImage: {
     width: '100%',
     height: '100%',
   },
-  recommendationPoster: {
-    position: 'absolute',
-    bottom: 8,
-    right: 8,
-    width: 40,
-    height: 60,
-    borderRadius: 4,
-    borderWidth: 1,
-    borderColor: '#fff',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 2,
-    elevation: 2,
-  },
   recommendationContent: {
-    padding: 16,
+    padding: 12,
     backgroundColor: '#fff',
   },
   recommendationTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 8,
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1a1a1a',
+    marginBottom: 6,
+    fontFamily: Platform.OS === 'ios' ? 'SF Pro Display' : 'sans-serif',
   },
-  recommendationText: {
+  recommendationDescription: {
     fontSize: 14,
-    color: '#666',
+    color: '#666666',
     lineHeight: 20,
+    marginBottom: 8,
+    fontFamily: Platform.OS === 'ios' ? 'SF Pro Text' : 'sans-serif',
+  },
+  recommendationTags: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
     marginBottom: 12,
   },
+  recommendationTag: {
+    backgroundColor: '#f0f4f8',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    marginRight: 6,
+    marginBottom: 4,
+  },
+  recommendationTagText: {
+    fontSize: 12,
+    color: '#4a5568',
+    fontWeight: '500',
+    fontFamily: Platform.OS === 'ios' ? 'SF Pro Text' : 'sans-serif',
+  },
   addToShowlistButton: {
-    backgroundColor: '#7C3AED',
+    backgroundColor: '#f8fafc',
     borderRadius: 20,
     paddingVertical: 10,
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     alignItems: 'center',
-    shadowColor: '#7C3AED',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 3,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
   },
   addToShowlistButtonAdded: {
-    backgroundColor: '#E2E8F0',
+    backgroundColor: '#e2e8f0',
+    borderColor: '#cbd5e0',
   },
   addToShowlistButtonText: {
-    color: '#fff',
+    color: '#4a5568',
     fontSize: 14,
     fontWeight: '600',
+    fontFamily: Platform.OS === 'ios' ? 'SF Pro Text' : 'sans-serif',
   },
   addToShowlistButtonTextAdded: {
-    color: '#64748B',
+    color: '#718096',
   },
   showHeaderButtons: {
     flexDirection: 'row',
