@@ -46,14 +46,6 @@ const ReviewIntroScreen = () => {
     try {
       // 优先使用本地vocabulary数据计算错词数量
       if (vocabulary && vocabulary.length > 0) {
-        wrongWordLogger.debug('vocabulary详情', vocabulary.map(w => ({
-          word: w.word,
-          incorrectCount: w.incorrectCount,
-          consecutiveIncorrect: w.consecutiveIncorrect,
-          correctCount: w.correctCount,
-          consecutiveCorrect: w.consecutiveCorrect
-        })));
-        
         // 错词卡逻辑：连续答对3次后从错词卡移除，否则保持在错词卡中
         const localWrongWords = vocabulary.filter((word: any) => {
           // 如果连续答对次数 >= 3，则从错词卡移除
@@ -64,18 +56,11 @@ const ReviewIntroScreen = () => {
           return (word.incorrectCount && word.incorrectCount > 0) || 
                  (word.consecutiveIncorrect && word.consecutiveIncorrect > 0);
         });
-        wrongWordLogger.info(`从本地vocabulary获取到 ${localWrongWords.length} 个错词`);
-        wrongWordLogger.debug('错词详情', localWrongWords.map(w => ({
-          word: w.word,
-          incorrectCount: w.incorrectCount,
-          consecutiveIncorrect: w.consecutiveIncorrect
-        })));
         setWrongWordsCount(localWrongWords.length);
         return;
       }
 
       // 如果本地vocabulary为空，直接设置为0，不依赖云端数据
-      wrongWordLogger.info('本地vocabulary为空，设置为0个错词');
       setWrongWordsCount(0);
     } catch (error) {
       wrongWordLogger.error('手动刷新错词数量失败', error);
@@ -88,14 +73,6 @@ const ReviewIntroScreen = () => {
       try {
         // 优先使用本地vocabulary数据计算错词数量
         if (vocabulary && vocabulary.length > 0) {
-          wrongWordLogger.debug('vocabulary详情', vocabulary.map(w => ({
-            word: w.word,
-            incorrectCount: w.incorrectCount,
-            consecutiveIncorrect: w.consecutiveIncorrect,
-            correctCount: w.correctCount,
-            consecutiveCorrect: w.consecutiveCorrect
-          })));
-          
           // 错词卡逻辑：连续答对3次后从错词卡移除，否则保持在错词卡中
           const localWrongWords = vocabulary.filter((word: any) => {
             // 如果连续答对次数 >= 3，则从错词卡移除
@@ -106,18 +83,11 @@ const ReviewIntroScreen = () => {
             return (word.incorrectCount && word.incorrectCount > 0) || 
                    (word.consecutiveIncorrect && word.consecutiveIncorrect > 0);
           });
-          wrongWordLogger.info(`从本地vocabulary获取到 ${localWrongWords.length} 个错词`);
-          wrongWordLogger.debug('错词详情', localWrongWords.map(w => ({
-            word: w.word,
-            incorrectCount: w.incorrectCount,
-            consecutiveIncorrect: w.consecutiveIncorrect
-          })));
           setWrongWordsCount(localWrongWords.length);
           return;
         }
 
         // 如果本地vocabulary为空，直接设置为0，不依赖云端数据
-        wrongWordLogger.info('本地vocabulary为空，设置为0个错词');
         setWrongWordsCount(0);
       } catch (error) {
         wrongWordLogger.error('获取错词数量失败', error);

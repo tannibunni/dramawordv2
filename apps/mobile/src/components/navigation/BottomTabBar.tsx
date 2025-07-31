@@ -135,9 +135,9 @@ const styles = StyleSheet.create({
   tabBar: {
     flexDirection: 'row',
     backgroundColor: '#ffffff',
-    borderRadius: 24,
+    borderRadius: 26,
     marginHorizontal: 16,
-    marginBottom: 0, // 减少距离屏幕底部的距离，从16改为8
+    marginBottom: 12, // 减少距离屏幕底部的距离，从16改为8
     paddingBottom: Platform.OS === 'ios' ? 12 : 6,
     paddingTop: 6,
     shadowColor: '#000',
@@ -157,7 +157,7 @@ const styles = StyleSheet.create({
     flex: 1.2,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: -32, // 浮出底部导航栏
+    marginTop: -20, // 浮出底部导航栏
   },
   searchIconContainer: {
     width: 80, // 64 + 4*2 = 72px to accommodate 4px stroke on each side
