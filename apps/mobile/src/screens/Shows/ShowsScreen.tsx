@@ -1337,7 +1337,11 @@ const ShowsScreen: React.FC = () => {
 
       {/* 推荐内容瀑布流 */}
       {filter === 'recommendations' && searchResults.length === 0 && searchText.length === 0 && (
-        <ScrollView style={styles.list} contentContainerStyle={styles.listContent}>
+        <ScrollView 
+          style={styles.list} 
+          contentContainerStyle={[styles.listContent, { paddingHorizontal: 0 }]} // 移除水平内边距
+          showsVerticalScrollIndicator={false} // 隐藏垂直滚动条
+        >
           {recommendationsLoading ? (
             <View style={styles.loadingContainer}>
               <ActivityIndicator size="large" color={colors.primary[500]} />
@@ -1654,17 +1658,17 @@ const ShowsScreen: React.FC = () => {
 };
 
 const styles = StyleSheet.create({
-  // 瀑布流布局样式 - 小红书风格
+  // 瀑布流布局样式 - 小红书紧凑风格
   waterfallContainer: {
     flexDirection: 'row',
-    paddingHorizontal: 16,
+    paddingHorizontal: 8, // 减小左右边距
   },
   waterfallColumn: {
     flex: 1,
-    marginHorizontal: 8,
+    marginHorizontal: 4, // 减小列间距
   },
   waterfallItem: {
-    marginBottom: 16,
+    marginBottom: 8, // 减小卡片间距
   },
   container: {
     flex: 1,
@@ -2090,17 +2094,17 @@ const styles = StyleSheet.create({
     color: colors.neutral[500],
     marginBottom: 4,
   },
-  // 推荐卡片样式 - 小红书风格
+  // 推荐卡片样式 - 小红书紧凑风格
   recommendationCard: {
     backgroundColor: '#fff',
-    borderRadius: 16,
+    borderRadius: 12, // 减小圆角
     overflow: 'hidden',
-    marginBottom: 16,
+    marginBottom: 8, // 减小底部间距
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 1 }, // 减小阴影
+    shadowOpacity: 0.04, // 减小阴影透明度
+    shadowRadius: 4, // 减小阴影半径
+    elevation: 2, // 减小Android阴影
   },
   recommendationImageContainer: {
     width: '100%',
@@ -2112,47 +2116,47 @@ const styles = StyleSheet.create({
     height: '100%',
   },
   recommendationContent: {
-    padding: 12,
+    padding: 8, // 减小内边距
     backgroundColor: '#fff',
   },
   recommendationTitle: {
-    fontSize: 18,
+    fontSize: 16, // 减小字体大小
     fontWeight: '700',
     color: '#1a1a1a',
-    marginBottom: 6,
+    marginBottom: 4, // 减小间距
     fontFamily: Platform.OS === 'ios' ? 'SF Pro Display' : 'sans-serif',
   },
   recommendationDescription: {
-    fontSize: 14,
+    fontSize: 13, // 减小字体大小
     color: '#666666',
-    lineHeight: 20,
-    marginBottom: 8,
+    lineHeight: 18, // 减小行高
+    marginBottom: 6, // 减小间距
     fontFamily: Platform.OS === 'ios' ? 'SF Pro Text' : 'sans-serif',
   },
   recommendationTags: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    marginBottom: 12,
+    marginBottom: 8, // 减小间距
   },
   recommendationTag: {
     backgroundColor: '#f0f4f8',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-    marginRight: 6,
-    marginBottom: 4,
+    paddingHorizontal: 6, // 减小内边距
+    paddingVertical: 3, // 减小内边距
+    borderRadius: 10, // 减小圆角
+    marginRight: 4, // 减小间距
+    marginBottom: 3, // 减小间距
   },
   recommendationTagText: {
-    fontSize: 12,
+    fontSize: 11, // 减小字体大小
     color: '#4a5568',
     fontWeight: '500',
     fontFamily: Platform.OS === 'ios' ? 'SF Pro Text' : 'sans-serif',
   },
   addToShowlistButton: {
     backgroundColor: '#f8fafc',
-    borderRadius: 20,
-    paddingVertical: 10,
-    paddingHorizontal: 16,
+    borderRadius: 16, // 减小圆角
+    paddingVertical: 8, // 减小内边距
+    paddingHorizontal: 12, // 减小内边距
     alignItems: 'center',
     borderWidth: 1,
     borderColor: '#e2e8f0',
@@ -2163,7 +2167,7 @@ const styles = StyleSheet.create({
   },
   addToShowlistButtonText: {
     color: '#4a5568',
-    fontSize: 14,
+    fontSize: 13, // 减小字体大小
     fontWeight: '600',
     fontFamily: Platform.OS === 'ios' ? 'SF Pro Text' : 'sans-serif',
   },
