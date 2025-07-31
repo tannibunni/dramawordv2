@@ -16,7 +16,7 @@ declare global {
 }
 
 // JWT密钥
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
+const JWT_SECRET = process.env.JWT_SECRET || 'dramaword_jwt_secret';
 
 // 生成JWT token
 export const generateToken = (userId: string): string => {
