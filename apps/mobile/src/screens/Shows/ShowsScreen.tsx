@@ -41,9 +41,6 @@ interface RecommendationCard {
   };
 }
 
-// 混合数据项类型
-type MixedDataItem = Show | RecommendationCard;
-
 const { width } = Dimensions.get('window');
 
 // 生成阴影的工具函数
@@ -127,7 +124,7 @@ const ShowsScreen: React.FC = () => {
   const [searchResults, setSearchResults] = useState<TMDBShow[]>([]);
   const [selectedShow, setSelectedShow] = useState<Show | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
-  const [filter, setFilter] = useState<'shows' | 'wordbooks'>('shows');
+  const [filter, setFilter] = useState<'recommendations' | 'shows' | 'wordbooks'>('recommendations');
   const [showStatusFilter, setShowStatusFilter] = useState<'all' | 'not_completed' | 'completed'>('all');
   const [searchLoading, setSearchLoading] = useState(false);
   const [isOverviewExpanded, setIsOverviewExpanded] = useState(false);
@@ -148,6 +145,10 @@ const ShowsScreen: React.FC = () => {
   // 推荐相关状态
   const [recommendations, setRecommendations] = useState<RecommendationCard[]>([]);
   const [filteredRecommendations, setFilteredRecommendations] = useState<RecommendationCard[]>([]);
+  
+  // 瀑布流相关状态
+  const [leftColumn, setLeftColumn] = useState<RecommendationCard[]>([]);
+  const [rightColumn, setRightColumn] = useState<RecommendationCard[]>([]);
 
   // Robust modal close handlers
   const closeShowDetailModal = () => {
@@ -299,6 +300,27 @@ const ShowsScreen: React.FC = () => {
     
     setRecommendations(mockRecommendations);
     setFilteredRecommendations(mockRecommendations);
+    
+    // 初始化瀑布流布局
+    arrangeWaterfallLayout(mockRecommendations);
+  };
+  
+  // 瀑布流布局函数
+  const arrangeWaterfallLayout = (items: RecommendationCard[]) => {
+    const left: RecommendationCard[] = [];
+    const right: RecommendationCard[] = [];
+    
+    items.forEach((item, index) => {
+      // 交替分配到左右列，创造瀑布流效果
+      if (index % 2 === 0) {
+        left.push(item);
+      } else {
+        right.push(item);
+      }
+    });
+    
+    setLeftColumn(left);
+    setRightColumn(right);
   };
 
   useEffect(() => {
@@ -323,7 +345,40 @@ const ShowsScreen: React.FC = () => {
       try {
         setSearchLoading(true);
         
-        if (filter === 'wordbooks') {
+        if (filter === 'recommendations') {
+          // 推荐模式：搜索推荐内容
+          const filteredRecommendations = recommendations.filter(rec => 
+            rec.title.toLowerCase().includes(query.toLowerCase()) ||
+            rec.originalTitle.toLowerCase().includes(query.toLowerCase()) ||
+            rec.recommendation.text.toLowerCase().includes(query.toLowerCase())
+          );
+          
+          setFilteredRecommendations(filteredRecommendations);
+          // 更新瀑布流布局
+          arrangeWaterfallLayout(filteredRecommendations);
+          
+          // 将推荐转换为TMDBShow格式以保持兼容性
+          const searchResults = filteredRecommendations.map(rec => ({
+            id: rec.tmdbShowId,
+            name: rec.title,
+            original_name: rec.originalTitle,
+            overview: rec.recommendation.text,
+            poster_path: rec.posterUrl.split('/').pop() || '',
+            backdrop_path: rec.backdropUrl.split('/').pop() || '',
+            vote_average: 0,
+            vote_count: 0,
+            first_air_date: '',
+            last_air_date: '',
+            status: 'Returning Series',
+            type: 'show',
+            genre_ids: [],
+            popularity: 0,
+            original_language: 'en',
+            origin_country: ['US'],
+          } as TMDBShow));
+          
+          setSearchResults(searchResults);
+        } else if (filter === 'wordbooks') {
           // 单词本模式：搜索现有的单词本
           const wordbooks = shows.filter(show => show.type === 'wordbook');
           const filteredWordbooks = wordbooks.filter(wordbook => 
@@ -377,6 +432,10 @@ const ShowsScreen: React.FC = () => {
   const clearSearch = () => {
     setSearchText('');
     setSearchResults([]);
+    if (filter === 'recommendations') {
+      setFilteredRecommendations(recommendations);
+      arrangeWaterfallLayout(recommendations);
+    }
     searchInputRef.current?.blur();
   };
 
@@ -501,7 +560,11 @@ const ShowsScreen: React.FC = () => {
 
   const filterShows = () => {
     let filtered = shows;
-    if (filter === 'shows') {
+    if (filter === 'recommendations') {
+      // 推荐模式：不需要筛选剧集，推荐内容由单独的state管理
+      console.log('🔍 筛选条件: 推荐模式');
+      return;
+    } else if (filter === 'shows') {
       // 先筛选出剧集，排除单词本
       filtered = shows.filter(show => show.type !== 'wordbook');
       
@@ -784,12 +847,31 @@ const ShowsScreen: React.FC = () => {
 
   // 新的iOS风格分段控制器
   const renderSegmentedControl = () => {
+    const isRecommendationsActive = filter === 'recommendations';
     const isShowsActive = filter === 'shows';
     const isWordbooksActive = filter === 'wordbooks';
 
     return (
       <View style={styles.segmentedControlContainer}>
         <View style={styles.segmentedControlBackground}>
+          <TouchableOpacity
+            style={[
+              styles.segmentedControlButton,
+              isRecommendationsActive && styles.segmentedControlButtonActive
+            ]}
+            onPress={() => {
+              setFilter('recommendations');
+            }}
+            activeOpacity={0.8}
+          >
+            <Text style={[
+              styles.segmentedControlText,
+              isRecommendationsActive && styles.segmentedControlTextActive
+            ]}>
+              {t('recommendations_tab')}
+            </Text>
+          </TouchableOpacity>
+          
           <TouchableOpacity
             style={[
               styles.segmentedControlButton,
@@ -920,48 +1002,29 @@ const ShowsScreen: React.FC = () => {
 
   const renderFooter = () => null; // 不需要分页
 
-  // 创建混合数据源：剧集 + 推荐内容
-  const createMixedData = (): MixedDataItem[] => {
-    if (filter === 'wordbooks') {
-      return filteredShows; // 单词本模式不显示推荐
-    }
-    
-    // 剧单模式：在剧集列表后面添加推荐内容
-    const mixedData: MixedDataItem[] = [...filteredShows];
-    
-    // 如果剧集数量少于3个，添加推荐内容
-    if (filteredShows.length < 3) {
-      mixedData.push(...filteredRecommendations);
-    } else {
-      // 在剧集列表中间插入推荐内容（每3个剧集插入1个推荐）
-      const insertPositions = [];
-      for (let i = 3; i < filteredShows.length; i += 4) {
-        insertPositions.push(i);
-      }
-      
-      // 从后往前插入，避免索引变化
-      for (let i = insertPositions.length - 1; i >= 0; i--) {
-        const pos = insertPositions[i];
-        const recIndex = i % filteredRecommendations.length;
-        mixedData.splice(pos, 0, filteredRecommendations[recIndex]);
-      }
-      
-      // 在列表末尾添加剩余的推荐内容
-      const remainingRecs = filteredRecommendations.slice(insertPositions.length);
-      mixedData.push(...remainingRecs);
-    }
-    
-    return mixedData;
-  };
-
-  // 渲染混合列表项
-  const renderMixedItem = ({ item, index }: { item: MixedDataItem, index: number }) => {
-    // 判断是否为推荐内容
-    if ('recommendation' in item) {
-      return renderRecommendationCard({ item: item as RecommendationCard });
-    } else {
-      return renderShowItem({ item: item as Show });
-    }
+  // 瀑布流布局组件
+  const renderWaterfallLayout = () => {
+    return (
+      <View style={styles.waterfallContainer}>
+        {/* 左列 */}
+        <View style={styles.waterfallColumn}>
+          {leftColumn.map((item, index) => (
+            <View key={`left-${item.id}`} style={styles.waterfallItem}>
+              {renderRecommendationCard({ item })}
+            </View>
+          ))}
+        </View>
+        
+        {/* 右列 */}
+        <View style={styles.waterfallColumn}>
+          {rightColumn.map((item, index) => (
+            <View key={`right-${item.id}`} style={styles.waterfallItem}>
+              {renderRecommendationCard({ item })}
+            </View>
+          ))}
+        </View>
+      </View>
+    );
   };
 
   // 渲染推荐卡片
@@ -970,24 +1033,25 @@ const ShowsScreen: React.FC = () => {
     
     return (
       <View style={styles.recommendationCard}>
-        {/* 背景图片 */}
-        <Image
-          source={{ uri: item.backdropUrl }}
-          style={styles.recommendationBackdrop}
-          resizeMode="cover"
-        />
-        
-        {/* 海报小图 */}
-        <Image
-          source={{ uri: item.posterUrl }}
-          style={styles.recommendationPoster}
-          resizeMode="cover"
-        />
+        {/* 图片区域 */}
+        <View style={styles.recommendationImageContainer}>
+          <Image
+            source={{ uri: item.backdropUrl }}
+            style={styles.recommendationImage}
+            resizeMode="cover"
+          />
+          {/* 海报小图叠加 */}
+          <Image
+            source={{ uri: item.posterUrl }}
+            style={styles.recommendationPoster}
+            resizeMode="cover"
+          />
+        </View>
         
         {/* 内容区域 */}
         <View style={styles.recommendationContent}>
-          <Text style={styles.recommendationTitle}>{item.title}</Text>
-          <Text style={styles.recommendationText}>{item.recommendation.text}</Text>
+          <Text style={styles.recommendationTitle} numberOfLines={1}>{item.title}</Text>
+          <Text style={styles.recommendationText} numberOfLines={2}>{item.recommendation.text}</Text>
           
           {/* 添加按钮 */}
           <TouchableOpacity
@@ -1120,6 +1184,7 @@ const ShowsScreen: React.FC = () => {
               ref={searchInputRef}
               style={styles.searchInput}
               placeholder={
+                filter === 'recommendations' ? t('search_recommendations') :
                 filter === 'wordbooks' ? t('search_wordbooks') : 
                 t('search_shows')
               }
@@ -1163,12 +1228,14 @@ const ShowsScreen: React.FC = () => {
         <View style={styles.searchEmptyContainer}>
           <Ionicons name="search-outline" size={64} color={colors.neutral[300]} />
           <Text style={styles.searchEmptyText}>
-            {filter === 'wordbooks' ? t('no_wordbook_results') : 
+            {filter === 'recommendations' ? t('no_recommendations') :
+             filter === 'wordbooks' ? t('no_wordbook_results') : 
              t('no_results')}
           </Text>
           <TouchableOpacity style={styles.searchEmptyButton}>
             <Text style={styles.searchEmptyButtonText}>
-              {filter === 'wordbooks' ? t('try_other_wordbook_keywords') : 
+              {filter === 'recommendations' ? t('try_other_keywords') :
+               filter === 'wordbooks' ? t('try_other_wordbook_keywords') : 
                t('try_other_keywords')}
             </Text>
           </TouchableOpacity>
@@ -1186,12 +1253,26 @@ const ShowsScreen: React.FC = () => {
         />
       )}
 
+      {/* 推荐内容瀑布流 */}
+      {filter === 'recommendations' && searchResults.length === 0 && searchText.length === 0 && (
+        <ScrollView style={styles.list} contentContainerStyle={styles.listContent}>
+          {filteredRecommendations.length > 0 ? (
+            renderWaterfallLayout()
+          ) : (
+            <View style={styles.emptyContainer}>
+              <Ionicons name="heart-outline" size={64} color={colors.neutral[300]} />
+              <Text style={styles.emptyText}>{t('no_recommendations')}</Text>
+            </View>
+          )}
+        </ScrollView>
+      )}
+
       {/* 用户剧单列表 */}
-      {searchResults.length === 0 && searchText.length === 0 && (
+      {filter !== 'recommendations' && searchResults.length === 0 && searchText.length === 0 && (
       <FlatList
-        data={createMixedData()}
-        renderItem={renderMixedItem}
-        keyExtractor={(item, index) => 'recommendation' in item ? `rec-${item.id}` : `show-${item.id}`}
+        data={filteredShows}
+        renderItem={renderShowItem}
+          keyExtractor={item => item.id.toString()}
         style={styles.list}
         contentContainerStyle={styles.listContent}
         ListHeaderComponent={
@@ -1486,6 +1567,18 @@ const ShowsScreen: React.FC = () => {
 };
 
 const styles = StyleSheet.create({
+  // 瀑布流布局样式
+  waterfallContainer: {
+    flexDirection: 'row',
+    paddingHorizontal: 12,
+  },
+  waterfallColumn: {
+    flex: 1,
+    marginHorizontal: 6,
+  },
+  waterfallItem: {
+    marginBottom: 12,
+  },
   container: {
     flex: 1,
     backgroundColor: colors.background.primary,
@@ -1914,7 +2007,6 @@ const styles = StyleSheet.create({
   recommendationCard: {
     backgroundColor: '#fff',
     borderRadius: 12,
-    marginBottom: 12,
     overflow: 'hidden',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
@@ -1922,24 +2014,29 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     elevation: 6,
   },
-  recommendationBackdrop: {
+  recommendationImageContainer: {
+    position: 'relative',
     width: '100%',
-    height: 200,
+    height: 180,
+  },
+  recommendationImage: {
+    width: '100%',
+    height: '100%',
   },
   recommendationPoster: {
     position: 'absolute',
-    bottom: 12,
-    right: 12,
-    width: 50,
-    height: 75,
-    borderRadius: 6,
-    borderWidth: 2,
+    bottom: 8,
+    right: 8,
+    width: 40,
+    height: 60,
+    borderRadius: 4,
+    borderWidth: 1,
     borderColor: '#fff',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowRadius: 2,
+    elevation: 2,
   },
   recommendationContent: {
     padding: 16,
