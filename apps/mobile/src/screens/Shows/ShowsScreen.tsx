@@ -41,6 +41,9 @@ interface RecommendationCard {
   };
 }
 
+// 混合数据项类型
+type MixedDataItem = Show | RecommendationCard;
+
 const { width } = Dimensions.get('window');
 
 // 生成阴影的工具函数
@@ -124,7 +127,7 @@ const ShowsScreen: React.FC = () => {
   const [searchResults, setSearchResults] = useState<TMDBShow[]>([]);
   const [selectedShow, setSelectedShow] = useState<Show | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
-  const [filter, setFilter] = useState<'recommendations' | 'shows' | 'wordbooks'>('recommendations');
+  const [filter, setFilter] = useState<'shows' | 'wordbooks'>('shows');
   const [showStatusFilter, setShowStatusFilter] = useState<'all' | 'not_completed' | 'completed'>('all');
   const [searchLoading, setSearchLoading] = useState(false);
   const [isOverviewExpanded, setIsOverviewExpanded] = useState(false);
@@ -320,36 +323,7 @@ const ShowsScreen: React.FC = () => {
       try {
         setSearchLoading(true);
         
-        if (filter === 'recommendations') {
-          // 推荐模式：搜索推荐内容
-          const filteredRecommendations = recommendations.filter(rec => 
-            rec.title.toLowerCase().includes(query.toLowerCase()) ||
-            rec.originalTitle.toLowerCase().includes(query.toLowerCase()) ||
-            rec.recommendation.text.toLowerCase().includes(query.toLowerCase())
-          );
-          
-          // 将推荐转换为TMDBShow格式以保持兼容性
-          const searchResults = filteredRecommendations.map(rec => ({
-            id: rec.tmdbShowId,
-            name: rec.title,
-            original_name: rec.originalTitle,
-            overview: rec.recommendation.text,
-            poster_path: rec.posterUrl.split('/').pop() || '',
-            backdrop_path: rec.backdropUrl.split('/').pop() || '',
-            vote_average: 0,
-            vote_count: 0,
-            first_air_date: '',
-            last_air_date: '',
-            status: 'Returning Series',
-            type: 'show',
-            genre_ids: [],
-            popularity: 0,
-            original_language: 'en',
-            origin_country: ['US'],
-          } as TMDBShow));
-          
-          setSearchResults(searchResults);
-        } else if (filter === 'wordbooks') {
+        if (filter === 'wordbooks') {
           // 单词本模式：搜索现有的单词本
           const wordbooks = shows.filter(show => show.type === 'wordbook');
           const filteredWordbooks = wordbooks.filter(wordbook => 
@@ -527,11 +501,7 @@ const ShowsScreen: React.FC = () => {
 
   const filterShows = () => {
     let filtered = shows;
-    if (filter === 'recommendations') {
-      // 推荐模式：不需要筛选剧集，推荐内容由单独的state管理
-      console.log('🔍 筛选条件: 推荐模式');
-      return;
-    } else if (filter === 'shows') {
+    if (filter === 'shows') {
       // 先筛选出剧集，排除单词本
       filtered = shows.filter(show => show.type !== 'wordbook');
       
@@ -814,31 +784,12 @@ const ShowsScreen: React.FC = () => {
 
   // 新的iOS风格分段控制器
   const renderSegmentedControl = () => {
-    const isRecommendationsActive = filter === 'recommendations';
     const isShowsActive = filter === 'shows';
     const isWordbooksActive = filter === 'wordbooks';
 
     return (
       <View style={styles.segmentedControlContainer}>
         <View style={styles.segmentedControlBackground}>
-          <TouchableOpacity
-            style={[
-              styles.segmentedControlButton,
-              isRecommendationsActive && styles.segmentedControlButtonActive
-            ]}
-            onPress={() => {
-              setFilter('recommendations');
-            }}
-            activeOpacity={0.8}
-          >
-            <Text style={[
-              styles.segmentedControlText,
-              isRecommendationsActive && styles.segmentedControlTextActive
-            ]}>
-              {t('recommendations_tab')}
-            </Text>
-          </TouchableOpacity>
-          
           <TouchableOpacity
             style={[
               styles.segmentedControlButton,
@@ -968,6 +919,50 @@ const ShowsScreen: React.FC = () => {
   };
 
   const renderFooter = () => null; // 不需要分页
+
+  // 创建混合数据源：剧集 + 推荐内容
+  const createMixedData = (): MixedDataItem[] => {
+    if (filter === 'wordbooks') {
+      return filteredShows; // 单词本模式不显示推荐
+    }
+    
+    // 剧单模式：在剧集列表后面添加推荐内容
+    const mixedData: MixedDataItem[] = [...filteredShows];
+    
+    // 如果剧集数量少于3个，添加推荐内容
+    if (filteredShows.length < 3) {
+      mixedData.push(...filteredRecommendations);
+    } else {
+      // 在剧集列表中间插入推荐内容（每3个剧集插入1个推荐）
+      const insertPositions = [];
+      for (let i = 3; i < filteredShows.length; i += 4) {
+        insertPositions.push(i);
+      }
+      
+      // 从后往前插入，避免索引变化
+      for (let i = insertPositions.length - 1; i >= 0; i--) {
+        const pos = insertPositions[i];
+        const recIndex = i % filteredRecommendations.length;
+        mixedData.splice(pos, 0, filteredRecommendations[recIndex]);
+      }
+      
+      // 在列表末尾添加剩余的推荐内容
+      const remainingRecs = filteredRecommendations.slice(insertPositions.length);
+      mixedData.push(...remainingRecs);
+    }
+    
+    return mixedData;
+  };
+
+  // 渲染混合列表项
+  const renderMixedItem = ({ item, index }: { item: MixedDataItem, index: number }) => {
+    // 判断是否为推荐内容
+    if ('recommendation' in item) {
+      return renderRecommendationCard({ item: item as RecommendationCard });
+    } else {
+      return renderShowItem({ item: item as Show });
+    }
+  };
 
   // 渲染推荐卡片
   const renderRecommendationCard = ({ item }: { item: RecommendationCard }) => {
@@ -1125,7 +1120,6 @@ const ShowsScreen: React.FC = () => {
               ref={searchInputRef}
               style={styles.searchInput}
               placeholder={
-                filter === 'recommendations' ? t('search_recommendations') :
                 filter === 'wordbooks' ? t('search_wordbooks') : 
                 t('search_shows')
               }
@@ -1169,14 +1163,12 @@ const ShowsScreen: React.FC = () => {
         <View style={styles.searchEmptyContainer}>
           <Ionicons name="search-outline" size={64} color={colors.neutral[300]} />
           <Text style={styles.searchEmptyText}>
-            {filter === 'recommendations' ? t('no_recommendations') :
-             filter === 'wordbooks' ? t('no_wordbook_results') : 
+            {filter === 'wordbooks' ? t('no_wordbook_results') : 
              t('no_results')}
           </Text>
           <TouchableOpacity style={styles.searchEmptyButton}>
             <Text style={styles.searchEmptyButtonText}>
-              {filter === 'recommendations' ? t('try_other_keywords') :
-               filter === 'wordbooks' ? t('try_other_wordbook_keywords') : 
+              {filter === 'wordbooks' ? t('try_other_wordbook_keywords') : 
                t('try_other_keywords')}
             </Text>
           </TouchableOpacity>
@@ -1194,29 +1186,12 @@ const ShowsScreen: React.FC = () => {
         />
       )}
 
-      {/* 推荐内容列表 */}
-      {filter === 'recommendations' && searchResults.length === 0 && searchText.length === 0 && (
-        <FlatList
-          data={filteredRecommendations}
-          renderItem={renderRecommendationCard}
-          keyExtractor={item => item.id}
-          style={styles.list}
-          contentContainerStyle={styles.listContent}
-          ListEmptyComponent={
-            <View style={styles.emptyContainer}>
-              <Ionicons name="heart-outline" size={64} color={colors.neutral[300]} />
-              <Text style={styles.emptyText}>{t('no_recommendations')}</Text>
-            </View>
-          }
-        />
-      )}
-
       {/* 用户剧单列表 */}
-      {filter !== 'recommendations' && searchResults.length === 0 && searchText.length === 0 && (
+      {searchResults.length === 0 && searchText.length === 0 && (
       <FlatList
-        data={filteredShows}
-        renderItem={renderShowItem}
-          keyExtractor={item => item.id.toString()}
+        data={createMixedData()}
+        renderItem={renderMixedItem}
+        keyExtractor={(item, index) => 'recommendation' in item ? `rec-${item.id}` : `show-${item.id}`}
         style={styles.list}
         contentContainerStyle={styles.listContent}
         ListHeaderComponent={
