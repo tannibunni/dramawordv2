@@ -16,56 +16,69 @@ export class SyncController {
 
       // 支持新的分层数据格式
       if (syncData && syncData.type) {
-        // 新的分层数据格式
-        switch (syncData.type) {
-          case 'learning_record':
-            // 处理学习记录数据
-            if (syncData.data && Array.isArray(syncData.data)) {
-              for (const record of syncData.data) {
-                if (record.word && record.progress) {
-                  // 调用现有的单词进度更新API
-                  await this.updateWordProgress({
-                    userId,
-                    word: record.word,
-                    progress: record.progress,
-                    isSuccessfulReview: record.isSuccessfulReview || false
-                  });
+        logger.info(`🔄 处理分层数据同步: ${syncData.type} for user: ${userId}`);
+        
+        try {
+          // 新的分层数据格式
+          switch (syncData.type) {
+            case 'learning_record':
+              // 处理学习记录数据
+              if (syncData.data && Array.isArray(syncData.data)) {
+                logger.info(`📚 处理 ${syncData.data.length} 条学习记录`);
+                for (const record of syncData.data) {
+                  if (record.word && record.progress) {
+                    // 调用现有的单词进度更新API
+                    await this.updateWordProgress({
+                      userId,
+                      word: record.word,
+                      progress: record.progress,
+                      isSuccessfulReview: record.isSuccessfulReview || false
+                    });
+                  }
                 }
               }
-            }
-            break;
-            
-          case 'vocabulary':
-            // 处理词汇表数据
-            if (syncData.data && syncData.data.word) {
-              // 调用现有的词汇表添加API
-              await this.addToVocabulary({
-                userId,
-                word: syncData.data.word,
-                sourceShow: syncData.data.sourceShow,
-                language: syncData.data.language
-              });
-            }
-            break;
-            
-          case 'user_action':
-          case 'experience_gain':
-          case 'level_up':
-            // 处理实时数据
-            logger.info(`实时数据同步: ${syncData.type}`, syncData.data);
-            break;
-            
-          default:
-            logger.warn(`未知的同步数据类型: ${syncData.type}`);
+              break;
+              
+            case 'vocabulary':
+              // 处理词汇表数据
+              if (syncData.data && syncData.data.word) {
+                // 调用现有的词汇表添加API
+                await this.addToVocabulary({
+                  userId,
+                  word: syncData.data.word,
+                  sourceShow: syncData.data.sourceShow,
+                  language: syncData.data.language
+                });
+              }
+              break;
+              
+            case 'user_action':
+            case 'experience_gain':
+            case 'level_up':
+              // 处理实时数据
+              logger.info(`⚡ 实时数据同步: ${syncData.type}`, syncData.data);
+              break;
+              
+            default:
+              logger.warn(`⚠️ 未知的同步数据类型: ${syncData.type}`);
+          }
+          
+          logger.info(`✅ 用户 ${userId} 分层数据同步成功`);
+          res.json({
+            success: true,
+            message: '数据同步成功',
+            data: { synced: true }
+          });
+          return;
+        } catch (error) {
+          logger.error(`❌ 分层数据同步失败: ${syncData.type}`, error);
+          res.status(500).json({
+            success: false,
+            message: '服务器内部错误,请稍后重试',
+            error: error instanceof Error ? error.message : 'Unknown error'
+          });
+          return;
         }
-        
-        logger.info(`用户 ${userId} 分层数据同步成功`);
-        res.json({
-          success: true,
-          message: '数据同步成功',
-          data: { synced: true }
-        });
-        return;
       }
 
       // 兼容旧的 ISyncData 格式
@@ -119,6 +132,8 @@ export class SyncController {
     isSuccessfulReview: boolean;
   }) {
     try {
+      logger.info(`🔄 同步更新单词进度: ${data.word} for user: ${data.userId}`);
+      
       // 直接调用现有的 wordController 方法
       const mockReq = {
         body: {
@@ -126,22 +141,36 @@ export class SyncController {
           word: data.word,
           progress: data.progress,
           isSuccessfulReview: data.isSuccessfulReview
-        }
+        },
+        headers: {},
+        method: 'POST',
+        url: '/api/words/progress'
       } as Request;
       
+      let responseStatus = 200;
+      let responseData: any = { success: true };
+      
       const mockRes = {
-        status: (code: number) => ({
-          json: (responseData: any) => {
-            if (code === 200) {
-              logger.info(`✅ 同步单词进度更新成功: ${data.word}`);
-            } else {
-              logger.error(`❌ 同步单词进度更新失败: ${data.word}`, responseData);
+        status: (code: number) => {
+          responseStatus = code;
+          return {
+            json: (response: any) => {
+              responseData = response;
+              if (code === 200) {
+                logger.info(`✅ 同步单词进度更新成功: ${data.word}`);
+              } else {
+                logger.error(`❌ 同步单词进度更新失败: ${data.word}`, response);
+              }
             }
-          }
-        })
+          };
+        }
       } as Response;
       
       await updateWordProgress(mockReq, mockRes);
+      
+      if (responseStatus !== 200) {
+        throw new Error(`Word progress update failed with status ${responseStatus}: ${JSON.stringify(responseData)}`);
+      }
     } catch (error) {
       logger.error(`❌ 同步更新单词进度失败: ${data.word}`, error);
       throw error;
@@ -156,6 +185,8 @@ export class SyncController {
     language?: string;
   }) {
     try {
+      logger.info(`🔄 同步添加到词汇表: ${data.word} for user: ${data.userId}`);
+      
       // 直接调用现有的 wordController 方法
       const mockReq = {
         body: {
@@ -163,22 +194,36 @@ export class SyncController {
           word: data.word,
           sourceShow: data.sourceShow,
           language: data.language || 'en'
-        }
+        },
+        headers: {},
+        method: 'POST',
+        url: '/api/words/vocabulary'
       } as Request;
       
+      let responseStatus = 200;
+      let responseData: any = { success: true };
+      
       const mockRes = {
-        status: (code: number) => ({
-          json: (responseData: any) => {
-            if (code === 200) {
-              logger.info(`✅ 同步词汇表添加成功: ${data.word}`);
-            } else {
-              logger.error(`❌ 同步词汇表添加失败: ${data.word}`, responseData);
+        status: (code: number) => {
+          responseStatus = code;
+          return {
+            json: (response: any) => {
+              responseData = response;
+              if (code === 200) {
+                logger.info(`✅ 同步词汇表添加成功: ${data.word}`);
+              } else {
+                logger.error(`❌ 同步词汇表添加失败: ${data.word}`, response);
+              }
             }
-          }
-        })
+          };
+        }
       } as Response;
       
       await addToUserVocabulary(mockReq, mockRes);
+      
+      if (responseStatus !== 200) {
+        throw new Error(`Add to vocabulary failed with status ${responseStatus}: ${JSON.stringify(responseData)}`);
+      }
     } catch (error) {
       logger.error(`❌ 同步添加到词汇表失败: ${data.word}`, error);
       throw error;
