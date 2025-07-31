@@ -26,6 +26,7 @@ import wordFeedbackRoutes from './routes/wordFeedback';
 import experienceRoutes from './routes/experience';
 import feedbackRoutes from './routes/feedback';
 import paymentRoutes from './routes/payment';
+import recommendationRoutes from './routes/recommendations';
 import { logger } from './utils/logger';
 
 const app = express();
@@ -58,6 +59,7 @@ app.use('/api/word-feedback', wordFeedbackRoutes);
 app.use('/api/experience', experienceRoutes);
 app.use('/api/feedback', feedbackRoutes);
 app.use('/api/payment', paymentRoutes);
+app.use('/api/recommendations', recommendationRoutes);
 
 // 健康检查
 app.get('/health', (req, res) => {

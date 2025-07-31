@@ -250,50 +250,70 @@ const ShowsScreen: React.FC = () => {
   const initializeRecommendations = async () => {
     setRecommendationsLoading(true);
     try {
-      // 从TMDB获取热门剧集
-      const popularShowsResponse = await TMDBService.getPopularShows(1, appLanguage === 'zh-CN' ? 'zh-CN' : 'en-US');
-      const popularShows = popularShowsResponse.results.slice(0, 12); // 取前12个热门剧集
+      // 优先从数据库获取推荐内容
+      const response = await fetch(`${process.env.EXPO_PUBLIC_API_URL || 'https://dramawordv2.onrender.com'}/api/recommendations/smart?language=${appLanguage === 'zh-CN' ? 'zh-CN' : 'en-US'}&limit=12`);
       
-      // 生成推荐内容
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && data.data && data.data.length > 0) {
+          // 转换数据库格式为前端格式
+          const recommendations: RecommendationCard[] = data.data.map((item: any) => ({
+            id: item._id,
+            tmdbShowId: item.tmdbShowId,
+            title: item.title,
+            originalTitle: item.originalTitle,
+            backdropUrl: item.backdropUrl,
+            posterUrl: item.posterUrl,
+            recommendation: {
+              text: item.recommendation.text,
+              difficulty: item.recommendation.difficulty
+            }
+          }));
+          
+          setRecommendations(recommendations);
+          setFilteredRecommendations(recommendations);
+          arrangeWaterfallLayout(recommendations);
+          return;
+        }
+      }
+      
+      // 如果数据库没有数据，从TMDB获取热门剧集作为备用
+      console.log('数据库中没有推荐内容，使用TMDB备用数据');
+      const popularShowsResponse = await TMDBService.getPopularShows(1, appLanguage === 'zh-CN' ? 'zh-CN' : 'en-US');
+      const popularShows = popularShowsResponse.results.slice(0, 12);
+      
       const recommendations: RecommendationCard[] = popularShows.map((show, index) => {
-        // 根据剧集类型和热度生成推荐文案
-        const getRecommendationText = (show: TMDBShow) => {
-          const baseTexts = [
-            '这部剧真的绝了！学英语必备，强烈安利！',
-            '看完后我的英语口语突飞猛进，姐妹们冲！',
-            '学英语必看！对话简单清晰，新手友好！',
-            '这部剧拯救了我的英语听力，强烈推荐！',
-            '被这部剧治愈了，顺便还学了超多实用词汇！',
-            '商务英语必备，职场对话太实用了！',
-            '2024年必看神剧，每一集都让人欲罢不能！',
-            '经典神作，看完后久久不能平静！',
-            '治愈系必看剧集，轻松愉快的下饭剧！',
-            '悬疑氛围感拉满，紧张刺激的剧情！',
-            '家庭喜剧神作，温暖人心的故事！',
-            '律政剧经典之作，智慧与正义的较量！'
-          ];
-          
-          // 根据剧集类型添加特定描述
-          let specificText = '';
-          if (show.genre_ids?.includes(35)) { // 喜剧
-            specificText = '，轻松幽默的喜剧神作！';
-          } else if (show.genre_ids?.includes(80)) { // 犯罪
-            specificText = '，犯罪剧巅峰之作！';
-          } else if (show.genre_ids?.includes(18)) { // 剧情
-            specificText = '，剧情深度探讨人性！';
-          } else if (show.genre_ids?.includes(9648)) { // 悬疑
-            specificText = '，悬疑推理烧脑神作！';
-          } else {
-            specificText = '，不容错过的经典剧集！';
-          }
-          
-          return baseTexts[index % baseTexts.length] + specificText;
-        };
+        const baseTexts = [
+          '这部剧真的绝了！学英语必备，强烈安利！',
+          '看完后我的英语口语突飞猛进，姐妹们冲！',
+          '学英语必看！对话简单清晰，新手友好！',
+          '这部剧拯救了我的英语听力，强烈推荐！',
+          '被这部剧治愈了，顺便还学了超多实用词汇！',
+          '商务英语必备，职场对话太实用了！',
+          '2024年必看神剧，每一集都让人欲罢不能！',
+          '经典神作，看完后久久不能平静！',
+          '治愈系必看剧集，轻松愉快的下饭剧！',
+          '悬疑氛围感拉满，紧张刺激的剧情！',
+          '家庭喜剧神作，温暖人心的故事！',
+          '律政剧经典之作，智慧与正义的较量！'
+        ];
         
-        // 根据剧集类型和评分确定难度
+        let specificText = '';
+        if (show.genre_ids?.includes(35)) {
+          specificText = '，轻松幽默的喜剧神作！';
+        } else if (show.genre_ids?.includes(80)) {
+          specificText = '，犯罪剧巅峰之作！';
+        } else if (show.genre_ids?.includes(18)) {
+          specificText = '，剧情深度探讨人性！';
+        } else if (show.genre_ids?.includes(9648)) {
+          specificText = '，悬疑推理烧脑神作！';
+        } else {
+          specificText = '，不容错过的经典剧集！';
+        }
+        
         const getDifficulty = (show: TMDBShow): 'easy' | 'medium' | 'hard' => {
-          if (show.genre_ids?.includes(35)) return 'easy'; // 喜剧通常较简单
-          if (show.vote_average > 8.5) return 'hard'; // 高分剧集通常较复杂
+          if (show.genre_ids?.includes(35)) return 'easy';
+          if (show.vote_average > 8.5) return 'hard';
           if (show.vote_average > 7.5) return 'medium';
           return 'easy';
         };
@@ -306,7 +326,7 @@ const ShowsScreen: React.FC = () => {
           backdropUrl: TMDBService.getImageUrl(show.backdrop_path, 'w780'),
           posterUrl: TMDBService.getImageUrl(show.poster_path, 'w92'),
           recommendation: {
-            text: getRecommendationText(show),
+            text: baseTexts[index % baseTexts.length] + specificText,
             difficulty: getDifficulty(show)
           }
         };
@@ -317,8 +337,8 @@ const ShowsScreen: React.FC = () => {
       arrangeWaterfallLayout(recommendations);
       
     } catch (error) {
-      console.error('Failed to fetch recommendations from TMDB:', error);
-      // 如果TMDB API失败，使用备用数据
+      console.error('Failed to fetch recommendations:', error);
+      // 使用硬编码备用数据
       const fallbackRecommendations: RecommendationCard[] = [
         {
           id: '1',
