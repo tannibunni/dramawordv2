@@ -95,7 +95,7 @@ export class RecommendationController {
           }
         },
         {
-          $sort: { score: -1 }
+          $sort: { score: -1 as any }
         },
         {
           $limit: Number(limit)
@@ -146,8 +146,8 @@ export class RecommendationController {
       const recommendation = new Recommendation({
         ...recommendationData,
         author: {
-          id: req.user?.id || 'system',
-          name: req.user?.name || 'System'
+          id: (req as any).user?.id || 'system',
+          name: (req as any).user?.name || 'System'
         }
       });
 
@@ -277,8 +277,8 @@ export class RecommendationController {
           const recommendation = new Recommendation({
             ...rec,
             author: {
-              id: req.user?.id || 'system',
-              name: req.user?.name || 'System'
+              id: (req as any).user?.id || 'system',
+              name: (req as any).user?.name || 'System'
             }
           });
 
