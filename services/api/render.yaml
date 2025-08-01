@@ -20,6 +20,8 @@ services:
         sync: false
       - key: WECHAT_APP_SECRET
         sync: false
+      - key: WECHAT_BUNDLE_ID
+        sync: false
       - key: APPLE_CLIENT_ID
         sync: false
       - key: APPLE_TEAM_ID
