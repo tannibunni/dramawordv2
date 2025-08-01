@@ -53,6 +53,11 @@ export interface IUserAuth {
   wechatRefreshToken?: string;
   wechatTokenExpiresAt?: Date;
   appleId?: string;
+  appleEmail?: string;
+  appleFullName?: {
+    givenName?: string;
+    familyName?: string;
+  };
   guestId?: string;
   lastLoginAt: Date;
   isActive: boolean;
@@ -175,6 +180,20 @@ const UserSchema = new Schema<IUser>({
       required: false,
       unique: true,
       sparse: true
+    },
+    appleEmail: {
+      type: String,
+      required: false
+    },
+    appleFullName: {
+      givenName: {
+        type: String,
+        required: false
+      },
+      familyName: {
+        type: String,
+        required: false
+      }
     },
     guestId: {
       type: String,
