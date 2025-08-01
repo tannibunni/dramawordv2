@@ -14,6 +14,12 @@ export class AppleController {
         return res.status(400).json({ success: false, message: '缺少idToken' });
       }
       
+      // 添加调试日志
+      logger.info(`🍎 Apple 登录请求开始`);
+      logger.info(`🍎 接收到的 email: ${email}`);
+      logger.info(`🍎 接收到的 fullName:`, fullName);
+      logger.info(`🍎 环境变量检查 - APPLE_CLIENT_ID: ${process.env.APPLE_CLIENT_ID}`);
+      
       // 验证idToken
       const appleUser = await AppleService.verifyIdToken(idToken);
       const { sub: appleId } = appleUser;
