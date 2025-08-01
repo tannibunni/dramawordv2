@@ -83,8 +83,15 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   const { navigate } = navigationContext || {};
   const { user, loginType, isAuthenticated, logout: authLogout, login } = authContext || {};
   
-  // 确保user对象不为undefined，user可能是null
+  // 确保所有值都有默认值
   const safeUser = user || {};
+  const safeLoginType = loginType || 'guest';
+  const safeIsAuthenticated = isAuthenticated || false;
+  const safeLogout = authLogout || (() => {});
+  const safeLogin = login || (() => {});
+  
+  // 确保user对象不为undefined，user可能是null
+  // safeUser已经在上面定义了
   const { appLanguage = 'zh-CN' } = appLanguageContext || {};
   const userService = UserService.getInstance();
 
@@ -99,17 +106,17 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   const getUserAvatar = () => {
     console.log('🔍 getUserAvatar 调试信息:', {
       user: safeUser,
-      loginType: loginType,
-      isAuthenticated: isAuthenticated
+      loginType: safeLoginType,
+      isAuthenticated: safeIsAuthenticated
     });
 
-    if (!safeUser || !loginType) {
+    if (!safeUser || !safeLoginType) {
       // 返回本地默认游客头像
       return require('../../../assets/images/guest-avatar.png');
     }
 
     // 根据登录类型返回不同的默认头像
-    switch (loginType) {
+    switch (safeLoginType) {
       case 'wechat':
         return 'https://via.placeholder.com/80/1AAD19/FFFFFF?text=WeChat';
       case 'apple':
@@ -125,12 +132,12 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
 
   // 获取用户昵称
   const getUserNickname = () => {
-    if (!safeUser || !loginType) {
+    if (!safeUser || !safeLoginType) {
       return t('guest_user', appLanguage);
     }
 
     // 游客用户直接显示用户ID
-    if (loginType === 'guest' && safeUser.nickname) {
+    if (safeLoginType === 'guest' && safeUser.nickname) {
       return safeUser.nickname; // 这里显示的是用户ID
     }
 
@@ -138,7 +145,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
       return safeUser.nickname;
     }
 
-    switch (loginType) {
+    switch (safeLoginType) {
       case 'wechat':
         return t('wechat_user', appLanguage);
       case 'apple':
@@ -171,10 +178,10 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   useEffect(() => {
     console.log('🔍 ProfileScreen AuthContext 状态变化:', {
       user: user,
-      loginType: loginType,
-      isAuthenticated: isAuthenticated
+      loginType: safeLoginType,
+      isAuthenticated: safeIsAuthenticated
     });
-  }, [user, loginType, isAuthenticated]);
+  }, [user, safeLoginType, safeIsAuthenticated]);
 
   // 当应用语言改变时，更新通知服务的语言设置
   useEffect(() => {
@@ -220,13 +227,13 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
 
   const renderUserInfo = () => {
     // 当前版本使用自动生成的游客ID，无需登录按钮
-    const isGuest = !isAuthenticated || !user || loginType === 'guest';
+    const isGuest = !safeIsAuthenticated || !user || safeLoginType === 'guest';
     
     return (
       <View style={styles.userSection}>
         <View style={styles.userHeader}>
           <Image
-            key={`avatar-${loginType}-${isAuthenticated}`}
+            key={`avatar-${safeLoginType}-${safeIsAuthenticated}`}
             source={getUserAvatar()}
             style={styles.avatar}
           />
