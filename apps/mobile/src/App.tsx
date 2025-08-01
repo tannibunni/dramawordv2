@@ -14,12 +14,12 @@ import { LoginScreen } from './screens/Auth/LoginScreen';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Device from 'expo-device';
 
-// 内部组件：移除自动通知初始化
+// 内部组件：处理认证逻辑
 const AppContent = () => {
   const [showInitialLanguageModal, setShowInitialLanguageModal] = useState(false);
   const [showLoginScreen, setShowLoginScreen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const { isAuthenticated, user, login } = useAuth();
+  const { login } = useAuth();
 
   useEffect(() => {
     initializeApp();
@@ -208,57 +208,25 @@ const AppContent = () => {
   // 如果正在加载，显示加载状态
   if (isLoading) {
     return (
-      <AuthProvider>
-        <LanguageProvider>
-          <ShowListProvider>
-            <VocabularyProvider>
-              <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#fff' }}>
-                <Text>正在加载...</Text>
-              </View>
-            </VocabularyProvider>
-          </ShowListProvider>
-        </LanguageProvider>
-      </AuthProvider>
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#fff' }}>
+        <Text>正在加载...</Text>
+      </View>
     );
   }
 
   // 如果需要显示登录界面
   if (showLoginScreen) {
     return (
-      <AuthProvider>
-        <LanguageProvider>
-          <ShowListProvider>
-            <VocabularyProvider>
-              <LoginScreen
-                onLoginSuccess={handleLoginSuccess}
-                onGuestLogin={handleGuestLogin}
-              />
-              <InitialLanguageModal
-                visible={showInitialLanguageModal}
-                onComplete={handleInitialLanguageComplete}
-              />
-            </VocabularyProvider>
-          </ShowListProvider>
-        </LanguageProvider>
-      </AuthProvider>
+      <LoginScreen
+        onLoginSuccess={handleLoginSuccess}
+        onGuestLogin={handleGuestLogin}
+      />
     );
   }
 
   // 正常显示主界面
   return (
-    <AuthProvider>
-      <LanguageProvider>
-        <ShowListProvider>
-          <VocabularyProvider>
-            <MainLayout />
-            <InitialLanguageModal
-              visible={showInitialLanguageModal}
-              onComplete={handleInitialLanguageComplete}
-            />
-          </VocabularyProvider>
-        </ShowListProvider>
-      </LanguageProvider>
-    </AuthProvider>
+    <MainLayout />
   );
 };
 
@@ -279,7 +247,15 @@ export default function App() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <AppLanguageProvider>
-        <AppContent />
+        <AuthProvider>
+          <LanguageProvider>
+            <ShowListProvider>
+              <VocabularyProvider>
+                <AppContent />
+              </VocabularyProvider>
+            </ShowListProvider>
+          </LanguageProvider>
+        </AuthProvider>
       </AppLanguageProvider>
     </GestureHandlerRootView>
   );
