@@ -11,7 +11,7 @@ export class AppleService {
     logger.info(`🍎 idToken 长度: ${idToken.length}`);
     
     try {
-      const result = appleSigninAuth.verifyIdToken(idToken, {
+      const result = await appleSigninAuth.verifyIdToken(idToken, {
         audience: appleConfig.clientId,
         ignoreExpiration: false,
       });
