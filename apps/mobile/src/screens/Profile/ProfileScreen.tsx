@@ -72,6 +72,9 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   const { shows, clearShows } = useShowList();
   const { navigate } = useNavigation();
   const { user, loginType, isAuthenticated, logout: authLogout, login } = useAuth();
+  
+  // 确保user对象不为undefined
+  const safeUser = user || {};
   const { appLanguage } = useAppLanguage();
   const userService = UserService.getInstance();
 
@@ -85,12 +88,12 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   // 获取用户头像
   const getUserAvatar = () => {
     console.log('🔍 getUserAvatar 调试信息:', {
-      user: user,
+      user: safeUser,
       loginType: loginType,
       isAuthenticated: isAuthenticated
     });
 
-    if (!user || !loginType) {
+    if (!safeUser || !loginType) {
       // 返回本地默认游客头像
       return require('../../../assets/images/guest-avatar.png');
     }
@@ -112,17 +115,17 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
 
   // 获取用户昵称
   const getUserNickname = () => {
-    if (!user || !loginType) {
+    if (!safeUser || !loginType) {
       return t('guest_user', appLanguage);
     }
 
     // 游客用户直接显示用户ID
-    if (loginType === 'guest' && user.nickname) {
-      return user.nickname; // 这里显示的是用户ID
+    if (loginType === 'guest' && safeUser.nickname) {
+      return safeUser.nickname; // 这里显示的是用户ID
     }
 
-    if (user.nickname) {
-      return user.nickname;
+    if (safeUser.nickname) {
+      return safeUser.nickname;
     }
 
     switch (loginType) {
@@ -409,19 +412,19 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
           style: 'destructive', 
           onPress: async () => {
             try {
-              // 清除云端数据
-              if (user?.id) {
-                console.log('🗑️ 开始清除云端数据，用户ID:', user.id);
-                
-                // 清除云端用户词汇表
-                try {
-                  const response = await fetch(`${process.env.EXPO_PUBLIC_API_BASE_URL || 'https://dramawordv2.onrender.com'}/api/words/user/clear-vocabulary`, {
-                    method: 'DELETE',
-                    headers: {
-                      'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ userId: user.id })
-                  });
+                              // 清除云端数据
+                if (safeUser?.id) {
+                  console.log('🗑️ 开始清除云端数据，用户ID:', safeUser.id);
+                  
+                  // 清除云端用户词汇表
+                  try {
+                    const response = await fetch(`${process.env.EXPO_PUBLIC_API_BASE_URL || 'https://dramawordv2.onrender.com'}/api/words/user/clear-vocabulary`, {
+                      method: 'DELETE',
+                      headers: {
+                        'Content-Type': 'application/json',
+                      },
+                      body: JSON.stringify({ userId: safeUser.id })
+                    });
                   
                   if (response.ok) {
                     console.log('✅ 云端用户词汇表清除成功');
@@ -439,7 +442,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                     headers: {
                       'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify({ userId: user.id })
+                    body: JSON.stringify({ userId: safeUser.id })
                   });
                   
                   if (statsResponse.ok) {
@@ -458,7 +461,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                     headers: {
                       'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify({ userId: user.id })
+                    body: JSON.stringify({ userId: safeUser.id })
                   });
                   
                   if (historyResponse.ok) {
@@ -554,10 +557,10 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
         onClose={() => setEditModalVisible(false)}
         onUpdate={handleProfileUpdate}
         user={{
-          id: user?.id || 'guest',
-          nickname: user?.nickname || getUserNickname(),
-          avatar: user?.avatar,
-          email: user?.email,
+          id: safeUser?.id || 'guest',
+          nickname: safeUser?.nickname || getUserNickname(),
+          avatar: safeUser?.avatar,
+          email: safeUser?.email,
         }}
       />
       
