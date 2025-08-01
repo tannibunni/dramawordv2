@@ -68,14 +68,22 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   const [feedbackModalVisible, setFeedbackModalVisible] = useState(false);
   const [debugPanelVisible, setDebugPanelVisible] = useState(false);
 
-  const { vocabulary, clearVocabulary } = useVocabulary();
-  const { shows, clearShows } = useShowList();
-  const { navigate } = useNavigation();
-  const { user, loginType, isAuthenticated, logout: authLogout, login } = useAuth();
+  // 安全地获取hook返回值，防止undefined错误
+  const vocabularyContext = useVocabulary();
+  const showListContext = useShowList();
+  const navigationContext = useNavigation();
+  const authContext = useAuth();
+  const appLanguageContext = useAppLanguage();
   
-  // 确保user对象不为undefined
+  // 解构并设置默认值
+  const { vocabulary = [], clearVocabulary } = vocabularyContext || {};
+  const { shows = [], clearShows } = showListContext || {};
+  const { navigate } = navigationContext || {};
+  const { user, loginType, isAuthenticated, logout: authLogout, login } = authContext || {};
+  
+  // 确保user对象不为undefined，user可能是null
   const safeUser = user || {};
-  const { appLanguage } = useAppLanguage();
+  const { appLanguage = 'zh-CN' } = appLanguageContext || {};
   const userService = UserService.getInstance();
 
   // 自动打开语言设置
