@@ -165,7 +165,50 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
   };
 
   const handleWechatLogin = async () => {
-    await testLogin('wechat');
+    try {
+      setLoading(true);
+      
+      console.log('💬 开始微信登录流程...');
+      
+      // 调用真正的微信登录流程
+      const { WechatService } = require('../../services/wechatService');
+      const result = await WechatService.performLogin();
+      
+      if (result.success && result.data) {
+        // 保存用户信息到本地存储
+        const userData = {
+          id: result.data.user.id,
+          nickname: result.data.user.nickname,
+          avatar: result.data.user.avatar,
+          loginType: 'wechat',
+          token: result.data.token,
+        };
+        
+        // 清除旧缓存，确保新用户看到正确的数据
+        const { DataSyncService } = require('../../services/dataSyncService');
+        const dataSyncService = DataSyncService.getInstance();
+        await dataSyncService.clearAllCache();
+        
+        // 额外清理：清除所有可能的共享数据
+        await clearAllSharedData();
+        
+        onLoginSuccess(userData);
+      } else {
+        throw new Error(result.message || '微信登录失败');
+      }
+    } catch (error: any) {
+      console.error('❌ 微信登录失败:', error);
+      
+      if (error.message.includes('请先安装微信应用')) {
+        Alert.alert('提示', '请先安装微信应用');
+      } else if (error.message.includes('微信SDK注册失败')) {
+        Alert.alert('登录失败', '微信SDK初始化失败，请重试');
+      } else {
+        Alert.alert('登录失败', error instanceof Error ? error.message : '微信登录失败，请重试');
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleAppleLogin = async () => {
@@ -360,8 +403,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
 
         {/* 登录按钮 */}
         <View style={styles.loginButtons}>
-          {/* 暂时隐藏第三方登录，只保留游客登录 */}
-          {/*
+          {/* 恢复所有登录方式 */}
           <LoginButton
             type="phone"
             onPress={handlePhoneLogin}
@@ -381,7 +423,6 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
               loading={loading}
             />
           )}
-          */}
           
           <LoginButton
             type="guest"
@@ -405,13 +446,12 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
         </View>
       </View>
 
-      {/* 手机号登录模态框 - 暂时隐藏
+      {/* 手机号登录模态框 - 已恢复 */}
       <PhoneLoginModal
         visible={phoneModalVisible}
         onClose={() => setPhoneModalVisible(false)}
         onLoginSuccess={handlePhoneLoginSuccess}
       />
-      */}
 
 
     </SafeAreaView>

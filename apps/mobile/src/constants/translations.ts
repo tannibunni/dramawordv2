@@ -631,9 +631,7 @@ export const translations: Record<AppLanguage, Record<TranslationKey, string>> =
 
 // 翻译函数
 export const t = (key: TranslationKey, language: AppLanguage = 'zh-CN', params?: Record<string, string | number>): string => {
-  // 确保language是有效的
-  const safeLanguage = language && translations[language] ? language : 'zh-CN';
-  let text = translations[safeLanguage][key] || key;
+  let text = translations[language][key] || key;
   
   // 替换参数
   if (params) {

@@ -65,7 +65,7 @@ const MainContent: React.FC<MainLayoutProps> = ({ initialTab = 'search' }) => {
       case 'shows':
         return <ShowsScreen />;
       case 'profile':
-        return <ProfileScreen openLanguageSettings={params?.openLanguageSettings} />;
+        return <ProfileScreen openLanguageSettings={params.openLanguageSettings} />;
       default:
         return <HomeScreen />;
     }

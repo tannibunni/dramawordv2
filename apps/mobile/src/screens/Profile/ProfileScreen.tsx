@@ -35,7 +35,6 @@ import { learningDataService } from '../../services/learningDataService';
 import { LearningStatsService } from '../../services/learningStatsService';
 import { DataSyncService } from '../../services/dataSyncService';
 import { cacheService, CACHE_KEYS } from '../../services/cacheService';
-import { DebugPanel } from '../../components/common/DebugPanel';
 
 
 interface UserStats {
@@ -58,8 +57,6 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   onEditProfile,
   openLanguageSettings = false,
 }) => {
-  // 添加错误边界，防止undefined错误
-  try {
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [darkModeEnabled, setDarkModeEnabled] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -68,31 +65,12 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   const [clearingCache, setClearingCache] = useState(false);
   const [aboutModalVisible, setAboutModalVisible] = useState(false);
   const [feedbackModalVisible, setFeedbackModalVisible] = useState(false);
-  const [debugPanelVisible, setDebugPanelVisible] = useState(false);
 
-  // 安全地获取hook返回值，防止undefined错误
-  const vocabularyContext = useVocabulary();
-  const showListContext = useShowList();
-  const navigationContext = useNavigation();
-  const authContext = useAuth();
-  const appLanguageContext = useAppLanguage();
-  
-  // 解构并设置默认值
-  const { vocabulary = [], clearVocabulary } = vocabularyContext || {};
-  const { shows = [], clearShows } = showListContext || {};
-  const { navigate } = navigationContext || {};
-  const { user, loginType, isAuthenticated, logout: authLogout, login } = authContext || {};
-  
-  // 确保所有值都有默认值
-  const safeUser = user || {};
-  const safeLoginType = loginType || 'guest';
-  const safeIsAuthenticated = isAuthenticated || false;
-  const safeLogout = authLogout || (() => {});
-  const safeLogin = login || (() => {});
-  
-  // 确保user对象不为undefined，user可能是null
-  // safeUser已经在上面定义了
-  const { appLanguage = 'zh-CN' } = appLanguageContext || {};
+  const { vocabulary, clearVocabulary } = useVocabulary();
+  const { shows, clearShows } = useShowList();
+  const { navigate } = useNavigation();
+  const { user, loginType, isAuthenticated, logout: authLogout, login } = useAuth();
+  const { appLanguage } = useAppLanguage();
   const userService = UserService.getInstance();
 
   // 自动打开语言设置
@@ -105,18 +83,18 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   // 获取用户头像
   const getUserAvatar = () => {
     console.log('🔍 getUserAvatar 调试信息:', {
-      user: safeUser,
-      loginType: safeLoginType,
-      isAuthenticated: safeIsAuthenticated
+      user: user,
+      loginType: loginType,
+      isAuthenticated: isAuthenticated
     });
 
-    if (!safeUser || !safeLoginType) {
+    if (!user || !loginType) {
       // 返回本地默认游客头像
       return require('../../../assets/images/guest-avatar.png');
     }
 
     // 根据登录类型返回不同的默认头像
-    switch (safeLoginType) {
+    switch (loginType) {
       case 'wechat':
         return 'https://via.placeholder.com/80/1AAD19/FFFFFF?text=WeChat';
       case 'apple':
@@ -132,20 +110,20 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
 
   // 获取用户昵称
   const getUserNickname = () => {
-    if (!safeUser || !safeLoginType) {
+    if (!user || !loginType) {
       return t('guest_user', appLanguage);
     }
 
     // 游客用户直接显示用户ID
-    if (safeLoginType === 'guest' && safeUser.nickname) {
-      return safeUser.nickname; // 这里显示的是用户ID
+    if (loginType === 'guest' && user.nickname) {
+      return user.nickname; // 这里显示的是用户ID
     }
 
-    if (safeUser.nickname) {
-      return safeUser.nickname;
+    if (user.nickname) {
+      return user.nickname;
     }
 
-    switch (safeLoginType) {
+    switch (loginType) {
       case 'wechat':
         return t('wechat_user', appLanguage);
       case 'apple':
@@ -178,10 +156,10 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   useEffect(() => {
     console.log('🔍 ProfileScreen AuthContext 状态变化:', {
       user: user,
-      loginType: safeLoginType,
-      isAuthenticated: safeIsAuthenticated
+      loginType: loginType,
+      isAuthenticated: isAuthenticated
     });
-  }, [user, safeLoginType, safeIsAuthenticated]);
+  }, [user, loginType, isAuthenticated]);
 
   // 当应用语言改变时，更新通知服务的语言设置
   useEffect(() => {
@@ -219,21 +197,21 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
     accuracy: 87,
   };
 
-  // 暂时隐藏登录功能
-  // const handleLoginPress = () => {
-  //   // 使用自定义导航跳转到登录页面
-  //   navigate('login');
-  // };
+  // 恢复登录功能
+  const handleLoginPress = () => {
+    // 使用自定义导航跳转到登录页面
+    navigate('login');
+  };
 
   const renderUserInfo = () => {
     // 当前版本使用自动生成的游客ID，无需登录按钮
-    const isGuest = !safeIsAuthenticated || !user || safeLoginType === 'guest';
+    const isGuest = !isAuthenticated || !user || loginType === 'guest';
     
     return (
       <View style={styles.userSection}>
         <View style={styles.userHeader}>
           <Image
-            key={`avatar-${safeLoginType}-${safeIsAuthenticated}`}
+            key={`avatar-${loginType}-${isAuthenticated}`}
             source={getUserAvatar()}
             style={styles.avatar}
           />
@@ -242,8 +220,8 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
             <Text style={styles.userLevel}>{t('intermediate_learner', appLanguage)}</Text>
             <Text style={styles.userEmail}>{user?.email || 'user@example.com'}</Text>
             
-            {/* 登录/退出登录按钮 - 暂时隐藏 */}
-            {/* {isGuest ? (
+            {/* 登录/退出登录按钮 - 已恢复 */}
+            {isGuest ? (
               <TouchableOpacity 
                 style={styles.userActionButton} 
                 onPress={handleLoginPress}
@@ -259,12 +237,12 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                 <Ionicons name="log-out-outline" size={18} color={colors.text.inverse} />
                 <Text style={styles.userActionButtonText}>{t('logout', appLanguage)}</Text>
               </TouchableOpacity>
-            )} */}
+            )}
           </View>
-          {/* 暂时隐藏编辑按钮 */}
-          {/* <TouchableOpacity style={styles.editButton} onPress={handleEditProfile}>
-            <Ionicons name="pencil" size={20} color={colors.primary[500]} />
-          </TouchableOpacity> */}
+                      {/* 恢复编辑按钮 */}
+            <TouchableOpacity style={styles.editButton} onPress={handleEditProfile}>
+              <Ionicons name="pencil" size={20} color={colors.primary[500]} />
+            </TouchableOpacity>
         </View>
       </View>
     );
@@ -327,15 +305,6 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
         <View style={styles.settingLeft}>
           <Ionicons name="trash-outline" size={24} color={colors.error[500]} />
           <Text style={[styles.settingText, { color: colors.error[500] }]}>{t('clear_all_data', appLanguage)}</Text>
-        </View>
-        <Ionicons name="chevron-forward" size={20} color={colors.neutral[500]} />
-      </TouchableOpacity>
-
-      {/* 调试面板 */}
-      <TouchableOpacity style={styles.settingItem} onPress={() => setDebugPanelVisible(true)}>
-        <View style={styles.settingLeft}>
-          <Ionicons name="bug-outline" size={24} color={colors.warning[500]} />
-          <Text style={[styles.settingText, { color: colors.warning[500] }]}>调试面板</Text>
         </View>
         <Ionicons name="chevron-forward" size={20} color={colors.neutral[500]} />
       </TouchableOpacity>
@@ -429,19 +398,19 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
           style: 'destructive', 
           onPress: async () => {
             try {
-                              // 清除云端数据
-                if (safeUser?.id) {
-                  console.log('🗑️ 开始清除云端数据，用户ID:', safeUser.id);
-                  
-                  // 清除云端用户词汇表
-                  try {
-                    const response = await fetch(`${process.env.EXPO_PUBLIC_API_BASE_URL || 'https://dramawordv2.onrender.com'}/api/words/user/clear-vocabulary`, {
-                      method: 'DELETE',
-                      headers: {
-                        'Content-Type': 'application/json',
-                      },
-                      body: JSON.stringify({ userId: safeUser.id })
-                    });
+              // 清除云端数据
+              if (user?.id) {
+                console.log('🗑️ 开始清除云端数据，用户ID:', user.id);
+                
+                // 清除云端用户词汇表
+                try {
+                  const response = await fetch(`${process.env.EXPO_PUBLIC_API_BASE_URL || 'https://dramawordv2.onrender.com'}/api/words/user/clear-vocabulary`, {
+                    method: 'DELETE',
+                    headers: {
+                      'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ userId: user.id })
+                  });
                   
                   if (response.ok) {
                     console.log('✅ 云端用户词汇表清除成功');
@@ -459,7 +428,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                     headers: {
                       'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify({ userId: safeUser.id })
+                    body: JSON.stringify({ userId: user.id })
                   });
                   
                   if (statsResponse.ok) {
@@ -478,7 +447,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                     headers: {
                       'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify({ userId: safeUser.id })
+                    body: JSON.stringify({ userId: user.id })
                   });
                   
                   if (historyResponse.ok) {
@@ -574,10 +543,10 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
         onClose={() => setEditModalVisible(false)}
         onUpdate={handleProfileUpdate}
         user={{
-          id: safeUser?.id || 'guest',
-          nickname: safeUser?.nickname || getUserNickname(),
-          avatar: safeUser?.avatar,
-          email: safeUser?.email,
+          id: user?.id || 'guest',
+          nickname: user?.nickname || getUserNickname(),
+          avatar: user?.avatar,
+          email: user?.email,
         }}
       />
       
@@ -620,24 +589,8 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
           </View>
         </View>
       </Modal>
-      
-      {/* 调试面板 */}
-      <DebugPanel
-        visible={debugPanelVisible}
-        onClose={() => setDebugPanelVisible(false)}
-      />
     </SafeAreaView>
   );
-  } catch (error) {
-    console.error('ProfileScreen 渲染错误:', error);
-    return (
-      <SafeAreaView style={styles.container}>
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-          <Text>加载中...</Text>
-        </View>
-      </SafeAreaView>
-    );
-  }
 };
 
 const styles = StyleSheet.create({
