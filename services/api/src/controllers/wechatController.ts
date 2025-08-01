@@ -68,6 +68,18 @@ export class WechatController {
         logger.info(`创建新微信用户: openid=${wechatResult.openid}, nickname=${nickname}`);
       } else {
         // 更新现有用户信息
+        const newNickname = wechatResult.userInfo.nickname || '微信用户';
+        const newAvatar = wechatResult.userInfo.headimgurl;
+        
+        // 更新用户基本信息
+        if (newNickname !== user.nickname) {
+          user.nickname = newNickname;
+        }
+        if (newAvatar && newAvatar !== user.avatar) {
+          user.avatar = newAvatar;
+        }
+        
+        // 更新微信认证信息
         user.auth.wechatNickname = wechatResult.userInfo.nickname;
         user.auth.wechatAvatar = wechatResult.userInfo.headimgurl;
         user.auth.wechatAccessToken = wechatResult.accessToken;
@@ -80,7 +92,7 @@ export class WechatController {
         }
 
         await user.save();
-        logger.info(`更新微信用户信息: openid=${wechatResult.openid}`);
+        logger.info(`更新微信用户信息: openid=${wechatResult.openid}, nickname=${newNickname}`);
       }
 
       // 生成JWT token

@@ -243,8 +243,13 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
         throw new Error('未获取到身份令牌');
       }
 
-      // 调用后端登录API
-      const result = await AppleService.login(credential.identityToken);
+      // 调用后端登录API，传递完整的用户信息
+      const loginData = {
+        idToken: credential.identityToken,
+        email: credential.email,
+        fullName: credential.fullName,
+      };
+      const result = await AppleService.login(loginData);
       
       if (result.success && result.data) {
         // 保存用户信息到本地存储

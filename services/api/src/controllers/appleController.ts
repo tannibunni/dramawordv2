@@ -9,32 +9,56 @@ const JWT_SECRET = process.env.JWT_SECRET || 'dramaword_jwt_secret';
 export class AppleController {
   static async login(req: Request, res: Response) {
     try {
-      const { idToken } = req.body;
+      const { idToken, email, fullName } = req.body;
       if (!idToken) {
         return res.status(400).json({ success: false, message: '缺少idToken' });
       }
+      
       // 验证idToken
       const appleUser = await AppleService.verifyIdToken(idToken);
-      const { sub: appleId, email } = appleUser;
+      const { sub: appleId } = appleUser;
+
+      // 构建用户昵称
+      let nickname = 'Apple用户';
+      if (fullName && (fullName.givenName || fullName.familyName)) {
+        const givenName = fullName.givenName || '';
+        const familyName = fullName.familyName || '';
+        nickname = `${givenName}${familyName}`.trim() || 'Apple用户';
+      } else if (email) {
+        nickname = email.split('@')[0];
+      }
 
       // 查找或创建用户
       let user = await User.findOne({ 'auth.appleId': appleId });
       if (!user) {
         user = new User({
           username: `apple_${appleId.slice(0, 8)}`,
-          nickname: email ? email.split('@')[0] : 'Apple用户',
+          nickname,
           email,
           auth: {
             loginType: 'apple',
             appleId,
+            appleEmail: email,
+            appleFullName: fullName,
             lastLoginAt: new Date(),
             isActive: true,
           },
         });
         await user.save();
+        logger.info(`创建新Apple用户: appleId=${appleId}, nickname=${nickname}`);
       } else {
+        // 更新现有用户信息
+        if (nickname !== 'Apple用户') {
+          user.nickname = nickname;
+        }
+        if (email && email !== user.email) {
+          user.email = email;
+        }
+        user.auth.appleEmail = email;
+        user.auth.appleFullName = fullName;
         user.auth.lastLoginAt = new Date();
         await user.save();
+        logger.info(`更新Apple用户信息: appleId=${appleId}, nickname=${nickname}`);
       }
 
       // 生成JWT
