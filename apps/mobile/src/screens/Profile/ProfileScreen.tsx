@@ -35,6 +35,7 @@ import { learningDataService } from '../../services/learningDataService';
 import { LearningStatsService } from '../../services/learningStatsService';
 import { DataSyncService } from '../../services/dataSyncService';
 import { cacheService, CACHE_KEYS } from '../../services/cacheService';
+import { DebugPanel } from '../../components/common/DebugPanel';
 
 
 interface UserStats {
@@ -65,6 +66,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   const [clearingCache, setClearingCache] = useState(false);
   const [aboutModalVisible, setAboutModalVisible] = useState(false);
   const [feedbackModalVisible, setFeedbackModalVisible] = useState(false);
+  const [debugPanelVisible, setDebugPanelVisible] = useState(false);
 
   const { vocabulary, clearVocabulary } = useVocabulary();
   const { shows, clearShows } = useShowList();
@@ -305,6 +307,15 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
         <View style={styles.settingLeft}>
           <Ionicons name="trash-outline" size={24} color={colors.error[500]} />
           <Text style={[styles.settingText, { color: colors.error[500] }]}>{t('clear_all_data', appLanguage)}</Text>
+        </View>
+        <Ionicons name="chevron-forward" size={20} color={colors.neutral[500]} />
+      </TouchableOpacity>
+
+      {/* 调试面板 */}
+      <TouchableOpacity style={styles.settingItem} onPress={() => setDebugPanelVisible(true)}>
+        <View style={styles.settingLeft}>
+          <Ionicons name="bug-outline" size={24} color={colors.warning[500]} />
+          <Text style={[styles.settingText, { color: colors.warning[500] }]}>调试面板</Text>
         </View>
         <Ionicons name="chevron-forward" size={20} color={colors.neutral[500]} />
       </TouchableOpacity>
@@ -589,6 +600,12 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
           </View>
         </View>
       </Modal>
+      
+      {/* 调试面板 */}
+      <DebugPanel
+        visible={debugPanelVisible}
+        onClose={() => setDebugPanelVisible(false)}
+      />
     </SafeAreaView>
   );
 };
