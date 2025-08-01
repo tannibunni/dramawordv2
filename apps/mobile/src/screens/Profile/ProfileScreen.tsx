@@ -58,6 +58,8 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   onEditProfile,
   openLanguageSettings = false,
 }) => {
+  // 添加错误边界，防止undefined错误
+  try {
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [darkModeEnabled, setDarkModeEnabled] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -619,6 +621,16 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
       />
     </SafeAreaView>
   );
+  } catch (error) {
+    console.error('ProfileScreen 渲染错误:', error);
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+          <Text>加载中...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 };
 
 const styles = StyleSheet.create({
