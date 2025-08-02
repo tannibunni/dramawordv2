@@ -17,6 +17,7 @@ import Swiper from 'react-native-deck-swiper';
 import WordCard, { WordData } from '../../components/cards/WordCard';
 import { audioService } from '../../services/audioService';
 import { learningDataService } from '../../services/learningDataService';
+import { wrongWordsManager } from '../../services/wrongWordsManager';
 import { LearningRecord, updateWordReview, Word } from '../../services/learningAlgorithm';
 import { SwipeableWordCard } from '../../components/cards';
 import { UserService } from '../../services/userService';
@@ -389,40 +390,30 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
       if (type === 'wrong_words') {
         setIsEbbinghaus(false);
         
-        // 优先使用本地vocabulary数据，如果本地为空则返回空数组
-        if (vocabulary && vocabulary.length > 0) {
-          console.log('🔍 错词卡筛选前 vocabulary 总数:', vocabulary.length);
-          console.log('🔍 vocabulary 详情:', vocabulary.map(w => ({
+        // 使用错词管理器获取错词列表
+        const wrongWordsList = wrongWordsManager.getWrongWords();
+        console.log('🔍 错词管理器返回错词列表:', wrongWordsList);
+        console.log('📊 错词管理器统计信息:', wrongWordsManager.getStatistics());
+        
+        if (wrongWordsList.length > 0) {
+          // 从 vocabulary 中获取错词的完整信息
+          const wrongWordsWithDetails = wrongWordsList
+            .map(wordStr => vocabulary.find(w => w.word === wordStr))
+            .filter(Boolean); // 过滤掉未找到的单词
+          
+          console.log(`🔍 错词卡筛选结果: ${wrongWordsWithDetails.length} 个错词`);
+          console.log('🔍 错词详情:', wrongWordsWithDetails.map(w => ({
             word: w.word,
             incorrectCount: w.incorrectCount,
             consecutiveIncorrect: w.consecutiveIncorrect,
             consecutiveCorrect: w.consecutiveCorrect
           })));
           
-          // 使用与 ReviewIntroScreen 相同的筛选逻辑
-          const localWrongWords = vocabulary.filter((word: any) => {
-            console.log(`🔍 检查单词: ${word.word}`, {
-              incorrectCount: word.incorrectCount,
-              consecutiveIncorrect: word.consecutiveIncorrect,
-              consecutiveCorrect: word.consecutiveCorrect,
-              isWrongWord: isWrongWord(word)
-            });
-            return isWrongWord(word);
-          });
-          
-          console.log(`🔍 错词卡筛选结果: ${localWrongWords.length} 个错词`);
-          console.log('🔍 错词详情:', localWrongWords.map(w => ({
-            word: w.word,
-            incorrectCount: w.incorrectCount,
-            consecutiveIncorrect: w.consecutiveIncorrect,
-            consecutiveCorrect: w.consecutiveCorrect
-          })));
-          
-          wrongWordLogger.info(`从本地vocabulary获取到 ${localWrongWords.length} 个错词`);
-          return localWrongWords.slice(0, MIN_REVIEW_BATCH);
+          wrongWordLogger.info(`从错词管理器获取到 ${wrongWordsWithDetails.length} 个错词`);
+          return wrongWordsWithDetails.slice(0, MIN_REVIEW_BATCH);
         } else {
-          console.log('🔍 本地vocabulary为空，返回空数组');
-          wrongWordLogger.info('本地vocabulary为空，返回空数组');
+          console.log('🔍 错词管理器中没有错词，返回空数组');
+          wrongWordLogger.info('错词管理器中没有错词，返回空数组');
           return [];
         }
       }
@@ -771,15 +762,31 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
       // 3. 直接更新 vocabulary context，确保错词卡能立即看到更新
       const currentWord = words[swiperIndex];
       if (currentWord) {
-        updateWord(word, {
+        const updatedWordData = {
           incorrectCount: (currentWord.incorrectCount || 0) + 1,
           consecutiveIncorrect: (currentWord.consecutiveIncorrect || 0) + 1,
           consecutiveCorrect: 0 // 答错时重置连续正确次数
-        });
+        };
+        
+        updateWord(word, updatedWordData);
         console.log('✅ 已更新 vocabulary context，错词数据已同步');
+        
+        // 4. 实时添加到错词集合管理器
+        const wordDataForWrongWords = {
+          ...currentWord,
+          ...updatedWordData
+        };
+        
+        const added = wrongWordsManager.addWrongWord(word, wordDataForWrongWords);
+        if (added) {
+          console.log('✅ 错词已实时添加到错词集合:', word);
+          console.log('📊 当前错词总数:', wrongWordsManager.getWrongWordsCount());
+        } else {
+          console.log('ℹ️ 错词已存在于错词集合中:', word);
+        }
       }
       
-      // 4. 延迟更新后端用户词汇表（避免立即冲突）
+      // 5. 延迟更新后端用户词汇表（避免立即冲突）
       setTimeout(async () => {
         await updateBackendWordProgress(word, false);
       }, 1000);
@@ -824,15 +831,32 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
       // 3. 直接更新 vocabulary context，确保错词卡能立即看到更新
       const currentWord = words[swiperIndex];
       if (currentWord) {
-        updateWord(word, {
+        const updatedWordData = {
           incorrectCount: currentWord.incorrectCount || 0,
           consecutiveIncorrect: 0, // 答对时重置连续错误次数
           consecutiveCorrect: (currentWord.consecutiveCorrect || 0) + 1
-        });
+        };
+        
+        updateWord(word, updatedWordData);
         console.log('✅ 已更新 vocabulary context，正确答题数据已同步');
+        
+        // 4. 更新错词集合管理器
+        const wordDataForWrongWords = {
+          ...currentWord,
+          ...updatedWordData
+        };
+        
+        wrongWordsManager.updateWrongWord(word, true, wordDataForWrongWords);
+        console.log('🔄 已更新错词集合中的单词状态:', word);
+        
+        // 检查是否需要从错词集合移除（连续答对3次）
+        const wordInfo = wrongWordsManager.getWrongWordInfo(word);
+        if (wordInfo && wordInfo.consecutiveCorrect >= 3) {
+          console.log('🎉 单词连续答对3次，从错词集合移除:', word);
+        }
       }
       
-      // 4. 延迟更新后端用户词汇表（避免立即冲突）
+      // 5. 延迟更新后端用户词汇表（避免立即冲突）
       setTimeout(async () => {
         await updateBackendWordProgress(word, true);
       }, 1000);

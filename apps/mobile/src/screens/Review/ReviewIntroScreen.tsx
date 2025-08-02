@@ -14,6 +14,7 @@ import { API_BASE_URL } from '../../constants/config';
 import { colors } from '../../constants/colors';
 import { wrongWordLogger, experienceLogger, userDataLogger, vocabularyLogger } from '../../utils/logger';
 import { SyncStatusIndicator } from '../../components/common/SyncStatusIndicator';
+import { wrongWordsManager } from '../../services/wrongWordsManager';
 
 const ReviewIntroScreen = () => {
   const { vocabulary, refreshLearningProgress } = useVocabulary();
@@ -49,15 +50,15 @@ const ReviewIntroScreen = () => {
         console.log('🔍 ReviewIntroScreen: 开始计算错词数量');
         console.log('🔍 vocabulary 总数:', vocabulary.length);
         
-        // 错词卡逻辑：连续答对3次后从错词卡移除，否则保持在错词卡中
+        // 使用错词管理器计算错词数量
         const localWrongWords = vocabulary.filter((word: any) => {
             console.log(`🔍 ReviewIntroScreen 检查单词: ${word.word}`, {
               incorrectCount: word.incorrectCount,
               consecutiveIncorrect: word.consecutiveIncorrect,
               consecutiveCorrect: word.consecutiveCorrect,
-              isWrongWord: isWrongWord(word)
+              isWrongWord: wrongWordsManager.isWrongWord(word)
             });
-            return isWrongWord(word);
+            return wrongWordsManager.isWrongWord(word);
           });
         
         console.log(`🔍 ReviewIntroScreen: 错词数量计算结果: ${localWrongWords.length}`);
@@ -83,15 +84,15 @@ const ReviewIntroScreen = () => {
           console.log('🔍 ReviewIntroScreen useEffect: 开始计算错词数量');
           console.log('🔍 vocabulary 总数:', vocabulary.length);
           
-          // 错词卡逻辑：连续答对3次后从错词卡移除，否则保持在错词卡中
+          // 使用错词管理器计算错词数量
           const localWrongWords = vocabulary.filter((word: any) => {
             console.log(`🔍 ReviewIntroScreen 检查单词: ${word.word}`, {
               incorrectCount: word.incorrectCount,
               consecutiveIncorrect: word.consecutiveIncorrect,
               consecutiveCorrect: word.consecutiveCorrect,
-              isWrongWord: isWrongWord(word)
+              isWrongWord: wrongWordsManager.isWrongWord(word)
             });
-            return isWrongWord(word);
+            return wrongWordsManager.isWrongWord(word);
           });
           
           console.log(`🔍 ReviewIntroScreen useEffect: 错词数量计算结果: ${localWrongWords.length}`);
@@ -165,6 +166,14 @@ const ReviewIntroScreen = () => {
   // 加载用户统计数据
   useEffect(() => {
     loadUserStats();
+  }, [vocabulary]);
+
+  // 初始化错词管理器
+  useEffect(() => {
+    if (vocabulary && vocabulary.length > 0) {
+      wrongWordsManager.initialize(vocabulary);
+      console.log('🔍 ReviewIntroScreen: 错词管理器初始化完成');
+    }
   }, [vocabulary]);
   
   // 检查是否需要刷新vocabulary
