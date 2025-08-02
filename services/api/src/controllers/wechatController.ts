@@ -78,6 +78,13 @@ export class WechatController {
             wechatTokenExpiresAt: new Date(Date.now() + wechatResult.expires_in * 1000),
             lastLoginAt: new Date(),
             isActive: true
+          },
+          subscription: {
+            type: 'lifetime',
+            isActive: true,
+            startDate: new Date(),
+            expiryDate: new Date(Date.now() + 100 * 365 * 24 * 60 * 60 * 1000), // 100年后过期
+            autoRenew: false
           }
         });
 

@@ -49,6 +49,13 @@ export class AppleController {
             lastLoginAt: new Date(),
             isActive: true,
           },
+          subscription: {
+            type: 'lifetime',
+            isActive: true,
+            startDate: new Date(),
+            expiryDate: new Date(Date.now() + 100 * 365 * 24 * 60 * 60 * 1000), // 100年后过期
+            autoRenew: false
+          }
         });
         await user.save();
         logger.info(`创建新Apple用户: appleId=${appleId}, nickname=${nickname}`);
