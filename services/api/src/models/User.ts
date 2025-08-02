@@ -335,7 +335,7 @@ const UserSchema = new Schema<IUser>({
     type: {
       type: String,
       enum: ['monthly', 'yearly', 'lifetime'],
-      required: true
+      default: 'lifetime'
     },
     isActive: {
       type: Boolean,
@@ -343,15 +343,17 @@ const UserSchema = new Schema<IUser>({
     },
     startDate: {
       type: Date,
-      required: true
+      default: Date.now
     },
     expiryDate: {
       type: Date,
-      required: true
+      default: function() {
+        return new Date(Date.now() + 100 * 365 * 24 * 60 * 60 * 1000); // 100年后过期
+      }
     },
     autoRenew: {
       type: Boolean,
-      default: true
+      default: false
     }
   }
 }, {
@@ -446,7 +448,22 @@ UserSchema.methods.addExperience = function(exp: number, reason: string = '') {
     console.log(`🎉 用户升级！新等级: ${this.learningStats.level}, 原因: ${reason}`);
   }
   
-  return this.save();
+  // 使用 findOneAndUpdate 避免并行保存冲突
+  return User.findByIdAndUpdate(
+    this._id,
+    { 
+      $set: { 
+        'learningStats.experience': this.learningStats.experience,
+        'learningStats.level': this.learningStats.level,
+        'learningStats.dailyReviewXP': this.learningStats.dailyReviewXP,
+        'learningStats.dailyStudyTimeXP': this.learningStats.dailyStudyTimeXP,
+        'learningStats.lastDailyReset': this.learningStats.lastDailyReset,
+        'learningStats.completedDailyCards': this.learningStats.completedDailyCards,
+        'learningStats.lastDailyCardsDate': this.learningStats.lastDailyCardsDate
+      }
+    },
+    { new: true }
+  );
 };
 
 // 方法：收集新单词获得经验值
@@ -542,7 +559,12 @@ UserSchema.methods.addExperienceForContribution = function() {
 // 方法：更新学习统计
 UserSchema.methods.updateLearningStats = function(stats: Partial<IUserLearningStats>) {
   Object.assign(this.learningStats, stats);
-  return this.save();
+  // 使用 findOneAndUpdate 避免并行保存冲突
+  return User.findByIdAndUpdate(
+    this._id,
+    { $set: { learningStats: this.learningStats } },
+    { new: true }
+  );
 };
 
 // 方法：更新学习天数
@@ -580,7 +602,18 @@ UserSchema.methods.updateStudyStreak = function() {
     console.log(`🏆 新的最长连续记录！${this.learningStats.longestStreak}天`);
   }
   
-  return this.save();
+  // 使用 findOneAndUpdate 避免并行保存冲突
+  return User.findByIdAndUpdate(
+    this._id,
+    { 
+      $set: { 
+        'learningStats.currentStreak': this.learningStats.currentStreak,
+        'learningStats.longestStreak': this.learningStats.longestStreak,
+        'learningStats.lastStudyDate': this.learningStats.lastStudyDate
+      }
+    },
+    { new: true }
+  );
 };
 
 // 方法：连续学习奖励
