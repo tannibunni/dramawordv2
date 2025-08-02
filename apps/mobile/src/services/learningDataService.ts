@@ -7,7 +7,7 @@ import {
 } from './learningAlgorithm';
 // 移除未使用的导入
 import { API_BASE_URL } from '../constants/config';
-import optimizedDataSyncService from './optimizedDataSyncService';
+import { unifiedSyncService } from './unifiedSyncService';
 
 async function getUserToken() {
   try {
@@ -92,16 +92,18 @@ class LearningDataService {
       const userId = await this.getUserId();
       if (userId) {
         try {
-          await optimizedDataSyncService.syncBatchData({
-            type: 'learning_record',
-            userId,
+          await unifiedSyncService.addToSyncQueue({
+            type: 'learningRecords',
             data: [{
               wordId,
               word,
               wasCorrect,
               timestamp: Date.now(),
               record: updatedRecord
-            }]
+            }],
+            userId,
+            operation: 'create',
+            priority: 'medium'
           });
           console.log('✅ 学习记录已加入同步队列');
         } catch (e) {
@@ -164,10 +166,12 @@ class LearningDataService {
             timestamp: Date.now()
           }));
           
-          await optimizedDataSyncService.syncBatchData({
-            type: 'learning_record',
+          await unifiedSyncService.addToSyncQueue({
+            type: 'learningRecords',
+            data: batchData,
             userId,
-            data: batchData
+            operation: 'create',
+            priority: 'medium'
           });
           console.log('✅ 批量学习记录已加入同步队列');
         } catch (e) {

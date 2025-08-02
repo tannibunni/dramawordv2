@@ -1,6 +1,6 @@
 import { ExperienceService, ExperienceGainResult, ExperienceInfo } from './experienceService';
 import { animationManager } from './animationManager';
-import { incrementalSyncManager } from './incrementalSyncManager';
+import { unifiedSyncService } from './unifiedSyncService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export interface ExperienceGainEvent {
@@ -401,16 +401,18 @@ export class ExperienceManager {
    */
   private async syncExperienceData(): Promise<void> {
     try {
-      // 使用增量同步管理器记录经验值变更
-      await incrementalSyncManager.recordChange(
-        'userStats',
-        'update',
-        {
+      // 使用统一同步服务记录经验值变更
+      await unifiedSyncService.addToSyncQueue({
+        type: 'userStats',
+        data: {
           experience: this.currentExperience,
           level: this.currentLevel,
           lastUpdated: Date.now()
-        }
-      );
+        },
+        userId: await this.getUserId() || '',
+        operation: 'update',
+        priority: 'high'
+      });
     } catch (error) {
       console.error('❌ 同步经验值数据失败:', error);
     }
@@ -496,6 +498,23 @@ export class ExperienceManager {
       console.log('🧹 经验值事件历史已清除');
     } catch (error) {
       console.error('❌ 清除经验值事件历史失败:', error);
+    }
+  }
+
+  /**
+   * 获取用户ID
+   */
+  private async getUserId(): Promise<string | null> {
+    try {
+      const userData = await AsyncStorage.getItem('userData');
+      if (userData) {
+        const parsed = JSON.parse(userData);
+        return parsed.id || null;
+      }
+      return null;
+    } catch (error) {
+      console.error('获取用户ID失败:', error);
+      return null;
     }
   }
 }
