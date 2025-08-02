@@ -90,6 +90,7 @@ export class AppleController {
             id: user._id,
             username: user.username,
             nickname: user.nickname,
+            email: user.email,
             avatar: user.avatar,
             loginType: user.auth.loginType,
             learningStats: user.learningStats,

@@ -230,6 +230,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
           AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
           AppleAuthentication.AppleAuthenticationScope.EMAIL,
         ],
+        // 注意：Apple 不直接提供头像，需要用户手动上传
       });
 
       console.log('🍎 苹果登录成功，获取到凭证:', {
@@ -256,6 +257,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
         const userData = {
           id: result.data.user.id,
           nickname: result.data.user.nickname,
+          email: result.data.user.email,
           avatar: result.data.user.avatar,
           loginType: 'apple',
           token: result.data.token,
