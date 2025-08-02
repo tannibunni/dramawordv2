@@ -16,8 +16,16 @@ export class WechatController {
     try {
       const { code, state } = req.body;
 
+      // 添加调试日志
+      logger.info(`💬 微信登录请求开始`);
+      logger.info(`💬 接收到的 code: ${code ? code.substring(0, 10) + '...' : 'null'}`);
+      logger.info(`💬 接收到的 state: ${state || 'null'}`);
+      logger.info(`💬 环境变量检查 - WECHAT_APP_ID: ${process.env.WECHAT_APP_ID}`);
+      logger.info(`💬 环境变量检查 - WECHAT_APP_SECRET: ${process.env.WECHAT_APP_SECRET ? '已设置' : '未设置'}`);
+
       // 验证参数
       if (!WechatService.validateLoginParams(code)) {
+        logger.error(`💬 微信登录参数验证失败: code=${code}`);
         return res.status(400).json({
           success: false,
           message: '无效的授权码'
@@ -26,14 +34,21 @@ export class WechatController {
 
       // 验证state（可选）
       if (state && !WechatService.validateState(state)) {
+        logger.error(`💬 微信登录状态验证失败: state=${state}`);
         return res.status(400).json({
           success: false,
           message: '无效的状态参数'
         });
       }
 
+      logger.info(`💬 开始执行微信登录流程...`);
+      
       // 执行微信登录
       const wechatResult = await WechatService.login(code);
+      
+      logger.info(`💬 微信登录成功，获取到用户信息: openid=${wechatResult.openid}`);
+      logger.info(`💬 用户昵称: ${wechatResult.userInfo.nickname}`);
+      logger.info(`💬 用户头像: ${wechatResult.userInfo.headimgurl ? '已获取' : '未获取'}`);
       
       // 查找或创建用户
       let user = await User.findOne({
@@ -44,6 +59,8 @@ export class WechatController {
         // 创建新用户
         const username = `wechat_${wechatResult.openid.substring(0, 8)}`;
         const nickname = wechatResult.userInfo.nickname || '微信用户';
+        
+        logger.info(`💬 创建新微信用户: username=${username}, nickname=${nickname}`);
         
         user = new User({
           username,
@@ -65,11 +82,15 @@ export class WechatController {
         });
 
         await user.save();
-        logger.info(`创建新微信用户: openid=${wechatResult.openid}, nickname=${nickname}`);
+        logger.info(`💬 新微信用户创建成功: openid=${wechatResult.openid}, nickname=${nickname}`);
       } else {
         // 更新现有用户信息
         const newNickname = wechatResult.userInfo.nickname || '微信用户';
         const newAvatar = wechatResult.userInfo.headimgurl;
+        
+        logger.info(`💬 更新现有微信用户: openid=${wechatResult.openid}`);
+        logger.info(`💬 原昵称: ${user.nickname}, 新昵称: ${newNickname}`);
+        logger.info(`💬 头像更新: ${newAvatar ? '是' : '否'}`);
         
         // 更新用户基本信息
         if (newNickname !== user.nickname) {
@@ -92,7 +113,7 @@ export class WechatController {
         }
 
         await user.save();
-        logger.info(`更新微信用户信息: openid=${wechatResult.openid}, nickname=${newNickname}`);
+        logger.info(`💬 微信用户信息更新成功: openid=${wechatResult.openid}, nickname=${newNickname}`);
       }
 
       // 生成JWT token
@@ -105,6 +126,8 @@ export class WechatController {
         JWT_SECRET,
         { expiresIn: '7d' }
       );
+
+      logger.info(`💬 微信登录完成，生成JWT token: userId=${user._id}`);
 
       // 返回用户信息和token
       return res.json({
@@ -125,7 +148,7 @@ export class WechatController {
       });
 
     } catch (error) {
-      logger.error('微信登录失败:', error);
+      logger.error('💬 微信登录失败:', error);
       return res.status(500).json({
         success: false,
         message: error instanceof Error ? error.message : '微信登录失败'

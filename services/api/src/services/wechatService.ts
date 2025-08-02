@@ -55,6 +55,11 @@ export class WechatService {
    */
   static async getAccessToken(code: string): Promise<WechatAccessTokenResponse> {
     try {
+      logger.info(`💬 开始获取微信 access_token`);
+      logger.info(`💬 使用的 AppID: ${wechatConfig.appId}`);
+      logger.info(`💬 AppSecret 状态: ${wechatConfig.appSecret ? '已设置' : '未设置'}`);
+      logger.info(`💬 授权码长度: ${code.length}`);
+      
       const params = new URLSearchParams({
         appid: wechatConfig.appId,
         secret: wechatConfig.appSecret,
@@ -62,19 +67,27 @@ export class WechatService {
         grant_type: 'authorization_code',
       });
 
+      logger.info(`💬 请求微信 API: ${wechatConfig.api.accessToken}`);
+      
       const response = await axios.get(`${wechatConfig.api.accessToken}?${params.toString()}`);
       const data = response.data as WechatAccessTokenResponse;
 
+      logger.info(`💬 微信 API 响应状态: ${response.status}`);
+      logger.info(`💬 响应数据:`, data);
+
       if (data.errcode) {
         const errorMessage = wechatErrorCodes[String(data.errcode) as keyof typeof wechatErrorCodes] || data.errmsg || '未知错误';
-        logger.error(`微信获取access_token失败: ${data.errcode} - ${errorMessage}`);
+        logger.error(`💬 微信获取access_token失败: ${data.errcode} - ${errorMessage}`);
+        logger.error(`💬 错误详情:`, data);
         throw new Error(`微信登录失败: ${errorMessage}`);
       }
 
-      logger.info(`微信获取access_token成功: openid=${data.openid}`);
+      logger.info(`💬 微信获取access_token成功: openid=${data.openid}`);
+      logger.info(`💬 access_token 长度: ${data.access_token ? data.access_token.length : 0}`);
+      logger.info(`💬 expires_in: ${data.expires_in}`);
       return data;
     } catch (error) {
-      logger.error('微信获取access_token异常:', error);
+      logger.error('💬 微信获取access_token异常:', error);
       throw new Error('微信登录服务异常');
     }
   }
@@ -173,13 +186,29 @@ export class WechatService {
     expires_in: number;
   }> {
     try {
+      logger.info(`💬 开始微信登录流程`);
+      logger.info(`💬 步骤 1: 获取 access_token`);
+      
       // 1. 获取access_token
       const tokenResponse = await this.getAccessToken(code);
+      
+      logger.info(`💬 步骤 2: 获取用户信息`);
+      logger.info(`💬 使用 access_token 获取用户信息: openid=${tokenResponse.openid}`);
       
       // 2. 获取用户信息
       const userInfo = await this.getUserInfo(tokenResponse.access_token, tokenResponse.openid);
       
-      logger.info(`微信登录成功: openid=${tokenResponse.openid}, nickname=${userInfo.nickname}`);
+      logger.info(`💬 微信登录流程完成`);
+      logger.info(`💬 最终结果: openid=${tokenResponse.openid}, nickname=${userInfo.nickname}`);
+      logger.info(`💬 用户信息详情:`, {
+        openid: userInfo.openid,
+        nickname: userInfo.nickname,
+        headimgurl: userInfo.headimgurl ? '已获取' : '未获取',
+        sex: userInfo.sex,
+        country: userInfo.country,
+        province: userInfo.province,
+        city: userInfo.city
+      });
       
       return {
         accessToken: tokenResponse.access_token,
@@ -190,7 +219,7 @@ export class WechatService {
         expires_in: tokenResponse.expires_in,
       };
     } catch (error) {
-      logger.error('微信登录流程异常:', error);
+      logger.error('💬 微信登录流程异常:', error);
       throw error;
     }
   }
