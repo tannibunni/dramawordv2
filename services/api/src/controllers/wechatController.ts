@@ -57,7 +57,18 @@ export class WechatController {
 
       if (!user) {
         // 创建新用户
-        const username = `wechat_${wechatResult.openid.substring(0, 8)}`;
+        // 为 Mock 模式生成唯一用户名
+        let username: string;
+        if (wechatResult.openid.startsWith('mock_')) {
+          // Mock 模式：使用时间戳生成唯一用户名
+          const timestamp = Date.now();
+          const randomSuffix = Math.random().toString(36).substring(2, 6);
+          username = `wechat_mock_${timestamp}_${randomSuffix}`;
+        } else {
+          // 真实模式：使用 openid 前8位
+          username = `wechat_${wechatResult.openid.substring(0, 8)}`;
+        }
+        
         const nickname = wechatResult.userInfo.nickname || '微信用户';
         
         logger.info(`💬 创建新微信用户: username=${username}, nickname=${nickname}`);
