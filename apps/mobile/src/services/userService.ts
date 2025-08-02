@@ -1,6 +1,7 @@
 import axios from 'axios';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_BASE_URL } from '../constants/config';
+import { storageService } from '../services/storageService';
+import { errorHandler, ErrorType } from '../utils/errorHandler';
 
 export interface UserProfile {
   id: string;
@@ -35,34 +36,57 @@ export class UserService {
   // 保存用户登录信息到本地存储
   async saveUserLoginInfo(userData: any, loginType: string): Promise<void> {
     try {
-      await AsyncStorage.setItem('userData', JSON.stringify(userData));
-      await AsyncStorage.setItem('loginType', loginType);
+      const results = await Promise.all([
+        storageService.setUserData(userData),
+        storageService.setLoginType(loginType)
+      ]);
+
+      // 检查存储结果
+      const hasError = results.some(result => !result.success);
+      if (hasError) {
+        throw new Error('部分用户数据保存失败');
+      }
+
       // 保存认证token
       if (userData.token) {
-        await AsyncStorage.setItem('authToken', userData.token);
+        const tokenResult = await storageService.setAuthToken(userData.token);
+        if (!tokenResult.success) {
+          throw new Error('认证token保存失败');
+        }
         console.log('✅ 认证token已保存');
       }
+      
       console.log('✅ 用户登录信息已保存到本地存储');
     } catch (error) {
-      console.error('❌ 保存用户登录信息失败:', error);
+      errorHandler.handleError(error, { userData, loginType }, {
+        type: ErrorType.STORAGE,
+        userMessage: '用户信息保存失败，请重试'
+      });
+      throw error;
     }
   }
 
   // 从本地存储获取用户信息
   async getUserLoginInfo(): Promise<{ userData: any; loginType: string } | null> {
     try {
-      const userData = await AsyncStorage.getItem('userData');
-      const loginType = await AsyncStorage.getItem('loginType');
-      
-      if (userData && loginType) {
+      const [userDataResult, loginTypeResult] = await Promise.all([
+        storageService.getUserData(),
+        storageService.getLoginType()
+      ]);
+
+      if (userDataResult.success && loginTypeResult.success && 
+          userDataResult.data && loginTypeResult.data) {
         return {
-          userData: JSON.parse(userData),
-          loginType,
+          userData: userDataResult.data,
+          loginType: loginTypeResult.data,
         };
       }
       return null;
     } catch (error) {
-      console.error('❌ 获取用户登录信息失败:', error);
+      errorHandler.handleError(error, {}, {
+        type: ErrorType.STORAGE,
+        userMessage: '获取用户信息失败'
+      });
       return null;
     }
   }
@@ -70,12 +94,16 @@ export class UserService {
   // 清除用户登录信息
   async clearUserLoginInfo(): Promise<void> {
     try {
-      await AsyncStorage.removeItem('userData');
-      await AsyncStorage.removeItem('loginType');
-      await AsyncStorage.removeItem('authToken');
+      const result = await storageService.clearUserData();
+      if (!result.success) {
+        throw new Error('清除用户数据失败');
+      }
       console.log('✅ 用户登录信息已清除');
     } catch (error) {
-      console.error('❌ 清除用户登录信息失败:', error);
+      errorHandler.handleError(error, {}, {
+        type: ErrorType.STORAGE,
+        userMessage: '清除用户信息失败'
+      });
     }
   }
 
@@ -97,7 +125,10 @@ export class UserService {
       const result = await response.json();
       return result;
     } catch (error) {
-      console.error('❌ 获取用户资料失败:', error);
+      errorHandler.handleError(error, { token }, {
+        type: ErrorType.NETWORK,
+        userMessage: '获取用户资料失败，请检查网络连接'
+      });
       return {
         success: false,
         error: error instanceof Error ? error.message : '未知错误',

@@ -1,56 +1,36 @@
 import { API_BASE_URL } from '../constants/config';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { storageService } from './storageService';
+import { errorHandler, ErrorType } from '../utils/errorHandler';
+import { experienceCalculationService } from './experienceCalculationService';
+import type { 
+  UserExperienceInfo, 
+  ExperienceGainResult, 
+  ExperienceWays,
+  ExperienceEvent,
+  ExperienceAPIResponse 
+} from '../types/experience';
 
-export interface ExperienceInfo {
-  level: number;
-  experience: number;
-  experienceToNextLevel: number;
-  progressPercentage: number;
-  totalExperience: number;
-  dailyReviewXP: number;
-  dailyStudyTimeXP: number;
-  completedDailyCards: boolean;
-  currentStreak: number;
-  contributedWords: number;
-}
-
-export interface ExperienceGainResult {
-  success: boolean;
-  xpGained: number;
-  newLevel: number;
-  leveledUp: boolean;
-  message: string;
-}
-
-export interface ExperienceWay {
-  name: string;
-  description: string;
-  dailyLimit: string;
-  xpPerAction: string;
-}
-
-export interface ExperienceWays {
-  review: ExperienceWay;
-  smartChallenge: ExperienceWay;
-  wrongWordChallenge: ExperienceWay;
-  newWord: ExperienceWay;
-  contribution: ExperienceWay;
-  dailyCheckin: ExperienceWay;
-  dailyCards: ExperienceWay;
-  studyTime: ExperienceWay;
-}
+// 使用从类型定义文件导入的接口
+export type { 
+  UserExperienceInfo as ExperienceInfo,
+  ExperienceGainResult,
+  ExperienceWay,
+  ExperienceWays 
+} from '../types/experience';
 
 export class ExperienceService {
   private static async getAuthToken(): Promise<string | null> {
     try {
-      const userData = await AsyncStorage.getItem('userData');
-      if (userData) {
-        const parsed = JSON.parse(userData);
-        return parsed.token || null;
+      const result = await storageService.getUserData();
+      if (result.success && result.data && result.data.token) {
+        return result.data.token;
       }
       return null;
     } catch (error) {
-      console.error('获取认证token失败:', error);
+      errorHandler.handleError(error, {}, {
+        type: ErrorType.STORAGE,
+        userMessage: '获取认证token失败'
+      });
       return null;
     }
   }
@@ -58,7 +38,7 @@ export class ExperienceService {
   /**
    * 获取用户经验值信息
    */
-  static async getExperienceInfo(): Promise<ExperienceInfo | null> {
+  static async getExperienceInfo(): Promise<UserExperienceInfo | null> {
     try {
       const token = await this.getAuthToken();
       if (!token) {
@@ -75,20 +55,21 @@ export class ExperienceService {
       });
 
       if (!response.ok) {
-        console.warn('⚠️ 获取经验值信息失败:', response.status);
-        return null;
+        throw new Error(`获取经验值信息失败: ${response.status}`);
       }
 
-      const result = await response.json();
+      const result: ExperienceAPIResponse<UserExperienceInfo> = await response.json();
       if (result.success && result.data) {
         console.log('✅ 获取经验值信息成功:', result.data);
         return result.data;
       } else {
-        console.warn('⚠️ 经验值信息格式错误');
-        return null;
+        throw new Error(result.error || '经验值信息格式错误');
       }
     } catch (error) {
-      console.error('❌ 获取经验值信息失败:', error);
+      errorHandler.handleError(error, {}, {
+        type: ErrorType.NETWORK,
+        userMessage: '获取经验值信息失败，请检查网络连接'
+      });
       return null;
     }
   }

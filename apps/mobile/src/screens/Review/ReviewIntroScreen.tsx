@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, Animated, Platform, Alert } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useVocabulary } from '../../context/VocabularyContext';
@@ -17,6 +17,7 @@ import { wrongWordsManager } from '../../services/wrongWordsManager';
 import { animationManager } from '../../services/animationManager';
 import { unifiedSyncService } from '../../services/unifiedSyncService';
 import { DataConflictResolver } from '../../services/dataConflictResolver';
+import { ExperienceLogic } from '../../utils/conditionalLogic';
 
 const ReviewIntroScreen = () => {
   const { vocabulary, refreshLearningProgress } = useVocabulary();
@@ -29,31 +30,91 @@ const ReviewIntroScreen = () => {
   // 计算真实的错词数量 - 从用户词汇表中获取学习记录数据
   const [wrongWordsCount, setWrongWordsCount] = useState(0);
   
-  // 统一的经验值处理函数 - 防止重复计算
-  const experienceManager = {
+  // 统一的AsyncStorage访问工具类
+  const storageUtils = {
+    // 经验值相关存储
+    experience: {
+      async getGain() {
+        return await AsyncStorage.getItem('experienceGain');
+      },
+      async getGainApplied() {
+        return await AsyncStorage.getItem('experienceGainApplied');
+      },
+      async setGain(value: number) {
+        return await AsyncStorage.setItem('experienceGain', JSON.stringify(value));
+      },
+      async setGainApplied(timestamp: string) {
+        return await AsyncStorage.setItem('experienceGainApplied', timestamp);
+      },
+      async removeGain() {
+        return await AsyncStorage.removeItem('experienceGain');
+      },
+      async removeGainApplied() {
+        return await AsyncStorage.removeItem('experienceGainApplied');
+      },
+      async clearAll() {
+        await AsyncStorage.removeItem('experienceGain');
+        await AsyncStorage.removeItem('experienceGainApplied');
+      }
+    },
+    
+    // 用户数据相关存储
+    user: {
+      async getData() {
+        return await AsyncStorage.getItem('userData');
+      },
+      async getStats() {
+        return await AsyncStorage.getItem('userStats');
+      },
+      async setStats(stats: any) {
+        return await AsyncStorage.setItem('userStats', JSON.stringify(stats));
+      }
+    },
+    
+    // 导航参数相关存储
+    navigation: {
+      async getParams() {
+        return await AsyncStorage.getItem('navigationParams');
+      },
+      async removeParams() {
+        return await AsyncStorage.removeItem('navigationParams');
+      },
+      async getRefreshFlag() {
+        return await AsyncStorage.getItem('refreshVocabulary');
+      },
+      async removeRefreshFlag() {
+        return await AsyncStorage.removeItem('refreshVocabulary');
+      }
+    }
+  };
+
+  // 本地经验值重复计算防止器 - 使用新的条件逻辑工具
+  const localExperienceDuplicationPreventer = {
     // 检查并应用经验值增益，防止重复计算
     async checkAndApplyExperienceGain(currentExperience: number): Promise<number> {
       try {
-        const gainData = await AsyncStorage.getItem('experienceGain');
-        if (!gainData) {
+        const gainData = await storageUtils.experience.getGain();
+        
+        // 使用条件逻辑工具检查是否应该应用经验值增益
+        const gainAppliedKey = await storageUtils.experience.getGainApplied();
+        if (!ExperienceLogic.shouldApplyExperienceGain(gainData, gainAppliedKey)) {
+          if (ExperienceLogic.isExperienceGainApplied(gainAppliedKey)) {
+            experienceLogger.info('经验值增益已应用过，跳过重复计算', { currentExperience });
+          }
           return currentExperience;
         }
         
-        // 检查是否已经应用过该经验值增益
-        const gainAppliedKey = await AsyncStorage.getItem('experienceGainApplied');
-        if (gainAppliedKey) {
-          experienceLogger.info('经验值增益已应用过，跳过重复计算', {
-            currentExperience,
-            gainAppliedKey
-          });
+        // 验证经验值增益的有效性
+        if (!ExperienceLogic.isValidExperienceGain(gainData)) {
+          experienceLogger.warn('经验值增益数据无效', { gainData });
           return currentExperience;
         }
         
         const gainedExp = JSON.parse(gainData);
-        const finalExperience = currentExperience + gainedExp;
+        const finalExperience = ExperienceLogic.calculateFinalExperience(currentExperience, gainedExp);
         
         // 标记为已应用
-        await AsyncStorage.setItem('experienceGainApplied', Date.now().toString());
+        await storageUtils.experience.setGainApplied(Date.now().toString());
         
         experienceLogger.info('应用经验值增益', {
           currentExperience,
@@ -72,8 +133,7 @@ const ReviewIntroScreen = () => {
     // 清理经验值增益状态
     async clearExperienceGainStatus(): Promise<void> {
       try {
-        await AsyncStorage.removeItem('experienceGain');
-        await AsyncStorage.removeItem('experienceGainApplied');
+        await storageUtils.experience.clearAll();
         experienceLogger.info('清理经验值增益状态');
       } catch (error) {
         experienceLogger.error('清理经验值增益状态失败', error);
@@ -83,9 +143,9 @@ const ReviewIntroScreen = () => {
     // 设置新的经验值增益
     async setExperienceGain(gainedExp: number): Promise<void> {
       try {
-        await AsyncStorage.setItem('experienceGain', JSON.stringify(gainedExp));
+        await storageUtils.experience.setGain(gainedExp);
         // 清除之前的应用状态
-        await AsyncStorage.removeItem('experienceGainApplied');
+        await storageUtils.experience.removeGainApplied();
         experienceLogger.info('设置新的经验值增益', { gainedExp });
       } catch (error) {
         experienceLogger.error('设置经验值增益失败', error);
@@ -96,7 +156,7 @@ const ReviewIntroScreen = () => {
   // 获取用户ID的辅助函数
   const getUserId = async (): Promise<string | null> => {
     try {
-      const userData = await AsyncStorage.getItem('userData');
+      const userData = await storageUtils.user.getData();
       if (userData) {
         const parsed = JSON.parse(userData);
         return parsed.id || null;
@@ -192,7 +252,7 @@ const ReviewIntroScreen = () => {
   // 经验值动画状态
   const [showExperienceAnimation, setShowExperienceAnimation] = useState(false);
   const [experienceGained, setExperienceGained] = useState(0);
-  const [previousExperience, setPreviousExperience] = useState(0);
+
   const [progressBarValue, setProgressBarValue] = useState(0); // 添加状态来跟踪进度条值
   const [hasCheckedExperience, setHasCheckedExperience] = useState(false);
   const [animatedExperience, setAnimatedExperience] = useState(0);
@@ -265,12 +325,12 @@ const ReviewIntroScreen = () => {
       userDataLogger.info('开始加载用户统计数据');
       
       // 优先使用本地数据
-      const localStatsData = await AsyncStorage.getItem('userStats');
+      const localStatsData = await storageUtils.user.getStats();
       if (localStatsData) {
         const localStats = JSON.parse(localStatsData);
         
-        // 使用统一的经验值处理函数，防止重复计算
-        const finalExperience = await experienceManager.checkAndApplyExperienceGain(localStats.experience || 0);
+        // 使用本地经验值重复计算防止器，防止重复计算
+        const finalExperience = await localExperienceDuplicationPreventer.checkAndApplyExperienceGain(localStats.experience || 0);
         
         const updatedStats = {
           ...localStats,
@@ -324,7 +384,7 @@ const ReviewIntroScreen = () => {
         setProgressBarValue(progressValue);
         setHasInitializedProgressBar(true);
         
-        await AsyncStorage.setItem('userStats', JSON.stringify(defaultStats));
+        await storageUtils.user.setStats(defaultStats);
         return;
       }
       
@@ -341,7 +401,7 @@ const ReviewIntroScreen = () => {
       const userId = await getUserId();
       if (!userId) return;
       
-      const userDataStr = await AsyncStorage.getItem('userData');
+      const userDataStr = await storageUtils.user.getData();
       if (!userDataStr) return;
       
       const userData = JSON.parse(userDataStr);
@@ -359,7 +419,7 @@ const ReviewIntroScreen = () => {
         await unifiedSyncService.syncPendingData();
         
         // 同步完成后，重新加载本地数据
-        const updatedStatsStr = await AsyncStorage.getItem('userStats');
+        const updatedStatsStr = await storageUtils.user.getStats();
         if (updatedStatsStr) {
           const updatedStats = JSON.parse(updatedStatsStr);
           setUserStats(updatedStats);
@@ -407,7 +467,7 @@ const ReviewIntroScreen = () => {
                 lastUpdated: Date.now()
               };
               
-              await AsyncStorage.setItem('userStats', JSON.stringify(resolvedStats));
+              await storageUtils.user.setStats(resolvedStats);
               
               // 更新UI状态
               setUserStats(resolvedStats);
@@ -429,7 +489,7 @@ const ReviewIntroScreen = () => {
                 lastUpdated: Date.now()
               };
               
-              await AsyncStorage.setItem('userStats', JSON.stringify(updatedStats));
+              await storageUtils.user.setStats(updatedStats);
               userDataLogger.info('数据一致，静默更新本地数据');
             }
           }
@@ -446,7 +506,7 @@ const ReviewIntroScreen = () => {
       const userId = await getUserId();
       if (!userId) return;
       
-      const userDataStr = await AsyncStorage.getItem('userData');
+      const userDataStr = await storageUtils.user.getData();
       if (!userDataStr) return;
       
       const userData = JSON.parse(userDataStr);
@@ -473,7 +533,7 @@ const ReviewIntroScreen = () => {
           };
           
           userDataLogger.info('启动时同步后端数据成功', backendStats);
-          await AsyncStorage.setItem('userStats', JSON.stringify(backendStats));
+          await storageUtils.user.setStats(backendStats);
           
           // 更新本地状态（如果数据有变化）
           setUserStats(prevStats => {
@@ -674,8 +734,8 @@ const ReviewIntroScreen = () => {
           // 清除参数
           await AsyncStorage.removeItem('navigationParams');
           
-          // 使用统一的经验值管理器设置经验值增益
-          await experienceManager.setExperienceGain(params.experienceGained);
+          // 使用本地经验值重复计算防止器设置经验值增益
+          await localExperienceDuplicationPreventer.setExperienceGain(params.experienceGained);
           
           // 优先使用本地数据，避免网络延迟
           const localUserData = await getLocalUserData();
@@ -699,7 +759,7 @@ const ReviewIntroScreen = () => {
             
             // 动画完成后清理
             setTimeout(async () => {
-              await experienceManager.clearExperienceGainStatus();
+              await localExperienceDuplicationPreventer.clearExperienceGainStatus();
               setIsSyncingExperience(false);
             }, 3000);
           } else {
@@ -773,8 +833,8 @@ const ReviewIntroScreen = () => {
         const statsData = await AsyncStorage.getItem('userStats');
         if (statsData) {
           const stats = JSON.parse(statsData);
-          // 使用统一的经验值处理函数，防止重复计算
-          const finalExperience = await experienceManager.checkAndApplyExperienceGain(stats.experience || 0);
+          // 使用本地经验值重复计算防止器，防止重复计算
+          const finalExperience = await localExperienceDuplicationPreventer.checkAndApplyExperienceGain(stats.experience || 0);
           
           return {
             currentExperience: finalExperience,
@@ -906,9 +966,9 @@ const ReviewIntroScreen = () => {
           if (response.ok) {
             const result = await response.json();
             if (result.success && result.data) {
-              // 使用统一的经验值处理函数，防止重复计算
+              // 使用本地经验值重复计算防止器，防止重复计算
               // 注意：这里使用后端返回的经验值作为基础，但经验值管理器会检查是否已经应用过增益
-              const finalExperience = await experienceManager.checkAndApplyExperienceGain(result.data.experience || 0);
+              const finalExperience = await localExperienceDuplicationPreventer.checkAndApplyExperienceGain(result.data.experience || 0);
               
               const backendStats = {
                 experience: finalExperience,

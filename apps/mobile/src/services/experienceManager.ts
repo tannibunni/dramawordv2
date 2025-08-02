@@ -1,7 +1,14 @@
-import { ExperienceService, ExperienceGainResult, ExperienceInfo } from './experienceService';
+import { ExperienceService, ExperienceGainResult } from './experienceService';
 import { animationManager } from './animationManager';
 import { unifiedSyncService } from './unifiedSyncService';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { storageService } from './storageService';
+import { errorHandler, ErrorType } from '../utils/errorHandler';
+import { experienceCalculationService } from './experienceCalculationService';
+import type { 
+  UserExperienceInfo, 
+  ExperienceEvent, 
+  ExperienceGainResult as CalculationResult 
+} from '../types/experience';
 
 export interface ExperienceGainEvent {
   type: 'review' | 'smartChallenge' | 'wrongWordChallenge' | 'newWord' | 'contribution' | 'dailyCheckin' | 'dailyCards' | 'studyTime';
@@ -62,21 +69,34 @@ export class ExperienceManager {
     try {
       this.isProcessing = true;
       
-      const result = await ExperienceService.addReviewExperience(isCorrect);
+      // 使用计算服务计算经验值
+      const xpGained = experienceCalculationService.calculateReviewExperience(isCorrect);
+      const currentExp = this.currentExperience;
+      const calculationResult = experienceCalculationService.calculateExperienceGain(
+        currentExp,
+        xpGained,
+        isCorrect ? '复习正确' : '复习错误'
+      );
       
-      if (result && result.success) {
-        await this.handleExperienceGain({
-          type: 'review',
-          xpGained: result.xpGained,
-          leveledUp: result.leveledUp,
-          message: result.message,
-          timestamp: Date.now()
-        });
-      }
+      // 更新当前经验值
+      this.currentExperience = calculationResult.newExperience;
+      this.currentLevel = calculationResult.newLevel;
       
-      return result;
+      // 处理经验值增益事件
+      await this.handleExperienceGain({
+        type: 'review',
+        xpGained: calculationResult.xpGained,
+        leveledUp: calculationResult.leveledUp,
+        message: calculationResult.message,
+        timestamp: Date.now()
+      });
+      
+      return calculationResult;
     } catch (error) {
-      console.error('❌ 复习单词经验值添加失败:', error);
+      errorHandler.handleError(error, { isCorrect }, {
+        type: ErrorType.BUSINESS_LOGIC,
+        userMessage: '复习经验值计算失败'
+      });
       return null;
     } finally {
       this.isProcessing = false;
@@ -332,9 +352,15 @@ export class ExperienceManager {
         events.splice(0, events.length - 100);
       }
       
-      await AsyncStorage.setItem('experienceEvents', JSON.stringify(events));
+      const saveResult = await storageService.setExperienceEvents(events);
+      if (!saveResult.success) {
+        throw new Error('保存经验值事件失败');
+      }
     } catch (error) {
-      console.error('❌ 记录经验值事件失败:', error);
+      errorHandler.handleError(error, { event }, {
+        type: ErrorType.STORAGE,
+        userMessage: '记录经验值事件失败'
+      });
     }
   }
 
@@ -343,10 +369,13 @@ export class ExperienceManager {
    */
   public async getExperienceEvents(): Promise<ExperienceGainEvent[]> {
     try {
-      const eventsStr = await AsyncStorage.getItem('experienceEvents');
-      return eventsStr ? JSON.parse(eventsStr) : [];
+      const result = await storageService.getExperienceEvents();
+      return result.success && result.data ? result.data : [];
     } catch (error) {
-      console.error('❌ 获取经验值事件失败:', error);
+      errorHandler.handleError(error, {}, {
+        type: ErrorType.STORAGE,
+        userMessage: '获取经验值事件失败'
+      });
       return [];
     }
   }
@@ -494,10 +523,16 @@ export class ExperienceManager {
    */
   public async clearExperienceEvents(): Promise<void> {
     try {
-      await AsyncStorage.removeItem('experienceEvents');
+      const result = await storageService.removeItem('experienceEvents');
+      if (!result.success) {
+        throw new Error('清除经验值事件失败');
+      }
       console.log('🧹 经验值事件历史已清除');
     } catch (error) {
-      console.error('❌ 清除经验值事件历史失败:', error);
+      errorHandler.handleError(error, {}, {
+        type: ErrorType.STORAGE,
+        userMessage: '清除经验值事件失败'
+      });
     }
   }
 
@@ -506,14 +541,16 @@ export class ExperienceManager {
    */
   private async getUserId(): Promise<string | null> {
     try {
-      const userData = await AsyncStorage.getItem('userData');
-      if (userData) {
-        const parsed = JSON.parse(userData);
-        return parsed.id || null;
+      const result = await storageService.getUserData();
+      if (result.success && result.data) {
+        return result.data.id || null;
       }
       return null;
     } catch (error) {
-      console.error('获取用户ID失败:', error);
+      errorHandler.handleError(error, {}, {
+        type: ErrorType.STORAGE,
+        userMessage: '获取用户ID失败'
+      });
       return null;
     }
   }

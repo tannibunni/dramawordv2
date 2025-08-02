@@ -1,0 +1,76 @@
+{
+  "timestamp": "2025-08-02T23:01:47.359Z",
+  "issueSummary": {
+    "problem": "在loadUserStats函数中，当检测到experienceGain时，会直接将经验值加到finalExperience中，这可能导致重复计算",
+    "severity": "HIGH",
+    "affectedFunctions": [
+      "loadUserStats",
+      "loadBackendData",
+      "getCurrentUserData"
+    ],
+    "rootCause": "多个函数都直接累加experienceGain到finalExperience，没有检查是否已经应用过",
+    "impact": "用户可能获得重复的经验值，影响游戏平衡性"
+  },
+  "problemLocations": [
+    {
+      "function": "loadUserStats",
+      "line": 214,
+      "code": "finalExperience += gainedExp;",
+      "context": "从本地存储加载数据时直接累加经验值增益"
+    },
+    {
+      "function": "getCurrentUserData",
+      "line": 726,
+      "code": "finalExperience += gainedExp;",
+      "context": "获取用户数据时直接累加经验值增益"
+    },
+    {
+      "function": "loadBackendData",
+      "line": 859,
+      "code": "finalExperience += gainedExp;",
+      "context": "从后端加载数据时直接累加经验值增益"
+    }
+  ],
+  "reproductionSteps": [
+    "1. 用户完成学习活动，获得经验值增益",
+    "2. experienceGain被存储到AsyncStorage",
+    "3. loadUserStats函数被调用，检测到experienceGain并累加到finalExperience",
+    "4. loadBackendData函数被调用，再次检测到experienceGain并累加",
+    "5. getCurrentUserData函数被调用，第三次累加经验值",
+    "6. 结果：同一经验值增益被重复应用多次"
+  ],
+  "fixSolutions": [
+    {
+      "title": "方案1: 添加状态跟踪",
+      "description": "使用时间戳标记经验值增益是否已应用",
+      "priority": "HIGH",
+      "implementation": "\n// 在累加经验值前检查是否已应用\nconst gainAppliedKey = await AsyncStorage.getItem('experienceGainApplied');\nif (gainData && !gainAppliedKey) {\n  // 标记为已应用\n  await AsyncStorage.setItem('experienceGainApplied', Date.now().toString());\n  finalExperience += gainedExp;\n}"
+    },
+    {
+      "title": "方案2: 统一经验值处理",
+      "description": "创建统一的经验值处理函数",
+      "priority": "MEDIUM",
+      "implementation": "\n// 统一的经验值处理函数\nconst experienceManager = {\n  async applyExperienceGain(gainedExp) {\n    const appliedKey = await AsyncStorage.getItem('experienceGainApplied');\n    if (appliedKey) return; // 已应用过\n    \n    await AsyncStorage.setItem('experienceGainApplied', Date.now().toString());\n    // 应用经验值增益\n  }\n}"
+    },
+    {
+      "title": "方案3: 事务性操作",
+      "description": "使用锁机制确保原子性",
+      "priority": "MEDIUM",
+      "implementation": "\n// 使用锁机制\nconst lockKey = 'experienceUpdateLock';\nconst lock = await AsyncStorage.getItem(lockKey);\nif (lock) return; // 正在处理中\n\nawait AsyncStorage.setItem(lockKey, Date.now().toString());\ntry {\n  // 处理经验值更新\n} finally {\n  await AsyncStorage.removeItem(lockKey);\n}"
+    }
+  ],
+  "testSuggestions": [
+    "1. 创建单元测试验证经验值增益只被应用一次",
+    "2. 模拟多个函数同时调用的情况",
+    "3. 测试经验值增益的清理机制",
+    "4. 验证状态跟踪的正确性",
+    "5. 测试并发情况下的数据一致性"
+  ],
+  "monitoringSuggestions": [
+    "1. 添加经验值变化的详细日志",
+    "2. 监控经验值增益的应用次数",
+    "3. 设置经验值异常增长的告警",
+    "4. 定期检查数据一致性",
+    "5. 记录用户反馈的经验值问题"
+  ]
+}
