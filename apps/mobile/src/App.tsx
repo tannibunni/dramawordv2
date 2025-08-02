@@ -11,18 +11,80 @@ import { InterruptionModeIOS, InterruptionModeAndroid } from 'expo-av/build/Audi
 import { InitialLanguageModal } from './components/common/InitialLanguageModal';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Device from 'expo-device';
+import { unifiedSyncService } from './services/unifiedSyncService';
+import { experienceManager } from './services/experienceManager';
 
 // 内部组件：移除自动通知初始化
 const AppContent = () => {
   const [showInitialLanguageModal, setShowInitialLanguageModal] = useState(false);
 
   useEffect(() => {
-    checkInitialLanguageSetup();
-    // 清理可能的共享数据
-    clearSharedDataOnStartup();
-    // 自动生成游客ID
-    autoGenerateGuestId();
+    initializeApp();
   }, []);
+
+  const initializeApp = async () => {
+    try {
+      console.log('🚀 应用初始化开始...');
+      
+      // 1. 检查初始语言设置
+      await checkInitialLanguageSetup();
+      
+      // 2. 清理可能的共享数据
+      await clearSharedDataOnStartup();
+      
+      // 3. 自动生成游客ID
+      await autoGenerateGuestId();
+      
+      // 4. 初始化统一同步服务
+      await initializeUnifiedSync();
+      
+      // 5. 初始化经验值管理器
+      await initializeExperienceManager();
+      
+      console.log('✅ 应用初始化完成');
+    } catch (error) {
+      console.error('❌ 应用初始化失败:', error);
+    }
+  };
+
+  const initializeUnifiedSync = async () => {
+    try {
+      console.log('🔄 初始化统一同步服务...');
+      
+      // 迁移旧同步数据
+      await unifiedSyncService.migrateOldSyncData();
+      
+      // 配置同步服务
+      unifiedSyncService.updateConfig({
+        wifiSyncInterval: 2 * 60 * 1000, // 2分钟
+        mobileSyncInterval: 5 * 60 * 1000, // 5分钟
+        enableRealTimeSync: true,
+        enableOfflineFirst: true
+      });
+      
+      console.log('✅ 统一同步服务初始化完成');
+    } catch (error) {
+      console.error('❌ 统一同步服务初始化失败:', error);
+    }
+  };
+
+  const initializeExperienceManager = async () => {
+    try {
+      console.log('⭐ 初始化经验值管理器...');
+      
+      // 配置经验值管理器
+      experienceManager.updateConfig({
+        enableAnimations: true,
+        enableNotifications: true,
+        enableSound: true,
+        autoSync: true
+      });
+      
+      console.log('✅ 经验值管理器初始化完成');
+    } catch (error) {
+      console.error('❌ 经验值管理器初始化失败:', error);
+    }
+  };
 
   const checkInitialLanguageSetup = async () => {
     try {

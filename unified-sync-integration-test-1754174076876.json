@@ -1,0 +1,231 @@
+{
+  "timestamp": "2025-08-02T22:34:36.869Z",
+  "summary": {
+    "totalFiles": 9,
+    "filesWithDeprecatedImports": 0,
+    "filesWithNewImports": 9,
+    "totalDeprecatedUsages": 6,
+    "totalNewUsages": 35
+  },
+  "details": [
+    {
+      "filePath": "apps/mobile/src/App.tsx",
+      "deprecatedImports": [],
+      "newImports": [
+        {
+          "line": 14,
+          "content": "import { unifiedSyncService } from './services/unifiedSyncService';",
+          "service": "unifiedSyncService",
+          "filePath": "apps/mobile/src/App.tsx",
+          "isNew": true
+        }
+      ],
+      "deprecatedUsages": [],
+      "newUsages": [
+        {
+          "service": "unifiedSyncService",
+          "count": 4,
+          "filePath": "apps/mobile/src/App.tsx",
+          "isNew": true
+        }
+      ]
+    },
+    {
+      "filePath": "apps/mobile/src/screens/Review/ReviewIntroScreen.tsx",
+      "deprecatedImports": [],
+      "newImports": [
+        {
+          "line": 18,
+          "content": "import { unifiedSyncService } from '../../services/unifiedSyncService';",
+          "service": "unifiedSyncService",
+          "filePath": "apps/mobile/src/screens/Review/ReviewIntroScreen.tsx",
+          "isNew": true
+        }
+      ],
+      "deprecatedUsages": [],
+      "newUsages": [
+        {
+          "service": "unifiedSyncService",
+          "count": 5,
+          "filePath": "apps/mobile/src/screens/Review/ReviewIntroScreen.tsx",
+          "isNew": true
+        }
+      ]
+    },
+    {
+      "filePath": "apps/mobile/src/screens/Review/ReviewScreen.tsx",
+      "deprecatedImports": [],
+      "newImports": [
+        {
+          "line": 35,
+          "content": "import { unifiedSyncService } from '../../services/unifiedSyncService';",
+          "service": "unifiedSyncService",
+          "filePath": "apps/mobile/src/screens/Review/ReviewScreen.tsx",
+          "isNew": true
+        }
+      ],
+      "deprecatedUsages": [],
+      "newUsages": [
+        {
+          "service": "unifiedSyncService",
+          "count": 3,
+          "filePath": "apps/mobile/src/screens/Review/ReviewScreen.tsx",
+          "isNew": true
+        }
+      ]
+    },
+    {
+      "filePath": "apps/mobile/src/screens/Profile/ProfileScreen.tsx",
+      "deprecatedImports": [],
+      "newImports": [
+        {
+          "line": 36,
+          "content": "import { unifiedSyncService } from '../../services/unifiedSyncService';",
+          "service": "unifiedSyncService",
+          "filePath": "apps/mobile/src/screens/Profile/ProfileScreen.tsx",
+          "isNew": true
+        }
+      ],
+      "deprecatedUsages": [],
+      "newUsages": [
+        {
+          "service": "unifiedSyncService",
+          "count": 3,
+          "filePath": "apps/mobile/src/screens/Profile/ProfileScreen.tsx",
+          "isNew": true
+        }
+      ]
+    },
+    {
+      "filePath": "apps/mobile/src/screens/Auth/LoginScreen.tsx",
+      "deprecatedImports": [],
+      "newImports": [
+        {
+          "line": 24,
+          "content": "import { unifiedSyncService } from '../../services/unifiedSyncService';",
+          "service": "unifiedSyncService",
+          "filePath": "apps/mobile/src/screens/Auth/LoginScreen.tsx",
+          "isNew": true
+        }
+      ],
+      "deprecatedUsages": [
+        {
+          "service": "dataSyncService",
+          "count": 3,
+          "filePath": "apps/mobile/src/screens/Auth/LoginScreen.tsx"
+        },
+        {
+          "service": "DataSyncService",
+          "count": 2,
+          "filePath": "apps/mobile/src/screens/Auth/LoginScreen.tsx"
+        }
+      ],
+      "newUsages": [
+        {
+          "service": "unifiedSyncService",
+          "count": 6,
+          "filePath": "apps/mobile/src/screens/Auth/LoginScreen.tsx",
+          "isNew": true
+        }
+      ]
+    },
+    {
+      "filePath": "apps/mobile/src/context/AuthContext.tsx",
+      "deprecatedImports": [],
+      "newImports": [
+        {
+          "line": 3,
+          "content": "import { unifiedSyncService } from '../services/unifiedSyncService';",
+          "service": "unifiedSyncService",
+          "filePath": "apps/mobile/src/context/AuthContext.tsx",
+          "isNew": true
+        }
+      ],
+      "deprecatedUsages": [],
+      "newUsages": [
+        {
+          "service": "unifiedSyncService",
+          "count": 3,
+          "filePath": "apps/mobile/src/context/AuthContext.tsx",
+          "isNew": true
+        }
+      ]
+    },
+    {
+      "filePath": "apps/mobile/src/context/VocabularyContext.tsx",
+      "deprecatedImports": [],
+      "newImports": [
+        {
+          "line": 8,
+          "content": "import { unifiedSyncService } from '../services/unifiedSyncService';",
+          "service": "unifiedSyncService",
+          "filePath": "apps/mobile/src/context/VocabularyContext.tsx",
+          "isNew": true
+        }
+      ],
+      "deprecatedUsages": [],
+      "newUsages": [
+        {
+          "service": "unifiedSyncService",
+          "count": 3,
+          "filePath": "apps/mobile/src/context/VocabularyContext.tsx",
+          "isNew": true
+        }
+      ]
+    },
+    {
+      "filePath": "apps/mobile/src/components/learning/LearningStatsSection.tsx",
+      "deprecatedImports": [],
+      "newImports": [
+        {
+          "line": 17,
+          "content": "import { unifiedSyncService } from '../../services/unifiedSyncService';",
+          "service": "unifiedSyncService",
+          "filePath": "apps/mobile/src/components/learning/LearningStatsSection.tsx",
+          "isNew": true
+        }
+      ],
+      "deprecatedUsages": [
+        {
+          "service": "dataSyncService",
+          "count": 1,
+          "filePath": "apps/mobile/src/components/learning/LearningStatsSection.tsx"
+        }
+      ],
+      "newUsages": [
+        {
+          "service": "unifiedSyncService",
+          "count": 5,
+          "filePath": "apps/mobile/src/components/learning/LearningStatsSection.tsx",
+          "isNew": true
+        }
+      ]
+    },
+    {
+      "filePath": "apps/mobile/src/components/learning/DataIntegrationTest.tsx",
+      "deprecatedImports": [],
+      "newImports": [
+        {
+          "line": 4,
+          "content": "import { unifiedSyncService } from '../../services/unifiedSyncService';",
+          "service": "unifiedSyncService",
+          "filePath": "apps/mobile/src/components/learning/DataIntegrationTest.tsx",
+          "isNew": true
+        }
+      ],
+      "deprecatedUsages": [],
+      "newUsages": [
+        {
+          "service": "unifiedSyncService",
+          "count": 3,
+          "filePath": "apps/mobile/src/components/learning/DataIntegrationTest.tsx",
+          "isNew": true
+        }
+      ]
+    }
+  ],
+  "recommendations": [
+    "⚠️ 发现废弃的同步服务使用，需要替换为统一同步服务",
+    "✅ 统一同步服务已正确集成"
+  ]
+}

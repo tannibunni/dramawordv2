@@ -5,7 +5,7 @@ import { Show } from './ShowListContext';
 import { wordService } from '../services/wordService';
 import { API_BASE_URL } from '../constants/config';
 import { vocabularyLogger, apiLogger } from '../utils/logger';
-import optimizedDataSyncService from '../services/optimizedDataSyncService';
+import { unifiedSyncService } from '../services/unifiedSyncService';
 
 export interface WordWithSource extends WordData {
   sourceShow?: Show;
@@ -219,20 +219,22 @@ export const VocabularyProvider = ({ children }: { children: ReactNode }) => {
       const language = (word as any).language || 'en';
       const newWord = { ...word, sourceShow: fixedSourceShow, collectedAt: new Date().toISOString(), language };
       
-      // 使用优化的同步服务 - 缓存同步词汇表
+      // 使用统一同步服务 - 缓存同步词汇表
       (async () => {
         const userId = await getUserId();
         if (userId) {
           try {
-            await optimizedDataSyncService.syncCacheData({
+            await unifiedSyncService.addToSyncQueue({
               type: 'vocabulary',
-              userId,
               data: {
                 word: word.word,
                 sourceShow,
                 language,
                 timestamp: Date.now()
-              }
+              },
+              userId,
+              operation: 'create',
+              priority: 'medium'
             });
             apiLogger.info('词汇表已加入同步队列');
           } catch (e) {

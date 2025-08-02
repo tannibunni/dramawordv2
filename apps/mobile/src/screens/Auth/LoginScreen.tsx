@@ -21,6 +21,7 @@ import { colors } from '../../constants/colors';
 import { t } from '../../constants/translations';
 import { useAppLanguage } from '../../context/AppLanguageContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { unifiedSyncService } from '../../services/unifiedSyncService';
 
 interface LoginScreenProps {
   onLoginSuccess: (userData: any) => void;
@@ -141,9 +142,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
         };
         
         // 清除旧缓存，确保新用户看到正确的数据
-        const { DataSyncService } = require('../../services/dataSyncService');
-        const dataSyncService = DataSyncService.getInstance();
-        await dataSyncService.clearAllCache();
+        await unifiedSyncService.clearSyncQueue();
         
         // 额外清理：清除所有可能的共享数据
         await clearAllSharedData();
@@ -221,9 +220,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
         
         // 清除旧缓存，确保新用户看到正确的数据
         console.log('💬 清除旧缓存...');
-        const { DataSyncService } = require('../../services/dataSyncService');
-        const dataSyncService = DataSyncService.getInstance();
-        await dataSyncService.clearAllCache();
+        await unifiedSyncService.clearSyncQueue();
         
         // 额外清理：清除所有可能的共享数据
         console.log('💬 清除共享数据...');
@@ -317,9 +314,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
         };
         
         // 清除旧缓存，确保新用户看到正确的数据
-        const { DataSyncService } = require('../../services/dataSyncService');
-        const dataSyncService = DataSyncService.getInstance();
-        await dataSyncService.clearAllCache();
+        await unifiedSyncService.clearSyncQueue();
         
         // 额外清理：清除所有可能的共享数据
         await clearAllSharedData();
@@ -410,9 +405,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
         };
         
         // 清除旧缓存，确保新用户看到正确的数据
-        const { DataSyncService } = require('../../services/dataSyncService');
-        const dataSyncService = DataSyncService.getInstance();
-        await dataSyncService.clearAllCache();
+        await unifiedSyncService.clearSyncQueue();
         
         // 额外清理：清除所有可能的共享数据
         await clearAllSharedData();
@@ -497,9 +490,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
             
             // 清除旧缓存
             console.log('💬 清除旧缓存...');
-            const { DataSyncService } = require('../../services/dataSyncService');
-            const dataSyncService = DataSyncService.getInstance();
-            await dataSyncService.clearAllCache();
+            await unifiedSyncService.clearSyncQueue();
             await clearAllSharedData();
             
             console.log('💬 调用 onLoginSuccess...');

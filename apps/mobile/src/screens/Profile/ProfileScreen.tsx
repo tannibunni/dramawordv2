@@ -33,7 +33,7 @@ import SubscriptionScreen from './SubscriptionScreen';
 import notificationService, { NotificationPreferences } from '../../services/notificationService';
 import { learningDataService } from '../../services/learningDataService';
 import { LearningStatsService } from '../../services/learningStatsService';
-import { DataSyncService } from '../../services/dataSyncService';
+import { unifiedSyncService } from '../../services/unifiedSyncService';
 import { cacheService, CACHE_KEYS } from '../../services/cacheService';
 
 
@@ -475,7 +475,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
               // 清除用户学习数据
               await learningDataService.clearAll();
               await LearningStatsService.clearAll();
-              await DataSyncService.getInstance().clearAll();
+              await unifiedSyncService.clearSyncQueue();
               
               // 清除单词缓存（使用统一缓存服务）
               await cacheService.clearPrefix(CACHE_KEYS.WORD_DETAIL);

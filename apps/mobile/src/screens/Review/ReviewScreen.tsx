@@ -32,7 +32,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_BASE_URL } from '../../constants/config';
 import Toast from '../../components/common/Toast';
 import { reviewLogger, wrongWordLogger, apiLogger } from '../../utils/logger';
-import optimizedDataSyncService from '../../services/optimizedDataSyncService';
+import { unifiedSyncService } from '../../services/unifiedSyncService';
 
 // 复习完成统计接口
 interface ReviewStats {
@@ -275,16 +275,18 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
         // 不中断流程，继续执行
       }
       
-      // 使用优化的同步服务 - 批量同步学习记录
-      await optimizedDataSyncService.syncBatchData({
-        type: 'learning_record',
-        userId,
+      // 使用统一同步服务 - 批量同步学习记录
+      await unifiedSyncService.addToSyncQueue({
+        type: 'learningRecords',
         data: [{
           word,
           progress,
           isSuccessfulReview: isCorrect,
           timestamp: Date.now()
-        }]
+        }],
+        userId,
+        operation: 'create',
+        priority: 'medium'
       });
       
       apiLogger.info('学习记录已加入同步队列');

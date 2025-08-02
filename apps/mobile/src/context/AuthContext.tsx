@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { UserService } from '../services/userService';
-import { DataSyncService } from '../services/dataSyncService';
+import { unifiedSyncService } from '../services/unifiedSyncService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 interface UserInfo {
@@ -91,8 +91,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         isAuthenticated: true 
       });
       // 新增：登录后同步本地历史到云端
-      const dataSyncService = DataSyncService.getInstance();
-      await dataSyncService.syncLocalSearchHistoryToCloud();
+      await unifiedSyncService.addToSyncQueue({
+        type: 'searchHistory',
+        data: await AsyncStorage.getItem('searchHistory') || [],
+        userId: userData.id,
+        operation: 'update',
+        priority: 'high'
+      });
     } catch (error) {
       console.error('❌ AuthContext login 失败:', error);
       throw error;

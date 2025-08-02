@@ -15,9 +15,8 @@ import { wrongWordLogger, experienceLogger, userDataLogger, vocabularyLogger } f
 import { SyncStatusIndicator } from '../../components/common/SyncStatusIndicator';
 import { wrongWordsManager } from '../../services/wrongWordsManager';
 import { animationManager } from '../../services/animationManager';
-import { syncManager } from '../../services/syncManager';
+import { unifiedSyncService } from '../../services/unifiedSyncService';
 import { DataConflictResolver } from '../../services/dataConflictResolver';
-import { incrementalSyncManager } from '../../services/incrementalSyncManager';
 
 const ReviewIntroScreen = () => {
   const { vocabulary, refreshLearningProgress } = useVocabulary();
@@ -298,13 +297,13 @@ const ReviewIntroScreen = () => {
       if (!token) return;
       
       // 检查是否有待同步的变更
-      const pendingChangesCount = incrementalSyncManager.getPendingChangesCount();
+      const syncStatus = unifiedSyncService.getSyncStatus();
       
-      if (pendingChangesCount > 0) {
-        console.log(`🔄 发现 ${pendingChangesCount} 个待同步变更，开始增量同步`);
+      if (syncStatus.queueLength > 0) {
+        console.log(`🔄 发现 ${syncStatus.queueLength} 个待同步变更，开始统一同步`);
         
-        // 执行增量同步
-        await incrementalSyncManager.performIncrementalSync();
+        // 执行统一同步
+        await unifiedSyncService.syncPendingData();
         
         // 同步完成后，重新加载本地数据
         const updatedStatsStr = await AsyncStorage.getItem('userStats');
@@ -362,12 +361,13 @@ const ReviewIntroScreen = () => {
               setAnimatedExperience(resolvedStats.experience);
               
               // 记录冲突解决为变更
-              await incrementalSyncManager.recordChange(
-                'userStats',
-                'update',
-                resolvedStats,
-                `conflict_resolution_${Date.now()}`
-              );
+              await unifiedSyncService.addToSyncQueue({
+                type: 'userStats',
+                data: resolvedStats,
+                userId: await getUserId() || '',
+                operation: 'update',
+                priority: 'high'
+              });
               
             } else {
               // 无冲突，静默更新本地数据

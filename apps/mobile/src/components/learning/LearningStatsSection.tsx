@@ -14,7 +14,7 @@ import { StatsCard } from './StatsCard';
 import { BadgeSection } from './BadgeSection';
 import { BadgeModal } from './BadgeModal';
 import { LearningStatsService, LearningStats, Badge as LearningBadge } from '../../services/learningStatsService';
-import { DataSyncService } from '../../services/dataSyncService';
+import { unifiedSyncService } from '../../services/unifiedSyncService';
 
 interface LearningStatsSectionProps {
   onBadgePress?: (badge: LearningBadge) => void;
@@ -42,7 +42,7 @@ export const LearningStatsSection: React.FC<LearningStatsSectionProps> = ({
   const [syncStatus, setSyncStatus] = useState<string>('');
 
   const learningStatsService = LearningStatsService.getInstance();
-  const dataSyncService = DataSyncService.getInstance();
+  // 移除旧的同步服务引用，使用统一同步服务
 
   // 加载数据
   useEffect(() => {
@@ -56,17 +56,17 @@ export const LearningStatsSection: React.FC<LearningStatsSectionProps> = ({
       setSyncStatus('检查数据同步状态...');
       console.log('📊 开始加载学习数据...');
 
-      // 检查是否需要同步
-      const shouldSync = await dataSyncService.shouldSync();
+      // 检查统一同步服务状态
+      const syncStatus = unifiedSyncService.getSyncStatus();
       
-      if (shouldSync) {
+      if (syncStatus.queueLength > 0) {
         setSyncStatus('同步数据中...');
-        console.log('🔄 需要同步数据，开始同步...');
+        console.log('🔄 发现待同步数据，开始同步...');
         
         // 尝试同步数据
-        const syncSuccess = await dataSyncService.syncAllData();
+        const syncResult = await unifiedSyncService.syncPendingData();
         
-        if (syncSuccess) {
+        if (syncResult.success) {
           setSyncStatus('数据同步完成');
           console.log('✅ 数据同步成功');
         } else {
@@ -120,9 +120,10 @@ export const LearningStatsSection: React.FC<LearningStatsSectionProps> = ({
 
   const getStatsData = async (): Promise<LearningStats | null> => {
     try {
-      // 先尝试从缓存获取
-      const cachedStats = await dataSyncService.getCachedUserStats();
-      if (cachedStats) {
+      // 先尝试从本地存储获取
+      const cachedStatsStr = await AsyncStorage.getItem('userStats');
+      if (cachedStatsStr) {
+        const cachedStats = JSON.parse(cachedStatsStr);
         console.log('📋 使用缓存的统计数据');
         return cachedStats;
       }
@@ -146,11 +147,14 @@ export const LearningStatsSection: React.FC<LearningStatsSectionProps> = ({
 
   const getBadgesData = async (): Promise<LearningBadge[]> => {
     try {
-      // 先尝试从缓存获取
-      const cachedBadges = await dataSyncService.getCachedBadges();
-      if (cachedBadges && cachedBadges.length > 0) {
-        console.log('📋 使用缓存的奖章数据');
-        return cachedBadges;
+      // 先尝试从本地存储获取
+      const cachedBadgesStr = await AsyncStorage.getItem('badges');
+      if (cachedBadgesStr) {
+        const cachedBadges = JSON.parse(cachedBadgesStr);
+        if (cachedBadges && cachedBadges.length > 0) {
+          console.log('📋 使用缓存的奖章数据');
+          return cachedBadges;
+        }
       }
 
       // 缓存不存在，从服务器获取
@@ -192,8 +196,8 @@ export const LearningStatsSection: React.FC<LearningStatsSectionProps> = ({
     setSyncStatus('强制同步中...');
     
     try {
-      const syncSuccess = await dataSyncService.forceSync();
-      if (syncSuccess) {
+      const syncResult = await unifiedSyncService.forceSync();
+      if (syncResult.success) {
         await loadDataWithSync();
       } else {
         setSyncStatus('同步失败');

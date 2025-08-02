@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert, ScrollView } from 'react-native';
 import { LearningStatsService } from '../../services/learningStatsService';
-import { DataSyncService } from '../../services/dataSyncService';
+import { unifiedSyncService } from '../../services/unifiedSyncService';
 import { colors } from '../../constants/colors';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -128,10 +128,12 @@ export const DataIntegrationTest: React.FC = () => {
       setLoading(true);
       addResult('🔄 开始测试数据同步...');
       
-      const syncService = DataSyncService.getInstance();
-      const syncSuccess = await syncService.syncAllData();
+      const syncResult = await unifiedSyncService.syncPendingData();
       
-      addResult(`✅ 数据同步状态: ${syncSuccess ? '成功' : '失败'}`);
+      addResult(`✅ 数据同步状态: ${syncResult.success ? '成功' : '失败'}`);
+      if (syncResult.message) {
+        addResult(`📝 同步信息: ${syncResult.message}`);
+      }
       
     } catch (error) {
       addResult(`❌ 数据同步测试失败: ${error}`);
