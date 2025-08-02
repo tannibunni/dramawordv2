@@ -89,6 +89,7 @@ export interface IUser extends Document {
   updateStudyStreak: () => Promise<any>;
   addContinuousLearningReward: () => Promise<any>;
   checkContinuousLearningStatus: () => any;
+  addExperience: (exp: number, reason?: string) => Promise<any>;
   addExperienceForNewWord: (...args: any[]) => Promise<any>;
   addExperienceForReview: (...args: any[]) => Promise<any>;
   addExperienceForDailyCheckin: () => Promise<any>;
