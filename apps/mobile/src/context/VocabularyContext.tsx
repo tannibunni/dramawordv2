@@ -67,7 +67,28 @@ async function getUserId() {
 const VOCABULARY_STORAGE_KEY = 'user_vocabulary';
 
 export const VocabularyProvider = ({ children }: { children: ReactNode }) => {
-  const [vocabulary, setVocabulary] = useState<WordWithSource[]>([]);
+
+  // 初始化单词学习进度字段
+  const initializeWordProgress = (word: WordWithSource): WordWithSource => {
+    return {
+      ...word,
+      incorrectCount: word.incorrectCount || 0,
+      consecutiveIncorrect: word.consecutiveIncorrect || 0,
+      consecutiveCorrect: word.consecutiveCorrect || 0,
+      reviewCount: word.reviewCount || 0,
+      correctCount: word.correctCount || 0,
+      mastery: word.mastery || 1,
+      lastReviewDate: word.lastReviewDate || word.collectedAt,
+      nextReviewDate: word.nextReviewDate || word.collectedAt,
+      interval: word.interval || 1,
+      easeFactor: word.easeFactor || 2.5,
+      totalStudyTime: word.totalStudyTime || 0,
+      averageResponseTime: word.averageResponseTime || 0,
+      confidence: word.confidence || 1
+    };
+  };
+
+    const [vocabulary, setVocabulary] = useState<WordWithSource[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
 
   // 加载本地存储的词汇数据
@@ -94,15 +115,17 @@ export const VocabularyProvider = ({ children }: { children: ReactNode }) => {
       const storedData = await AsyncStorage.getItem(VOCABULARY_STORAGE_KEY);
       if (storedData) {
         const parsedData = JSON.parse(storedData);
-        setVocabulary(parsedData);
-        vocabularyLogger.info(`从本地存储加载词汇数据: ${parsedData.length} 个单词`);
+        // 确保所有单词都有正确的学习进度字段
+        const initializedData = parsedData.map((word: WordWithSource) => initializeWordProgress(word));
+        setVocabulary(initializedData);
+        vocabularyLogger.info(`从本地存储加载词汇数据: ${initializedData.length} 个单词`);
       } else {
         // 如果没有本地数据，初始化为空数组
-        vocabularyLogger.info('本地存储中没有词汇数据，初始化为空列表');
         setVocabulary([]);
+        vocabularyLogger.info('本地存储中没有词汇数据，初始化为空数组');
       }
     } catch (error) {
-      vocabularyLogger.error('加载词汇数据失败', error);
+      vocabularyLogger.error('加载本地词汇数据失败', error);
       setVocabulary([]);
     } finally {
       setIsLoaded(true);
@@ -260,7 +283,14 @@ export const VocabularyProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const updateWord = (word: string, data: Partial<WordWithSource>) => {
-    setVocabulary(prev => prev.map(w => w.word === word ? { ...w, ...data } : w));
+    setVocabulary(prev => prev.map(w => {
+      if (w.word === word) {
+        const updatedWord = { ...w, ...data };
+        // 确保更新后的单词有正确的学习进度字段
+        return initializeWordProgress(updatedWord);
+      }
+      return w;
+    }));
   };
 
   const clearVocabulary = async () => {

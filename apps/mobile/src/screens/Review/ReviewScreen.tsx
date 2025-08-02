@@ -168,7 +168,7 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
   });
   const [finalStats, setFinalStats] = useState<ReviewStats | null>(null);
   const [reviewActions, setReviewActions] = useState<{ word: string; remembered: boolean }[]>([]);
-  const { vocabulary } = useVocabulary();
+  const { vocabulary, updateWord } = useVocabulary();
   const { navigate } = useNavigation();
   const { appLanguage } = useAppLanguage();
   const { user } = useAuth();
@@ -401,20 +401,13 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
           
           // 使用与 ReviewIntroScreen 相同的筛选逻辑
           const localWrongWords = vocabulary.filter((word: any) => {
-            // 如果连续答对次数 >= 3，则从错词卡移除
-            if (word.consecutiveCorrect && word.consecutiveCorrect >= 3) {
-              console.log(`🔍 ${word.word}: 连续答对${word.consecutiveCorrect}次，从错词卡移除`);
-              return false;
-            }
-            // 否则保持在错词卡中（有答错记录）
-            const isWrongWord = (word.incorrectCount && word.incorrectCount > 0) || 
-                               (word.consecutiveIncorrect && word.consecutiveIncorrect > 0);
-            if (isWrongWord) {
-              console.log(`🔍 ${word.word}: 符合错词条件 (incorrectCount=${word.incorrectCount}, consecutiveIncorrect=${word.consecutiveIncorrect})`);
-            } else {
-              console.log(`🔍 ${word.word}: 不符合错词条件 (incorrectCount=${word.incorrectCount}, consecutiveIncorrect=${word.consecutiveIncorrect})`);
-            }
-            return isWrongWord;
+            console.log(`🔍 检查单词: ${word.word}`, {
+              incorrectCount: word.incorrectCount,
+              consecutiveIncorrect: word.consecutiveIncorrect,
+              consecutiveCorrect: word.consecutiveCorrect,
+              isWrongWord: isWrongWord(word)
+            });
+            return isWrongWord(word);
           });
           
           console.log(`🔍 错词卡筛选结果: ${localWrongWords.length} 个错词`);
@@ -778,7 +771,6 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
       // 3. 直接更新 vocabulary context，确保错词卡能立即看到更新
       const currentWord = words[swiperIndex];
       if (currentWord) {
-        const { updateWord } = useVocabulary();
         updateWord(word, {
           incorrectCount: (currentWord.incorrectCount || 0) + 1,
           consecutiveIncorrect: (currentWord.consecutiveIncorrect || 0) + 1,
@@ -832,7 +824,6 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
       // 3. 直接更新 vocabulary context，确保错词卡能立即看到更新
       const currentWord = words[swiperIndex];
       if (currentWord) {
-        const { updateWord } = useVocabulary();
         updateWord(word, {
           incorrectCount: currentWord.incorrectCount || 0,
           consecutiveIncorrect: 0, // 答对时重置连续错误次数

@@ -51,19 +51,14 @@ const ReviewIntroScreen = () => {
         
         // 错词卡逻辑：连续答对3次后从错词卡移除，否则保持在错词卡中
         const localWrongWords = vocabulary.filter((word: any) => {
-          // 如果连续答对次数 >= 3，则从错词卡移除
-          if (word.consecutiveCorrect && word.consecutiveCorrect >= 3) {
-            console.log(`🔍 ${word.word}: 连续答对${word.consecutiveCorrect}次，从错词卡移除`);
-            return false;
-          }
-          // 否则保持在错词卡中（有答错记录）
-          const isWrongWord = (word.incorrectCount && word.incorrectCount > 0) || 
-                             (word.consecutiveIncorrect && word.consecutiveIncorrect > 0);
-          if (isWrongWord) {
-            console.log(`🔍 ${word.word}: 符合错词条件 (incorrectCount=${word.incorrectCount}, consecutiveIncorrect=${word.consecutiveIncorrect})`);
-          }
-          return isWrongWord;
-        });
+            console.log(`🔍 ReviewIntroScreen 检查单词: ${word.word}`, {
+              incorrectCount: word.incorrectCount,
+              consecutiveIncorrect: word.consecutiveIncorrect,
+              consecutiveCorrect: word.consecutiveCorrect,
+              isWrongWord: isWrongWord(word)
+            });
+            return isWrongWord(word);
+          });
         
         console.log(`🔍 ReviewIntroScreen: 错词数量计算结果: ${localWrongWords.length}`);
         setWrongWordsCount(localWrongWords.length);
@@ -90,18 +85,13 @@ const ReviewIntroScreen = () => {
           
           // 错词卡逻辑：连续答对3次后从错词卡移除，否则保持在错词卡中
           const localWrongWords = vocabulary.filter((word: any) => {
-            // 如果连续答对次数 >= 3，则从错词卡移除
-            if (word.consecutiveCorrect && word.consecutiveCorrect >= 3) {
-              console.log(`🔍 ${word.word}: 连续答对${word.consecutiveCorrect}次，从错词卡移除`);
-              return false;
-            }
-            // 否则保持在错词卡中（有答错记录）
-            const isWrongWord = (word.incorrectCount && word.incorrectCount > 0) || 
-                               (word.consecutiveIncorrect && word.consecutiveIncorrect > 0);
-            if (isWrongWord) {
-              console.log(`🔍 ${word.word}: 符合错词条件 (incorrectCount=${word.incorrectCount}, consecutiveIncorrect=${word.consecutiveIncorrect})`);
-            }
-            return isWrongWord;
+            console.log(`🔍 ReviewIntroScreen 检查单词: ${word.word}`, {
+              incorrectCount: word.incorrectCount,
+              consecutiveIncorrect: word.consecutiveIncorrect,
+              consecutiveCorrect: word.consecutiveCorrect,
+              isWrongWord: isWrongWord(word)
+            });
+            return isWrongWord(word);
           });
           
           console.log(`🔍 ReviewIntroScreen useEffect: 错词数量计算结果: ${localWrongWords.length}`);
