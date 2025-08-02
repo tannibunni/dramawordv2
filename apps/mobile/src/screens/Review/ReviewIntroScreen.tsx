@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, Animated, Platform, Alert } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -188,6 +187,238 @@ const ReviewIntroScreen = () => {
     }
   }, [userStats.experience, userStats.level]);
   
+  // 加载用户统计数据 - 优化版本，启动时读取，减少频繁同步
+  const loadUserStats = async () => {
+    try {
+      // 如果正在进行经验值同步，跳过加载
+      if (isSyncingExperience) {
+        userDataLogger.info('经验值同步进行中，跳过用户统计加载');
+        return;
+      }
+      
+      userDataLogger.info('开始加载用户统计数据');
+      
+      // 优先使用本地数据
+      const localStatsData = await AsyncStorage.getItem('userStats');
+      if (localStatsData) {
+        const localStats = JSON.parse(localStatsData);
+        
+        // 检查是否有待处理的经验值增益
+        const gainData = await AsyncStorage.getItem('experienceGain');
+        let finalExperience = localStats.experience || 0;
+        
+        if (gainData) {
+          const gainedExp = JSON.parse(gainData);
+          finalExperience += gainedExp;
+          userDataLogger.info('从本地存储检测到经验值增益，使用更新后的经验值', {
+            originalExp: localStats.experience,
+            gainedExp,
+            finalExperience
+          });
+        }
+        
+        const updatedStats = {
+          ...localStats,
+          experience: finalExperience
+        };
+        
+        userDataLogger.info('从本地存储加载统计数据', updatedStats);
+        setUserStats(updatedStats);
+        setAnimatedExperience(updatedStats.experience);
+        setAnimatedCollectedWords(vocabulary?.length || 0);
+        setAnimatedContributedWords(localStats.contributedWords);
+        
+        // 初始化进度条 - 只有在没有动画进行时才初始化
+        if (!isProgressBarAnimating) {
+          const progressPercentage = getExperienceProgressFromStats(updatedStats);
+          const progressValue = progressPercentage / 100;
+          progressBarAnimation.setValue(progressValue);
+          setProgressBarValue(progressValue);
+          setHasInitializedProgressBar(true);
+        }
+        
+        // 只在启动时同步一次后端数据（减少频繁请求）
+        await syncBackendDataOnStartup();
+        return;
+      }
+      
+      // 如果本地没有数据，才从后端获取
+      const userId = await getUserId();
+      if (!userId) {
+        userDataLogger.warn('用户未登录，初始化默认数据');
+        
+        // 初始化默认数据
+        const defaultStats = {
+          experience: 0,
+          level: 1,
+          collectedWords: vocabulary?.length || 0,
+          contributedWords: 0,
+          totalReviews: 0,
+          currentStreak: 0
+        };
+        userDataLogger.info('初始化默认统计数据', defaultStats);
+        setUserStats(defaultStats);
+        setAnimatedExperience(0);
+        setAnimatedCollectedWords(vocabulary?.length || 0);
+        setAnimatedContributedWords(0);
+        
+        // 静默初始化进度条 - 不触发动画
+        const progressPercentage = getExperienceProgressFromStats(defaultStats);
+        const progressValue = progressPercentage / 100;
+        progressBarAnimation.setValue(progressValue);
+        setProgressBarValue(progressValue);
+        setHasInitializedProgressBar(true);
+        
+        await AsyncStorage.setItem('userStats', JSON.stringify(defaultStats));
+        return;
+      }
+      
+      // 从后端获取数据（仅在启动时或本地无数据时）
+      await loadBackendData();
+    } catch (error) {
+      userDataLogger.error('加载用户统计数据失败', error);
+    }
+  };
+
+  // 新增：启动时同步后端数据（仅一次）
+  const syncBackendDataOnStartup = async () => {
+    try {
+      const userId = await getUserId();
+      if (!userId) return;
+      
+      const userDataStr = await AsyncStorage.getItem('userData');
+      if (!userDataStr) return;
+      
+      const userData = JSON.parse(userDataStr);
+      const token = userData.token;
+      
+      if (!token) return;
+      
+      const response = await fetch(`${API_BASE_URL}/users/stats`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+      
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success && result.data) {
+          const backendStats = {
+            experience: result.data.experience || 0,
+            level: result.data.level || 1,
+            collectedWords: vocabulary?.length || 0,
+            contributedWords: result.data.contributedWords || 0,
+            totalReviews: result.data.totalReviews || 0,
+            currentStreak: result.data.currentStreak || 0
+          };
+          
+          userDataLogger.info('启动时同步后端数据成功', backendStats);
+          await AsyncStorage.setItem('userStats', JSON.stringify(backendStats));
+          
+          // 更新本地状态（如果数据有变化）
+          setUserStats(prevStats => {
+            if (prevStats.experience !== backendStats.experience) {
+              userDataLogger.info('检测到经验值变化，更新本地状态', {
+                oldExp: prevStats.experience,
+                newExp: backendStats.experience
+              });
+              return backendStats;
+            }
+            return prevStats;
+          });
+        }
+      }
+    } catch (error) {
+      userDataLogger.warn('启动时同步后端数据失败', error);
+    }
+  };
+
+  // 新增：定时同步本地数据到后端（可配置间隔）
+  const schedulePeriodicSync = () => {
+    // 每30分钟同步一次，或者用户主动触发
+    const syncInterval = 30 * 60 * 1000; // 30分钟
+    
+    setInterval(async () => {
+      await syncLocalDataToBackend();
+    }, syncInterval);
+  };
+
+  // 新增：同步本地数据到后端
+  const syncLocalDataToBackend = async () => {
+    try {
+      const userId = await getUserId();
+      if (!userId) return;
+      
+      const localStatsData = await AsyncStorage.getItem('userStats');
+      if (!localStatsData) return;
+      
+      const localStats = JSON.parse(localStatsData);
+      const userDataStr = await AsyncStorage.getItem('userData');
+      if (!userDataStr) return;
+      
+      const userData = JSON.parse(userDataStr);
+      const token = userData.token;
+      
+      if (!token) return;
+      
+      // 发送本地数据到后端进行同步
+      const response = await fetch(`${API_BASE_URL}/users/sync-stats`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          experience: localStats.experience,
+          level: localStats.level,
+          totalReviews: localStats.totalReviews,
+          currentStreak: localStats.currentStreak,
+          // 其他需要同步的数据
+        }),
+      });
+      
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success) {
+          userDataLogger.info('定时同步本地数据到后端成功');
+        }
+      }
+    } catch (error) {
+      userDataLogger.warn('定时同步本地数据到后端失败', error);
+    }
+  };
+
+  // 新增：APP关闭时同步数据
+  const syncOnAppClose = async () => {
+    try {
+      await syncLocalDataToBackend();
+      userDataLogger.info('APP关闭时同步数据完成');
+    } catch (error) {
+      userDataLogger.error('APP关闭时同步数据失败', error);
+    }
+  };
+
+  // 组件挂载时启动定时同步
+  useEffect(() => {
+    schedulePeriodicSync();
+    
+    // APP关闭时同步数据
+    const handleAppStateChange = (nextAppState: string) => {
+      if (nextAppState === 'background' || nextAppState === 'inactive') {
+        syncOnAppClose();
+      }
+    };
+    
+    // 监听APP状态变化
+    // 注意：这里需要根据实际的APP状态监听库来实现
+    // 例如：AppState.addEventListener('change', handleAppStateChange);
+    
+    return () => {
+      // 清理定时器
+      // 这里需要保存定时器ID并在清理时清除
+    };
+  }, []);
+
   // 加载用户统计数据
   useEffect(() => {
     loadUserStats();
@@ -492,139 +723,7 @@ const ReviewIntroScreen = () => {
     experienceLogger.info('统一进度条动画完成', { fromProgress, toProgress });
   };
 
-  // 加载用户统计数据 - 改进版本，优先使用本地数据
-  const loadUserStats = async () => {
-    try {
-      // 如果正在进行经验值同步，跳过加载
-      if (isSyncingExperience) {
-        userDataLogger.info('经验值同步进行中，跳过用户统计加载');
-        return;
-      }
-      
-      userDataLogger.info('开始加载用户统计数据');
-      
-      // 优先使用本地数据
-      const localStatsData = await AsyncStorage.getItem('userStats');
-      if (localStatsData) {
-        const localStats = JSON.parse(localStatsData);
-        
-        // 检查是否有待处理的经验值增益
-        const gainData = await AsyncStorage.getItem('experienceGain');
-        let finalExperience = localStats.experience || 0;
-        
-        if (gainData) {
-          const gainedExp = JSON.parse(gainData);
-          finalExperience += gainedExp;
-          userDataLogger.info('从本地存储检测到经验值增益，使用更新后的经验值', {
-            originalExp: localStats.experience,
-            gainedExp,
-            finalExperience
-          });
-        }
-        
-        const updatedStats = {
-          ...localStats,
-          experience: finalExperience
-        };
-        
-        userDataLogger.info('从本地存储加载统计数据', updatedStats);
-        setUserStats(updatedStats);
-        setAnimatedExperience(updatedStats.experience);
-        setAnimatedCollectedWords(vocabulary?.length || 0);
-        setAnimatedContributedWords(localStats.contributedWords);
-        
-        // 初始化进度条 - 只有在没有动画进行时才初始化
-        if (!isProgressBarAnimating) {
-          const progressPercentage = getExperienceProgressFromStats(updatedStats);
-          const progressValue = progressPercentage / 100;
-          progressBarAnimation.setValue(progressValue);
-          setProgressBarValue(progressValue);
-          setHasInitializedProgressBar(true);
-        }
-        
-        // 后台静默同步后端数据（不阻塞UI）
-        syncBackendDataInBackground();
-        return;
-      }
-      
-      // 如果本地没有数据，才从后端获取
-      const userId = await getUserId();
-      if (!userId) {
-        userDataLogger.warn('用户未登录，初始化默认数据');
-        
-        // 初始化默认数据
-        const defaultStats = {
-          experience: 0,
-          level: 1,
-          collectedWords: vocabulary?.length || 0,
-          contributedWords: 0,
-          totalReviews: 0,
-          currentStreak: 0
-        };
-        userDataLogger.info('初始化默认统计数据', defaultStats);
-        setUserStats(defaultStats);
-        setAnimatedExperience(0);
-        setAnimatedCollectedWords(vocabulary?.length || 0);
-        setAnimatedContributedWords(0);
-        
-        // 静默初始化进度条 - 不触发动画
-        const progressPercentage = getExperienceProgressFromStats(defaultStats);
-        const progressValue = progressPercentage / 100;
-        progressBarAnimation.setValue(progressValue);
-        setProgressBarValue(progressValue);
-        setHasInitializedProgressBar(true);
-        
-        await AsyncStorage.setItem('userStats', JSON.stringify(defaultStats));
-        return;
-      }
-      
-      // 从后端获取数据（作为备选方案）
-      await loadBackendData();
-    } catch (error) {
-      userDataLogger.error('加载用户统计数据失败', error);
-    }
-  };
 
-  // 新增：后台静默同步后端数据
-  const syncBackendDataInBackground = async () => {
-    try {
-      const userId = await getUserId();
-      if (!userId) return;
-      
-      const userDataStr = await AsyncStorage.getItem('userData');
-      if (!userDataStr) return;
-      
-      const userData = JSON.parse(userDataStr);
-      const token = userData.token;
-      
-      if (!token) return;
-      
-      const response = await fetch(`${API_BASE_URL}/users/stats`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-      
-      if (response.ok) {
-        const result = await response.json();
-        if (result.success && result.data) {
-          const backendStats = {
-            experience: result.data.experience || 0,
-            level: result.data.level || 1,
-            collectedWords: vocabulary?.length || 0,
-            contributedWords: result.data.contributedWords || 0,
-            totalReviews: result.data.totalReviews || 0,
-            currentStreak: result.data.currentStreak || 0
-          };
-          
-          userDataLogger.info('后台同步后端数据成功', backendStats);
-          await AsyncStorage.setItem('userStats', JSON.stringify(backendStats));
-        }
-      }
-    } catch (error) {
-      userDataLogger.warn('后台同步后端数据失败', error);
-    }
-  };
 
   // 新增：从后端加载数据（备选方案）
   const loadBackendData = async () => {
