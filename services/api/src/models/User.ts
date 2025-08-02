@@ -441,8 +441,7 @@ UserSchema.methods.addExperience = function(exp: number, reason: string = '') {
   if (this.learningStats.experience >= expNeededForCurrentLevel) {
     // 升级
     this.learningStats.level += 1;
-    this.learningStats.experience -= expNeededForCurrentLevel;
-    
+    // 不重置经验值，保持累计
     console.log(`🎉 用户升级！新等级: ${this.learningStats.level}, 原因: ${reason}`);
   }
   

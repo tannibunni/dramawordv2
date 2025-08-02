@@ -121,8 +121,7 @@ export class AnimationManager {
 
     this.setAnimatingState(true);
     this.cleanupListeners();
-    this.resetAnimationValues();
-
+    
     const {
       oldExperience,
       newExperience,
@@ -133,6 +132,13 @@ export class AnimationManager {
       oldProgress,
       newProgress
     } = params;
+    
+    // 设置初始值，而不是重置
+    this.numberAnimation.setValue(0);
+    this.progressBarAnimation.setValue(oldProgress * 100);
+    this.opacityAnimation.setValue(0);
+    this.scaleAnimation.setValue(1);
+    this.levelAnimation.setValue(1);
 
     experienceLogger.info('开始统一经验值动画', {
       oldExperience,
@@ -150,6 +156,7 @@ export class AnimationManager {
 
     // 数字动画监听器
     this.numberAnimation.addListener(({ value }) => {
+      // 数字动画：从当前经验值增长到新经验值
       const currentExp = Math.round(oldExperience + (value * gainedExp));
       let currentProgress;
       
@@ -159,7 +166,9 @@ export class AnimationManager {
         currentProgress = oldProgress + (value * (newProgress - oldProgress));
       }
       
-      this.progressBarAnimation.setValue(currentProgress);
+      // 更新进度条动画值（使用百分比数值）
+      const progressPercentage = currentProgress * 100;
+      this.progressBarAnimation.setValue(progressPercentage);
       callbacks.onProgress?.(currentExp, currentProgress);
     });
 
@@ -257,6 +266,9 @@ export class AnimationManager {
     const { duration = 1500, useNativeDriver = false } = config;
     
     this.cleanupListeners();
+    
+    // 设置初始值
+    this.progressBarAnimation.setValue(fromProgress);
     
     Animated.timing(this.progressBarAnimation, {
       toValue: toProgress,

@@ -166,6 +166,25 @@ const ReviewIntroScreen = () => {
     return () => clearTimeout(timer);
   }, []);
   
+  // 初始化进度条显示当前经验值进度
+  useEffect(() => {
+    if (userStats.experience >= 0) {
+      const currentProgress = getExperienceProgressFromStats(userStats);
+      const progressPercentage = currentProgress * 100;
+      
+      console.log('🎯 初始化进度条:', {
+        experience: userStats.experience,
+        level: userStats.level,
+        progress: currentProgress,
+        percentage: progressPercentage
+      });
+      
+      // 设置进度条动画值
+      progressBarAnimation.setValue(progressPercentage);
+      setProgressBarValue(currentProgress);
+    }
+  }, [userStats.experience, userStats.level]);
+  
   // 加载用户统计数据
   useEffect(() => {
     loadUserStats();
@@ -305,11 +324,13 @@ const ReviewIntroScreen = () => {
             
             // 延迟刷新用户数据，确保后端数据已更新
             setTimeout(async () => {
-              // 清理经验值增益标记，防止重复计算
-              await AsyncStorage.removeItem('experienceGain');
-              
-              // 然后从后端刷新数据
+              // 从后端刷新数据，但不清理经验值增益标记
               await loadUserStats();
+              
+              // 延迟清理经验值增益标记，确保动画完成后再清理
+              setTimeout(async () => {
+                await AsyncStorage.removeItem('experienceGain');
+              }, 3000);
             }, 2000);
           } else {
             experienceLogger.warn('currentExperience < 0，跳过动画', { currentExperience });
@@ -381,8 +402,7 @@ const ReviewIntroScreen = () => {
               gainedExp,
               finalExperience
             });
-            // 立即清理经验值增益标记，防止重复计算
-            await AsyncStorage.removeItem('experienceGain');
+            // 不清理经验值增益标记，让动画完成后再清理
           }
           
           const updatedStats = {
@@ -476,8 +496,7 @@ const ReviewIntroScreen = () => {
                     gainedExp,
                     finalExperience
                   });
-                  // 立即清理经验值增益标记，防止重复计算
-                  await AsyncStorage.removeItem('experienceGain');
+                  // 不清理经验值增益标记，让动画完成后再清理
                   
                   // 设置状态并返回，避免后续重复处理
                   const backendStats = {
@@ -597,7 +616,7 @@ const ReviewIntroScreen = () => {
       onStart: () => {
         setShowExperienceAnimation(true);
         setIsProgressBarAnimating(true);
-        setAnimatedExperience(oldExperience);
+        setAnimatedExperience(oldExperience); // 从当前累计经验值开始动画
       },
       onProgress: (currentExp, currentProgress) => {
         setAnimatedExperience(currentExp);
@@ -606,7 +625,7 @@ const ReviewIntroScreen = () => {
       onComplete: (finalExp, finalProgress) => {
         setShowExperienceAnimation(false);
         setIsProgressBarAnimating(false);
-        setAnimatedExperience(finalExp);
+        setAnimatedExperience(newExperience);
         setProgressBarValue(finalProgress);
         setHasCheckedExperience(true);
         
@@ -616,15 +635,14 @@ const ReviewIntroScreen = () => {
         // 更新用户统计数据
         const updatedStats = {
           ...userStats,
-          experience: finalExp,
-          level: newLevel,
+          experience: newExperience,
+          level: userStats.level,
         };
         setUserStats(updatedStats);
         AsyncStorage.setItem('userStats', JSON.stringify(updatedStats));
         
         experienceLogger.info('统一经验值动画完成', {
-          newExperience: finalExp,
-          newLevel,
+          newExperience: newExperience,
           finalProgress
         });
       }
@@ -642,12 +660,12 @@ const ReviewIntroScreen = () => {
     const oldProgress = getExperienceProgressFromStats({
       ...userStats,
       experience: oldExperience
-    }) / 100;
+    });
     const newProgress = getExperienceProgressFromStats({
       ...userStats,
       experience: newExperience,
       level: newLevel
-    }) / 100;
+    });
     
     experienceLogger.info('开始统一经验值动画（指定当前经验值）', {
       oldExperience,
@@ -673,7 +691,7 @@ const ReviewIntroScreen = () => {
       onStart: () => {
         setShowExperienceAnimation(true);
         setIsProgressBarAnimating(true);
-        setAnimatedExperience(oldExperience);
+        setAnimatedExperience(oldExperience); // 从当前累计经验值开始动画
       },
       onProgress: (currentExp, currentProgress) => {
         setAnimatedExperience(currentExp);
@@ -684,12 +702,17 @@ const ReviewIntroScreen = () => {
         setExperienceGained(0);
         setIsProgressBarAnimating(false);
         setHasCheckedExperience(true);
-        setAnimatedExperience(finalExp);
+        setAnimatedExperience(newExperience); // 显示真正的累加经验值
         setProgressBarValue(finalProgress);
         
+        // 更新userStats中的经验值，确保状态同步
+        setUserStats(prevStats => ({
+          ...prevStats,
+          experience: newExperience
+        }));
+        
         experienceLogger.info('统一经验值动画完成（指定当前经验值）', {
-          newExperience: finalExp,
-          newLevel,
+          newExperience: newExperience,
           finalProgress
         });
       }
@@ -736,6 +759,17 @@ const ReviewIntroScreen = () => {
     
     if (currentExp <= 0) return 0;
     
+    // 修复进度计算逻辑：对于低等级，直接使用经验值作为进度
+    if (currentLevel === 1) {
+      // 等级1：每50经验值升一级，所以进度 = 经验值 / 50
+      const progress = Math.min(1, currentExp / 50);
+      console.log('🎯 等级1进度计算:', {
+        currentExp,
+        progress: progress * 100
+      });
+      return progress;
+    }
+    
     const totalExpForNextLevel = 50 * Math.pow(currentLevel + 1, 2);
     const totalExpForCurrentLevel = 50 * Math.pow(currentLevel, 2);
     const expNeededForCurrentLevel = totalExpForNextLevel - totalExpForCurrentLevel;
@@ -756,7 +790,7 @@ const ReviewIntroScreen = () => {
       result
     });
     
-    return result;
+    return result / 100; // 返回0-1之间的值，用于动画
   };
 
   // 计算经验值进度
@@ -765,6 +799,17 @@ const ReviewIntroScreen = () => {
     const currentExp = userStats.experience;
     
     if (currentExp <= 0) return 0;
+    
+    // 修复进度计算逻辑：对于低等级，直接使用经验值作为进度
+    if (currentLevel === 1) {
+      // 等级1：每50经验值升一级，所以进度 = 经验值 / 50
+      const progress = Math.min(1, currentExp / 50);
+      console.log('🎯 等级1进度计算:', {
+        currentExp,
+        progress: progress * 100
+      });
+      return progress;
+    }
     
     const totalExpForNextLevel = 50 * Math.pow(currentLevel + 1, 2);
     const totalExpForCurrentLevel = 50 * Math.pow(currentLevel, 2);
@@ -786,7 +831,7 @@ const ReviewIntroScreen = () => {
       result
     });
     
-    return result;
+    return result / 100; // 返回0-1之间的值，用于动画
   };
 
   // 获取当前等级所需经验值
@@ -948,12 +993,21 @@ const ReviewIntroScreen = () => {
           </View>
           <View style={styles.progressBarContainer}>
             {/* 蓝色渐变进度条 */}
-            <LinearGradient
-              colors={[colors.primary[400], colors.primary[600]]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={[styles.progressBarFill, { width: `${progressBarValue * 100}%` }]}
-            />
+            <Animated.View style={[styles.progressBarFill, { width: progressBarAnimation.interpolate({
+              inputRange: [0, 100],
+              outputRange: ['0%', '100%']
+            }) }]}>
+              <LinearGradient
+                colors={[colors.primary[400], colors.primary[600]]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.progressBarGradient}
+              />
+            </Animated.View>
+            {/* 调试信息 */}
+            <Text style={{position: 'absolute', right: 5, top: 2, fontSize: 10, color: 'red'}}>
+              {Math.round(progressBarValue * 100)}%
+            </Text>
           </View>
         </View>
         
@@ -1159,6 +1213,51 @@ const ReviewIntroScreen = () => {
           >
             <Text style={styles.debugButtonText}>清除错词缓存</Text>
           </TouchableOpacity>
+          
+          {/* 测试经验值动画按钮 */}
+          <TouchableOpacity 
+            style={[styles.debugButton, {marginTop: 10}]} 
+            onPress={() => {
+              console.log('🧪 测试经验值动画');
+              console.log('🧪 当前经验值:', userStats.experience);
+              console.log('🧪 当前等级:', userStats.level);
+              console.log('🧪 当前进度值:', progressBarValue);
+              console.log('🧪 当前动画值:', progressBarAnimation);
+              startExperienceAnimationWithCurrentExp(10, userStats.experience);
+            }}
+          >
+            <Text style={styles.debugButtonText}>测试经验值动画</Text>
+          </TouchableOpacity>
+          
+          {/* 检查后端数据按钮 */}
+          <TouchableOpacity 
+            style={[styles.debugButton, {marginTop: 10}]} 
+            onPress={async () => {
+              console.log('🔍 检查后端数据');
+              try {
+                const userDataStr = await AsyncStorage.getItem('userData');
+                if (userDataStr) {
+                  const userData = JSON.parse(userDataStr);
+                  const response = await fetch(`${API_BASE_URL}/users/stats`, {
+                    headers: {
+                      'Authorization': `Bearer ${userData.token}`,
+                    },
+                  });
+                  
+                  if (response.ok) {
+                    const result = await response.json();
+                    console.log('🔍 后端用户数据:', result.data);
+                  } else {
+                    console.log('❌ 获取后端数据失败:', response.status);
+                  }
+                }
+              } catch (error) {
+                console.log('❌ 检查后端数据失败:', error);
+              }
+            }}
+          >
+            <Text style={styles.debugButtonText}>检查后端数据</Text>
+          </TouchableOpacity>
         </View>
       )}
     </View>
@@ -1214,6 +1313,10 @@ const styles = StyleSheet.create({
     height: '100%',
     borderRadius: 5,
     overflow: 'hidden',
+  },
+  progressBarGradient: {
+    height: '100%',
+    width: '100%',
   },
   statsSection: {
     flexDirection: 'row',
