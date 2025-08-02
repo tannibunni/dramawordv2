@@ -1,0 +1,32 @@
+{
+  "totalFiles": 12,
+  "filesWithIssues": 4,
+  "totalIssues": 5,
+  "details": [
+    {
+      "filePath": "apps/mobile/src/screens/Review/ReviewScreen.tsx",
+      "issues": [
+        "缺少必需参数: userId, operation, priority"
+      ]
+    },
+    {
+      "filePath": "apps/mobile/src/context/VocabularyContext.tsx",
+      "issues": [
+        "缺少必需参数: userId, operation, priority"
+      ]
+    },
+    {
+      "filePath": "apps/mobile/src/services/experienceManager.ts",
+      "issues": [
+        "缺少必需参数: userId, operation, priority"
+      ]
+    },
+    {
+      "filePath": "apps/mobile/src/services/learningDataService.ts",
+      "issues": [
+        "缺少必需参数: userId, operation, priority",
+        "缺少必需参数: userId"
+      ]
+    }
+  ]
+}
