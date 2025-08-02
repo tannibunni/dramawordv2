@@ -48,22 +48,49 @@ export class WechatService {
    * 注册微信应用
    */
   static async registerApp(): Promise<boolean> {
-    try {
-      if (Platform.OS === 'ios') {
-        // iOS 使用 universal link
-        const result = await WechatSDK.registerApp(this.appId, this.universalLink);
-        console.log('微信SDK注册结果:', result);
-        return result;
-      } else {
-        // Android 使用包名
-        const result = await WechatSDK.registerApp(this.appId, 'com.tannibunni.dramawordmobile');
-        console.log('微信SDK注册结果:', result);
-        return result;
+    const maxRetries = 3;
+    let lastError: any;
+    
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        console.log(`微信SDK注册尝试 ${attempt}/${maxRetries}`);
+        
+        if (Platform.OS === 'ios') {
+          // iOS 使用 universal link
+          const result = await WechatSDK.registerApp(this.appId, this.universalLink);
+          console.log('微信SDK注册结果:', result);
+          
+          if (result) {
+            console.log('微信SDK注册成功');
+            return true;
+          } else {
+            console.log('微信SDK注册返回false，重试中...');
+          }
+        } else {
+          // Android 使用包名
+          const result = await WechatSDK.registerApp(this.appId, 'com.tannibunni.dramawordmobile');
+          console.log('微信SDK注册结果:', result);
+          
+          if (result) {
+            console.log('微信SDK注册成功');
+            return true;
+          } else {
+            console.log('微信SDK注册返回false，重试中...');
+          }
+        }
+      } catch (error) {
+        console.error(`微信SDK注册失败 (尝试 ${attempt}/${maxRetries}):`, error);
+        lastError = error;
+        
+        if (attempt < maxRetries) {
+          // 等待1秒后重试
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        }
       }
-    } catch (error) {
-      console.error('微信SDK注册失败:', error);
-      return false;
     }
+    
+    console.error('微信SDK注册失败，已尝试所有重试次数');
+    return false;
   }
 
   /**
@@ -287,14 +314,14 @@ export class WechatService {
       const registered = await this.registerApp();
       if (!registered) {
         console.log('微信SDK注册失败');
-        throw new Error('微信SDK注册失败，请检查配置');
+        throw new Error('微信SDK初始化失败，请重试。如果问题持续，请检查：1. 设备是否安装了微信应用 2. 网络连接是否正常');
       }
 
       // 2. 检查微信是否已安装
       const installed = await this.isWXInstalled();
       if (!installed) {
         console.log('微信未安装');
-        throw new Error('请先安装微信应用');
+        throw new Error('请先安装微信应用，然后重试');
       }
 
       // 3. 生成状态参数
@@ -309,6 +336,12 @@ export class WechatService {
       return loginResult;
     } catch (error) {
       console.error('微信登录流程失败:', error);
+      
+      // 提供更详细的错误信息
+      if (error.message.includes('SDK')) {
+        throw new Error('微信SDK初始化失败，请重试。如果问题持续，请检查：1. 设备是否安装了微信应用 2. 网络连接是否正常 3. 微信应用是否最新版本');
+      }
+      
       throw error;
     }
   }
