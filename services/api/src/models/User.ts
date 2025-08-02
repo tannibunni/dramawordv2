@@ -455,6 +455,9 @@ UserSchema.methods.addExperienceForNewWord = function() {
 
 // 方法：复习单词获得经验值（记得+2，不记得+1）
 UserSchema.methods.addExperienceForReview = function(isCorrect = true) {
+  // 检查并重置每日限制
+  this.checkAndResetDailyLimits();
+  
   // 检查每日复习XP限制
   const dailyLimit = 90; // 每日上限90点，允许更多复习
   if (this.learningStats.dailyReviewXP >= dailyLimit) {

@@ -151,9 +151,6 @@ export class AnimationManager {
       isLevelUp
     });
 
-    // 调用开始回调
-    callbacks.onStart?.();
-
     // 数字动画监听器
     this.numberAnimation.addListener(({ value }) => {
       // 数字动画：从当前经验值增长到新经验值
@@ -171,6 +168,9 @@ export class AnimationManager {
       this.progressBarAnimation.setValue(progressPercentage);
       callbacks.onProgress?.(currentExp, currentProgress);
     });
+
+    // 调用开始回调（在监听器设置之后）
+    callbacks.onStart?.();
 
     // 动画序列
     Animated.sequence([
