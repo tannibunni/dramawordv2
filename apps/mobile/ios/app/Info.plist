@@ -47,7 +47,7 @@
       </dict>
     </array>
     <key>CFBundleVersion</key>
-    <string>15</string>
+    <string>18</string>
     <key>ITSAppUsesNonExemptEncryption</key>
     <false/>
     <key>LSApplicationQueriesSchemes</key>
@@ -104,5 +104,9 @@
     <string>Light</string>
     <key>UIViewControllerBasedStatusBarAppearance</key>
     <false/>
+    <key>com.apple.developer.associated-domains</key>
+    <array>
+      <string>applinks:dramaword.com</string>
+    </array>
   </dict>
 </plist>

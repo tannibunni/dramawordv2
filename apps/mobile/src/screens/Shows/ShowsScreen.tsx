@@ -126,7 +126,7 @@ const ShowsScreen: React.FC = () => {
   const [searchResults, setSearchResults] = useState<TMDBShow[]>([]);
   const [selectedShow, setSelectedShow] = useState<Show | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
-  const [filter, setFilter] = useState<'recommendations' | 'shows' | 'wordbooks'>('recommendations');
+  const [filter, setFilter] = useState<'recommendations' | 'shows' | 'wordbooks'>('shows');
   const [showStatusFilter, setShowStatusFilter] = useState<'all' | 'not_completed' | 'completed'>('all');
   const [searchLoading, setSearchLoading] = useState(false);
   const [isOverviewExpanded, setIsOverviewExpanded] = useState(false);
@@ -980,31 +980,13 @@ const ShowsScreen: React.FC = () => {
 
   // 新的iOS风格分段控制器
   const renderSegmentedControl = () => {
-    const isRecommendationsActive = filter === 'recommendations';
     const isShowsActive = filter === 'shows';
     const isWordbooksActive = filter === 'wordbooks';
+    const isRecommendationsActive = filter === 'recommendations';
 
     return (
       <View style={styles.segmentedControlContainer}>
         <View style={styles.segmentedControlBackground}>
-          <TouchableOpacity
-            style={[
-              styles.segmentedControlButton,
-              isRecommendationsActive && styles.segmentedControlButtonActive
-            ]}
-            onPress={() => {
-              setFilter('recommendations');
-            }}
-            activeOpacity={0.8}
-          >
-            <Text style={[
-              styles.segmentedControlText,
-              isRecommendationsActive && styles.segmentedControlTextActive
-            ]}>
-              {t('recommendations_tab')}
-            </Text>
-          </TouchableOpacity>
-          
           <TouchableOpacity
             style={[
               styles.segmentedControlButton,
@@ -1039,6 +1021,24 @@ const ShowsScreen: React.FC = () => {
               isWordbooksActive && styles.segmentedControlTextActive
             ]}>
               {t('wordbooks_tab')}
+            </Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity
+            style={[
+              styles.segmentedControlButton,
+              isRecommendationsActive && styles.segmentedControlButtonActive
+            ]}
+            onPress={() => {
+              setFilter('recommendations');
+            }}
+            activeOpacity={0.8}
+          >
+            <Text style={[
+              styles.segmentedControlText,
+              isRecommendationsActive && styles.segmentedControlTextActive
+            ]}>
+              {t('recommendations_tab')}
             </Text>
           </TouchableOpacity>
         </View>

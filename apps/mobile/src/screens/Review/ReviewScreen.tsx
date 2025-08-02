@@ -391,25 +391,44 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
         
         // 优先使用本地vocabulary数据，如果本地为空则返回空数组
         if (vocabulary && vocabulary.length > 0) {
-          wrongWordLogger.debug('vocabulary详情', vocabulary.map(w => ({
+          console.log('🔍 错词卡筛选前 vocabulary 总数:', vocabulary.length);
+          console.log('🔍 vocabulary 详情:', vocabulary.map(w => ({
             word: w.word,
             incorrectCount: w.incorrectCount,
-            consecutiveIncorrect: w.consecutiveIncorrect
+            consecutiveIncorrect: w.consecutiveIncorrect,
+            consecutiveCorrect: w.consecutiveCorrect
           })));
           
-          const localWrongWords = vocabulary.filter((word: any) => 
-            (word.incorrectCount && word.incorrectCount > 0) || 
-            (word.consecutiveIncorrect && word.consecutiveIncorrect > 0)
-          );
+          // 使用与 ReviewIntroScreen 相同的筛选逻辑
+          const localWrongWords = vocabulary.filter((word: any) => {
+            // 如果连续答对次数 >= 3，则从错词卡移除
+            if (word.consecutiveCorrect && word.consecutiveCorrect >= 3) {
+              console.log(`🔍 ${word.word}: 连续答对${word.consecutiveCorrect}次，从错词卡移除`);
+              return false;
+            }
+            // 否则保持在错词卡中（有答错记录）
+            const isWrongWord = (word.incorrectCount && word.incorrectCount > 0) || 
+                               (word.consecutiveIncorrect && word.consecutiveIncorrect > 0);
+            if (isWrongWord) {
+              console.log(`🔍 ${word.word}: 符合错词条件 (incorrectCount=${word.incorrectCount}, consecutiveIncorrect=${word.consecutiveIncorrect})`);
+            } else {
+              console.log(`🔍 ${word.word}: 不符合错词条件 (incorrectCount=${word.incorrectCount}, consecutiveIncorrect=${word.consecutiveIncorrect})`);
+            }
+            return isWrongWord;
+          });
+          
+          console.log(`🔍 错词卡筛选结果: ${localWrongWords.length} 个错词`);
+          console.log('🔍 错词详情:', localWrongWords.map(w => ({
+            word: w.word,
+            incorrectCount: w.incorrectCount,
+            consecutiveIncorrect: w.consecutiveIncorrect,
+            consecutiveCorrect: w.consecutiveCorrect
+          })));
           
           wrongWordLogger.info(`从本地vocabulary获取到 ${localWrongWords.length} 个错词`);
-          wrongWordLogger.debug('错词详情', localWrongWords.map(w => ({
-            word: w.word,
-            incorrectCount: w.incorrectCount,
-            consecutiveIncorrect: w.consecutiveIncorrect
-          })));
           return localWrongWords.slice(0, MIN_REVIEW_BATCH);
         } else {
+          console.log('🔍 本地vocabulary为空，返回空数组');
           wrongWordLogger.info('本地vocabulary为空，返回空数组');
           return [];
         }
@@ -756,7 +775,19 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
         false // 不正确
       );
       
-      // 3. 延迟更新后端用户词汇表（避免立即冲突）
+      // 3. 直接更新 vocabulary context，确保错词卡能立即看到更新
+      const currentWord = words[swiperIndex];
+      if (currentWord) {
+        const { updateWord } = useVocabulary();
+        updateWord(word, {
+          incorrectCount: (currentWord.incorrectCount || 0) + 1,
+          consecutiveIncorrect: (currentWord.consecutiveIncorrect || 0) + 1,
+          consecutiveCorrect: 0 // 答错时重置连续正确次数
+        });
+        console.log('✅ 已更新 vocabulary context，错词数据已同步');
+      }
+      
+      // 4. 延迟更新后端用户词汇表（避免立即冲突）
       setTimeout(async () => {
         await updateBackendWordProgress(word, false);
       }, 1000);
@@ -798,7 +829,19 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
         true // 正确
       );
       
-      // 3. 延迟更新后端用户词汇表（避免立即冲突）
+      // 3. 直接更新 vocabulary context，确保错词卡能立即看到更新
+      const currentWord = words[swiperIndex];
+      if (currentWord) {
+        const { updateWord } = useVocabulary();
+        updateWord(word, {
+          incorrectCount: currentWord.incorrectCount || 0,
+          consecutiveIncorrect: 0, // 答对时重置连续错误次数
+          consecutiveCorrect: (currentWord.consecutiveCorrect || 0) + 1
+        });
+        console.log('✅ 已更新 vocabulary context，正确答题数据已同步');
+      }
+      
+      // 4. 延迟更新后端用户词汇表（避免立即冲突）
       setTimeout(async () => {
         await updateBackendWordProgress(word, true);
       }, 1000);

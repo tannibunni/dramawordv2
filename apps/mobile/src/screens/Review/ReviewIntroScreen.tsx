@@ -46,23 +46,35 @@ const ReviewIntroScreen = () => {
     try {
       // 优先使用本地vocabulary数据计算错词数量
       if (vocabulary && vocabulary.length > 0) {
+        console.log('🔍 ReviewIntroScreen: 开始计算错词数量');
+        console.log('🔍 vocabulary 总数:', vocabulary.length);
+        
         // 错词卡逻辑：连续答对3次后从错词卡移除，否则保持在错词卡中
         const localWrongWords = vocabulary.filter((word: any) => {
           // 如果连续答对次数 >= 3，则从错词卡移除
           if (word.consecutiveCorrect && word.consecutiveCorrect >= 3) {
+            console.log(`🔍 ${word.word}: 连续答对${word.consecutiveCorrect}次，从错词卡移除`);
             return false;
           }
           // 否则保持在错词卡中（有答错记录）
-          return (word.incorrectCount && word.incorrectCount > 0) || 
-                 (word.consecutiveIncorrect && word.consecutiveIncorrect > 0);
+          const isWrongWord = (word.incorrectCount && word.incorrectCount > 0) || 
+                             (word.consecutiveIncorrect && word.consecutiveIncorrect > 0);
+          if (isWrongWord) {
+            console.log(`🔍 ${word.word}: 符合错词条件 (incorrectCount=${word.incorrectCount}, consecutiveIncorrect=${word.consecutiveIncorrect})`);
+          }
+          return isWrongWord;
         });
+        
+        console.log(`🔍 ReviewIntroScreen: 错词数量计算结果: ${localWrongWords.length}`);
         setWrongWordsCount(localWrongWords.length);
         return;
       }
 
       // 如果本地vocabulary为空，直接设置为0，不依赖云端数据
+      console.log('🔍 ReviewIntroScreen: vocabulary为空，错词数量设为0');
       setWrongWordsCount(0);
     } catch (error) {
+      console.error('🔍 ReviewIntroScreen: 手动刷新错词数量失败', error);
       wrongWordLogger.error('手动刷新错词数量失败', error);
     }
   };
@@ -73,23 +85,35 @@ const ReviewIntroScreen = () => {
       try {
         // 优先使用本地vocabulary数据计算错词数量
         if (vocabulary && vocabulary.length > 0) {
+          console.log('🔍 ReviewIntroScreen useEffect: 开始计算错词数量');
+          console.log('🔍 vocabulary 总数:', vocabulary.length);
+          
           // 错词卡逻辑：连续答对3次后从错词卡移除，否则保持在错词卡中
           const localWrongWords = vocabulary.filter((word: any) => {
             // 如果连续答对次数 >= 3，则从错词卡移除
             if (word.consecutiveCorrect && word.consecutiveCorrect >= 3) {
+              console.log(`🔍 ${word.word}: 连续答对${word.consecutiveCorrect}次，从错词卡移除`);
               return false;
             }
             // 否则保持在错词卡中（有答错记录）
-            return (word.incorrectCount && word.incorrectCount > 0) || 
-                   (word.consecutiveIncorrect && word.consecutiveIncorrect > 0);
+            const isWrongWord = (word.incorrectCount && word.incorrectCount > 0) || 
+                               (word.consecutiveIncorrect && word.consecutiveIncorrect > 0);
+            if (isWrongWord) {
+              console.log(`🔍 ${word.word}: 符合错词条件 (incorrectCount=${word.incorrectCount}, consecutiveIncorrect=${word.consecutiveIncorrect})`);
+            }
+            return isWrongWord;
           });
+          
+          console.log(`🔍 ReviewIntroScreen useEffect: 错词数量计算结果: ${localWrongWords.length}`);
           setWrongWordsCount(localWrongWords.length);
           return;
         }
 
         // 如果本地vocabulary为空，直接设置为0，不依赖云端数据
+        console.log('🔍 ReviewIntroScreen useEffect: vocabulary为空，错词数量设为0');
         setWrongWordsCount(0);
       } catch (error) {
+        console.error('🔍 ReviewIntroScreen useEffect: 获取错词数量失败', error);
         wrongWordLogger.error('获取错词数量失败', error);
         setWrongWordsCount(0);
       }

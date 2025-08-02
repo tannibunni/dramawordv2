@@ -169,13 +169,39 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
     try {
       setLoading(true);
       
-      console.log('💬 开始微信登录流程...');
+      console.log('💬 ===== 微信登录流程开始 =====');
+      console.log('💬 时间戳:', new Date().toISOString());
+      console.log('💬 平台:', Platform.OS);
+      console.log('💬 设备信息:', {
+        deviceName: Device.deviceName,
+        modelName: Device.modelName,
+        osVersion: Device.osVersion
+      });
+      
+      // 检查网络连接状态
+      console.log('💬 检查网络连接...');
       
       // 调用真正的微信登录流程
+      console.log('💬 调用 WechatService.performLogin()...');
       const { WechatService } = require('../../services/wechatService');
+      
+      const startTime = Date.now();
       const result = await WechatService.performLogin();
+      const endTime = Date.now();
+      
+      console.log('💬 微信登录API调用完成');
+      console.log('💬 API调用耗时:', endTime - startTime, 'ms');
+      console.log('💬 返回结果:', {
+        success: result.success,
+        hasData: !!result.data,
+        hasUser: !!result.data?.user,
+        hasToken: !!result.data?.token,
+        message: result.message
+      });
       
       if (result.success && result.data) {
+        console.log('💬 微信登录成功，处理用户数据...');
+        
         // 保存用户信息到本地存储
         const userData = {
           id: result.data.user.id,
@@ -185,29 +211,55 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
           token: result.data.token,
         };
         
+        console.log('💬 用户数据:', {
+          id: userData.id,
+          nickname: userData.nickname,
+          hasAvatar: !!userData.avatar,
+          loginType: userData.loginType,
+          hasToken: !!userData.token
+        });
+        
         // 清除旧缓存，确保新用户看到正确的数据
+        console.log('💬 清除旧缓存...');
         const { DataSyncService } = require('../../services/dataSyncService');
         const dataSyncService = DataSyncService.getInstance();
         await dataSyncService.clearAllCache();
         
         // 额外清理：清除所有可能的共享数据
+        console.log('💬 清除共享数据...');
         await clearAllSharedData();
         
+        console.log('💬 调用 onLoginSuccess...');
         onLoginSuccess(userData);
+        
+        console.log('💬 ===== 微信登录流程完成 =====');
       } else {
+        console.error('💬 微信登录返回失败结果:', result);
         throw new Error(result.message || '微信登录失败');
       }
     } catch (error: any) {
-      console.error('❌ 微信登录失败:', error);
+      console.error('💬 ===== 微信登录流程失败 =====');
+      console.error('💬 错误类型:', error.constructor.name);
+      console.error('💬 错误消息:', error.message);
+      console.error('💬 错误堆栈:', error.stack);
+      console.error('💬 错误详情:', {
+        name: error.name,
+        code: error.code,
+        cause: error.cause
+      });
       
       if (error.message.includes('请先安装微信应用')) {
+        console.log('💬 显示"请先安装微信应用"提示');
         Alert.alert('提示', '请先安装微信应用');
-      } else if (error.message.includes('微信SDK注册失败')) {
+      } else if (error.message.includes('微信SDK注册失败') || error.message.includes('SDK初始化失败')) {
+        console.log('💬 显示"微信SDK初始化失败"提示');
         Alert.alert('登录失败', '微信SDK初始化失败，请重试');
       } else {
+        console.log('💬 显示通用错误提示');
         Alert.alert('登录失败', error instanceof Error ? error.message : '微信登录失败，请重试');
       }
     } finally {
+      console.log('💬 设置 loading 状态为 false');
       setLoading(false);
     }
   };
@@ -395,16 +447,37 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
   // 微信登录回调处理
   useEffect(() => {
     const handleWechatCallback = async (url: string) => {
-      console.log('💬 收到微信回调URL:', url);
+      console.log('💬 ===== 微信回调处理开始 =====');
+      console.log('💬 回调URL:', url);
+      console.log('💬 时间戳:', new Date().toISOString());
       
       // 检查是否是微信回调
-      if (url.includes('wxa225945508659eb8') || url.includes('weixin')) {
+      const isWechatCallback = url.includes('wxa225945508659eb8') || url.includes('weixin');
+      console.log('💬 是否为微信回调:', isWechatCallback);
+      
+      if (isWechatCallback) {
         try {
+          console.log('💬 开始处理微信回调...');
+          
           // 处理微信回调
           const { WechatService } = require('../../services/wechatService');
+          const startTime = Date.now();
           const result = await WechatService.handleCallback(url);
+          const endTime = Date.now();
+          
+          console.log('💬 微信回调处理完成');
+          console.log('💬 处理耗时:', endTime - startTime, 'ms');
+          console.log('💬 处理结果:', {
+            success: result.success,
+            hasData: !!result.data,
+            hasUser: !!result.data?.user,
+            hasToken: !!result.data?.token,
+            message: result.message
+          });
           
           if (result.success && result.data) {
+            console.log('💬 微信回调处理成功，准备用户数据...');
+            
             // 保存用户信息到本地存储
             const userData = {
               id: result.data.user.id,
@@ -414,18 +487,37 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
               token: result.data.token,
             };
             
+            console.log('💬 用户数据:', {
+              id: userData.id,
+              nickname: userData.nickname,
+              hasAvatar: !!userData.avatar,
+              loginType: userData.loginType,
+              hasToken: !!userData.token
+            });
+            
             // 清除旧缓存
+            console.log('💬 清除旧缓存...');
             const { DataSyncService } = require('../../services/dataSyncService');
             const dataSyncService = DataSyncService.getInstance();
             await dataSyncService.clearAllCache();
             await clearAllSharedData();
             
+            console.log('💬 调用 onLoginSuccess...');
             onLoginSuccess(userData);
+            
+            console.log('💬 ===== 微信回调处理完成 =====');
+          } else {
+            console.error('💬 微信回调处理返回失败结果:', result);
           }
         } catch (error) {
-          console.error('💬 处理微信回调失败:', error);
+          console.error('💬 ===== 微信回调处理失败 =====');
+          console.error('💬 错误类型:', error.constructor.name);
+          console.error('💬 错误消息:', error.message);
+          console.error('💬 错误堆栈:', error.stack);
           Alert.alert('登录失败', '微信登录回调处理失败');
         }
+      } else {
+        console.log('💬 非微信回调，忽略处理');
       }
     };
 
@@ -473,7 +565,12 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
           
           <LoginButton
             type="wechat"
-            onPress={handleWechatLogin}
+            onPress={() => {
+              console.log('💬 微信登录按钮被点击');
+              console.log('💬 当前loading状态:', loading);
+              console.log('💬 点击时间:', new Date().toISOString());
+              handleWechatLogin();
+            }}
             loading={loading}
           />
           
