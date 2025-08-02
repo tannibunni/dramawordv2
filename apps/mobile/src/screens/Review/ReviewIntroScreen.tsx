@@ -55,6 +55,7 @@ const ReviewIntroScreen = () => {
       async clearAll() {
         await AsyncStorage.removeItem('experienceGain');
         await AsyncStorage.removeItem('experienceGainApplied');
+        await AsyncStorage.removeItem('experienceEvents');
       }
     },
     

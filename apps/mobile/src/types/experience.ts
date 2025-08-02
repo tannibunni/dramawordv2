@@ -256,6 +256,11 @@ export enum ExperienceErrorType {
   STORAGE_ERROR = 'STORAGE_ERROR',
 }
 
+// 数据冲突解决器类型
+export interface DataConflictResolver {
+  resolveConflict(conflict: any): any;
+}
+
 // 经验值错误接口
 export interface ExperienceError {
   type: ExperienceErrorType;

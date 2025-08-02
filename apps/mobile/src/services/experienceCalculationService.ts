@@ -120,6 +120,7 @@ export class ExperienceCalculationService {
   /**
    * 计算等级所需经验值
    * 公式: baseXP * (level + 1)^levelMultiplier
+   * 与后端保持一致
    */
   public calculateLevelRequiredExp(level: number): number {
     return this.config.baseXP * Math.pow(level + 1, this.config.levelMultiplier);
@@ -207,6 +208,7 @@ export class ExperienceCalculationService {
 
   /**
    * 计算经验值增益
+   * 与后端ExperienceGainResult保持一致
    */
   public calculateExperienceGain(
     currentExperience: number,

@@ -13,6 +13,10 @@ export interface SyncData {
   localVersion: number;
   serverVersion?: number;
   priority: 'high' | 'medium' | 'low';
+  // 添加经验值相关字段以保持对齐
+  xpGained?: number;
+  leveledUp?: boolean;
+  level?: number;
 }
 
 export interface SyncConfig {
