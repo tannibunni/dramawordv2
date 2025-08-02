@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   Alert,
   Platform,
+  Linking,
 } from 'react-native';
 import * as Device from 'expo-device';
 import { Ionicons } from '@expo/vector-icons';
@@ -391,6 +392,59 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
     Alert.alert('用户协议', '这里将打开用户协议页面');
   };
 
+  // 微信登录回调处理
+  useEffect(() => {
+    const handleWechatCallback = async (url: string) => {
+      console.log('💬 收到微信回调URL:', url);
+      
+      // 检查是否是微信回调
+      if (url.includes('wxa225945508659eb8') || url.includes('weixin')) {
+        try {
+          // 处理微信回调
+          const { WechatService } = require('../../services/wechatService');
+          const result = await WechatService.handleCallback(url);
+          
+          if (result.success && result.data) {
+            // 保存用户信息到本地存储
+            const userData = {
+              id: result.data.user.id,
+              nickname: result.data.user.nickname,
+              avatar: result.data.user.avatar,
+              loginType: 'wechat',
+              token: result.data.token,
+            };
+            
+            // 清除旧缓存
+            const { DataSyncService } = require('../../services/dataSyncService');
+            const dataSyncService = DataSyncService.getInstance();
+            await dataSyncService.clearAllCache();
+            await clearAllSharedData();
+            
+            onLoginSuccess(userData);
+          }
+        } catch (error) {
+          console.error('💬 处理微信回调失败:', error);
+          Alert.alert('登录失败', '微信登录回调处理失败');
+        }
+      }
+    };
+
+    // 监听应用启动时的URL
+    Linking.getInitialURL().then((url) => {
+      if (url) {
+        handleWechatCallback(url);
+      }
+    });
+
+    // 监听URL变化
+    const subscription = Linking.addEventListener('url', (event) => {
+      handleWechatCallback(event.url);
+    });
+
+    return () => {
+      subscription?.remove();
+    };
+  }, [onLoginSuccess]);
 
 
   return (

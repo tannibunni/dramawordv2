@@ -108,6 +108,32 @@ export class WechatService {
   }
 
   /**
+   * 处理微信登录回调
+   */
+  static async handleCallback(url: string): Promise<WechatLoginResponse> {
+    try {
+      console.log('💬 处理微信登录回调:', url);
+      
+      // 解析回调URL中的参数
+      const urlObj = new URL(url);
+      const code = urlObj.searchParams.get('code');
+      const state = urlObj.searchParams.get('state');
+      
+      if (!code) {
+        throw new Error('回调URL中缺少授权码');
+      }
+      
+      console.log('💬 从回调URL解析到:', { code, state });
+      
+      // 使用授权码进行登录
+      return await this.login(code, state || undefined);
+    } catch (error) {
+      console.error('💬 处理微信回调失败:', error);
+      throw error;
+    }
+  }
+
+  /**
    * 微信登录
    */
   static async login(code: string, state?: string): Promise<WechatLoginResponse> {
