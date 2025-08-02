@@ -15,6 +15,9 @@ import { wrongWordLogger, experienceLogger, userDataLogger, vocabularyLogger } f
 import { SyncStatusIndicator } from '../../components/common/SyncStatusIndicator';
 import { wrongWordsManager } from '../../services/wrongWordsManager';
 import { animationManager } from '../../services/animationManager';
+import { syncManager } from '../../services/syncManager';
+import { DataConflictResolver } from '../../services/dataConflictResolver';
+import { incrementalSyncManager } from '../../services/incrementalSyncManager';
 
 const ReviewIntroScreen = () => {
   const { vocabulary, refreshLearningProgress } = useVocabulary();
@@ -187,7 +190,7 @@ const ReviewIntroScreen = () => {
     }
   }, [userStats.experience, userStats.level]);
   
-  // 加载用户统计数据 - 优化版本，启动时读取，减少频繁同步
+  // 加载用户统计数据 - 使用多邻国风格的智能同步
   const loadUserStats = async () => {
     try {
       // 如果正在进行经验值同步，跳过加载
@@ -237,8 +240,8 @@ const ReviewIntroScreen = () => {
           setHasInitializedProgressBar(true);
         }
         
-        // 只在启动时同步一次后端数据（减少频繁请求）
-        await syncBackendDataOnStartup();
+        // 使用增量同步策略：启动时检查数据一致性
+        await performIncrementalSync(localStats);
         return;
       }
       
@@ -277,6 +280,110 @@ const ReviewIntroScreen = () => {
       await loadBackendData();
     } catch (error) {
       userDataLogger.error('加载用户统计数据失败', error);
+    }
+  };
+
+  // 新增：增量同步策略 - 多邻国风格
+  const performIncrementalSync = async (localStats: any) => {
+    try {
+      const userId = await getUserId();
+      if (!userId) return;
+      
+      const userDataStr = await AsyncStorage.getItem('userData');
+      if (!userDataStr) return;
+      
+      const userData = JSON.parse(userDataStr);
+      const token = userData.token;
+      
+      if (!token) return;
+      
+      // 检查是否有待同步的变更
+      const pendingChangesCount = incrementalSyncManager.getPendingChangesCount();
+      
+      if (pendingChangesCount > 0) {
+        console.log(`🔄 发现 ${pendingChangesCount} 个待同步变更，开始增量同步`);
+        
+        // 执行增量同步
+        await incrementalSyncManager.performIncrementalSync();
+        
+        // 同步完成后，重新加载本地数据
+        const updatedStatsStr = await AsyncStorage.getItem('userStats');
+        if (updatedStatsStr) {
+          const updatedStats = JSON.parse(updatedStatsStr);
+          setUserStats(updatedStats);
+          setAnimatedExperience(updatedStats.experience);
+          userDataLogger.info('增量同步完成，数据已更新');
+        }
+      } else {
+        // 无待同步变更，检查服务器数据一致性
+        const response = await fetch(`${API_BASE_URL}/users/stats`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        });
+        
+        if (response.ok) {
+          const result = await response.json();
+          if (result.success && result.data) {
+            const serverStats = result.data;
+            
+            // 检查数据冲突
+            const hasConflict = DataConflictResolver.hasConflict(localStats, serverStats, 'userStats');
+            
+            if (hasConflict) {
+              // 解决冲突
+              const conflict = {
+                localData: localStats,
+                serverData: serverStats,
+                localTimestamp: localStats.lastUpdated || Date.now(),
+                serverTimestamp: serverStats.lastUpdated || Date.now(),
+                dataType: 'userStats'
+              };
+              
+              const resolution = DataConflictResolver.resolveConflict(conflict);
+              
+              userDataLogger.info('检测到数据冲突，已解决', {
+                conflict: DataConflictResolver.getConflictSummary(conflict),
+                resolution: resolution.reason,
+                source: resolution.source,
+                confidence: resolution.confidence
+              });
+              
+              // 使用解决后的数据
+              const resolvedStats = {
+                ...resolution.resolvedData,
+                lastUpdated: Date.now()
+              };
+              
+              await AsyncStorage.setItem('userStats', JSON.stringify(resolvedStats));
+              
+              // 更新UI状态
+              setUserStats(resolvedStats);
+              setAnimatedExperience(resolvedStats.experience);
+              
+              // 记录冲突解决为变更
+              await incrementalSyncManager.recordChange(
+                'userStats',
+                'update',
+                resolvedStats,
+                `conflict_resolution_${Date.now()}`
+              );
+              
+            } else {
+              // 无冲突，静默更新本地数据
+              const updatedStats = {
+                ...serverStats,
+                lastUpdated: Date.now()
+              };
+              
+              await AsyncStorage.setItem('userStats', JSON.stringify(updatedStats));
+              userDataLogger.info('数据一致，静默更新本地数据');
+            }
+          }
+        }
+      }
+    } catch (error) {
+      userDataLogger.warn('增量同步失败，继续使用本地数据', error);
     }
   };
 
