@@ -19,6 +19,12 @@ class RealWechatSDK implements WechatSDKInterface {
       const { Wechat } = require('react-native-wechat-lib');
       console.log('注册微信应用:', { appId, universalLink });
       
+      // 检查 Wechat 对象是否存在
+      if (!Wechat || typeof Wechat.registerApp !== 'function') {
+        console.error('微信SDK未正确加载，回退到Mock模式');
+        return false;
+      }
+      
       const result = await Wechat.registerApp(appId, universalLink);
       console.log('微信SDK注册结果:', result);
       return result;
@@ -92,7 +98,7 @@ class MockWechatSDK implements WechatSDKInterface {
 }
 
 // 根据环境选择SDK实现
-// 临时在真机上也使用 Mock SDK 进行测试
-const WechatSDK: WechatSDKInterface = new MockWechatSDK();
+// 在开发环境或SDK不可用时使用Mock SDK
+const WechatSDK: WechatSDKInterface = __DEV__ ? new MockWechatSDK() : new RealWechatSDK();
 
 export default WechatSDK; 
