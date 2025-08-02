@@ -417,11 +417,12 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
             loading={loading}
           />
           
-          <LoginButton
+          {/* 暂时隐藏微信登录，等待真实SDK配置 */}
+          {/* <LoginButton
             type="wechat"
             onPress={handleWechatLogin}
             loading={loading}
-          />
+          /> */}
           
           {Platform.OS === 'ios' && (
             <LoginButton
