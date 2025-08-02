@@ -60,6 +60,24 @@ export class WechatService {
       logger.info(`💬 AppSecret 状态: ${wechatConfig.appSecret ? '已设置' : '未设置'}`);
       logger.info(`💬 授权码长度: ${code.length}`);
       
+      // 检查是否为开发模式的模拟授权码
+      if (code.startsWith('mock_wechat_code_')) {
+        logger.info(`💬 检测到开发模式模拟授权码，使用模拟响应`);
+        
+        // 返回模拟的微信登录响应
+        const mockResponse: WechatAccessTokenResponse = {
+          access_token: 'mock_access_token_' + Date.now(),
+          expires_in: 7200,
+          refresh_token: 'mock_refresh_token_' + Date.now(),
+          openid: 'mock_openid_' + Date.now(),
+          scope: 'snsapi_userinfo',
+          unionid: 'mock_unionid_' + Date.now()
+        };
+        
+        logger.info(`💬 返回模拟 access_token 响应: openid=${mockResponse.openid}`);
+        return mockResponse;
+      }
+      
       const params = new URLSearchParams({
         appid: wechatConfig.appId,
         secret: wechatConfig.appSecret,
@@ -97,6 +115,27 @@ export class WechatService {
    */
   static async getUserInfo(accessToken: string, openid: string): Promise<WechatUserInfoResponse> {
     try {
+      // 检查是否为开发模式的模拟 token
+      if (accessToken.startsWith('mock_access_token_')) {
+        logger.info(`💬 检测到开发模式模拟 access_token，使用模拟用户信息`);
+        
+        // 返回模拟的用户信息
+        const mockUserInfo: WechatUserInfoResponse = {
+          openid: openid,
+          nickname: '微信用户_' + Math.random().toString(36).substr(2, 6),
+          sex: 1,
+          province: '北京',
+          city: '北京',
+          country: '中国',
+          headimgurl: 'https://thirdwx.qlogo.cn/mmopen/vi_32/Q0j4TwGTfTKxrqss1Y4GxM/132',
+          privilege: [],
+          unionid: openid.replace('mock_openid_', 'mock_unionid_')
+        };
+        
+        logger.info(`💬 返回模拟用户信息: nickname=${mockUserInfo.nickname}`);
+        return mockUserInfo;
+      }
+      
       const params = new URLSearchParams({
         access_token: accessToken,
         openid: openid,
@@ -108,14 +147,14 @@ export class WechatService {
 
       if (data.errcode) {
         const errorMessage = wechatErrorCodes[String(data.errcode) as keyof typeof wechatErrorCodes] || data.errmsg || '未知错误';
-        logger.error(`微信获取用户信息失败: ${data.errcode} - ${errorMessage}`);
+        logger.error(`💬 微信获取用户信息失败: ${data.errcode} - ${errorMessage}`);
         throw new Error(`获取用户信息失败: ${errorMessage}`);
       }
 
-      logger.info(`微信获取用户信息成功: nickname=${data.nickname}`);
+      logger.info(`💬 微信获取用户信息成功: nickname=${data.nickname}`);
       return data;
     } catch (error) {
-      logger.error('微信获取用户信息异常:', error);
+      logger.error('💬 微信获取用户信息异常:', error);
       throw new Error('获取用户信息异常');
     }
   }
