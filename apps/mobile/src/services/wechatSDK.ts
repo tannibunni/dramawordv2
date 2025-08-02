@@ -98,7 +98,7 @@ class MockWechatSDK implements WechatSDKInterface {
 }
 
 // 根据环境选择SDK实现
-// 强制使用真实SDK进行测试
-const WechatSDK: WechatSDKInterface = new RealWechatSDK();
+// 生产环境使用真实SDK，开发环境使用Mock SDK
+const WechatSDK: WechatSDKInterface = __DEV__ ? new MockWechatSDK() : new RealWechatSDK();
 
 export default WechatSDK; 
