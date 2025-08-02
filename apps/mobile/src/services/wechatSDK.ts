@@ -19,18 +19,18 @@ class RealWechatSDK implements WechatSDKInterface {
       console.log('🔍 参数检查:', { appId, universalLink });
       console.log('🔍 平台:', Platform.OS);
       
-      // 检查 expo-wechat 模块
-      console.log('🔍 尝试加载 expo-wechat...');
+      // 检查 react-native-wechat-lib 模块
+      console.log('🔍 尝试加载 react-native-wechat-lib...');
       let Wechat;
       try {
-        const wechatModule = require('expo-wechat');
+        const wechatModule = require('react-native-wechat-lib');
         console.log('🔍 wechatModule 内容:', Object.keys(wechatModule));
         Wechat = wechatModule;
         console.log('🔍 Wechat 对象:', Wechat ? '存在' : '不存在');
         console.log('🔍 Wechat 类型:', typeof Wechat);
         console.log('🔍 Wechat 方法:', Wechat ? Object.keys(Wechat) : 'N/A');
       } catch (moduleError) {
-        console.error('🔍 加载 expo-wechat 模块失败:', moduleError);
+        console.error('🔍 加载 react-native-wechat-lib 模块失败:', moduleError);
         console.error('🔍 模块错误详情:', {
           message: moduleError.message,
           stack: moduleError.stack,
@@ -50,7 +50,7 @@ class RealWechatSDK implements WechatSDKInterface {
         return false;
       }
       
-      // 检查 registerApp 方法
+      // react-native-wechat-lib 使用 registerApp 方法，但参数可能不同
       console.log('🔍 检查 registerApp 方法...');
       if (!Wechat.registerApp) {
         console.error('🔍 Wechat.registerApp 方法不存在');
@@ -66,7 +66,8 @@ class RealWechatSDK implements WechatSDKInterface {
       console.log('🔍 调用 Wechat.registerApp...');
       console.log('🔍 调用参数:', { appId, universalLink });
       
-      const result = await Wechat.registerApp(appId, universalLink);
+      // react-native-wechat-lib 可能只需要 appId 参数
+      const result = await Wechat.registerApp(appId);
       console.log('🔍 微信SDK注册结果:', result);
       console.log('🔍 结果类型:', typeof result);
       
@@ -87,7 +88,7 @@ class RealWechatSDK implements WechatSDKInterface {
     try {
       console.log('🔍 开始检查微信安装状态...');
       
-      const Wechat = require('expo-wechat');
+      const Wechat = require('react-native-wechat-lib');
       console.log('🔍 Wechat 对象检查:', Wechat ? '存在' : '不存在');
       
       if (!Wechat || typeof Wechat.isWXAppInstalled !== 'function') {
@@ -113,7 +114,8 @@ class RealWechatSDK implements WechatSDKInterface {
 
   async sendAuthRequest(scope: string, state: string): Promise<{ code: string; state: string }> {
     try {
-      const Wechat = require('expo-wechat');
+      const Wechat = require('react-native-wechat-lib');
+      // react-native-wechat-lib 可能使用不同的方法名或参数
       const result = await Wechat.sendAuthRequest(scope, state);
       console.log('微信授权请求结果:', result);
       return result;
@@ -125,7 +127,8 @@ class RealWechatSDK implements WechatSDKInterface {
 
   async handleOpenURL(url: string): Promise<boolean> {
     try {
-      const Wechat = require('expo-wechat');
+      const Wechat = require('react-native-wechat-lib');
+      // react-native-wechat-lib 可能使用不同的方法名
       const result = await Wechat.handleOpenURL(url);
       console.log('处理微信回调URL结果:', result);
       return result;

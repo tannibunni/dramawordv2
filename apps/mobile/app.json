@@ -14,19 +14,12 @@
       "backgroundColor": "#ffffff"
     },
     "plugins": [
-      [
-        "expo-wechat",
-        {
-          "appid": "wxa225945508659eb8",
-          "universalLink": "https://dramaword.com/app/"
-        }
-      ],
       "expo-localization"
     ],
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.tannibunni.dramawordmobile",
-      "buildNumber": "18",
+      "buildNumber": "19",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
         "UIFileSharingEnabled": false,
