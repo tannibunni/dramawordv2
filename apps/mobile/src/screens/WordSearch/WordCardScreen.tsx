@@ -11,7 +11,7 @@ import {
   Dimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors } from '../../../../../packages/ui/src/tokens';
+import { colors } from '../../constants/colors';
 import { wordService, WordData } from '../../services/wordService';
 import { audioService } from '../../services/audioService';
 import { useShowList } from '../../context/ShowListContext';

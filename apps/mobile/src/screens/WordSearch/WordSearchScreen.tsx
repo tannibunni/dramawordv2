@@ -11,7 +11,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors } from '../../../../../packages/ui/src/tokens';
+import { colors } from '../../constants/colors';
 import { wordService, RecentWord } from '../../services/wordService';
 import WordCard from '../../components/cards/WordCard';
 import { useAppLanguage } from '../../context/AppLanguageContext';

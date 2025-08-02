@@ -8,7 +8,7 @@ import {
   Dimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors } from '../../../../../packages/ui/src/tokens';
+import { colors } from '../../constants/colors';
 import { WordData } from './WordCard';
 import { Audio } from 'expo-av';
 

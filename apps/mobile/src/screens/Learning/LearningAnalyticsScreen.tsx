@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { colors } from '../../../../../packages/ui/src/tokens';
+import { colors } from '../../constants/colors';
 import { LearningProgressChart } from '../../components/learning/LearningProgressChart';
 import { LearningSuggestions } from '../../components/learning/LearningSuggestions';
 import { 

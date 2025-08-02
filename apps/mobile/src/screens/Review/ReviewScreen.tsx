@@ -302,49 +302,89 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
   
   // 监控 swiperIndex 变化
   useEffect(() => {
+    if (words.length === 0) return;
+    
     // 修复进度计算逻辑：
     // 开始状态：进度条为0%（swiperIndex=0时）
-    // 滑完第一张卡：进度条为33.33%（swiperIndex=1时，3张卡的情况下）
-    // 滑完第二张卡：进度条为66.67%（swiperIndex=2时，3张卡的情况下）
-    // 滑完最后一张卡：进度条为100%（swiperIndex=3时，3张卡的情况下）
-    const newProgress = (swiperIndex / words.length) * 100;
+    // 滑完第一张卡：进度条为50%（swiperIndex=1时，2张卡的情况下）
+    // 滑完第二张卡：进度条为100%（swiperIndex=2时，2张卡的情况下）
+    const newProgress = words.length > 0 ? Math.min(100, Math.max(0, (swiperIndex / words.length) * 100)) : 0;
     
-    // 使用更平滑的动画曲线，增加动画时长
+    console.log(`📊 进度条更新: swiperIndex=${swiperIndex}, words.length=${words.length}, progress=${newProgress.toFixed(2)}%`);
+    console.log(`🎯 进度条状态: currentProgress=${currentProgress.toFixed(2)}%, newProgress=${newProgress.toFixed(2)}%`);
+    
+    // 防止重复动画：如果新进度与当前进度相同，跳过动画
+    if (Math.abs(newProgress - currentProgress) < 0.1) {
+      console.log(`⏭️ 进度条无变化，跳过动画: ${newProgress.toFixed(2)}%`);
+      return;
+    }
+    
+    // 停止之前的动画
+    progressAnimation.stopAnimation();
+    
+    // 使用更快的动画速度
     Animated.timing(progressAnimation, {
       toValue: newProgress,
-      duration: 1000, // 增加动画时长，确保动画完全完成
+      duration: 200, // 减少动画时长，让动画更快
       useNativeDriver: false,
     }).start(({ finished }) => {
       if (finished) {
-        // 进度条动画完成
+        console.log(`✅ 进度条动画完成: ${newProgress.toFixed(2)}%`);
+      } else {
+        console.log(`⚠️ 进度条动画被中断: ${newProgress.toFixed(2)}%`);
       }
     });
     
     setCurrentProgress(newProgress);
-  }, [swiperIndex, words.length]);
+  }, [swiperIndex]); // 只依赖swiperIndex，不依赖words.length
   
   // 监控 words 数组变化，初始化统计数据
   useEffect(() => {
-    console.log('ReviewScreen: words array changed, length:', words.length);
+    console.log('📚 words 数组变化 - length:', words.length);
     if (words.length > 0) {
-      console.log('ReviewScreen: First word:', words[0]);
-      // 初始化统计数据
-      setReviewStats({
-        totalWords: words.length,
-        rememberedWords: 0,
-        forgottenWords: 0,
-        experience: 0,
-        accuracy: 0,
-      });
-      // 重置计数器
-      rememberedRef.current = 0;
-      forgottenRef.current = 0;
+      console.log('📚 第一个单词:', words[0]);
+      
+      // 检查是否是新的复习会话（swiperIndex为0且没有进行中的复习）
+      const isNewSession = swiperIndex === 0 && !isReviewComplete;
+      
+      if (isNewSession) {
+        // 初始化统计数据
+        const initialStats = {
+          totalWords: words.length,
+          rememberedWords: 0,
+          forgottenWords: 0,
+          experience: 0,
+          accuracy: 0,
+        };
+        console.log('📊 初始化统计数据:', initialStats);
+        setReviewStats(initialStats);
+        // 重置计数器
+        rememberedRef.current = 0;
+        forgottenRef.current = 0;
+        console.log('🔄 计数器已重置 - rememberedRef: 0, forgottenRef: 0');
+        
+        // 重置进度条动画
+        progressAnimation.setValue(0);
+        setCurrentProgress(0);
+        console.log('🔄 进度条已重置到0%');
+      } else {
+        console.log('📚 不是新会话，保持当前进度条状态');
+      }
+    } else {
+      console.log('⚠️ words 数组为空');
     }
-  }, [words]);
+  }, [words, swiperIndex, isReviewComplete]);
   
   // 监控复习统计变化
   useEffect(() => {
-    console.log('ReviewScreen: reviewStats changed:', reviewStats);
+    console.log('📈 reviewStats 变化:', reviewStats);
+    console.log('📊 统计详情:', {
+      totalWords: reviewStats.totalWords,
+      rememberedWords: reviewStats.rememberedWords,
+      forgottenWords: reviewStats.forgottenWords,
+      experience: reviewStats.experience,
+      accuracy: reviewStats.accuracy
+    });
   }, [reviewStats]);
 
 
@@ -388,12 +428,14 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
     if (isChallengeMode) {
       // 错词挑战：专门显示用户之前不记得的单词
       if (type === 'wrong_words') {
+        console.log('🔍 ReviewScreen: 进入错词挑战模式');
         setIsEbbinghaus(false);
         
         // 使用错词管理器获取错词列表
         const wrongWordsList = wrongWordsManager.getWrongWords();
         console.log('🔍 错词管理器返回错词列表:', wrongWordsList);
         console.log('📊 错词管理器统计信息:', wrongWordsManager.getStatistics());
+        console.log('🔍 错词管理器总数:', wrongWordsManager.getWrongWordsCount());
         
         if (wrongWordsList.length > 0) {
           // 从 vocabulary 中获取错词的完整信息
@@ -521,6 +563,14 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
     }, 100);
   };
 
+  // 初始化错词管理器
+  useEffect(() => {
+    if (vocabulary && vocabulary.length > 0) {
+      console.log('🔧 ReviewScreen: 初始化错词管理器');
+      wrongWordsManager.initialize(vocabulary);
+    }
+  }, [vocabulary]);
+
   useEffect(() => {
     console.log('ReviewScreen: useEffect triggered - vocabulary length:', vocabulary.length, 'type:', type, 'id:', id);
     loadReviewWords().catch(error => {
@@ -531,27 +581,27 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
   // 当 words 数组加载完成后，确保 swiperIndex 正确初始化
   useEffect(() => {
     if (words.length > 0) {
-      console.log('ReviewScreen: Words loaded, initializing swiperIndex to 0');
-      setSwiperIndex(0);
+      console.log('ReviewScreen: Words loaded, checking if this is a new session');
       
-      // 初始化进度条动画
-      const initialProgress = 0; // 开始总是0%
-      progressAnimation.setValue(initialProgress);
-      setCurrentProgress(initialProgress);
+      // 检查是否是新的复习会话（swiperIndex为0且没有进行中的复习）
+      const isNewSession = swiperIndex === 0 && !isReviewComplete;
       
-      // 延迟一点时间，确保 Swiper 组件完全初始化
-      setTimeout(() => {
-        console.log('ReviewScreen: Swiper should be initialized now');
-      }, 100);
+      if (isNewSession) {
+        console.log('ReviewScreen: 这是新的复习会话，初始化swiperIndex为0');
+        setSwiperIndex(0);
+        
+        // 延迟一点时间，确保 Swiper 组件完全初始化
+        setTimeout(() => {
+          console.log('ReviewScreen: Swiper should be initialized now');
+        }, 100);
+      } else {
+        console.log('ReviewScreen: 这是进行中的复习会话，保持当前swiperIndex:', swiperIndex);
+      }
     } else {
       console.log('ReviewScreen: Words array is empty, resetting swiperIndex to 0');
       setSwiperIndex(0);
-      
-      // 重置进度条动画
-      progressAnimation.setValue(0);
-      setCurrentProgress(0);
     }
-  }, [words]);
+  }, [words, swiperIndex, isReviewComplete]);
 
   const [wordDataCache, setWordDataCache] = useState<{ [key: string]: WordData }>({});
   const [isWordDataLoading, setIsWordDataLoading] = useState(true);
@@ -748,16 +798,22 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
 
   // 处理滑动操作
   const handleSwipeLeft = async (word: string) => {
+    console.log(`🔄 handleSwipeLeft 开始处理: ${word}, swiperIndex: ${swiperIndex}`);
+    
     // 1. 先用 updateWordReview 处理业务逻辑
     const wordObj = convertReviewWordToWord(words[swiperIndex]);
     const updatedWord = updateWordReview(wordObj, false);
+    console.log(`📝 updateWordReview 完成: ${word}, 更新结果:`, updatedWord);
+    
     try {
       // 2. 更新本地学习记录
+      console.log(`💾 开始更新本地学习记录: ${word}`);
       await learningDataService.updateLearningRecord(
         updatedWord.word,
         word,
         false // 不正确
       );
+      console.log(`✅ 本地学习记录更新成功: ${word}`);
       
       // 3. 直接更新 vocabulary context，确保错词卡能立即看到更新
       const currentWord = words[swiperIndex];
@@ -786,27 +842,42 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
         }
       }
       
-      // 5. 延迟更新后端用户词汇表（避免立即冲突）
-      setTimeout(async () => {
-        await updateBackendWordProgress(word, false);
-      }, 1000);
+      // 5. 立即更新后端用户词汇表
+      console.log(`🌐 开始更新后端用户词汇表: ${word}, isCorrect: false`);
+      await updateBackendWordProgress(word, false);
+      console.log(`✅ 后端用户词汇表更新成功: ${word}`);
     } catch (error) {
-      console.error('更新学习记录失败:', error);
+      console.error('❌ 更新学习记录失败:', error);
     }
     
+    console.log(`📊 更新统计 - 忘记单词: ${word}`);
     forgottenRef.current += 1;
+    console.log(`📊 当前统计 - rememberedRef: ${rememberedRef.current}, forgottenRef: ${forgottenRef.current}`);
+    
     setReviewStats(prev => {
       const remembered = prev.rememberedWords;
       const forgotten = prev.forgottenWords + 1;
       const total = prev.totalWords;
       const experience = (remembered * 2) + (forgotten * 1);
       const accuracy = total > 0 ? Math.round((remembered / total) * 100) : 0;
-      return {
+      
+      const newStats = {
         ...prev,
         forgottenWords: forgotten,
         experience,
         accuracy,
       };
+      
+      console.log(`📈 统计更新完成:`, {
+        remembered,
+        forgotten,
+        total,
+        experience,
+        accuracy,
+        newStats
+      });
+      
+      return newStats;
     });
     // 获取当前单词的释义
     const currentWord = words[swiperIndex];
@@ -817,16 +888,22 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
   };
 
   const handleSwipeRight = async (word: string) => {
+    console.log(`🔄 handleSwipeRight 开始处理: ${word}, swiperIndex: ${swiperIndex}`);
+    
     // 1. 先用 updateWordReview 处理业务逻辑
     const wordObj = convertReviewWordToWord(words[swiperIndex]);
     const updatedWord = updateWordReview(wordObj, true);
+    console.log(`📝 updateWordReview 完成: ${word}, 更新结果:`, updatedWord);
+    
     try {
       // 2. 更新本地学习记录
+      console.log(`💾 开始更新本地学习记录: ${word}`);
       await learningDataService.updateLearningRecord(
         updatedWord.word,
         word,
         true // 正确
       );
+      console.log(`✅ 本地学习记录更新成功: ${word}`);
       
       // 3. 直接更新 vocabulary context，确保错词卡能立即看到更新
       const currentWord = words[swiperIndex];
@@ -846,37 +923,54 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
           ...updatedWordData
         };
         
+        console.log('🔧 ReviewScreen: 更新错词集合中的单词:', word, wordDataForWrongWords);
         wrongWordsManager.updateWrongWord(word, true, wordDataForWrongWords);
         console.log('🔄 已更新错词集合中的单词状态:', word);
         
         // 检查是否需要从错词集合移除（连续答对3次）
         const wordInfo = wrongWordsManager.getWrongWordInfo(word);
+        console.log('🔧 ReviewScreen: 错词信息检查:', word, wordInfo);
         if (wordInfo && wordInfo.consecutiveCorrect >= 3) {
           console.log('🎉 单词连续答对3次，从错词集合移除:', word);
         }
       }
       
-      // 5. 延迟更新后端用户词汇表（避免立即冲突）
-      setTimeout(async () => {
-        await updateBackendWordProgress(word, true);
-      }, 1000);
+      // 5. 立即更新后端用户词汇表
+      console.log(`🌐 开始更新后端用户词汇表: ${word}, isCorrect: true`);
+      await updateBackendWordProgress(word, true);
+      console.log(`✅ 后端用户词汇表更新成功: ${word}`);
     } catch (error) {
-      console.error('更新学习记录失败:', error);
+      console.error('❌ 更新学习记录失败:', error);
     }
     
+    console.log(`📊 更新统计 - 记住单词: ${word}`);
     rememberedRef.current += 1;
+    console.log(`📊 当前统计 - rememberedRef: ${rememberedRef.current}, forgottenRef: ${forgottenRef.current}`);
+    
     setReviewStats(prev => {
       const remembered = prev.rememberedWords + 1;
       const forgotten = prev.forgottenWords;
       const total = prev.totalWords;
       const experience = (remembered * 2) + (forgotten * 1);
       const accuracy = total > 0 ? Math.round((remembered / total) * 100) : 0;
-      return {
+      
+      const newStats = {
         ...prev,
         rememberedWords: remembered,
         experience,
         accuracy,
       };
+      
+      console.log(`📈 统计更新完成:`, {
+        remembered,
+        forgotten,
+        total,
+        experience,
+        accuracy,
+        newStats
+      });
+      
+      return newStats;
     });
     // 获取当前单词的释义
     const currentWord = words[swiperIndex];
@@ -926,41 +1020,55 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
 
   // 移动到下一个单词
   const moveToNextWord = () => {
-    console.log('ReviewScreen: moveToNextWord called - current swiperIndex:', swiperIndex, 'words.length:', words.length);
+    console.log('🔄 moveToNextWord 开始 - current swiperIndex:', swiperIndex, 'words.length:', words.length);
     if (swiperIndex < words.length) {
       const newIndex = swiperIndex + 1;
-      console.log('ReviewScreen: Moving to next word, new index:', newIndex);
+      console.log('📱 移动到下一个单词 - new index:', newIndex);
       setSwiperIndex(newIndex);
-        setShowAnswer(false);
+      setShowAnswer(false);
       
       // 如果是最后一张卡，延迟显示完成页面
       if (newIndex === words.length) {
-        console.log('ReviewScreen: Last card completed, preparing to show completion screen');
+        console.log('🎯 最后一张卡完成，准备显示完成页面');
         // 延迟显示完成页面，确保进度条动画完成
         setTimeout(() => {
-      console.log('ReviewScreen: Review complete, calculating final stats');
-      // 复习完成 - 计算最终统计数据
-      if (!isReviewComplete) {
-        const rememberedWords = rememberedRef.current;
-        const forgottenWords = forgottenRef.current;
-        const currentStats = reviewStats;
-        const experience = (rememberedWords * 2) + (forgottenWords * 1);
-        const accuracy = currentStats.totalWords > 0 ? Math.round((rememberedWords / currentStats.totalWords) * 100) : 0;
-        const finalStats = {
-          totalWords: currentStats.totalWords,
-          rememberedWords,
-          forgottenWords,
-          experience,
-          accuracy,
-        };
-        console.log('ReviewScreen: Final stats:', finalStats);
-        setReviewStats(finalStats);
-        setFinalStats(finalStats);
-          setIsReviewComplete(true);
+          console.log('🏁 复习完成，计算最终统计数据');
+          // 复习完成 - 计算最终统计数据
+          if (!isReviewComplete) {
+            const rememberedWords = rememberedRef.current;
+            const forgottenWords = forgottenRef.current;
+            const currentStats = reviewStats;
+            const experience = (rememberedWords * 2) + (forgottenWords * 1);
+            const accuracy = currentStats.totalWords > 0 ? Math.round((rememberedWords / currentStats.totalWords) * 100) : 0;
+            const finalStats = {
+              totalWords: currentStats.totalWords,
+              rememberedWords,
+              forgottenWords,
+              experience,
+              accuracy,
+            };
+            console.log('📊 最终统计数据:', finalStats);
+            console.log('📊 统计详情:', {
+              rememberedWords,
+              forgottenWords,
+              totalWords: currentStats.totalWords,
+              experience,
+              accuracy
+            });
+            setReviewStats(finalStats);
+            setFinalStats(finalStats);
+            setIsReviewComplete(true);
+            console.log('✅ 复习完成状态已设置');
+          } else {
+            console.log('⚠️ 复习已完成，跳过重复计算');
           }
         }, 1200); // 增加延迟时间，确保100%动画完全加载完毕
+      } else {
+        console.log('📱 继续下一张卡');
       }
-      }
+    } else {
+      console.log('⚠️ swiperIndex 超出范围，无法移动到下一个单词');
+    }
   };
 
   // 处理音频播放
@@ -997,52 +1105,14 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
 
 
 
-  // Swiper 事件处理 - 现在由 SwipeableWordCard 处理手势
-  const handleSwipedLeft = (cardIndex: number) => {
-    console.log('ReviewScreen: handleSwipedLeft called with cardIndex:', cardIndex);
-    // 向左滑动 = 忘记了这个词
-    setReviewStats(prev => {
-      const newStats = {
-        ...prev,
-        forgottenWords: prev.forgottenWords + 1,
-      };
-      console.log('ReviewScreen: Updated stats after left swipe:', newStats);
-      return newStats;
-    });
-    // 不在这里更新swiperIndex，让moveToNextWord()来处理
-  };
-  const handleSwipedRight = (cardIndex: number) => {
-    console.log('ReviewScreen: handleSwipedRight called with cardIndex:', cardIndex);
-    // 向右滑动 = 记住了这个词
-    setReviewStats(prev => {
-      const newStats = {
-        ...prev,
-        rememberedWords: prev.rememberedWords + 1,
-      };
-      console.log('ReviewScreen: Updated stats after right swipe:', newStats);
-      return newStats;
-    });
-    // 不在这里更新swiperIndex，让moveToNextWord()来处理
-  };
-
-
-
-  // Swiper onSwiped 事件 - 作为备用处理
-  const handleSwiped = (cardIndex: number) => {
-    console.log('ReviewScreen: handleSwiped called with cardIndex:', cardIndex);
-    // 这个回调作为备用，主要依赖 handleSwipedLeft/Right/Top 来处理
-    // 如果其他回调没有被触发，这里确保索引被更新
-    const nextIndex = Math.min(cardIndex + 1, words.length);
-    console.log('ReviewScreen: handleSwiped - setting swiperIndex to:', nextIndex);
-    setSwiperIndex(nextIndex);
-  };
+  // 移除重复的Swiper事件处理函数，统一使用handleSwipeLeft/Right
 
   // 进度条渲染
   const renderProgressBar = () => {
     // 修复进度文本显示逻辑：
     // 开始显示 0/3，滑完第一张卡显示 1/3，滑完第二张卡显示 2/3，滑完最后一张卡显示 3/3
     // 显示当前正在查看的卡片索引（从0开始）
-    const progressText = words.length > 0 ? `${swiperIndex} / ${words.length}` : '';
+    const progressText = words.length > 0 ? `${Math.min(swiperIndex, words.length)} / ${words.length}` : '';
     return (
       <View style={{ 
         width: '100%', 
@@ -1377,10 +1447,6 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
             if (word) {
               await handleSwipeRight(word);
             }
-          }}
-          onSwiped={(cardIndex) => {
-            // 兜底，不做统计
-            handleSwiped(cardIndex);
           }}
           cardVerticalMargin={8}
           cardHorizontalMargin={0}

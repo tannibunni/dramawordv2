@@ -1,5 +1,5 @@
 // 单词服务 - 处理查词相关的API调用
-import { colors } from '../../../../packages/ui/src/tokens';
+import { colors } from '../constants/colors';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_BASE_URL } from '../constants/config';
 import { cacheService, CACHE_KEYS } from './cacheService';

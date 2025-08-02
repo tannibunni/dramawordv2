@@ -73,20 +73,33 @@ export class WrongWordsManager {
    * 初始化错词集合
    */
   async initialize(vocabulary: any[]): Promise<void> {
-    if (this.isInitialized) return;
+    if (this.isInitialized) {
+      console.log('🔧 WrongWordsManager: 已经初始化过，跳过重复初始化');
+      return;
+    }
+
+    console.log('🔧 WrongWordsManager: 开始初始化错词集合');
+    console.log('🔧 词汇表数量:', vocabulary.length);
 
     try {
       // 从本地存储加载错词集合
+      console.log('🔧 尝试从本地存储加载数据...');
       await this.loadFromStorage();
+      
+      console.log('🔧 本地存储加载完成，当前错词数量:', this.collection.wrongWordsSet.size);
       
       // 如果没有本地数据，从词汇表初始化
       if (this.collection.wrongWordsSet.size === 0) {
+        console.log('🔧 本地存储为空，从词汇表重新初始化');
         this.initializeFromVocabulary(vocabulary);
+      } else {
+        console.log('🔧 使用本地存储的数据，跳过词汇表初始化');
       }
 
       this.isInitialized = true;
       vocabularyLogger.info(`错词集合初始化完成，共 ${this.collection.wrongWordsSet.size} 个错词`);
     } catch (error) {
+      console.error('🔧 WrongWordsManager: 初始化失败', error);
       vocabularyLogger.error('错词集合初始化失败', error);
       // 初始化失败时从词汇表重新构建
       this.initializeFromVocabulary(vocabulary);
@@ -97,11 +110,30 @@ export class WrongWordsManager {
    * 从词汇表初始化错词集合
    */
   private initializeFromVocabulary(vocabulary: any[]): void {
+    console.log('🔧 WrongWordsManager: 开始从词汇表初始化错词集合');
+    console.log('🔧 词汇表总数:', vocabulary.length);
+    
+    let wrongWordCount = 0;
+    vocabulary.forEach(word => {
+      if (this.isWrongWord(word)) {
+        wrongWordCount++;
+        console.log(`🔧 发现错词: ${word.word}`, {
+          incorrectCount: word.incorrectCount,
+          consecutiveIncorrect: word.consecutiveIncorrect,
+          consecutiveCorrect: word.consecutiveCorrect
+        });
+      }
+    });
+    
+    console.log(`🔧 WrongWordsManager: 初始化完成，发现 ${wrongWordCount} 个错词`);
+    
+    // 将错词添加到集合中
     vocabulary.forEach(word => {
       if (this.isWrongWord(word)) {
         this.addWrongWord(word.word, word);
       }
     });
+    
     vocabularyLogger.info(`从词汇表初始化错词集合，共 ${this.collection.wrongWordsSet.size} 个错词`);
   }
 
@@ -109,20 +141,47 @@ export class WrongWordsManager {
    * 判断是否为错词
    */
   private isWrongWord(word: any): boolean {
+    const consecutiveCorrect = word.consecutiveCorrect || 0;
+    const incorrectCount = word.incorrectCount || 0;
+    const consecutiveIncorrect = word.consecutiveIncorrect || 0;
+    
     // 连续答对3次后从错词卡移除
-    if ((word.consecutiveCorrect || 0) >= 3) {
+    if (consecutiveCorrect >= 3) {
+      console.log(`🔍 WrongWordsManager: ${word.word} 连续答对${consecutiveCorrect}次，不是错词`);
       return false;
     }
     
     // 有答错记录或连续答错
-    return (word.incorrectCount || 0) > 0 || (word.consecutiveIncorrect || 0) > 0;
+    const isWrong = incorrectCount > 0 || consecutiveIncorrect > 0;
+    console.log(`🔍 WrongWordsManager: ${word.word} 检查结果:`, {
+      consecutiveCorrect,
+      incorrectCount,
+      consecutiveIncorrect,
+      isWrong
+    });
+    
+    return isWrong;
+  }
+
+  /**
+   * 公共方法：判断是否为错词
+   */
+  public checkIsWrongWord(word: any): boolean {
+    return this.isWrongWord(word);
   }
 
   /**
    * 添加错词到集合
    */
   addWrongWord(word: string, wordData: any): boolean {
+    console.log(`🔧 WrongWordsManager: 尝试添加错词 ${word}`, {
+      incorrectCount: wordData?.incorrectCount,
+      consecutiveIncorrect: wordData?.consecutiveIncorrect,
+      consecutiveCorrect: wordData?.consecutiveCorrect
+    });
+    
     if (this.collection.wrongWordsSet.has(word)) {
+      console.log(`🔧 WrongWordsManager: ${word} 已存在于错词集合中`);
       return false; // 已存在
     }
 
@@ -150,6 +209,7 @@ export class WrongWordsManager {
       timestamp: Date.now() 
     });
 
+    console.log(`🔧 WrongWordsManager: 成功添加错词 ${word}，当前错词总数: ${this.collection.statistics.totalWrongWords}`);
     vocabularyLogger.info(`添加错词: ${word}，当前错词总数: ${this.collection.statistics.totalWrongWords}`);
     return true;
   }
@@ -189,8 +249,18 @@ export class WrongWordsManager {
    * 更新错词状态
    */
   updateWrongWord(word: string, isCorrect: boolean, wordData?: any): void {
+    console.log(`🔧 WrongWordsManager: 更新错词状态 ${word}`, {
+      isCorrect,
+      wordData: wordData ? {
+        incorrectCount: wordData.incorrectCount,
+        consecutiveIncorrect: wordData.consecutiveIncorrect,
+        consecutiveCorrect: wordData.consecutiveCorrect
+      } : 'none'
+    });
+    
     const wordInfo = this.collection.wrongWordsMap.get(word);
     if (!wordInfo) {
+      console.log(`🔧 WrongWordsManager: ${word} 不在错词集合中，无法更新`);
       return;
     }
 
@@ -200,8 +270,11 @@ export class WrongWordsManager {
       wordInfo.consecutiveCorrect++;
       wordInfo.consecutiveIncorrect = 0;
       
+      console.log(`🔧 WrongWordsManager: ${word} 答对了，连续正确次数: ${wordInfo.consecutiveCorrect}`);
+      
       // 连续答对3次后移除
       if (wordInfo.consecutiveCorrect >= 3) {
+        console.log(`🔧 WrongWordsManager: ${word} 连续答对3次，从错词集合移除`);
         this.removeWrongWord(word, 'consecutiveCorrect');
         return;
       }
@@ -209,6 +282,8 @@ export class WrongWordsManager {
       wordInfo.incorrectCount++;
       wordInfo.consecutiveIncorrect++;
       wordInfo.consecutiveCorrect = 0;
+      
+      console.log(`🔧 WrongWordsManager: ${word} 答错了，错误次数: ${wordInfo.incorrectCount}，连续错误: ${wordInfo.consecutiveIncorrect}`);
     }
 
     wordInfo.lastReviewed = new Date();
@@ -231,6 +306,11 @@ export class WrongWordsManager {
       timestamp: Date.now() 
     });
 
+    console.log(`🔧 WrongWordsManager: ${word} 更新完成，最终状态:`, {
+      consecutiveCorrect: wordInfo.consecutiveCorrect,
+      consecutiveIncorrect: wordInfo.consecutiveIncorrect,
+      incorrectCount: wordInfo.incorrectCount
+    });
     vocabularyLogger.debug(`更新错词: ${word}，正确: ${isCorrect}，连续正确: ${wordInfo.consecutiveCorrect}`);
   }
 
@@ -266,7 +346,9 @@ export class WrongWordsManager {
    * 获取错词数量
    */
   getWrongWordsCount(): number {
-    return this.collection.statistics.totalWrongWords;
+    const count = this.collection.statistics.totalWrongWords;
+    console.log(`🔧 WrongWordsManager: 当前错词总数: ${count}`);
+    return count;
   }
 
   /**
@@ -384,6 +466,46 @@ export class WrongWordsManager {
       totalWords: this.collection.wrongWordsSet.size,
       isInitialized: this.isInitialized
     };
+  }
+
+  /**
+   * 清除本地存储缓存
+   */
+  async clearStorage(): Promise<void> {
+    try {
+      await AsyncStorage.removeItem('wrong_words_collection');
+      console.log('🔧 WrongWordsManager: 本地存储缓存已清除');
+      vocabularyLogger.info('错词集合本地存储缓存已清除');
+    } catch (error) {
+      console.error('🔧 WrongWordsManager: 清除缓存失败', error);
+      vocabularyLogger.error('清除错词集合缓存失败', error);
+    }
+  }
+
+  /**
+   * 重置错词集合（清除内存和存储）
+   */
+  async reset(): Promise<void> {
+    console.log('🔧 WrongWordsManager: 开始重置错词集合');
+    
+    // 清除内存中的数据
+    this.collection.wrongWordsSet.clear();
+    this.collection.wrongWordsMap.clear();
+    this.collection.statistics = {
+      totalWrongWords: 0,
+      newlyAdded: 0,
+      recentlyRemoved: 0,
+      lastUpdated: new Date()
+    };
+    
+    // 清除本地存储
+    await this.clearStorage();
+    
+    // 重置初始化状态
+    this.isInitialized = false;
+    
+    console.log('🔧 WrongWordsManager: 错词集合重置完成');
+    vocabularyLogger.info('错词集合已重置');
   }
 }
 

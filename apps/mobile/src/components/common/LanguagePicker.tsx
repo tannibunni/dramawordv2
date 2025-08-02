@@ -9,7 +9,7 @@ import {
   Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors } from '../../../../../packages/ui/src/tokens';
+import { colors } from '../../constants/colors';
 import { useLanguage } from '../../context/LanguageContext';
 import { SUPPORTED_LANGUAGES, SupportedLanguageCode } from '../../constants/config';
 import { useAppLanguage } from '../../context/AppLanguageContext';

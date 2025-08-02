@@ -15,6 +15,7 @@ import { colors } from '../../constants/colors';
 import { wrongWordLogger, experienceLogger, userDataLogger, vocabularyLogger } from '../../utils/logger';
 import { SyncStatusIndicator } from '../../components/common/SyncStatusIndicator';
 import { wrongWordsManager } from '../../services/wrongWordsManager';
+import { animationManager } from '../../services/animationManager';
 
 const ReviewIntroScreen = () => {
   const { vocabulary, refreshLearningProgress } = useVocabulary();
@@ -56,9 +57,9 @@ const ReviewIntroScreen = () => {
               incorrectCount: word.incorrectCount,
               consecutiveIncorrect: word.consecutiveIncorrect,
               consecutiveCorrect: word.consecutiveCorrect,
-              isWrongWord: wrongWordsManager.isWrongWord(word)
+              isWrongWord: wrongWordsManager.checkIsWrongWord(word)
             });
-            return wrongWordsManager.isWrongWord(word);
+            return wrongWordsManager.checkIsWrongWord(word);
           });
         
         console.log(`🔍 ReviewIntroScreen: 错词数量计算结果: ${localWrongWords.length}`);
@@ -90,9 +91,9 @@ const ReviewIntroScreen = () => {
               incorrectCount: word.incorrectCount,
               consecutiveIncorrect: word.consecutiveIncorrect,
               consecutiveCorrect: word.consecutiveCorrect,
-              isWrongWord: wrongWordsManager.isWrongWord(word)
+              isWrongWord: wrongWordsManager.checkIsWrongWord(word)
             });
-            return wrongWordsManager.isWrongWord(word);
+            return wrongWordsManager.checkIsWrongWord(word);
           });
           
           console.log(`🔍 ReviewIntroScreen useEffect: 错词数量计算结果: ${localWrongWords.length}`);
@@ -137,16 +138,18 @@ const ReviewIntroScreen = () => {
   const [animatedCollectedWords, setAnimatedCollectedWords] = useState(0);
   const [animatedContributedWords, setAnimatedContributedWords] = useState(0);
   
-  // 动画值
-  const experienceAnimation = new Animated.Value(0);
-  const scaleAnimation = new Animated.Value(1);
-  const opacityAnimation = new Animated.Value(0);
-  const progressAnimation = new Animated.Value(0);
-  const numberAnimation = new Animated.Value(0);
-  const levelAnimation = new Animated.Value(1);
-  const collectedWordsAnimation = new Animated.Value(0);
-  const contributedWordsAnimation = new Animated.Value(0);
-  const progressBarAnimation = new Animated.Value(0);
+  // 使用统一动画管理器的动画值
+  const {
+    experienceAnimation,
+    scaleAnimation,
+    opacityAnimation,
+    progressAnimation,
+    numberAnimation,
+    levelAnimation,
+    collectedWordsAnimation,
+    contributedWordsAnimation,
+    progressBarAnimation
+  } = animationManager.getAnimationValues();
   
   // 组件初始化时重置经验值检查状态
   useEffect(() => {
@@ -341,25 +344,15 @@ const ReviewIntroScreen = () => {
     }
   }, [userStats.experience, hasCheckedExperience]);
   
-  // 进度条增长动画
+  // 进度条增长动画 - 使用统一动画管理器
   const animateProgressBar = (fromProgress: number, toProgress: number, duration: number = 1500) => {
-    // 如果正在进行经验值动画，跳过进度条动画
-    if (isProgressBarAnimating) {
-      experienceLogger.info('经验值动画进行中，跳过进度条动画');
-      return;
-    }
-    
-    // 清理之前的动画监听器
-    progressBarAnimation.removeAllListeners();
-    
-    Animated.timing(progressBarAnimation, {
-      toValue: toProgress,
-      duration: duration,
-      useNativeDriver: false,
-    }).start(() => {
-      setProgressBarValue(toProgress);
-      experienceLogger.info('进度条动画完成', { fromProgress, toProgress });
+    animationManager.startProgressBarAnimation(fromProgress, toProgress, {
+      duration
     });
+    
+    // 更新状态值
+    setProgressBarValue(toProgress);
+    experienceLogger.info('统一进度条动画完成', { fromProgress, toProgress });
   };
 
   // 加载用户统计数据
@@ -553,92 +546,26 @@ const ReviewIntroScreen = () => {
     }
   };
   
-  // 处理经验值增长动画
+  // 处理经验值增长动画 - 使用统一动画管理器
   const animateExperienceGain = (gainedExp: number) => {
     const oldProgress = getExperienceProgress() / 100;
     const newExperience = userStats.experience + gainedExp;
     const newProgress = ((newExperience % getCurrentLevelRequiredExp()) / getCurrentLevelRequiredExp());
     
-    // 如果升级了，进度条重置为0然后增长到新等级进度
-    if (newExperience >= getCurrentLevelRequiredExp()) {
-      Animated.sequence([
-        // 先重置到0
-        Animated.timing(progressBarAnimation, {
-          toValue: 0,
-          duration: 300,
-          useNativeDriver: false,
-        }),
-        // 然后增长到新进度
-        Animated.timing(progressBarAnimation, {
-          toValue: newProgress,
-          duration: 1200,
-          useNativeDriver: false,
-        }),
-      ]).start();
-    } else {
-      // 直接增长到新进度
-      Animated.timing(progressBarAnimation, {
-        toValue: newProgress,
-        duration: 1500,
-        useNativeDriver: false,
-      }).start();
-    }
+    animationManager.startProgressBarAnimation(oldProgress, newProgress, {
+      duration: newExperience >= getCurrentLevelRequiredExp() ? 1200 : 1500
+    });
   };
 
-  // 开始经验值动画
+  // 开始经验值动画 - 使用统一动画管理器
   const startExperienceAnimation = (gainedExp: number) => {
-    // 防止重复动画
-    if (isProgressBarAnimating) {
-      experienceLogger.info('动画正在进行中，跳过重复动画');
-      return;
-    }
-    
-    // 设置动画标志
-    setIsProgressBarAnimating(true);
-    
-    // 清理之前的动画监听器
-    numberAnimation.removeAllListeners();
-    progressBarAnimation.removeAllListeners();
-    
-    // 重置动画值
-    experienceAnimation.setValue(0);
-    scaleAnimation.setValue(1);
-    opacityAnimation.setValue(0);
-    progressAnimation.setValue(0);
-    numberAnimation.setValue(0);
-    levelAnimation.setValue(1);
-    collectedWordsAnimation.setValue(0);
-    contributedWordsAnimation.setValue(0);
-    
-    // 使用当前实际的经验值，而不是 userStats.experience
     const currentExperience = userStats.experience;
-    const oldExperience = currentExperience; // 修复：使用当前经验值作为起始值
+    const oldExperience = currentExperience;
     const newExperience = oldExperience + gainedExp;
     const oldLevel = userStats.level;
+    const newLevel = animationManager.calculateLevel(newExperience);
+    const isLevelUp = newLevel > oldLevel;
     
-    // 正确的等级计算：根据经验值计算等级
-    const calculateLevel = (exp: number) => {
-      let level = 1;
-      let totalExpForLevel = 0;
-      while (true) {
-        const totalExpForNextLevel = 50 * Math.pow(level + 1, 2);
-        const totalExpForCurrentLevel = 50 * Math.pow(level, 2);
-        const expNeededForCurrentLevel = totalExpForNextLevel - totalExpForCurrentLevel;
-        
-        if (exp < totalExpForNextLevel) {
-          break;
-        }
-        level++;
-      }
-      return level;
-    };
-    
-    const newLevel = calculateLevel(newExperience);
-    
-    // 设置初始动画经验值
-    setAnimatedExperience(oldExperience); // 显示总经验值，而不是当前等级内的经验值
-    
-    // 计算进度变化 - 使用正确的进度计算方法
     const oldProgress = getExperienceProgressFromStats(userStats) / 100;
     const newProgress = getExperienceProgressFromStats({
       ...userStats,
@@ -646,10 +573,7 @@ const ReviewIntroScreen = () => {
       level: newLevel
     }) / 100;
     
-    // 检查是否升级
-    const isLevelUp = newLevel > oldLevel;
-    
-    experienceLogger.info('开始经验值动画', {
+    experienceLogger.info('开始统一经验值动画', {
       oldExperience,
       newExperience,
       gainedExp,
@@ -660,174 +584,61 @@ const ReviewIntroScreen = () => {
       isLevelUp
     });
     
-    // 显示经验值增加提示
-    Animated.sequence([
-      // 淡入弹窗
-      Animated.timing(opacityAnimation, {
-        toValue: 1,
-        duration: 300,
-        useNativeDriver: true,
-      }),
-      // 弹窗缩放动画
-      Animated.sequence([
-        Animated.timing(scaleAnimation, {
-          toValue: 1.2,
-          duration: 200,
-          useNativeDriver: true,
-        }),
-        Animated.timing(scaleAnimation, {
-          toValue: 1,
-          duration: 200,
-          useNativeDriver: true,
-        }),
-      ]),
-      // 等待一段时间
-      Animated.delay(800),
-      // 开始进度环动画
-      Animated.parallel([
-        // 经验值数字动画
-        Animated.timing(numberAnimation, {
-          toValue: 1,
-          duration: 1500,
-          useNativeDriver: false,
-        }),
-      ]),
-      // 等级提升动画（如果有）
-      ...(isLevelUp ? [
-        Animated.sequence([
-          Animated.timing(levelAnimation, {
-            toValue: 1.3,
-            duration: 200,
-            useNativeDriver: true,
-          }),
-          Animated.timing(levelAnimation, {
-            toValue: 1,
-            duration: 200,
-            useNativeDriver: true,
-          }),
-        ])
-      ] : []),
-      // 等待动画完成
-      Animated.delay(500),
-      // 淡出弹窗
-      Animated.timing(opacityAnimation, {
-        toValue: 0,
-        duration: 300,
-        useNativeDriver: true,
-      }),
-    ]).start(() => {
-      setShowExperienceAnimation(false);
-      setIsProgressBarAnimating(false); // 清除动画标志
-      
-      // 清理动画监听器
-      numberAnimation.removeAllListeners();
-      progressBarAnimation.removeAllListeners();
-      
-      // 清理 AsyncStorage 中的经验值增益数据
-      AsyncStorage.removeItem('experienceGain');
-      
-      // 动画完成后再更新用户统计数据
-      const updatedStats = {
-        ...userStats,
-        experience: newExperience,
-        level: newLevel,
-      };
-      setUserStats(updatedStats);
-      AsyncStorage.setItem('userStats', JSON.stringify(updatedStats));
-      
-      // 确保进度条动画最终状态正确 - 使用更新后的统计数据
-      const finalProgress = getExperienceProgressFromStats(updatedStats) / 100;
-      progressBarAnimation.setValue(finalProgress);
-      setProgressBarValue(finalProgress); // 更新状态值
-      setAnimatedExperience(newExperience); // 设置最终经验值
-      
-      experienceLogger.info('动画完成，最终状态', {
-        newExperience,
-        newLevel,
-        finalProgress
-      });
-      
-      // 重置动画状态，允许后续动画
-      setIsProgressBarAnimating(false);
-      
-      // 标记动画已完成，防止后续重置
-      setHasCheckedExperience(true);
-    });
-    
-    // 数字动画监听器
-    numberAnimation.addListener(({ value }) => {
-      // 计算总经验值（不是当前等级内的经验值）
-      const currentExp = Math.round(oldExperience + (value * gainedExp));
-      setAnimatedExperience(currentExp);
-      
-      // 同步进度条动画 - 使用相同的动画进度
-      let currentProgress;
-      if (isLevelUp) {
-        // 如果升级了，进度条从0开始增长到新进度
-        currentProgress = value * newProgress;
-      } else {
-        // 如果没有升级，正常从旧进度增长到新进度
-        currentProgress = oldProgress + (value * (newProgress - oldProgress));
+    animationManager.startExperienceAnimation({
+      oldExperience,
+      newExperience,
+      gainedExp,
+      oldLevel,
+      newLevel,
+      isLevelUp,
+      oldProgress,
+      newProgress
+    }, {
+      onStart: () => {
+        setShowExperienceAnimation(true);
+        setIsProgressBarAnimating(true);
+        setAnimatedExperience(oldExperience);
+      },
+      onProgress: (currentExp, currentProgress) => {
+        setAnimatedExperience(currentExp);
+        setProgressBarValue(currentProgress);
+      },
+      onComplete: (finalExp, finalProgress) => {
+        setShowExperienceAnimation(false);
+        setIsProgressBarAnimating(false);
+        setAnimatedExperience(finalExp);
+        setProgressBarValue(finalProgress);
+        setHasCheckedExperience(true);
+        
+        // 清理 AsyncStorage 中的经验值增益数据
+        AsyncStorage.removeItem('experienceGain');
+        
+        // 更新用户统计数据
+        const updatedStats = {
+          ...userStats,
+          experience: finalExp,
+          level: newLevel,
+        };
+        setUserStats(updatedStats);
+        AsyncStorage.setItem('userStats', JSON.stringify(updatedStats));
+        
+        experienceLogger.info('统一经验值动画完成', {
+          newExperience: finalExp,
+          newLevel,
+          finalProgress
+        });
       }
-      
-      progressBarAnimation.setValue(currentProgress);
-      setProgressBarValue(currentProgress); // 更新状态值
     });
   };
 
-  // 开始经验值动画（使用指定的当前经验值）
+  // 开始经验值动画（使用指定的当前经验值）- 使用统一动画管理器
   const startExperienceAnimationWithCurrentExp = (gainedExp: number, currentExp: number) => {
-    // 防止重复动画
-    if (isProgressBarAnimating) {
-      experienceLogger.info('动画正在进行中，跳过重复动画');
-      return;
-    }
-    
-    // 设置动画标志
-    setIsProgressBarAnimating(true);
-    
-    // 清理之前的动画监听器
-    numberAnimation.removeAllListeners();
-    progressBarAnimation.removeAllListeners();
-    
-    // 重置动画值
-    experienceAnimation.setValue(0);
-    scaleAnimation.setValue(1);
-    opacityAnimation.setValue(0);
-    progressAnimation.setValue(0);
-    numberAnimation.setValue(0);
-    levelAnimation.setValue(1);
-    collectedWordsAnimation.setValue(0);
-    contributedWordsAnimation.setValue(0);
-    
-    // 使用传入的当前经验值
     const oldExperience = currentExp;
     const newExperience = oldExperience + gainedExp;
     const oldLevel = userStats.level;
+    const newLevel = animationManager.calculateLevel(newExperience);
+    const isLevelUp = newLevel > oldLevel;
     
-    // 正确的等级计算：根据经验值计算等级
-    const calculateLevel = (exp: number) => {
-      let level = 1;
-      let totalExpForLevel = 0;
-      while (true) {
-        const totalExpForNextLevel = 50 * Math.pow(level + 1, 2);
-        const totalExpForCurrentLevel = 50 * Math.pow(level, 2);
-        const expNeededForCurrentLevel = totalExpForNextLevel - totalExpForCurrentLevel;
-        
-        if (exp < totalExpForNextLevel) {
-          break;
-        }
-        level++;
-      }
-      return level;
-    };
-    
-    const newLevel = calculateLevel(newExperience);
-    
-    // 设置初始动画经验值
-    setAnimatedExperience(oldExperience);
-    
-    // 计算进度变化 - 使用正确的进度计算方法
     const oldProgress = getExperienceProgressFromStats({
       ...userStats,
       experience: oldExperience
@@ -838,10 +649,7 @@ const ReviewIntroScreen = () => {
       level: newLevel
     }) / 100;
     
-    // 检查是否升级
-    const isLevelUp = newLevel > oldLevel;
-    
-    experienceLogger.info('开始经验值动画（指定当前经验值）', {
+    experienceLogger.info('开始统一经验值动画（指定当前经验值）', {
       oldExperience,
       newExperience,
       gainedExp,
@@ -852,96 +660,61 @@ const ReviewIntroScreen = () => {
       isLevelUp
     });
     
-    // 显示经验值增加提示
-    Animated.sequence([
-      // 淡入弹窗
-      Animated.timing(opacityAnimation, {
-        toValue: 1,
-        duration: 300,
-        useNativeDriver: true,
-      }),
-      // 弹窗缩放动画
-      Animated.sequence([
-        Animated.timing(scaleAnimation, {
-          toValue: 1.2,
-          duration: 200,
-          useNativeDriver: true,
-        }),
-        Animated.timing(scaleAnimation, {
-          toValue: 1,
-          duration: 200,
-          useNativeDriver: true,
-        }),
-      ]),
-      // 经验值数字动画
-      Animated.timing(numberAnimation, {
-        toValue: gainedExp,
-        duration: 1000,
-        useNativeDriver: false,
-      }),
-      // 经验值增长动画
-      Animated.timing(experienceAnimation, {
-        toValue: newExperience,
-        duration: 1000,
-        useNativeDriver: false,
-      }),
-      // 进度条动画
-      Animated.timing(progressAnimation, {
-        toValue: newProgress,
-        duration: 1000,
-        useNativeDriver: false,
-      }),
-      // 等级动画（如果升级）
-      ...(isLevelUp ? [
-        Animated.timing(levelAnimation, {
-          toValue: 1.3,
-          duration: 300,
-          useNativeDriver: true,
-        }),
-        Animated.timing(levelAnimation, {
-          toValue: 1,
-          duration: 300,
-          useNativeDriver: true,
-        }),
-      ] : []),
-      // 淡出弹窗
-      Animated.timing(opacityAnimation, {
-        toValue: 0,
-        duration: 300,
-        useNativeDriver: true,
-      }),
-    ]).start(() => {
-      // 动画完成后的处理
-      setShowExperienceAnimation(false);
-      setExperienceGained(0);
-      setIsProgressBarAnimating(false);
-      setHasCheckedExperience(true);
-      
-      // 更新最终状态
-      setAnimatedExperience(newExperience);
-      setProgressBarValue(newProgress);
-      
-      experienceLogger.info('动画完成，最终状态', {
-        newExperience,
-        newLevel,
-        finalProgress: newProgress
-      });
+    animationManager.startExperienceAnimation({
+      oldExperience,
+      newExperience,
+      gainedExp,
+      oldLevel,
+      newLevel,
+      isLevelUp,
+      oldProgress,
+      newProgress
+    }, {
+      onStart: () => {
+        setShowExperienceAnimation(true);
+        setIsProgressBarAnimating(true);
+        setAnimatedExperience(oldExperience);
+      },
+      onProgress: (currentExp, currentProgress) => {
+        setAnimatedExperience(currentExp);
+        setProgressBarValue(currentProgress);
+      },
+      onComplete: (finalExp, finalProgress) => {
+        setShowExperienceAnimation(false);
+        setExperienceGained(0);
+        setIsProgressBarAnimating(false);
+        setHasCheckedExperience(true);
+        setAnimatedExperience(finalExp);
+        setProgressBarValue(finalProgress);
+        
+        experienceLogger.info('统一经验值动画完成（指定当前经验值）', {
+          newExperience: finalExp,
+          newLevel,
+          finalProgress
+        });
+      }
     });
   };
 
-  // 更新统计数字
+  // 更新统计数字 - 使用统一动画管理器
   const updateStatistics = () => {
     console.log('🔄 更新统计数字...');
     // 更新收集单词数量（等于用户收藏单词的数量）
     const collectedCount = vocabulary?.length || 0;
-    setAnimatedCollectedWords(collectedCount);
-    
-    // 更新贡献单词数量（等于用户调用OpenAI的次数）
     const contributedCount = userStats.contributedWords || 0;
+    
     console.log('📊 当前贡献词数:', contributedCount);
     console.log('📊 当前userStats:', userStats);
-    setAnimatedContributedWords(contributedCount);
     console.log('🎯 设置动画贡献词数:', contributedCount);
+    
+    // 使用统一动画管理器更新统计数字
+    animationManager.startStatisticsAnimation(collectedCount, contributedCount, {
+      duration: 1500
+    });
+    
+    // 更新状态值
+    setAnimatedCollectedWords(collectedCount);
+    setAnimatedContributedWords(contributedCount);
   };
 
   // 当词汇表变化时更新统计
@@ -960,10 +733,16 @@ const ReviewIntroScreen = () => {
   const getExperienceProgressFromStats = (stats: any) => {
     const currentLevel = stats.level;
     const currentExp = stats.experience;
+    
+    if (currentExp <= 0) return 0;
+    
     const totalExpForNextLevel = 50 * Math.pow(currentLevel + 1, 2);
     const totalExpForCurrentLevel = 50 * Math.pow(currentLevel, 2);
     const expNeededForCurrentLevel = totalExpForNextLevel - totalExpForCurrentLevel;
-    const progressPercentage = (currentExp / expNeededForCurrentLevel) * 100;
+    
+    // 计算当前等级内的经验值
+    const expInCurrentLevel = currentExp - totalExpForCurrentLevel;
+    const progressPercentage = (expInCurrentLevel / expNeededForCurrentLevel) * 100;
     const result = Math.min(100, Math.max(0, progressPercentage));
     
     console.log('🎯 计算经验值进度(从统计数据):', {
@@ -972,6 +751,7 @@ const ReviewIntroScreen = () => {
       totalExpForNextLevel,
       totalExpForCurrentLevel,
       expNeededForCurrentLevel,
+      expInCurrentLevel,
       progressPercentage,
       result
     });
@@ -983,10 +763,16 @@ const ReviewIntroScreen = () => {
   const getExperienceProgress = () => {
     const currentLevel = userStats.level;
     const currentExp = userStats.experience;
+    
+    if (currentExp <= 0) return 0;
+    
     const totalExpForNextLevel = 50 * Math.pow(currentLevel + 1, 2);
     const totalExpForCurrentLevel = 50 * Math.pow(currentLevel, 2);
     const expNeededForCurrentLevel = totalExpForNextLevel - totalExpForCurrentLevel;
-    const progressPercentage = (currentExp / expNeededForCurrentLevel) * 100;
+    
+    // 计算当前等级内的经验值
+    const expInCurrentLevel = currentExp - totalExpForCurrentLevel;
+    const progressPercentage = (expInCurrentLevel / expNeededForCurrentLevel) * 100;
     const result = Math.min(100, Math.max(0, progressPercentage));
     
     console.log('🎯 计算经验值进度:', {
@@ -995,6 +781,7 @@ const ReviewIntroScreen = () => {
       totalExpForNextLevel,
       totalExpForCurrentLevel,
       expNeededForCurrentLevel,
+      expInCurrentLevel,
       progressPercentage,
       result
     });
@@ -1340,6 +1127,40 @@ const ReviewIntroScreen = () => {
           </TouchableOpacity>
         )}
       </View>
+
+      {/* 开发模式：清除缓存按钮 */}
+      {__DEV__ && (
+        <View style={styles.debugContainer}>
+          <TouchableOpacity
+            style={styles.debugButton}
+            onPress={async () => {
+              Alert.alert(
+                '清除缓存',
+                '确定要清除错词缓存吗？这将重置所有错词数据。',
+                [
+                  { text: '取消', style: 'cancel' },
+                  {
+                    text: '确定',
+                    style: 'destructive',
+                    onPress: async () => {
+                      try {
+                        await wrongWordsManager.reset();
+                        Alert.alert('成功', '错词缓存已清除');
+                        // 重新计算错词数量
+                        setWrongWordsCount(0);
+                      } catch (error) {
+                        Alert.alert('错误', '清除缓存失败');
+                      }
+                    }
+                  }
+                ]
+              );
+            }}
+          >
+            <Text style={styles.debugButtonText}>清除错词缓存</Text>
+          </TouchableOpacity>
+        </View>
+      )}
     </View>
   );
 };
@@ -1772,6 +1593,24 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: colors.primary[500],
+  },
+  debugContainer: {
+    marginTop: 20,
+    alignItems: 'center',
+  },
+  debugButton: {
+    backgroundColor: colors.primary[500],
+    borderRadius: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 25,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minWidth: 200,
+  },
+  debugButtonText: {
+    color: colors.text.inverse,
+    fontSize: 16,
+    fontWeight: 'bold',
   },
 });
 
