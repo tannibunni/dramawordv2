@@ -103,6 +103,98 @@ export class ExperienceService {
   }
 
   /**
+   * 智能挑战获得经验值
+   */
+  static async addExperienceForSmartChallenge(userId: string): Promise<ExperienceGainResult> {
+    try {
+      const user = await User.findById(userId);
+      if (!user) {
+        return {
+          success: false,
+          xpGained: 0,
+          newLevel: 0,
+          leveledUp: false,
+          message: '用户不存在'
+        };
+      }
+
+      const oldLevel = user.learningStats.level;
+      const oldExperience = user.learningStats.experience;
+      
+      // 智能挑战奖励15 XP
+      await user.addExperience(15, '智能挑战');
+      
+      const xpGained = user.learningStats.experience - oldExperience;
+      const leveledUp = user.learningStats.level > oldLevel;
+      
+      logger.info(`用户 ${user.username} 完成智能挑战获得 15 XP`);
+      
+      return {
+        success: true,
+        xpGained: 15,
+        newLevel: user.learningStats.level,
+        leveledUp,
+        message: leveledUp ? '智能挑战 +15 XP，恭喜升级！' : '智能挑战 +15 XP'
+      };
+    } catch (error) {
+      logger.error('智能挑战经验值添加失败:', error);
+      return {
+        success: false,
+        xpGained: 0,
+        newLevel: 0,
+        leveledUp: false,
+        message: '经验值添加失败'
+      };
+    }
+  }
+
+  /**
+   * 错词挑战获得经验值
+   */
+  static async addExperienceForWrongWordChallenge(userId: string): Promise<ExperienceGainResult> {
+    try {
+      const user = await User.findById(userId);
+      if (!user) {
+        return {
+          success: false,
+          xpGained: 0,
+          newLevel: 0,
+          leveledUp: false,
+          message: '用户不存在'
+        };
+      }
+
+      const oldLevel = user.learningStats.level;
+      const oldExperience = user.learningStats.experience;
+      
+      // 错词挑战奖励20 XP
+      await user.addExperience(20, '错词挑战');
+      
+      const xpGained = user.learningStats.experience - oldExperience;
+      const leveledUp = user.learningStats.level > oldLevel;
+      
+      logger.info(`用户 ${user.username} 完成错词挑战获得 20 XP`);
+      
+      return {
+        success: true,
+        xpGained: 20,
+        newLevel: user.learningStats.level,
+        leveledUp,
+        message: leveledUp ? '错词挑战 +20 XP，恭喜升级！' : '错词挑战 +20 XP'
+      };
+    } catch (error) {
+      logger.error('错词挑战经验值添加失败:', error);
+      return {
+        success: false,
+        xpGained: 0,
+        newLevel: 0,
+        leveledUp: false,
+        message: '经验值添加失败'
+      };
+    }
+  }
+
+  /**
    * 连续学习打卡获得经验值
    */
   static async addExperienceForDailyCheckin(userId: string): Promise<ExperienceGainResult> {
@@ -315,11 +407,68 @@ export class ExperienceService {
         dailyReviewXP: user.learningStats.dailyReviewXP,
         dailyStudyTimeXP: user.learningStats.dailyStudyTimeXP,
         completedDailyCards: user.learningStats.completedDailyCards,
-        currentStreak: user.learningStats.currentStreak
+        currentStreak: user.learningStats.currentStreak,
+        contributedWords: user.contributedWords || 0
       };
     } catch (error) {
       logger.error('获取用户经验值信息失败:', error);
       return null;
     }
+  }
+
+  /**
+   * 获取经验值获取方式说明
+   */
+  static getExperienceWays() {
+    return {
+      review: {
+        name: '复习单词',
+        description: '记得+2 XP，不记得+1 XP',
+        dailyLimit: '每日上限90点',
+        xpPerAction: '1-2 XP'
+      },
+      smartChallenge: {
+        name: '智能挑战',
+        description: '完成智能挑战获得经验值',
+        dailyLimit: '无限制',
+        xpPerAction: '15 XP'
+      },
+      wrongWordChallenge: {
+        name: '错词挑战',
+        description: '完成错词挑战获得经验值',
+        dailyLimit: '无限制',
+        xpPerAction: '20 XP'
+      },
+      newWord: {
+        name: '收集新单词',
+        description: '收集新单词到词汇表',
+        dailyLimit: '无限制',
+        xpPerAction: '5 XP'
+      },
+      contribution: {
+        name: '贡献新词',
+        description: '向社区贡献新单词',
+        dailyLimit: '无限制',
+        xpPerAction: '8 XP'
+      },
+      dailyCheckin: {
+        name: '连续学习打卡',
+        description: '基础5 XP + 连续天数奖励',
+        dailyLimit: '每日一次',
+        xpPerAction: '5-12 XP'
+      },
+      dailyCards: {
+        name: '完成每日词卡任务',
+        description: '完成每日词卡学习任务',
+        dailyLimit: '每日一次',
+        xpPerAction: '5 XP'
+      },
+      studyTime: {
+        name: '学习时长奖励',
+        description: '每10分钟获得3点XP',
+        dailyLimit: '每日上限30分钟',
+        xpPerAction: '3 XP/10分钟'
+      }
+    };
   }
 } 

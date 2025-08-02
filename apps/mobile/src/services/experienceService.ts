@@ -11,6 +11,7 @@ export interface ExperienceInfo {
   dailyStudyTimeXP: number;
   completedDailyCards: boolean;
   currentStreak: number;
+  contributedWords: number;
 }
 
 export interface ExperienceGainResult {
@@ -21,10 +22,33 @@ export interface ExperienceGainResult {
   message: string;
 }
 
+export interface ExperienceWay {
+  name: string;
+  description: string;
+  dailyLimit: string;
+  xpPerAction: string;
+}
+
+export interface ExperienceWays {
+  review: ExperienceWay;
+  smartChallenge: ExperienceWay;
+  wrongWordChallenge: ExperienceWay;
+  newWord: ExperienceWay;
+  contribution: ExperienceWay;
+  dailyCheckin: ExperienceWay;
+  dailyCards: ExperienceWay;
+  studyTime: ExperienceWay;
+}
+
 export class ExperienceService {
   private static async getAuthToken(): Promise<string | null> {
     try {
-      return await AsyncStorage.getItem('authToken');
+      const userData = await AsyncStorage.getItem('userData');
+      if (userData) {
+        const parsed = JSON.parse(userData);
+        return parsed.token || null;
+      }
+      return null;
     } catch (error) {
       console.error('获取认证token失败:', error);
       return null;
@@ -65,6 +89,235 @@ export class ExperienceService {
       }
     } catch (error) {
       console.error('❌ 获取经验值信息失败:', error);
+      return null;
+    }
+  }
+
+  /**
+   * 获取经验值获取方式说明
+   */
+  static async getExperienceWays(): Promise<ExperienceWays | null> {
+    try {
+      const token = await this.getAuthToken();
+      if (!token) {
+        console.log('⚠️ 未找到认证token');
+        return null;
+      }
+
+      const response = await fetch(`${API_BASE_URL}/experience/ways`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        console.warn('⚠️ 获取经验值获取方式失败:', response.status);
+        return null;
+      }
+
+      const result = await response.json();
+      if (result.success && result.data) {
+        console.log('✅ 获取经验值获取方式成功:', result.data);
+        return result.data;
+      } else {
+        console.warn('⚠️ 经验值获取方式格式错误');
+        return null;
+      }
+    } catch (error) {
+      console.error('❌ 获取经验值获取方式失败:', error);
+      return null;
+    }
+  }
+
+  /**
+   * 复习单词获得经验值
+   */
+  static async addReviewExperience(isCorrect: boolean = true): Promise<ExperienceGainResult | null> {
+    try {
+      const token = await this.getAuthToken();
+      if (!token) {
+        console.log('⚠️ 未找到认证token');
+        return null;
+      }
+
+      const response = await fetch(`${API_BASE_URL}/experience/review`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ isCorrect }),
+      });
+
+      if (!response.ok) {
+        console.warn('⚠️ 复习单词经验值添加失败:', response.status);
+        return null;
+      }
+
+      const result = await response.json();
+      if (result.success) {
+        console.log('✅ 复习单词经验值添加成功:', result.data);
+        return result.data;
+      } else {
+        console.warn('⚠️ 复习单词经验值添加失败:', result.message);
+        return null;
+      }
+    } catch (error) {
+      console.error('❌ 复习单词经验值添加失败:', error);
+      return null;
+    }
+  }
+
+  /**
+   * 智能挑战获得经验值
+   */
+  static async addSmartChallengeExperience(): Promise<ExperienceGainResult | null> {
+    try {
+      const token = await this.getAuthToken();
+      if (!token) {
+        console.log('⚠️ 未找到认证token');
+        return null;
+      }
+
+      const response = await fetch(`${API_BASE_URL}/experience/smart-challenge`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        console.warn('⚠️ 智能挑战经验值添加失败:', response.status);
+        return null;
+      }
+
+      const result = await response.json();
+      if (result.success) {
+        console.log('✅ 智能挑战经验值添加成功:', result.data);
+        return result.data;
+      } else {
+        console.warn('⚠️ 智能挑战经验值添加失败:', result.message);
+        return null;
+      }
+    } catch (error) {
+      console.error('❌ 智能挑战经验值添加失败:', error);
+      return null;
+    }
+  }
+
+  /**
+   * 错词挑战获得经验值
+   */
+  static async addWrongWordChallengeExperience(): Promise<ExperienceGainResult | null> {
+    try {
+      const token = await this.getAuthToken();
+      if (!token) {
+        console.log('⚠️ 未找到认证token');
+        return null;
+      }
+
+      const response = await fetch(`${API_BASE_URL}/experience/wrong-word-challenge`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        console.warn('⚠️ 错词挑战经验值添加失败:', response.status);
+        return null;
+      }
+
+      const result = await response.json();
+      if (result.success) {
+        console.log('✅ 错词挑战经验值添加成功:', result.data);
+        return result.data;
+      } else {
+        console.warn('⚠️ 错词挑战经验值添加失败:', result.message);
+        return null;
+      }
+    } catch (error) {
+      console.error('❌ 错词挑战经验值添加失败:', error);
+      return null;
+    }
+  }
+
+  /**
+   * 收集新单词获得经验值
+   */
+  static async addNewWordExperience(): Promise<ExperienceGainResult | null> {
+    try {
+      const token = await this.getAuthToken();
+      if (!token) {
+        console.log('⚠️ 未找到认证token');
+        return null;
+      }
+
+      const response = await fetch(`${API_BASE_URL}/experience/new-word`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        console.warn('⚠️ 收集新单词经验值添加失败:', response.status);
+        return null;
+      }
+
+      const result = await response.json();
+      if (result.success) {
+        console.log('✅ 收集新单词经验值添加成功:', result.data);
+        return result.data;
+      } else {
+        console.warn('⚠️ 收集新单词经验值添加失败:', result.message);
+        return null;
+      }
+    } catch (error) {
+      console.error('❌ 收集新单词经验值添加失败:', error);
+      return null;
+    }
+  }
+
+  /**
+   * 贡献新词获得经验值
+   */
+  static async addContributionExperience(): Promise<ExperienceGainResult | null> {
+    try {
+      const token = await this.getAuthToken();
+      if (!token) {
+        console.log('⚠️ 未找到认证token');
+        return null;
+      }
+
+      const response = await fetch(`${API_BASE_URL}/experience/contribution`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        console.warn('⚠️ 贡献新词经验值添加失败:', response.status);
+        return null;
+      }
+
+      const result = await response.json();
+      if (result.success) {
+        console.log('✅ 贡献新词经验值添加成功:', result.data);
+        return result.data;
+      } else {
+        console.warn('⚠️ 贡献新词经验值添加失败:', result.message);
+        return null;
+      }
+    } catch (error) {
+      console.error('❌ 贡献新词经验值添加失败:', error);
       return null;
     }
   }
@@ -211,5 +464,36 @@ export class ExperienceService {
       '专家', '大师', '传奇', '神话', '传说'
     ];
     return levels[Math.min(level - 1, levels.length - 1)];
+  }
+
+  /**
+   * 格式化经验值显示
+   */
+  static formatExperience(exp: number): string {
+    if (exp >= 1000000) {
+      return `${(exp / 1000000).toFixed(1)}M`;
+    } else if (exp >= 1000) {
+      return `${(exp / 1000).toFixed(1)}K`;
+    }
+    return exp.toString();
+  }
+
+  /**
+   * 获取经验值颜色
+   */
+  static getExperienceColor(level: number): string {
+    const colors = [
+      '#6B7280', // 灰色 - 初学者
+      '#3B82F6', // 蓝色 - 入门者
+      '#10B981', // 绿色 - 学习者
+      '#F59E0B', // 黄色 - 进阶者
+      '#EF4444', // 红色 - 熟练者
+      '#8B5CF6', // 紫色 - 专家
+      '#EC4899', // 粉色 - 大师
+      '#F97316', // 橙色 - 传奇
+      '#06B6D4', // 青色 - 神话
+      '#84CC16'  // 青绿色 - 传说
+    ];
+    return colors[Math.min(level - 1, colors.length - 1)];
   }
 } 
