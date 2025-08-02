@@ -283,47 +283,56 @@ const ReviewIntroScreen = () => {
           // 清除参数
           await AsyncStorage.removeItem('navigationParams');
           
-          // 统一获取用户数据（只获取一次）
-          const userData = await getCurrentUserData();
-          if (!userData) {
-            experienceLogger.warn('无法获取用户数据，跳过经验值动画');
-            setIsSyncingExperience(false);
-            setHasCheckedExperience(true);
-            return;
-          }
+          // 设置经验值增益标记
+          await AsyncStorage.setItem('experienceGain', JSON.stringify(params.experienceGained));
           
-          const { currentExperience, userStats: updatedStats } = userData;
-          
-          // 确保 userStats 已加载后再开始动画
-          if (currentExperience >= 0) {
-            experienceLogger.info('开始经验值动画', {
-              currentExperience: currentExperience,
-              gainedExperience: params.experienceGained,
-              targetExperience: currentExperience + params.experienceGained
-            });
-            
-            // 设置经验值增益标记
-            await AsyncStorage.setItem('experienceGain', JSON.stringify(params.experienceGained));
-            
-            // 直接更新用户状态，避免后续重复读取
-            setUserStats(updatedStats);
-            setAnimatedExperience(currentExperience);
-            
-            // 开始动画，传入当前经验值
-            setExperienceGained(params.experienceGained);
-            setShowExperienceAnimation(true);
-            startExperienceAnimationWithCurrentExp(params.experienceGained, currentExperience);
-            
-            // 动画完成后统一清理，不再调用 loadUserStats
-            setTimeout(async () => {
-              // 清理经验值增益标记
-              await AsyncStorage.removeItem('experienceGain');
+          // 延迟一点时间确保后端数据已更新，然后获取最新数据
+          setTimeout(async () => {
+            try {
+              // 统一获取用户数据（只获取一次）
+              const userData = await getCurrentUserData();
+              if (!userData) {
+                experienceLogger.warn('无法获取用户数据，跳过经验值动画');
+                setIsSyncingExperience(false);
+                setHasCheckedExperience(true);
+                return;
+              }
+              
+              const { currentExperience, userStats: updatedStats } = userData;
+              
+              // 确保 userStats 已加载后再开始动画
+              if (currentExperience >= 0) {
+                experienceLogger.info('开始经验值动画', {
+                  currentExperience: currentExperience,
+                  gainedExperience: params.experienceGained,
+                  targetExperience: currentExperience + params.experienceGained
+                });
+                
+                // 直接更新用户状态，避免后续重复读取
+                setUserStats(updatedStats);
+                setAnimatedExperience(currentExperience);
+                
+                // 开始动画，传入当前经验值
+                setExperienceGained(params.experienceGained);
+                setShowExperienceAnimation(true);
+                startExperienceAnimationWithCurrentExp(params.experienceGained, currentExperience);
+                
+                // 动画完成后统一清理
+                setTimeout(async () => {
+                  // 清理经验值增益标记
+                  await AsyncStorage.removeItem('experienceGain');
+                  setIsSyncingExperience(false);
+                }, 3000);
+              } else {
+                experienceLogger.warn('currentExperience < 0，跳过动画', { currentExperience });
+                setIsSyncingExperience(false);
+              }
+            } catch (error) {
+              experienceLogger.error('处理经验值动画失败', error);
               setIsSyncingExperience(false);
-            }, 3000);
-          } else {
-            experienceLogger.warn('currentExperience < 0，跳过动画', { currentExperience });
-            setIsSyncingExperience(false);
-          }
+            }
+          }, 1000); // 延迟1秒确保后端数据已更新
+          
         } else {
           experienceLogger.info('不满足经验值动画条件', {
             showExperienceAnimation: params.showExperienceAnimation,
@@ -392,16 +401,29 @@ const ReviewIntroScreen = () => {
               
               if (gainData) {
                 const gainedExp = JSON.parse(gainData);
-                finalExperience += gainedExp;
-                experienceLogger.info('检测到经验值增益，使用更新后的经验值', {
-                  originalExp: currentExperience,
-                  gainedExp,
-                  finalExperience
-                });
+                // 在经验值动画场景下，我们需要计算动画的起始点
+                // 如果后端还没有更新经验值，我们使用当前经验值作为动画起点
+                // 如果后端已经更新了经验值，我们使用更新后的经验值减去增益值作为动画起点
+                if (currentExperience >= gainedExp) {
+                  // 后端已经更新了经验值，动画起点应该是 currentExperience - gainedExp
+                  finalExperience = currentExperience - gainedExp;
+                  experienceLogger.info('后端已更新经验值，计算动画起点', {
+                    backendExp: currentExperience,
+                    gainedExp,
+                    animationStartExp: finalExperience
+                  });
+                } else {
+                  // 后端还没有更新经验值，使用当前经验值作为动画起点
+                  finalExperience = currentExperience;
+                  experienceLogger.info('后端未更新经验值，使用当前经验值作为动画起点', {
+                    currentExp: currentExperience,
+                    gainedExp
+                  });
+                }
               }
               
               const updatedStats = {
-                experience: finalExperience,
+                experience: currentExperience, // 使用后端返回的最新经验值
                 level: result.data.level || 1,
                 collectedWords: vocabulary?.length || 0,
                 contributedWords: result.data.contributedWords || 0,
@@ -413,7 +435,7 @@ const ReviewIntroScreen = () => {
               await AsyncStorage.setItem('userStats', JSON.stringify(updatedStats));
               
               return {
-                currentExperience: finalExperience,
+                currentExperience: finalExperience, // 返回动画起点经验值
                 userStats: updatedStats
               };
             }
