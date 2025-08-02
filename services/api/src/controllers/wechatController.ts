@@ -60,10 +60,10 @@ export class WechatController {
         // 为 Mock 模式生成唯一用户名
         let username: string;
         if (wechatResult.openid.startsWith('mock_')) {
-          // Mock 模式：使用时间戳生成唯一用户名
-          const timestamp = Date.now();
-          const randomSuffix = Math.random().toString(36).substring(2, 6);
-          username = `wechat_mock_${timestamp}_${randomSuffix}`;
+          // Mock 模式：生成短用户名（限制在20字符内）
+          const timestamp = Date.now().toString().slice(-6); // 取后6位
+          const randomSuffix = Math.random().toString(36).substring(2, 4); // 取2位
+          username = `w${timestamp}${randomSuffix}`; // 格式: w123456ab
         } else {
           // 真实模式：使用 openid 前8位
           username = `wechat_${wechatResult.openid.substring(0, 8)}`;
