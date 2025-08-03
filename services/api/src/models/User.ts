@@ -82,7 +82,7 @@ export interface IUser extends Document {
   learningStats: IUserLearningStats;
   contributedWords: number;
   settings: IUserSettings;
-  subscription?: IUserSubscription;
+  subscription: IUserSubscription;
   createdAt: Date;
   updatedAt: Date;
   // === 实例方法声明 ===
