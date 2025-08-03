@@ -1,6 +1,6 @@
 /**
  * URL处理工具
- * 确保头像URL使用正确的生产环境地址
+ * 强制使用生产环境URL，确保开发和生产环境一致
  */
 
 /**
@@ -18,18 +18,15 @@ export const normalizeAvatarUrl = (url: string | undefined): string | undefined 
 };
 
 /**
- * 获取API基础URL
+ * 获取API基础URL - 强制使用生产环境URL
  */
 export const getApiBaseUrl = (): string => {
+  // 优先使用环境变量
   let baseUrl = process.env.API_BASE_URL;
   
-  // 如果没有设置API_BASE_URL，根据环境判断
+  // 如果没有设置API_BASE_URL，强制使用生产环境URL
   if (!baseUrl) {
-    if (process.env.NODE_ENV === 'production') {
-      baseUrl = 'https://dramawordv2.onrender.com';
-    } else {
-      baseUrl = `http://localhost:${process.env.PORT || 3001}`;
-    }
+    baseUrl = 'https://dramawordv2.onrender.com';
   }
   
   return baseUrl;
