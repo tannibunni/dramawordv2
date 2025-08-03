@@ -37,7 +37,8 @@ export class AppleController {
       // 查找或创建用户
       let user = await User.findOne({ 'auth.appleId': appleId });
       if (!user) {
-        user = new User({
+        // 创建新用户
+        const userData = {
           username: `apple_${appleId.slice(0, 8)}`,
           nickname,
           email,
@@ -56,21 +57,36 @@ export class AppleController {
             expiryDate: new Date(Date.now() + 100 * 365 * 24 * 60 * 60 * 1000), // 100年后过期
             autoRenew: false
           }
-        });
+        };
+        
+        user = new User(userData);
         await user.save();
         logger.info(`创建新Apple用户: appleId=${appleId}, nickname=${nickname}`);
       } else {
-        // 更新现有用户信息
+        // 更新现有用户信息 - 使用 findOneAndUpdate 避免并行保存冲突
+        const updateData: any = {
+          'auth.lastLoginAt': new Date(),
+          'auth.appleEmail': email,
+          'auth.appleFullName': fullName
+        };
+        
         if (nickname !== 'Apple用户') {
-          user.nickname = nickname;
+          updateData.nickname = nickname;
         }
         if (email && email !== user.email) {
-          user.email = email;
+          updateData.email = email;
         }
-        user.auth.appleEmail = email;
-        user.auth.appleFullName = fullName;
-        user.auth.lastLoginAt = new Date();
-        await user.save();
+        
+        user = await User.findByIdAndUpdate(
+          user._id,
+          { $set: updateData },
+          { new: true }
+        );
+        
+        if (!user) {
+          throw new Error('用户更新失败');
+        }
+        
         logger.info(`更新Apple用户信息: appleId=${appleId}, nickname=${nickname}`);
       }
 

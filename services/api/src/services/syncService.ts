@@ -280,7 +280,12 @@ export class SyncService {
       }
 
       logger.info(`💾 保存学习记录到数据库...`);
-      await userLearningRecord.save();
+      // 使用 findOneAndUpdate 避免并行保存冲突
+      await UserLearningRecord.findByIdAndUpdate(
+        userLearningRecord._id,
+        { $set: { records: userLearningRecord.records } },
+        { new: true }
+      );
       logger.info(`✅ 学习记录保存成功，总记录数: ${userLearningRecord.records.length}`);
 
       if (conflicts.length > 0) {
@@ -320,7 +325,12 @@ export class SyncService {
           definition: localItem.definition,
           timestamp: localItem.timestamp
         });
-        await newHistory.save();
+        // 使用 findOneAndUpdate 避免并行保存冲突
+        await SearchHistory.findByIdAndUpdate(
+          newHistory._id,
+          { $set: newHistory.toObject() },
+          { new: true }
+        );
         syncedHistory.push(newHistory);
       }
     }
@@ -347,7 +357,12 @@ export class SyncService {
       };
     }
     
-    await user.save();
+    // 使用 findOneAndUpdate 避免并行保存冲突
+    await User.findByIdAndUpdate(
+      user._id,
+      { $set: { settings: user.settings } },
+      { new: true }
+    );
 
     return mergedSettings;
   }
@@ -486,7 +501,17 @@ export class SyncService {
       } else {
         userLearningRecord.averageMastery = 0;
       }
-      await userLearningRecord.save();
+      // 使用 findOneAndUpdate 避免并行保存冲突
+      await UserLearningRecord.findByIdAndUpdate(
+        userLearningRecord._id,
+        { 
+          $set: { 
+            records: userLearningRecord.records,
+            averageMastery: userLearningRecord.averageMastery
+          } 
+        },
+        { new: true }
+      );
 
       return {
         success: true,

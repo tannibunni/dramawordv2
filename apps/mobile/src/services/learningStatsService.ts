@@ -66,7 +66,7 @@ export class LearningStatsService {
       };
       
       await AsyncStorage.setItem('userData', JSON.stringify(tempUserData));
-      await AsyncStorage.setItem('loginType', 'guest');
+      await AsyncStorage.setItem('loginType', JSON.stringify('guest'));
       
       console.log('✅ 临时游客ID已生成:', guestId);
       return guestId;

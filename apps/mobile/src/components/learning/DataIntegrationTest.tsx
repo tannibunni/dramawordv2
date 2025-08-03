@@ -62,7 +62,7 @@ export const DataIntegrationTest: React.FC = () => {
       };
       
       await AsyncStorage.setItem('userData', JSON.stringify(userData));
-      await AsyncStorage.setItem('loginType', 'guest');
+              await AsyncStorage.setItem('loginType', JSON.stringify('guest'));
       
       setUserInfo(userData);
       addResult(`💾 用户信息已保存到本地存储`);
