@@ -218,4 +218,41 @@ export class UserService {
       return null;
     }
   }
+
+  // 注销账户
+  async deleteAccount(token: string, confirmText: string): Promise<{ success: boolean; data?: any; error?: string }> {
+    try {
+      console.log('🗑️ 开始注销账户...');
+      
+      const response = await axios.delete(`${API_BASE_URL}/users/account`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        data: {
+          confirmText
+        }
+      });
+
+      if (response.data.success) {
+        console.log('✅ 账户注销成功');
+        return {
+          success: true,
+          data: response.data.data
+        };
+      } else {
+        throw new Error(response.data.message || '注销失败');
+      }
+    } catch (error) {
+      console.error('❌ 注销账户失败:', error);
+      const errorMessage = errorHandler.handleError(error, { confirmText }, {
+        type: ErrorType.NETWORK,
+        userMessage: '注销账户失败，请重试'
+      });
+      return {
+        success: false,
+        error: errorMessage
+      };
+    }
+  }
 } 

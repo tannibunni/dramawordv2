@@ -580,18 +580,52 @@ export class UserController {
   static async deleteAccount(req: Request, res: Response) {
     try {
       const userId = (req as any).user.id;
-      const { password } = req.body; // 可以添加密码验证
+      const { confirmText } = req.body; // 确认文本验证
+
+      // 验证确认文本
+      if (confirmText !== 'DELETE') {
+        return res.status(400).json({
+          success: false,
+          message: '请输入正确的确认文本'
+        });
+      }
+
+      // 查找用户
+      const user = await User.findById(userId);
+      if (!user) {
+        return res.status(404).json({
+          success: false,
+          message: '用户不存在'
+        });
+      }
+
+      logger.info(`🗑️ 开始删除用户账号: ${userId}, username: ${user.username}`);
 
       // 删除用户相关数据
-      await User.findByIdAndDelete(userId);
-      await UserLearningRecord.findOneAndDelete({ userId });
-      await SearchHistory.deleteMany({ userId });
+      const deletePromises = [
+        // 删除用户基本信息
+        User.findByIdAndDelete(userId),
+        // 删除用户学习记录
+        UserLearningRecord.deleteMany({ userId }),
+        // 删除搜索历史
+        SearchHistory.deleteMany({ userId }),
+        // 删除用户词汇
+        UserVocabulary.deleteMany({ userId }),
+        // 删除用户剧集列表
+        UserShowList.deleteMany({ userId })
+      ];
 
-      logger.info(`用户账号删除成功: ${userId}`);
+      await Promise.all(deletePromises);
+
+      logger.info(`✅ 用户账号删除成功: ${userId}, username: ${user.username}`);
 
       res.json({
         success: true,
-        message: '账号删除成功'
+        message: '账号删除成功',
+        data: {
+          deletedUserId: userId,
+          deletedUsername: user.username
+        }
       });
     } catch (error) {
       logger.error('删除账号失败:', error);

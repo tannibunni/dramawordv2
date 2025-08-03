@@ -17,6 +17,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { EditProfileModal } from '../../components/profile/EditProfileModal';
 import AppLanguageSelector from '../../components/profile/AppLanguageSelector';
 import { FeedbackModal } from '../../components/profile/FeedbackModal';
+import { DeleteAccountModal } from '../../components/profile/DeleteAccountModal';
 
 import { UserService } from '../../services/userService';
 import { useVocabulary } from '../../context/VocabularyContext';
@@ -67,6 +68,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   const [clearingCache, setClearingCache] = useState(false);
   const [aboutModalVisible, setAboutModalVisible] = useState(false);
   const [feedbackModalVisible, setFeedbackModalVisible] = useState(false);
+  const [deleteAccountModalVisible, setDeleteAccountModalVisible] = useState(false);
 
   const { vocabulary, clearVocabulary } = useVocabulary();
   const { shows, clearShows } = useShowList();
@@ -354,6 +356,19 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
         </View>
         <Ionicons name="chevron-forward" size={20} color={colors.neutral[500]} />
       </TouchableOpacity>
+
+      {/* 注销账户 - 仅对已登录用户显示 */}
+      {isAuthenticated && loginType !== 'guest' && (
+        <TouchableOpacity style={styles.settingItem} onPress={handleDeleteAccount}>
+          <View style={styles.settingLeft}>
+            <Ionicons name="person-remove-outline" size={24} color={colors.error[500]} />
+            <Text style={[styles.settingText, { color: colors.error[500] }]}>
+              {appLanguage === 'zh-CN' ? '注销账户' : 'Delete Account'}
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color={colors.neutral[500]} />
+        </TouchableOpacity>
+      )}
     </View>
   );
 
@@ -583,6 +598,22 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
     navigate('Subscription');
   };
 
+  const handleDeleteAccount = () => {
+    setDeleteAccountModalVisible(true);
+  };
+
+  const handleAccountDeleted = () => {
+    // 清除所有本地数据
+    clearVocabulary();
+    clearShows();
+    
+    // 退出登录
+    authLogout();
+    
+    // 显示成功消息
+    Alert.alert('账户已注销', '您的账户已成功删除，感谢您使用剧词记！');
+  };
+
   const renderSubscriptionEntry = () => (
     // 暂时隐藏订阅入口
     null
@@ -632,6 +663,13 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
       <FeedbackModal
         visible={feedbackModalVisible}
         onClose={() => setFeedbackModalVisible(false)}
+      />
+
+      {/* 注销账户模态框 */}
+      <DeleteAccountModal
+        visible={deleteAccountModalVisible}
+        onClose={() => setDeleteAccountModalVisible(false)}
+        onAccountDeleted={handleAccountDeleted}
       />
       
 
