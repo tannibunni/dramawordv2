@@ -36,6 +36,7 @@ import { LearningStatsService } from '../../services/learningStatsService';
 import { unifiedSyncService } from '../../services/unifiedSyncService';
 import { cacheService, CACHE_KEYS } from '../../services/cacheService';
 import { getAboutUsContent } from '../../utils/aboutUsContent';
+import { normalizeImageUrl } from '../../utils/imageUrlHelper';
 
 
 interface UserStats {
@@ -91,8 +92,9 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
 
     // 如果用户有自定义头像，优先使用
     if (user?.avatar && user.avatar !== '') {
-      console.log('🔍 使用用户自定义头像:', user.avatar);
-      return { uri: user.avatar };
+      const normalizedAvatarUrl = normalizeImageUrl(user.avatar);
+      console.log('🔍 使用用户自定义头像:', normalizedAvatarUrl);
+      return { uri: normalizedAvatarUrl };
     }
 
     if (!user || !loginType) {
@@ -364,7 +366,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
     
     // 更新AuthContext中的用户数据
     if (updatedUser && user) {
-      // 合并更新后的数据
+      // 直接使用更新后的用户数据，不要嵌套
       const mergedUser = {
         ...user,
         ...updatedUser
