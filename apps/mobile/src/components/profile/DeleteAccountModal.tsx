@@ -32,8 +32,8 @@ export const DeleteAccountModal: React.FC<DeleteAccountModalProps> = ({
   const userService = UserService.getInstance();
 
   const handleDeleteAccount = async () => {
-    if (confirmText !== 'DELETE') {
-      Alert.alert('确认文本错误', '请输入正确的确认文本：DELETE');
+    if (confirmText !== '删除') {
+      Alert.alert('确认文本错误', '请输入正确的确认文本：删除');
       return;
     }
 
@@ -150,15 +150,15 @@ export const DeleteAccountModal: React.FC<DeleteAccountModalProps> = ({
           {/* 确认输入 */}
           <View style={styles.confirmSection}>
             <Text style={styles.confirmLabel}>
-              请输入 "DELETE" 确认注销账户：
+              请输入 "删除" 确认注销账户：
             </Text>
             <TextInput
               style={styles.confirmInput}
               value={confirmText}
               onChangeText={setConfirmText}
-              placeholder="输入 DELETE"
+              placeholder="输入 删除"
               placeholderTextColor={colors.text.tertiary}
-              autoCapitalize="characters"
+              autoCapitalize="none"
               autoCorrect={false}
             />
           </View>
@@ -167,10 +167,10 @@ export const DeleteAccountModal: React.FC<DeleteAccountModalProps> = ({
           <TouchableOpacity
             style={[
               styles.deleteButton,
-              (confirmText !== 'DELETE' || isDeleting) && styles.deleteButtonDisabled,
+              (confirmText !== '删除' || isDeleting) && styles.deleteButtonDisabled,
             ]}
             onPress={handleDeleteAccount}
-            disabled={confirmText !== 'DELETE' || isDeleting}
+            disabled={confirmText !== '删除' || isDeleting}
           >
             {isDeleting ? (
               <ActivityIndicator size="small" color={colors.text.inverse} />

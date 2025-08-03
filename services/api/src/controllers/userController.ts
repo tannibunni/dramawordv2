@@ -585,7 +585,7 @@ export class UserController {
       const { confirmText } = req.body; // 确认文本验证
 
       // 验证确认文本
-      if (confirmText !== 'DELETE') {
+      if (confirmText !== '删除') {
         return res.status(400).json({
           success: false,
           message: '请输入正确的确认文本'
