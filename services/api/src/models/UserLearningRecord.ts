@@ -205,7 +205,18 @@ UserLearningRecordSchema.methods.addOrUpdateWord = function(word: string, initia
   }
   
   this.updateAverageMastery();
-  return this.save();
+  // 使用 findOneAndUpdate 避免并行保存冲突
+  return UserLearningRecord.findByIdAndUpdate(
+    this._id,
+    { 
+      $set: { 
+        records: this.records,
+        totalWords: this.totalWords,
+        averageMastery: this.averageMastery
+      }
+    },
+    { new: true }
+  );
 };
 
 // 方法：更新复习结果
@@ -264,7 +275,19 @@ UserLearningRecordSchema.methods.updateReviewResult = function(
   this.lastStudyDate = new Date();
   this.updateAverageMastery();
   
-  return this.save();
+  // 使用 findOneAndUpdate 避免并行保存冲突
+  return UserLearningRecord.findByIdAndUpdate(
+    this._id,
+    { 
+      $set: { 
+        records: this.records,
+        totalReviews: this.totalReviews,
+        lastStudyDate: this.lastStudyDate,
+        averageMastery: this.averageMastery
+      }
+    },
+    { new: true }
+  );
 };
 
 // 方法：更新平均掌握度

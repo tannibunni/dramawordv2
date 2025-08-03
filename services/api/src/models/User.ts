@@ -480,7 +480,7 @@ UserSchema.methods.addExperienceForReview = function(isCorrect = true) {
   const dailyLimit = 90; // 每日上限90点，允许更多复习
   if (this.learningStats.dailyReviewXP >= dailyLimit) {
     console.log('⚠️ 今日复习XP已达上限90点');
-    return this.save();
+    return Promise.resolve(this);
   }
   
   // 根据是否正确给予不同经验值
@@ -516,7 +516,7 @@ UserSchema.methods.addExperienceForDailyCards = function() {
   // 检查是否已完成今日任务
   if (this.learningStats.completedDailyCards) {
     console.log('⚠️ 今日词卡任务已完成');
-    return this.save();
+    return Promise.resolve(this);
   }
   
   this.learningStats.completedDailyCards = true;
@@ -536,7 +536,7 @@ UserSchema.methods.addExperienceForStudyTime = function(minutes: number) {
   
   if (minutesToAdd <= 0) {
     console.log('⚠️ 今日学习时长XP已达上限');
-    return this.save();
+    return Promise.resolve(this);
   }
   
   const xpToAdd = Math.floor(minutesToAdd / 10) * 3;
@@ -547,7 +547,7 @@ UserSchema.methods.addExperienceForStudyTime = function(minutes: number) {
     return this.addExperience(xpToAdd, `学习时长奖励 (${minutesToAdd}分钟)`);
   }
   
-  return this.save();
+  return Promise.resolve(this);
 };
 
 // 方法：贡献新词获得经验值
