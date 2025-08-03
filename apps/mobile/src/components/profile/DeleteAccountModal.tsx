@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../constants/colors';
-import { userService } from '../../services/userService';
+import { UserService } from '../../services/userService';
 import { useAuth } from '../../context/AuthContext';
 
 interface DeleteAccountModalProps {
@@ -29,6 +29,7 @@ export const DeleteAccountModal: React.FC<DeleteAccountModalProps> = ({
   const [confirmText, setConfirmText] = useState('');
   const [isDeleting, setIsDeleting] = useState(false);
   const { getAuthToken } = useAuth();
+  const userService = UserService.getInstance();
 
   const handleDeleteAccount = async () => {
     if (confirmText !== 'DELETE') {
