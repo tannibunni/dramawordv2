@@ -12,6 +12,16 @@ interface UserInfo {
   loginType?: 'wechat' | 'apple' | 'phone' | 'guest';
   createdAt?: string;
   updatedAt?: string;
+  learningStats?: {
+    level?: number;
+    experience?: number;
+    totalWords?: number;
+    masteredWords?: number;
+    learningDays?: number;
+    currentStreak?: number;
+    totalReviews?: number;
+    accuracy?: number;
+  };
 }
 
 interface AuthContextType {

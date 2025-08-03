@@ -136,6 +136,37 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
     }
   };
 
+  // 获取用户等级和经验信息
+  const getUserLevelInfo = () => {
+    if (!user) {
+      return {
+        level: 1,
+        experience: 0,
+        displayText: appLanguage === 'zh-CN' ? '等级 1 (0 XP)' : 'Level 1 (0 XP)'
+      };
+    }
+
+    // 从用户数据中获取学习统计信息
+    const learningStats = user.learningStats || {};
+    const level = learningStats.level || 1;
+    const experience = learningStats.experience || 0;
+
+    // 根据语言返回不同的显示文本
+    if (appLanguage === 'zh-CN') {
+      return {
+        level,
+        experience,
+        displayText: `等级 ${level} (${experience} XP)`
+      };
+    } else {
+      return {
+        level,
+        experience,
+        displayText: `Level ${level} (${experience} XP)`
+      };
+    }
+  };
+
   // 模拟用户数据（当真实数据未加载时使用）
   const defaultUserData = {
     nickname: '学习达人',
@@ -206,6 +237,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   const renderUserInfo = () => {
     // 当前版本使用自动生成的游客ID，无需登录按钮
     const isGuest = !isAuthenticated || !user || loginType === 'guest';
+    const levelInfo = getUserLevelInfo();
     
     return (
       <View style={styles.userSection}>
@@ -217,7 +249,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
           />
           <View style={styles.userDetails}>
             <Text style={styles.userName}>{getUserNickname()}</Text>
-            <Text style={styles.userLevel}>{t('intermediate_learner', appLanguage)}</Text>
+            <Text style={styles.userLevel}>{levelInfo.displayText}</Text>
             <Text style={styles.userEmail}>{user?.email || 'user@example.com'}</Text>
             
             {/* 登录/退出登录按钮 - 已恢复 */}
