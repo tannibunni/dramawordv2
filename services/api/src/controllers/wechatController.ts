@@ -3,6 +3,7 @@ import jwt from 'jsonwebtoken';
 import { User, IUser } from '../models/User';
 import { WechatService } from '../services/wechatService';
 import { logger } from '../utils/logger';
+import { normalizeAvatarUrl } from '../utils/urlHelper';
 
 // JWT密钥
 const JWT_SECRET = process.env.JWT_SECRET || 'dramaword_jwt_secret';
@@ -149,6 +150,9 @@ export class WechatController {
         { expiresIn: '7d' }
       );
 
+      // 确保头像URL使用正确的生产环境地址
+      const avatarUrl = normalizeAvatarUrl(user.avatar);
+
       return res.json({
         success: true,
         message: '微信登录成功',
@@ -159,7 +163,7 @@ export class WechatController {
             username: user.username,
             nickname: user.nickname,
             email: user.email,
-            avatar: user.avatar,
+            avatar: avatarUrl,
             loginType: user.auth.loginType,
             learningStats: user.learningStats,
             settings: user.settings,

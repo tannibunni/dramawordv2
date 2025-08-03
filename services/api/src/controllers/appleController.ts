@@ -3,6 +3,7 @@ import jwt from 'jsonwebtoken';
 import { User } from '../models/User';
 import { AppleService } from '../services/appleService';
 import { logger } from '../utils/logger';
+import { normalizeAvatarUrl } from '../utils/urlHelper';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'dramaword_jwt_secret';
 
@@ -109,6 +110,9 @@ export class AppleController {
         { expiresIn: '7d' }
       );
 
+      // 确保头像URL使用正确的生产环境地址
+      const avatarUrl = normalizeAvatarUrl(user.avatar);
+
       return res.json({
         success: true,
         message: 'Apple登录成功',
@@ -119,7 +123,7 @@ export class AppleController {
             username: user.username,
             nickname: user.nickname,
             email: user.email,
-            avatar: user.avatar,
+            avatar: avatarUrl,
             loginType: user.auth.loginType,
             learningStats: user.learningStats,
             settings: user.settings,

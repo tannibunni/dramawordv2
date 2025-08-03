@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
 import { User } from '../models/User';
 import { logger } from '../utils/logger';
+import { normalizeAvatarUrl } from '../utils/urlHelper';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'dramaword_jwt_secret';
 
@@ -169,6 +170,9 @@ export class AuthController {
         { expiresIn: '7d' }
       );
 
+      // 确保头像URL使用正确的生产环境地址
+      const avatarUrl = normalizeAvatarUrl(user.avatar);
+
       res.json({
         success: true,
         message: '手机号登录成功',
@@ -178,7 +182,7 @@ export class AuthController {
             id: user._id,
             username: user.username,
             nickname: user.nickname,
-            avatar: user.avatar,
+            avatar: avatarUrl,
             loginType: user.auth.loginType,
             learningStats: user.learningStats,
             settings: user.settings,

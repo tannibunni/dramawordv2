@@ -139,6 +139,9 @@ export class UserController {
 
       logger.info(`新用户注册成功: ${username} (${loginType})`);
 
+      // 确保头像URL使用正确的生产环境地址
+      const avatarUrl = normalizeAvatarUrl(user.avatar);
+
       res.status(201).json({
         success: true,
         message: '注册成功',
@@ -147,7 +150,7 @@ export class UserController {
             id: user._id,
             username: user.username,
             nickname: user.nickname,
-            avatar: user.avatar,
+            avatar: avatarUrl,
             level: user.learningStats.level,
             levelName: (user as any).levelName || '初学者',
             experience: user.learningStats.experience,
@@ -250,6 +253,9 @@ export class UserController {
 
       logger.info(`用户登录成功: ${user.username} (${loginType})`);
 
+      // 确保头像URL使用正确的生产环境地址
+      const avatarUrl = normalizeAvatarUrl(user.avatar);
+
       res.json({
         success: true,
         message: '登录成功',
@@ -258,7 +264,7 @@ export class UserController {
             id: user._id,
             username: user.username,
             nickname: user.nickname,
-            avatar: user.avatar,
+            avatar: avatarUrl,
             level: user.learningStats.level,
             levelName: (user as any).levelName,
             experience: user.learningStats.experience,
