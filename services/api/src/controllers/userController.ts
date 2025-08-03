@@ -4,6 +4,7 @@ import { UserLearningRecord } from '../models/UserLearningRecord';
 import { SearchHistory } from '../models/SearchHistory';
 import { generateToken } from '../middleware/auth';
 import { logger } from '../utils/logger';
+import { normalizeAvatarUrl, getApiBaseUrl } from '../utils/urlHelper';
 
 // 用户控制器类
 export class UserController {
@@ -291,6 +292,9 @@ export class UserController {
         });
       }
 
+      // 确保头像URL使用正确的生产环境地址
+      const avatarUrl = normalizeAvatarUrl(user.avatar);
+
       res.json({
         success: true,
         data: {
@@ -298,7 +302,7 @@ export class UserController {
             id: user._id,
             username: user.username,
             nickname: user.nickname,
-            avatar: user.avatar,
+            avatar: avatarUrl,
             email: user.email,
             level: user.learningStats.level,
             levelName: (user as any).levelName,
@@ -350,6 +354,9 @@ export class UserController {
 
       logger.info(`用户信息更新成功: ${user.username}`);
 
+      // 确保头像URL使用正确的生产环境地址
+      const avatarUrl = normalizeAvatarUrl(user.avatar);
+
       res.json({
         success: true,
         message: '用户信息更新成功',
@@ -358,7 +365,7 @@ export class UserController {
             id: user._id,
             username: user.username,
             nickname: user.nickname,
-            avatar: user.avatar,
+            avatar: avatarUrl,
             email: user.email
           }
         }
@@ -603,8 +610,8 @@ export class UserController {
         });
       }
 
-      // 生成头像URL - 使用完整的服务器URL
-      const baseUrl = process.env.API_BASE_URL || `http://localhost:${process.env.PORT || 3001}`;
+      // 生成头像URL - 使用工具函数获取正确的base URL
+      const baseUrl = getApiBaseUrl();
       const avatarUrl = `${baseUrl}/uploads/avatars/${file.filename}`;
 
       // 更新用户头像
