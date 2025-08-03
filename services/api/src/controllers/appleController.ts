@@ -23,30 +23,37 @@ export class AppleController {
       // 验证idToken
       const appleUser = await AppleService.verifyIdToken(idToken);
       const { sub: appleId } = appleUser;
-
-      // 构建用户昵称
+      
+      // 从Apple JWT中获取用户信息
+      const appleEmail = appleUser.email || email;
+      const appleFullName = fullName || {};
+      
+      // 构建用户昵称 - 优先使用Apple提供的真实姓名
       let nickname = 'Apple用户';
-      if (fullName && (fullName.givenName || fullName.familyName)) {
-        const givenName = fullName.givenName || '';
-        const familyName = fullName.familyName || '';
+      if (appleFullName && (appleFullName.givenName || appleFullName.familyName)) {
+        const givenName = appleFullName.givenName || '';
+        const familyName = appleFullName.familyName || '';
         nickname = `${givenName}${familyName}`.trim() || 'Apple用户';
-      } else if (email) {
-        nickname = email.split('@')[0];
+        logger.info(`🍎 使用Apple真实姓名: ${nickname}`);
+      } else if (appleEmail) {
+        // 如果没有姓名，使用邮箱前缀作为昵称
+        nickname = appleEmail.split('@')[0];
+        logger.info(`🍎 使用邮箱前缀作为昵称: ${nickname}`);
       }
 
       // 查找或创建用户
       let user = await User.findOne({ 'auth.appleId': appleId });
       if (!user) {
-        // 创建新用户
+        // 创建新用户 - 使用Apple ID的真实信息
         const userData = {
           username: `apple_${appleId.slice(0, 8)}`,
           nickname,
-          email,
+          email: appleEmail, // 使用Apple提供的邮箱
           auth: {
             loginType: 'apple',
             appleId,
-            appleEmail: email,
-            appleFullName: fullName,
+            appleEmail: appleEmail,
+            appleFullName: appleFullName,
             lastLoginAt: new Date(),
             isActive: true,
           },
@@ -61,20 +68,25 @@ export class AppleController {
         
         user = new User(userData);
         await user.save();
-        logger.info(`创建新Apple用户: appleId=${appleId}, nickname=${nickname}`);
+        logger.info(`🍎 创建新Apple用户: appleId=${appleId}, nickname=${nickname}, email=${appleEmail}`);
       } else {
-        // 更新现有用户信息 - 使用 findOneAndUpdate 避免并行保存冲突
+        // 更新现有用户信息 - 优先使用Apple ID的真实信息
         const updateData: any = {
           'auth.lastLoginAt': new Date(),
-          'auth.appleEmail': email,
-          'auth.appleFullName': fullName
+          'auth.appleEmail': appleEmail,
+          'auth.appleFullName': appleFullName
         };
         
-        if (nickname !== 'Apple用户') {
+        // 如果Apple提供了真实姓名，更新昵称
+        if (nickname !== 'Apple用户' && nickname !== user.nickname) {
           updateData.nickname = nickname;
+          logger.info(`🍎 更新用户昵称为Apple真实姓名: ${nickname}`);
         }
-        if (email && email !== user.email) {
-          updateData.email = email;
+        
+        // 如果Apple提供了邮箱，更新邮箱
+        if (appleEmail && appleEmail !== user.email) {
+          updateData.email = appleEmail;
+          logger.info(`🍎 更新用户邮箱为Apple邮箱: ${appleEmail}`);
         }
         
         user = await User.findByIdAndUpdate(
@@ -87,7 +99,7 @@ export class AppleController {
           throw new Error('用户更新失败');
         }
         
-        logger.info(`更新Apple用户信息: appleId=${appleId}, nickname=${nickname}`);
+        logger.info(`🍎 更新Apple用户信息: appleId=${appleId}, nickname=${nickname}, email=${appleEmail}`);
       }
 
       // 生成JWT
