@@ -1,8 +1,8 @@
 import { Request, Response } from 'express';
 import { User, IUser } from '../models/User';
 import { UserLearningRecord } from '../models/UserLearningRecord';
-import { UserVocabulary } from '../models/UserVocabulary';
-import { UserShowList } from '../models/UserShowList';
+import UserVocabulary from '../models/UserVocabulary';
+import UserShowList from '../models/UserShowList';
 import { SearchHistory } from '../models/SearchHistory';
 import { generateToken } from '../middleware/auth';
 import { logger } from '../utils/logger';
