@@ -88,22 +88,33 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
       isAuthenticated: isAuthenticated
     });
 
+    // 如果用户有自定义头像，优先使用
+    if (user?.avatar && user.avatar !== '') {
+      console.log('🔍 使用用户自定义头像:', user.avatar);
+      return { uri: user.avatar };
+    }
+
     if (!user || !loginType) {
       // 返回本地默认游客头像
+      console.log('🔍 使用默认游客头像');
       return require('../../../assets/images/guest-avatar.png');
     }
 
     // 根据登录类型返回不同的默认头像
     switch (loginType) {
       case 'wechat':
-        return 'https://via.placeholder.com/80/1AAD19/FFFFFF?text=WeChat';
+        console.log('🔍 使用微信头像');
+        return require('../../../assets/images/wechat-avatar.png');
       case 'apple':
-        return 'https://via.placeholder.com/80/000000/FFFFFF?text=Apple';
+        console.log('🔍 使用苹果头像');
+        return require('../../../assets/images/apple-avatar.png');
       case 'phone':
-        return 'https://via.placeholder.com/80/007AFF/FFFFFF?text=Phone';
+        console.log('🔍 使用手机头像');
+        return require('../../../assets/images/phone-avatar.png');
       case 'guest':
       default:
         // 返回本地默认游客头像
+        console.log('🔍 使用游客头像');
         return require('../../../assets/images/guest-avatar.png');
     }
   };
