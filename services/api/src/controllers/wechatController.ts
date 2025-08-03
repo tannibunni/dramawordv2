@@ -49,6 +49,8 @@ export class WechatController {
       logger.info(`💬 微信登录成功，获取到用户信息: openid=${wechatResult.openid}`);
       logger.info(`💬 用户昵称: ${wechatResult.userInfo.nickname}`);
       logger.info(`💬 用户头像: ${wechatResult.userInfo.headimgurl ? '已获取' : '未获取'}`);
+      logger.info(`💬 用户性别: ${wechatResult.userInfo.sex}`);
+      logger.info(`💬 用户地区: ${wechatResult.userInfo.country} ${wechatResult.userInfo.province} ${wechatResult.userInfo.city}`);
       
       // 查找或创建用户
       let user = await User.findOne({
@@ -56,7 +58,7 @@ export class WechatController {
       });
 
       if (!user) {
-        // 创建新用户
+        // 创建新用户 - 使用微信的真实信息
         // 为 Mock 模式生成唯一用户名
         let username: string;
         if (wechatResult.openid.startsWith('mock_')) {
@@ -69,9 +71,11 @@ export class WechatController {
           username = `wechat_${wechatResult.openid.substring(0, 8)}`;
         }
         
+        // 使用微信的真实昵称
         const nickname = wechatResult.userInfo.nickname || '微信用户';
         
         logger.info(`💬 创建新微信用户: username=${username}, nickname=${nickname}`);
+        logger.info(`💬 使用微信真实信息: nickname=${nickname}, avatar=${wechatResult.userInfo.headimgurl ? '已获取' : '未获取'}`);
         
         user = new User({
           username,
@@ -100,61 +104,51 @@ export class WechatController {
         });
 
         await user.save();
-        logger.info(`💬 新微信用户创建成功: openid=${wechatResult.openid}, nickname=${nickname}`);
+        logger.info(`💬 新微信用户创建成功: userId=${user._id}`);
       } else {
-        // 更新现有用户信息
-        const newNickname = wechatResult.userInfo.nickname || '微信用户';
-        const newAvatar = wechatResult.userInfo.headimgurl;
-        
-        logger.info(`💬 更新现有微信用户: openid=${wechatResult.openid}`);
-        logger.info(`💬 原昵称: ${user.nickname}, 新昵称: ${newNickname}`);
-        logger.info(`💬 头像更新: ${newAvatar ? '是' : '否'}`);
-        
-        // 准备更新数据
+        // 更新现有用户信息 - 优先使用微信的真实信息
         const updateData: any = {
+          'auth.lastLoginAt': new Date(),
           'auth.wechatNickname': wechatResult.userInfo.nickname,
           'auth.wechatAvatar': wechatResult.userInfo.headimgurl,
           'auth.wechatAccessToken': wechatResult.accessToken,
           'auth.wechatRefreshToken': wechatResult.refreshToken,
-          'auth.wechatTokenExpiresAt': new Date(Date.now() + wechatResult.expires_in * 1000),
-          'auth.lastLoginAt': new Date()
+          'auth.wechatTokenExpiresAt': new Date(Date.now() + wechatResult.expires_in * 1000)
         };
         
-        // 更新用户基本信息
-        if (newNickname !== user.nickname) {
-          updateData.nickname = newNickname;
-        }
-        if (newAvatar && newAvatar !== user.avatar) {
-          updateData.avatar = newAvatar;
+        // 如果微信提供了新的昵称，更新昵称
+        if (wechatResult.userInfo.nickname && wechatResult.userInfo.nickname !== user.nickname) {
+          updateData.nickname = wechatResult.userInfo.nickname;
+          logger.info(`💬 更新用户昵称为微信真实昵称: ${wechatResult.userInfo.nickname}`);
         }
         
-        if (wechatResult.unionid && !user.auth.wechatUnionId) {
-          updateData['auth.wechatUnionId'] = wechatResult.unionid;
+        // 如果微信提供了新的头像，更新头像
+        if (wechatResult.userInfo.headimgurl && wechatResult.userInfo.headimgurl !== user.avatar) {
+          updateData.avatar = wechatResult.userInfo.headimgurl;
+          logger.info(`💬 更新用户头像为微信头像: ${wechatResult.userInfo.headimgurl}`);
         }
-
-        // 使用 findOneAndUpdate 避免并行保存冲突
+        
+        // 使用 findByIdAndUpdate 避免并行保存冲突
         user = await User.findByIdAndUpdate(
           user._id,
           { $set: updateData },
           { new: true }
         );
-        logger.info(`💬 微信用户信息更新成功: openid=${wechatResult.openid}, nickname=${newNickname}`);
+        
+        if (!user) {
+          throw new Error('用户更新失败');
+        }
+        
+        logger.info(`💬 微信用户信息更新成功: userId=${user._id}, nickname=${user.nickname}`);
       }
 
-      // 生成JWT token
+      // 生成JWT
       const token = jwt.sign(
-        { 
-          userId: user._id,
-          username: user.username,
-          loginType: 'wechat'
-        },
+        { userId: user._id, username: user.username, loginType: 'wechat' },
         JWT_SECRET,
         { expiresIn: '7d' }
       );
 
-      logger.info(`💬 微信登录完成，生成JWT token: userId=${user._id}`);
-
-      // 返回用户信息和token
       return res.json({
         success: true,
         message: '微信登录成功',
@@ -164,20 +158,17 @@ export class WechatController {
             id: user._id,
             username: user.username,
             nickname: user.nickname,
+            email: user.email,
             avatar: user.avatar,
             loginType: user.auth.loginType,
             learningStats: user.learningStats,
-            settings: user.settings
-          }
-        }
+            settings: user.settings,
+          },
+        },
       });
-
     } catch (error) {
-      logger.error('💬 微信登录失败:', error);
-      return res.status(500).json({
-        success: false,
-        message: error instanceof Error ? error.message : '微信登录失败'
-      });
+      logger.error('微信登录失败:', error);
+      return res.status(500).json({ success: false, message: '微信登录失败' });
     }
   }
 
