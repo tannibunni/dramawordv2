@@ -237,9 +237,12 @@ export class UserController {
         });
       }
 
-      // 更新最后登录时间
-      user.auth.lastLoginAt = new Date();
-      await user.save();
+      // 更新最后登录时间 - 使用 findOneAndUpdate 避免并行保存冲突
+      await User.findByIdAndUpdate(
+        user._id,
+        { $set: { 'auth.lastLoginAt': new Date() } },
+        { new: true }
+      );
 
       // 生成JWT token
       const token = generateToken(user._id.toString());
@@ -533,8 +536,12 @@ export class UserController {
         logger.info(`连续学习更新成功: ${user.username}, 连续天数: ${user.learningStats.currentStreak}, 最长记录: ${user.learningStats.longestStreak}`);
       }
 
-      // 保存更新
-      await user.save();
+      // 使用 findOneAndUpdate 避免并行保存冲突
+      await User.findByIdAndUpdate(
+        user._id,
+        { $set: updateData },
+        { new: true }
+      );
 
       logger.info(`用户学习统计更新成功: ${user.username}`, updateData);
 
