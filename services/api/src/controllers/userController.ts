@@ -636,16 +636,19 @@ export class UserController {
 
       logger.info(`用户头像上传成功: ${user.username}`);
 
+      // 确保返回的头像URL使用正确的生产环境地址
+      const normalizedAvatarUrl = normalizeAvatarUrl(user.avatar);
+
       return res.json({
         success: true,
         message: '头像上传成功',
         data: {
-          avatar: avatarUrl,
+          avatar: normalizedAvatarUrl,
           user: {
             id: user._id,
             username: user.username,
             nickname: user.nickname,
-            avatar: user.avatar,
+            avatar: normalizedAvatarUrl,
             email: user.email
           }
         }

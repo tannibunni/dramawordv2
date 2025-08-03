@@ -366,17 +366,20 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
     
     // 更新AuthContext中的用户数据
     if (updatedUser && user) {
-      // 直接使用更新后的用户数据，不要嵌套
+      // 确保updatedUser是扁平化的用户数据，不是嵌套对象
+      const userData = updatedUser.user || updatedUser;
+      
+      // 合并用户数据
       const mergedUser = {
         ...user,
-        ...updatedUser
+        ...userData
       };
       
       // 更新本地存储
       userService.saveUserLoginInfo(mergedUser, loginType || 'guest');
       
       // 使用AuthContext的updateUser方法更新用户数据
-      updateUser(updatedUser);
+      updateUser(userData);
       console.log('✅ 用户资料更新完成');
       
       // 强制重新渲染Profile页面
