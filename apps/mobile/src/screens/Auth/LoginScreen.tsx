@@ -245,7 +245,18 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
         cause: error.cause
       });
       
-      if (error.message.includes('请先安装微信应用')) {
+      // 根据错误类型显示不同的提示
+      if (error.message.includes('EXPO GO中不可用')) {
+        console.log('💬 显示EXPO GO不可用提示');
+        Alert.alert(
+          '微信登录不可用', 
+          '微信登录在EXPO GO中不可用。\n\n请使用以下方式测试：\n• expo run:ios\n• expo run:android\n\n或使用其他登录方式。',
+          [
+            { text: '知道了', style: 'default' },
+            { text: '使用游客登录', onPress: handleGuestLogin }
+          ]
+        );
+      } else if (error.message.includes('请先安装微信应用')) {
         console.log('💬 显示"请先安装微信应用"提示');
         Alert.alert('提示', '请先安装微信应用');
       } else if (error.message.includes('微信SDK注册失败') || error.message.includes('SDK初始化失败')) {

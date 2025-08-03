@@ -1,4 +1,5 @@
 import { Platform } from 'react-native';
+import Constants from 'expo-constants';
 
 // 微信SDK 接口定义
 export interface WechatSDKInterface {
@@ -7,6 +8,9 @@ export interface WechatSDKInterface {
   sendAuthRequest(scope: string, state: string): Promise<{ code: string; state: string }>;
   handleOpenURL(url: string): Promise<boolean>;
 }
+
+// 检查是否在EXPO GO环境中
+const isExpoGo = Constants.appOwnership === 'expo';
 
 // 真实的微信SDK实现
 class RealWechatSDK implements WechatSDKInterface {
@@ -18,6 +22,14 @@ class RealWechatSDK implements WechatSDKInterface {
       console.log('🔍 开始微信SDK注册流程...');
       console.log('🔍 参数检查:', { appId, universalLink });
       console.log('🔍 平台:', Platform.OS);
+      console.log('🔍 运行环境:', isExpoGo ? 'EXPO GO' : 'Development Build');
+      
+      // 在EXPO GO中禁用微信登录
+      if (isExpoGo) {
+        console.error('🔍 微信登录在EXPO GO中不可用');
+        console.error('🔍 请使用 expo run:ios 或 expo run:android 进行测试');
+        throw new Error('微信登录在EXPO GO中不可用，请使用Development Build');
+      }
       
       // 检查 react-native-wechat-lib 模块
       console.log('🔍 尝试加载 react-native-wechat-lib...');
@@ -36,18 +48,18 @@ class RealWechatSDK implements WechatSDKInterface {
           stack: moduleError.stack,
           code: moduleError.code
         });
-        return false;
+        throw new Error('微信SDK模块加载失败，请确保已正确安装react-native-wechat-lib');
       }
       
       // 检查 Wechat 对象是否存在
       if (!Wechat) {
         console.error('🔍 Wechat 对象不存在');
-        return false;
+        throw new Error('微信SDK对象不存在');
       }
       
       if (typeof Wechat !== 'object') {
         console.error('🔍 Wechat 不是对象，类型:', typeof Wechat);
-        return false;
+        throw new Error('微信SDK对象类型错误');
       }
       
       // react-native-wechat-lib 使用 registerApp 方法，但参数可能不同
@@ -55,12 +67,12 @@ class RealWechatSDK implements WechatSDKInterface {
       if (!Wechat.registerApp) {
         console.error('🔍 Wechat.registerApp 方法不存在');
         console.log('🔍 Wechat 可用方法:', Object.keys(Wechat));
-        return false;
+        throw new Error('微信SDK registerApp方法不存在');
       }
       
       if (typeof Wechat.registerApp !== 'function') {
         console.error('🔍 Wechat.registerApp 不是函数，类型:', typeof Wechat.registerApp);
-        return false;
+        throw new Error('微信SDK registerApp不是函数');
       }
       
       console.log('🔍 调用 Wechat.registerApp...');
@@ -80,7 +92,7 @@ class RealWechatSDK implements WechatSDKInterface {
         stack: error.stack,
         code: error.code
       });
-      return false;
+      throw error;
     }
   }
 
@@ -88,12 +100,18 @@ class RealWechatSDK implements WechatSDKInterface {
     try {
       console.log('🔍 开始检查微信安装状态...');
       
+      // 在EXPO GO中禁用微信登录
+      if (isExpoGo) {
+        console.error('🔍 微信登录在EXPO GO中不可用');
+        throw new Error('微信登录在EXPO GO中不可用，请使用Development Build');
+      }
+      
       const Wechat = require('react-native-wechat-lib');
       console.log('🔍 Wechat 对象检查:', Wechat ? '存在' : '不存在');
       
       if (!Wechat || typeof Wechat.isWXAppInstalled !== 'function') {
         console.error('🔍 Wechat.isWXAppInstalled 方法不可用');
-        return false;
+        throw new Error('微信SDK isWXAppInstalled方法不可用');
       }
       
       const result = await Wechat.isWXAppInstalled();
@@ -108,65 +126,54 @@ class RealWechatSDK implements WechatSDKInterface {
         message: error.message,
         stack: error.stack
       });
-      return false;
+      throw error;
     }
   }
 
   async sendAuthRequest(scope: string, state: string): Promise<{ code: string; state: string }> {
     try {
+      console.log('🔍 开始微信授权请求...');
+      
+      // 在EXPO GO中禁用微信登录
+      if (isExpoGo) {
+        console.error('🔍 微信登录在EXPO GO中不可用');
+        throw new Error('微信登录在EXPO GO中不可用，请使用Development Build');
+      }
+      
       const Wechat = require('react-native-wechat-lib');
       // react-native-wechat-lib 可能使用不同的方法名或参数
       const result = await Wechat.sendAuthRequest(scope, state);
-      console.log('微信授权请求结果:', result);
+      console.log('🔍 微信授权请求结果:', result);
       return result;
     } catch (error) {
-      console.error('微信授权请求失败:', error);
+      console.error('🔍 微信授权请求失败:', error);
       throw error;
     }
   }
 
   async handleOpenURL(url: string): Promise<boolean> {
     try {
+      console.log('🔍 开始处理微信回调URL...');
+      
+      // 在EXPO GO中禁用微信登录
+      if (isExpoGo) {
+        console.error('🔍 微信登录在EXPO GO中不可用');
+        throw new Error('微信登录在EXPO GO中不可用，请使用Development Build');
+      }
+      
       const Wechat = require('react-native-wechat-lib');
       // react-native-wechat-lib 可能使用不同的方法名
       const result = await Wechat.handleOpenURL(url);
-      console.log('处理微信回调URL结果:', result);
+      console.log('🔍 处理微信回调URL结果:', result);
       return result;
     } catch (error) {
-      console.error('处理微信回调URL失败:', error);
-      return false;
+      console.error('🔍 处理微信回调URL失败:', error);
+      throw error;
     }
   }
 }
 
-// 开发环境模拟SDK
-class MockWechatSDK implements WechatSDKInterface {
-  async registerApp(appId: string, universalLink: string): Promise<boolean> {
-    console.log('模拟注册微信应用:', { appId, universalLink });
-    return true;
-  }
-
-  async isWXAppInstalled(): Promise<boolean> {
-    console.log('模拟检查微信安装状态');
-    return true;
-  }
-
-  async sendAuthRequest(scope: string, state: string): Promise<{ code: string; state: string }> {
-    console.log('模拟微信授权请求:', { scope, state });
-    return {
-      code: 'mock_wechat_code_' + Date.now(),
-      state: state,
-    };
-  }
-
-  async handleOpenURL(url: string): Promise<boolean> {
-    console.log('模拟处理微信回调URL:', url);
-    return true;
-  }
-}
-
-// 根据环境选择SDK实现
-// 强制使用真实SDK进行测试
+// 导出真实SDK实现
 const WechatSDK: WechatSDKInterface = new RealWechatSDK();
 
 export default WechatSDK; 
