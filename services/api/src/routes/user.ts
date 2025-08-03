@@ -4,6 +4,7 @@ import { authenticateToken } from '../middleware/auth';
 import { validateRequest } from '../middleware/validateRequest';
 import { uploadAvatar } from '../middleware/upload';
 import { UserShowListController } from '../controllers/userShowListController';
+import { SyncController } from '../controllers/syncController';
 
 const router = express.Router();
 
@@ -110,5 +111,8 @@ router.get('/showlist', authenticateToken, UserShowListController.getShowList);
 router.post('/showlist', authenticateToken, UserShowListController.addShow);
 router.delete('/showlist', authenticateToken, UserShowListController.removeShow);
 router.put('/showlist', authenticateToken, UserShowListController.updateShow);
+
+// 批量数据同步 API
+router.post('/batch-sync', authenticateToken, SyncController.uploadData);
 
 export default router; 
