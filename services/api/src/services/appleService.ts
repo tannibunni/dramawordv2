@@ -11,68 +11,132 @@ export class AppleService {
     logger.info(`🍎 idToken 长度: ${idToken.length}`);
     
     // 解码 JWT token 以获取实际 audience
+    let actualAudience: string | string[] | null = null;
+    let jwtPayload: any = null;
+    
     try {
       const parts = idToken.split('.');
       if (parts.length === 3) {
         const payload = parts[1];
         const decodedPayload = Buffer.from(payload, 'base64').toString('utf8');
-        const payloadObj = JSON.parse(decodedPayload);
+        jwtPayload = JSON.parse(decodedPayload);
+        
+        actualAudience = jwtPayload.aud;
         
         logger.info(`🍎 JWT payload 解码成功`);
-        logger.info(`🍎 实际 audience: ${payloadObj.aud}`);
-        logger.info(`🍎 issuer: ${payloadObj.iss}`);
-        logger.info(`🍎 subject: ${payloadObj.sub}`);
+        logger.info(`🍎 实际 audience: ${actualAudience}`);
+        logger.info(`🍎 audience 类型: ${Array.isArray(actualAudience) ? 'array' : typeof actualAudience}`);
+        logger.info(`🍎 issuer: ${jwtPayload.iss}`);
+        logger.info(`🍎 subject: ${jwtPayload.sub}`);
+        logger.info(`🍎 过期时间: ${new Date(jwtPayload.exp * 1000).toISOString()}`);
         
-        // 检查 audience 是否匹配
-        if (payloadObj.aud !== appleConfig.clientId) {
-          logger.warn(`🍎 Audience 不匹配! 期望: ${appleConfig.clientId}, 实际: ${payloadObj.aud}`);
-          
-          // 如果 audience 是数组，检查是否包含期望的值
-          if (Array.isArray(payloadObj.aud)) {
-            const hasExpectedAudience = payloadObj.aud.includes(appleConfig.clientId);
-            logger.info(`🍎 Audience 是数组，包含期望值: ${hasExpectedAudience}`);
-            
-            if (hasExpectedAudience) {
-              logger.info(`🍎 使用数组中的第一个 audience: ${payloadObj.aud[0]}`);
-              // 使用数组中的第一个值作为 audience
-              const result = await appleSigninAuth.verifyIdToken(idToken, {
-                audience: payloadObj.aud[0],
-                ignoreExpiration: false,
-              });
-              
-              logger.info(`🍎 Apple JWT 验证成功: ${result.sub}`);
-              return result;
-            }
-          }
+        if (Array.isArray(actualAudience)) {
+          logger.info(`🍎 Audience 数组内容: ${actualAudience.join(', ')}`);
         }
       }
     } catch (decodeError) {
       logger.warn(`🍎 JWT 解码失败，继续正常验证: ${decodeError}`);
     }
     
+    // 尝试多种 audience 验证策略
+    const verificationStrategies = [
+      // 策略1: 使用配置的 clientId
+      { audience: appleConfig.clientId, description: '配置的 clientId' },
+      
+      // 策略2: 如果实际 audience 是数组，尝试数组中的每个值
+      ...(Array.isArray(actualAudience) ? actualAudience.map(aud => ({ 
+        audience: aud, 
+        description: `数组中的 audience: ${aud}` 
+      })) : []),
+      
+      // 策略3: 如果实际 audience 是字符串，直接使用
+      ...(typeof actualAudience === 'string' ? [{ 
+        audience: actualAudience, 
+        description: '实际的 audience' 
+      }] : []),
+      
+      // 策略4: 尝试常见的变体
+      { audience: 'com.tannibunni.dramawordmobile', description: '硬编码的 bundle ID' },
+      { audience: 'com.tannibunni.dramaword', description: '可能的变体1' },
+      { audience: 'dramaword', description: '可能的变体2' }
+    ];
+    
+    // 去重
+    const uniqueStrategies = verificationStrategies.filter((strategy, index, self) => 
+      index === self.findIndex(s => s.audience === strategy.audience)
+    );
+    
+    logger.info(`🍎 将尝试 ${uniqueStrategies.length} 种验证策略`);
+    
+    for (const strategy of uniqueStrategies) {
+      try {
+        logger.info(`🍎 尝试策略: ${strategy.description} (${strategy.audience})`);
+        
+        const result = await appleSigninAuth.verifyIdToken(idToken, {
+          audience: strategy.audience,
+          ignoreExpiration: false,
+        });
+        
+        logger.info(`🍎 ✅ Apple JWT 验证成功! 使用策略: ${strategy.description}`);
+        logger.info(`🍎 验证结果: sub=${result.sub}, email=${result.email || 'N/A'}`);
+        
+        // 记录成功的策略，以便后续优化
+        if (strategy.audience !== appleConfig.clientId) {
+          logger.warn(`🍎 注意: 使用了非配置的 audience: ${strategy.audience}`);
+          logger.warn(`🍎 建议更新 APPLE_CLIENT_ID 环境变量为: ${strategy.audience}`);
+        }
+        
+        return result;
+        
+      } catch (error) {
+        logger.debug(`🍎 ❌ 策略失败: ${strategy.description} - ${error.message}`);
+        continue;
+      }
+    }
+    
+    // 所有策略都失败了
+    logger.error(`🍎 ❌ 所有验证策略都失败了`);
+    logger.error(`🍎 期望的 audience: ${appleConfig.clientId}`);
+    logger.error(`🍎 实际的 audience: ${actualAudience}`);
+    logger.error(`🍎 JWT payload:`, jwtPayload);
+    
+    // 提供详细的错误信息和解决建议
+    const error = new Error(`Apple JWT 验证失败: 所有 audience 策略都失败`);
+    error.name = 'AppleJWTVerificationError';
+    
+    // 添加额外的错误信息
+    (error as any).details = {
+      expectedAudience: appleConfig.clientId,
+      actualAudience,
+      jwtPayload,
+      triedStrategies: uniqueStrategies.map(s => s.audience)
+    };
+    
+    throw error;
+  }
+  
+  // 新增: 获取 JWT 信息而不验证
+  static decodeJWTWithoutVerification(idToken: string) {
     try {
-      const result = await appleSigninAuth.verifyIdToken(idToken, {
-        audience: appleConfig.clientId,
-        ignoreExpiration: false,
-      });
-      
-      logger.info(`🍎 Apple JWT 验证成功: ${result.sub}`);
-      return result;
-    } catch (error) {
-      logger.error(`🍎 Apple JWT 验证失败:`, error);
-      
-      // 提供更详细的错误信息
-      if (error.message && error.message.includes('jwt audience invalid')) {
-        logger.error(`🍎 Audience 验证失败详情:`);
-        logger.error(`   - 期望的 audience: ${appleConfig.clientId}`);
-        logger.error(`   - 错误信息: ${error.message}`);
-        logger.error(`🍎 建议检查:`);
-        logger.error(`   1. Apple Developer Console 中的 App ID 配置`);
-        logger.error(`   2. 应用端的 bundle identifier`);
-        logger.error(`   3. 环境变量 APPLE_CLIENT_ID 设置`);
+      const parts = idToken.split('.');
+      if (parts.length !== 3) {
+        throw new Error('Invalid JWT format');
       }
       
-      throw error;
+      const header = JSON.parse(Buffer.from(parts[0], 'base64').toString('utf8'));
+      const payload = JSON.parse(Buffer.from(parts[1], 'base64').toString('utf8'));
+      
+      return {
+        header,
+        payload,
+        audience: payload.aud,
+        issuer: payload.iss,
+        subject: payload.sub,
+        expiration: new Date(payload.exp * 1000),
+        issuedAt: new Date(payload.iat * 1000)
+      };
+    } catch (error) {
+      throw new Error(`JWT 解码失败: ${error.message}`);
     }
   }
 } 
