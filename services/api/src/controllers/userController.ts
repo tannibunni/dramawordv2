@@ -603,8 +603,9 @@ export class UserController {
         });
       }
 
-      // 生成头像URL
-      const avatarUrl = `/uploads/avatars/${file.filename}`;
+      // 生成头像URL - 使用完整的服务器URL
+      const baseUrl = process.env.API_BASE_URL || `http://localhost:${process.env.PORT || 3001}`;
+      const avatarUrl = `${baseUrl}/uploads/avatars/${file.filename}`;
 
       // 更新用户头像
       const user = await User.findByIdAndUpdate(

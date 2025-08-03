@@ -139,6 +139,9 @@ export class UserService {
   // 更新用户资料
   async updateProfile(token: string, profileData: Partial<UserProfile>): Promise<UserServiceResponse> {
     try {
+      console.log('📝 开始更新用户资料...');
+      console.log('📝 使用的token:', token ? `${token.substring(0, 20)}...` : 'null');
+      
       const response = await fetch(`${API_BASE_URL}/users/profile`, {
         method: 'PUT',
         headers: {
@@ -148,11 +151,17 @@ export class UserService {
         body: JSON.stringify(profileData),
       });
 
+      console.log('📝 响应状态:', response.status);
+      console.log('📝 响应头:', Object.fromEntries(response.headers.entries()));
+
       if (!response.ok) {
-        throw new Error(`更新用户资料失败: ${response.status}`);
+        const errorText = await response.text();
+        console.error('📝 错误响应:', errorText);
+        throw new Error(`更新用户资料失败: ${response.status} - ${errorText}`);
       }
 
       const result = await response.json();
+      console.log('✅ 用户资料更新成功:', result);
       return result;
     } catch (error) {
       console.error('❌ 更新用户资料失败:', error);
@@ -160,6 +169,53 @@ export class UserService {
         success: false,
         error: error instanceof Error ? error.message : '未知错误',
       };
+    }
+  }
+
+  // 上传头像
+  async uploadAvatar(token: string, formData: FormData): Promise<{ success: boolean; data?: { avatar: string }; error?: string }> {
+    try {
+      console.log('📤 开始上传头像...');
+      console.log('📤 使用的token:', token ? `${token.substring(0, 20)}...` : 'null');
+      
+      const response = await fetch(`${API_BASE_URL}/users/avatar`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          // 不设置Content-Type，让FormData自动设置
+        },
+        body: formData,
+      });
+
+      console.log('📤 响应状态:', response.status);
+      console.log('📤 响应头:', Object.fromEntries(response.headers.entries()));
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('📤 错误响应:', errorText);
+        throw new Error(`上传头像失败: ${response.status} - ${errorText}`);
+      }
+
+      const result = await response.json();
+      console.log('✅ 头像上传成功:', result);
+      return result;
+    } catch (error) {
+      console.error('❌ 头像上传失败:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : '未知错误',
+      };
+    }
+  }
+
+  // 获取认证token
+  async getAuthToken(): Promise<string | null> {
+    try {
+      const result = await storageService.getAuthToken();
+      return result.success ? result.data : null;
+    } catch (error) {
+      console.error('❌ 获取认证token失败:', error);
+      return null;
     }
   }
 } 

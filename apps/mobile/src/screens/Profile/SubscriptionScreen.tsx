@@ -53,22 +53,10 @@ const paymentMethods = [
   { key: 'alipay', name: '支付宝', icon: require('../../../assets/images/alipay.png') },
 ];
 
-const reviews = [
-  { user: '小明', text: '用了剧词记，单词记得快多了！' },
-  { user: '小红', text: 'AI例句超实用，背单词不枯燥！' },
-  { user: '小李', text: '客服很贴心，退款也很快。' },
-];
-
 const benefitList = [
   '30% Discount at the Bar',
   '20% Discount on In-Room Dining',
   '25% Discount on Health Club/SPA',
-];
-
-const userAvatars = [
-  require('../../../assets/images/avatar1.png'),
-  require('../../../assets/images/avatar2.png'),
-  require('../../../assets/images/avatar3.png'),
 ];
 
 const featureTable = [

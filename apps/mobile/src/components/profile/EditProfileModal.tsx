@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -15,6 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { UserService } from '../../services/userService';
 import { colors } from '../../constants/colors';
+import { useAuth } from '../../context/AuthContext';
 
 interface EditProfileModalProps {
   visible: boolean;
@@ -37,6 +38,15 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
   const [nickname, setNickname] = useState(user.nickname);
   const [avatar, setAvatar] = useState(user.avatar);
   const [loading, setLoading] = useState(false);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const { user: authUser, getAuthToken } = useAuth();
+  const userService = UserService.getInstance();
+
+  // 当用户数据更新时，同步更新表单
+  useEffect(() => {
+    setNickname(user.nickname);
+    setAvatar(user.avatar);
+  }, [user]);
 
   const pickImage = async () => {
     try {
@@ -56,9 +66,11 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
       });
 
       if (!result.canceled && result.assets[0]) {
+        console.log('📸 选择图片成功:', result.assets[0].uri);
         setAvatar(result.assets[0].uri);
       }
     } catch (error) {
+      console.error('❌ 选择图片失败:', error);
       Alert.alert('选择图片失败', '请重试');
     }
   };
@@ -80,9 +92,11 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
       });
 
       if (!result.canceled && result.assets[0]) {
+        console.log('📸 拍照成功:', result.assets[0].uri);
         setAvatar(result.assets[0].uri);
       }
     } catch (error) {
+      console.error('❌ 拍照失败:', error);
       Alert.alert('拍照失败', '请重试');
     }
   };
@@ -99,9 +113,49 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
     );
   };
 
+  const uploadAvatarToServer = async (imageUri: string): Promise<string | null> => {
+    try {
+      setUploadingAvatar(true);
+      console.log('📤 开始上传头像到服务器...');
+
+      // 获取认证token
+      const token = await getAuthToken();
+      if (!token) {
+        throw new Error('未找到认证token，请重新登录');
+      }
+
+      // 准备FormData
+      const formData = new FormData();
+      formData.append('avatar', {
+        uri: imageUri,
+        type: 'image/jpeg',
+        name: `avatar_${Date.now()}.jpg`,
+      } as any);
+
+      // 上传头像
+      const uploadResult = await userService.uploadAvatar(token, formData);
+      if (uploadResult.success && uploadResult.data) {
+        console.log('✅ 头像上传成功:', uploadResult.data.avatar);
+        return uploadResult.data.avatar;
+      } else {
+        throw new Error(uploadResult.error || '头像上传失败');
+      }
+    } catch (error) {
+      console.error('❌ 头像上传失败:', error);
+      throw error;
+    } finally {
+      setUploadingAvatar(false);
+    }
+  };
+
   const handleSave = async () => {
     if (!nickname.trim()) {
       Alert.alert('提示', '昵称不能为空');
+      return;
+    }
+
+    if (nickname.trim().length > 30) {
+      Alert.alert('提示', '昵称不能超过30个字符');
       return;
     }
 
@@ -110,45 +164,53 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
       let avatarUrl = avatar;
 
       // 如果头像有变化且是本地文件，先上传头像
-      if (avatar && avatar !== user.avatar && avatar.startsWith('file://')) {
-        const formData = new FormData();
-        formData.append('avatar', {
-          uri: avatar,
-          type: 'image/jpeg',
-          name: 'avatar.jpg',
-        } as any);
-
-        // TODO: 从本地存储或全局状态获取token
-        const token = 'your-token-here';
-        const uploadResult = await UserService.uploadAvatar(token, formData);
-        if (uploadResult.success) {
-          avatarUrl = uploadResult.data.avatar;
+      if (avatar && avatar !== user.avatar && (avatar.startsWith('file://') || avatar.startsWith('content://'))) {
+        console.log('📤 检测到新头像，开始上传...');
+        const uploadedAvatarUrl = await uploadAvatarToServer(avatar);
+        if (uploadedAvatarUrl) {
+          avatarUrl = uploadedAvatarUrl;
         } else {
-          throw new Error(uploadResult.message);
+          throw new Error('头像上传失败');
         }
       }
 
-      // 更新用户信息
-      const updateData: any = { nickname };
-      if (avatarUrl !== user.avatar) {
+      // 获取认证token
+      const token = await getAuthToken();
+      if (!token) {
+        throw new Error('未找到认证token，请重新登录');
+      }
+
+      // 准备更新数据
+      const updateData: any = { nickname: nickname.trim() };
+      if (avatarUrl && avatarUrl !== user.avatar) {
         updateData.avatar = avatarUrl;
       }
 
-      // TODO: 从本地存储或全局状态获取token
-      const token = 'your-token-here';
-      const result = await UserService.updateProfile(token, updateData);
-      if (result.success) {
-        onUpdate(result.data.user);
+      console.log('📝 更新用户资料:', updateData);
+
+      // 更新用户信息
+      const result = await userService.updateProfile(token, updateData);
+      if (result.success && result.data) {
+        console.log('✅ 用户资料更新成功:', result.data);
+        onUpdate(result.data);
         onClose();
         Alert.alert('成功', '个人信息更新成功');
       } else {
-        throw new Error(result.message);
+        throw new Error(result.error || '更新失败');
       }
     } catch (error) {
+      console.error('❌ 更新用户资料失败:', error);
       Alert.alert('更新失败', (error as Error).message || '请重试');
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleCancel = () => {
+    // 重置表单数据
+    setNickname(user.nickname);
+    setAvatar(user.avatar);
+    onClose();
   };
 
   return (
@@ -161,16 +223,16 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
       <View style={styles.container}>
         {/* 头部 */}
         <View style={styles.header}>
-          <TouchableOpacity onPress={onClose} style={styles.cancelButton}>
+          <TouchableOpacity onPress={handleCancel} style={styles.cancelButton}>
             <Text style={styles.cancelText}>取消</Text>
           </TouchableOpacity>
           <Text style={styles.title}>编辑资料</Text>
           <TouchableOpacity
             onPress={handleSave}
-            style={[styles.saveButton, loading && styles.saveButtonDisabled]}
-            disabled={loading}
+            style={[styles.saveButton, loading || uploadingAvatar ? styles.saveButtonDisabled : null]}
+            disabled={loading || uploadingAvatar}
           >
-            {loading ? (
+            {loading || uploadingAvatar ? (
               <ActivityIndicator size="small" color={colors.primary[500]} />
             ) : (
               <Text style={styles.saveText}>保存</Text>
@@ -182,7 +244,11 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
         <View style={styles.content}>
           {/* 头像 */}
           <View style={styles.avatarSection}>
-            <TouchableOpacity onPress={showImagePicker} style={styles.avatarContainer}>
+            <TouchableOpacity 
+              onPress={showImagePicker} 
+              style={styles.avatarContainer}
+              disabled={uploadingAvatar}
+            >
               {avatar ? (
                 <Image source={{ uri: avatar }} style={styles.avatar} />
               ) : (
@@ -191,10 +257,16 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
                 </View>
               )}
               <View style={styles.avatarEditIcon}>
-                <Ionicons name="camera" size={16} color={colors.text.inverse} />
+                {uploadingAvatar ? (
+                  <ActivityIndicator size="small" color={colors.text.inverse} />
+                ) : (
+                  <Ionicons name="camera" size={16} color={colors.text.inverse} />
+                )}
               </View>
             </TouchableOpacity>
-            <Text style={styles.avatarHint}>点击更换头像</Text>
+            <Text style={styles.avatarHint}>
+              {uploadingAvatar ? '正在上传头像...' : '点击更换头像'}
+            </Text>
           </View>
 
           {/* 昵称 */}
@@ -206,7 +278,9 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
               onChangeText={setNickname}
               placeholder="请输入昵称"
               maxLength={30}
+              autoFocus={false}
             />
+            <Text style={styles.charCount}>{nickname.length}/30</Text>
           </View>
         </View>
       </View>
@@ -312,5 +386,11 @@ const styles = StyleSheet.create({
     fontSize: 16,
     borderWidth: 1,
     borderColor: colors.border.light,
+  },
+  charCount: {
+    fontSize: 12,
+    color: colors.neutral[500],
+    marginTop: 4,
+    alignSelf: 'flex-end',
   },
 }); 

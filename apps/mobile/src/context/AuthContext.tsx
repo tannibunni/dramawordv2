@@ -31,6 +31,7 @@ interface AuthContextType {
   login: (userData: UserInfo, type: string) => Promise<void>;
   logout: () => Promise<void>;
   updateUser: (userData: Partial<UserInfo>) => void;
+  getAuthToken: () => Promise<string | null>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -131,8 +132,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const getAuthToken = async (): Promise<string | null> => {
+    try {
+      return await userService.getAuthToken();
+    } catch (error) {
+      console.error('❌ AuthContext getAuthToken 失败:', error);
+      return null;
+    }
+  };
+
   return (
-    <AuthContext.Provider value={{ user, loginType, isAuthenticated, login, logout, updateUser }}>
+    <AuthContext.Provider value={{ user, loginType, isAuthenticated, login, logout, updateUser, getAuthToken }}>
       {children}
     </AuthContext.Provider>
   );

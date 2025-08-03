@@ -69,7 +69,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   const { vocabulary, clearVocabulary } = useVocabulary();
   const { shows, clearShows } = useShowList();
   const { navigate } = useNavigation();
-  const { user, loginType, isAuthenticated, logout: authLogout, login } = useAuth();
+  const { user, loginType, isAuthenticated, logout: authLogout, login, updateUser } = useAuth();
   const { appLanguage } = useAppLanguage();
   const userService = UserService.getInstance();
 
@@ -359,7 +359,24 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   };
 
   const handleProfileUpdate = (updatedUser: any) => {
-    // 用户信息现在由 AuthContext 管理，这里不需要设置
+    console.log('📝 用户资料更新:', updatedUser);
+    
+    // 更新AuthContext中的用户数据
+    if (updatedUser && user) {
+      // 合并更新后的数据
+      const mergedUser = {
+        ...user,
+        ...updatedUser
+      };
+      
+      // 更新本地存储
+      userService.saveUserLoginInfo(mergedUser, loginType || 'guest');
+      
+      // 使用AuthContext的updateUser方法更新用户数据
+      updateUser(updatedUser);
+      console.log('✅ 用户资料更新完成');
+    }
+    
     setEditModalVisible(false);
   };
 

@@ -38,24 +38,38 @@ export class AppleService {
       logger.warn(`🍎 JWT 解码失败，继续正常验证: ${decodeError}`);
     }
     
+    // 如果实际 audience 是数组，直接使用数组进行验证
+    if (Array.isArray(actualAudience)) {
+      try {
+        logger.info(`🍎 尝试使用数组 audience: ${actualAudience.join(', ')}`);
+        
+        const result = await appleSigninAuth.verifyIdToken(idToken, {
+          audience: actualAudience,
+          ignoreExpiration: false,
+        });
+        
+        logger.info(`🍎 ✅ Apple JWT 验证成功! 使用数组 audience`);
+        logger.info(`🍎 验证结果: sub=${result.sub}, email=${result.email || 'N/A'}`);
+        
+        return result;
+        
+      } catch (error) {
+        logger.error(`🍎 ❌ 数组 audience 验证失败: ${error.message}`);
+      }
+    }
+    
     // 尝试多种 audience 验证策略
     const verificationStrategies = [
       // 策略1: 使用配置的 clientId
       { audience: appleConfig.clientId, description: '配置的 clientId' },
       
-      // 策略2: 如果实际 audience 是数组，尝试数组中的每个值
-      ...(Array.isArray(actualAudience) ? actualAudience.map(aud => ({ 
-        audience: aud, 
-        description: `数组中的 audience: ${aud}` 
-      })) : []),
-      
-      // 策略3: 如果实际 audience 是字符串，直接使用
+      // 策略2: 如果实际 audience 是字符串，直接使用
       ...(typeof actualAudience === 'string' ? [{ 
         audience: actualAudience, 
         description: '实际的 audience' 
       }] : []),
       
-      // 策略4: 尝试常见的变体
+      // 策略3: 尝试常见的变体
       { audience: 'com.tannibunni.dramawordmobile', description: '硬编码的 bundle ID' },
       { audience: 'com.tannibunni.dramaword', description: '可能的变体1' },
       { audience: 'dramaword', description: '可能的变体2' }
