@@ -110,27 +110,34 @@ export class WechatController {
         logger.info(`💬 原昵称: ${user.nickname}, 新昵称: ${newNickname}`);
         logger.info(`💬 头像更新: ${newAvatar ? '是' : '否'}`);
         
+        // 准备更新数据
+        const updateData: any = {
+          'auth.wechatNickname': wechatResult.userInfo.nickname,
+          'auth.wechatAvatar': wechatResult.userInfo.headimgurl,
+          'auth.wechatAccessToken': wechatResult.accessToken,
+          'auth.wechatRefreshToken': wechatResult.refreshToken,
+          'auth.wechatTokenExpiresAt': new Date(Date.now() + wechatResult.expires_in * 1000),
+          'auth.lastLoginAt': new Date()
+        };
+        
         // 更新用户基本信息
         if (newNickname !== user.nickname) {
-          user.nickname = newNickname;
+          updateData.nickname = newNickname;
         }
         if (newAvatar && newAvatar !== user.avatar) {
-          user.avatar = newAvatar;
+          updateData.avatar = newAvatar;
         }
-        
-        // 更新微信认证信息
-        user.auth.wechatNickname = wechatResult.userInfo.nickname;
-        user.auth.wechatAvatar = wechatResult.userInfo.headimgurl;
-        user.auth.wechatAccessToken = wechatResult.accessToken;
-        user.auth.wechatRefreshToken = wechatResult.refreshToken;
-        user.auth.wechatTokenExpiresAt = new Date(Date.now() + wechatResult.expires_in * 1000);
-        user.auth.lastLoginAt = new Date();
         
         if (wechatResult.unionid && !user.auth.wechatUnionId) {
-          user.auth.wechatUnionId = wechatResult.unionid;
+          updateData['auth.wechatUnionId'] = wechatResult.unionid;
         }
 
-        await user.save();
+        // 使用 findOneAndUpdate 避免并行保存冲突
+        user = await User.findByIdAndUpdate(
+          user._id,
+          { $set: updateData },
+          { new: true }
+        );
         logger.info(`💬 微信用户信息更新成功: openid=${wechatResult.openid}, nickname=${newNickname}`);
       }
 

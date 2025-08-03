@@ -149,9 +149,12 @@ export class AuthController {
         await user.save();
         logger.info(`创建新手机号用户: ${phoneNumber}`);
       } else {
-        // 更新现有用户
-        user.auth.lastLoginAt = new Date();
-        await user.save();
+        // 更新现有用户 - 使用 findOneAndUpdate 避免并行保存冲突
+        user = await User.findByIdAndUpdate(
+          user._id,
+          { $set: { 'auth.lastLoginAt': new Date() } },
+          { new: true }
+        );
         logger.info(`手机号用户登录: ${phoneNumber}`);
       }
 
