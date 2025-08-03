@@ -161,7 +161,7 @@ export class AuthController {
       // 生成JWT token
       const token = jwt.sign(
         { 
-          userId: user._id,
+          id: user._id,
           username: user.username,
           loginType: 'phone'
         },

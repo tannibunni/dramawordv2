@@ -144,7 +144,7 @@ export class WechatController {
 
       // 生成JWT
       const token = jwt.sign(
-        { userId: user._id, username: user.username, loginType: 'wechat' },
+        { id: user._id, username: user.username, loginType: 'wechat' },
         JWT_SECRET,
         { expiresIn: '7d' }
       );
@@ -212,7 +212,7 @@ export class WechatController {
       // 生成新的JWT token
       const token = jwt.sign(
         { 
-          userId: user._id,
+          id: user._id,
           username: user.username,
           loginType: 'wechat'
         },
@@ -309,7 +309,7 @@ export class WechatController {
    */
   static async unbind(req: Request, res: Response) {
     try {
-      const userId = (req as any).user?.userId;
+      const userId = (req as any).user?.id;
 
       if (!userId) {
         return res.status(401).json({

@@ -104,7 +104,7 @@ export class AppleController {
 
       // 生成JWT
       const token = jwt.sign(
-        { userId: user._id, username: user.username, loginType: 'apple' },
+        { id: user._id, username: user.username, loginType: 'apple' },
         JWT_SECRET,
         { expiresIn: '7d' }
       );
