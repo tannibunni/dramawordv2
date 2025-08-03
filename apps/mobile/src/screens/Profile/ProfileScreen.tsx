@@ -375,6 +375,11 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
       // 使用AuthContext的updateUser方法更新用户数据
       updateUser(updatedUser);
       console.log('✅ 用户资料更新完成');
+      
+      // 强制重新渲染Profile页面
+      // 通过设置一个状态来触发重新渲染
+      setLoading(true);
+      setTimeout(() => setLoading(false), 100);
     }
     
     setEditModalVisible(false);
