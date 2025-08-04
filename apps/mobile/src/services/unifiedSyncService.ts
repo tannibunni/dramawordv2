@@ -112,11 +112,9 @@ export class UnifiedSyncService {
       }
     };
 
-    if (typeof document !== 'undefined') {
-      document.addEventListener('touchstart', handleUserActivity);
-      document.addEventListener('mousedown', handleUserActivity);
-      document.addEventListener('keydown', handleUserActivity);
-    }
+    // React Native环境中不监听DOM事件，改为定期检查
+    // 在React Native中，用户活跃度通过其他方式检测
+    console.log('📱 React Native环境，跳过DOM事件监听');
   }
 
   // 重置活跃度计时器
@@ -526,11 +524,19 @@ export class UnifiedSyncService {
   // 获取认证token
   private async getAuthToken(): Promise<string | null> {
     try {
+      // 首先尝试从authToken获取（统一存储方式）
+      const authToken = await AsyncStorage.getItem('authToken');
+      if (authToken) {
+        return authToken;
+      }
+      
+      // 兼容性：从userData获取
       const userData = await AsyncStorage.getItem('userData');
       if (userData) {
         const parsed = JSON.parse(userData);
         return parsed.token || null;
       }
+      
       return null;
     } catch (error) {
       console.error('获取认证token失败:', error);

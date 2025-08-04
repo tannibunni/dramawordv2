@@ -12,6 +12,7 @@ import {
   ActivityIndicator,
   Modal,
   Switch,
+  AppState,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { EditProfileModal } from '../../components/profile/EditProfileModal';
@@ -38,6 +39,7 @@ import { unifiedSyncService } from '../../services/unifiedSyncService';
 import { cacheService, CACHE_KEYS } from '../../services/cacheService';
 import { getAboutUsContent } from '../../utils/aboutUsContent';
 import { normalizeImageUrl } from '../../utils/imageUrlHelper';
+import DataSyncIndicator from '../../components/common/DataSyncIndicator';
 
 
 interface UserStats {
@@ -197,6 +199,9 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   useEffect(() => {
     setLoading(false);
     loadNotificationPreferences();
+    
+    // 设置APP关闭时同步
+    setupAppCloseSync();
   }, []);
 
   // 监听 AuthContext 状态变化
@@ -224,11 +229,28 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
     }
   };
 
-  // 保存通知偏好设置
+  // 保存通知偏好设置 - 通过多邻国数据同步方案
   const saveNotificationPreferences = async (preferences: NotificationPreferences) => {
     try {
+      // 先保存到本地
       await notificationService.saveNotificationPreferences(preferences);
-      console.log('💾 通知偏好设置已保存');
+      console.log('💾 通知偏好设置已保存到本地');
+      
+      // 通过多邻国数据同步方案同步到云端
+      if (user?.id) {
+        await unifiedSyncService.addToSyncQueue({
+          type: 'userSettings',
+          data: {
+            notificationPreferences: preferences,
+            lastUpdated: Date.now()
+          },
+          userId: user.id,
+          operation: 'update',
+          priority: 'medium'
+        });
+        
+        console.log('🔄 通知偏好设置已加入同步队列');
+      }
     } catch (error) {
       console.error('❌ 保存通知偏好设置失败:', error);
     }
@@ -267,6 +289,13 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
             <Text style={styles.userName}>{getUserNickname()}</Text>
             <Text style={styles.userLevel}>{levelInfo.displayText}</Text>
             <Text style={styles.userEmail}>{user?.email || 'user@example.com'}</Text>
+            
+            {/* 低调的数据同步状态指示器 */}
+            {isAuthenticated && (
+              <View style={styles.syncIndicatorContainer}>
+                <DataSyncIndicator visible={true} showDetails={false} />
+              </View>
+            )}
             
             {/* 登录/退出登录按钮 - 已恢复 */}
             {isGuest ? (
@@ -376,7 +405,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
     setEditModalVisible(true);
   };
 
-  const handleProfileUpdate = (updatedUser: any) => {
+  const handleProfileUpdate = async (updatedUser: any) => {
     console.log('📝 用户资料更新:', updatedUser);
     
     // 更新AuthContext中的用户数据
@@ -395,6 +424,31 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
       
       // 使用AuthContext的updateUser方法更新用户数据
       updateUser(userData);
+      
+      // 通过多邻国数据同步方案同步用户资料到云端
+      if (user?.id) {
+        try {
+          await unifiedSyncService.addToSyncQueue({
+            type: 'userSettings',
+            data: {
+              profile: {
+                nickname: mergedUser.nickname,
+                avatar: mergedUser.avatar,
+                email: mergedUser.email,
+                lastUpdated: Date.now()
+              }
+            },
+            userId: user.id,
+            operation: 'update',
+            priority: 'medium'
+          });
+          
+          console.log('🔄 用户资料已加入同步队列');
+        } catch (error: any) {
+          console.error('❌ 用户资料同步失败:', error);
+        }
+      }
+      
       console.log('✅ 用户资料更新完成');
       
       // 强制重新渲染Profile页面
@@ -484,65 +538,59 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
           style: 'destructive', 
           onPress: async () => {
             try {
-              // 清除云端数据
+              // 通过多邻国数据同步方案清除云端数据
               if (user?.id) {
-                console.log('🗑️ 开始清除云端数据，用户ID:', user.id);
+                console.log('🗑️ 开始通过多邻国数据同步方案清除云端数据，用户ID:', user.id);
                 
-                // 清除云端用户词汇表
                 try {
-                  const response = await fetch(`${process.env.EXPO_PUBLIC_API_BASE_URL || 'https://dramawordv2.onrender.com'}/api/words/user/clear-vocabulary`, {
-                    method: 'DELETE',
-                    headers: {
-                      'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ userId: user.id })
+                  // 清除词汇数据
+                  await unifiedSyncService.addToSyncQueue({
+                    type: 'vocabulary',
+                    data: [],
+                    userId: user.id,
+                    operation: 'delete',
+                    priority: 'high'
                   });
                   
-                  if (response.ok) {
-                    console.log('✅ 云端用户词汇表清除成功');
-                  } else {
-                    console.warn('⚠️ 云端用户词汇表清除失败:', response.status);
-                  }
-                } catch (error) {
-                  console.error('❌ 清除云端用户词汇表失败:', error);
-                }
-                
-                // 清除云端用户学习统计
-                try {
-                  const statsResponse = await fetch(`${process.env.EXPO_PUBLIC_API_BASE_URL || 'https://dramawordv2.onrender.com'}/api/users/clear-stats`, {
-                    method: 'DELETE',
-                    headers: {
-                      'Content-Type': 'application/json',
+                  // 清除用户统计数据
+                  await unifiedSyncService.addToSyncQueue({
+                    type: 'userStats',
+                    data: {
+                      experience: 0,
+                      level: 1,
+                      totalReviews: 0,
+                      currentStreak: 0,
+                      lastUpdated: Date.now()
                     },
-                    body: JSON.stringify({ userId: user.id })
+                    userId: user.id,
+                    operation: 'update',
+                    priority: 'high'
                   });
                   
-                  if (statsResponse.ok) {
-                    console.log('✅ 云端用户学习统计清除成功');
-                  } else {
-                    console.warn('⚠️ 云端用户学习统计清除失败:', statsResponse.status);
-                  }
-                } catch (error) {
-                  console.error('❌ 清除云端用户学习统计失败:', error);
-                }
-                
-                // 清除云端搜索历史
-                try {
-                  const historyResponse = await fetch(`${process.env.EXPO_PUBLIC_API_BASE_URL || 'https://dramawordv2.onrender.com'}/api/words/clear-search-history`, {
-                    method: 'DELETE',
-                    headers: {
-                      'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ userId: user.id })
+                  // 清除搜索历史
+                  await unifiedSyncService.addToSyncQueue({
+                    type: 'searchHistory',
+                    data: [],
+                    userId: user.id,
+                    operation: 'delete',
+                    priority: 'high'
                   });
                   
-                  if (historyResponse.ok) {
-                    console.log('✅ 云端搜索历史清除成功');
-                  } else {
-                    console.warn('⚠️ 云端搜索历史清除失败:', historyResponse.status);
-                  }
+                  // 清除学习记录
+                  await unifiedSyncService.addToSyncQueue({
+                    type: 'learningRecords',
+                    data: [],
+                    userId: user.id,
+                    operation: 'delete',
+                    priority: 'high'
+                  });
+                  
+                  // 执行同步
+                  await unifiedSyncService.syncPendingData();
+                  
+                  console.log('✅ 通过多邻国数据同步方案清除云端数据成功');
                 } catch (error) {
-                  console.error('❌ 清除云端搜索历史失败:', error);
+                  console.error('❌ 通过多邻国数据同步方案清除云端数据失败:', error);
                 }
               }
               
@@ -600,6 +648,137 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
 
   const handleDeleteAccount = () => {
     setDeleteAccountModalVisible(true);
+  };
+
+  // 新增：设置APP关闭时同步
+  const setupAppCloseSync = () => {
+    // 监听APP状态变化
+    const handleAppStateChange = (nextAppState: string) => {
+      if (nextAppState === 'background' || nextAppState === 'inactive') {
+        console.log('🔄 APP进入后台，开始同步数据...');
+        syncOnAppClose();
+      }
+    };
+    
+    // 添加AppState监听器
+    const subscription = AppState.addEventListener('change', handleAppStateChange);
+    
+    // 返回清理函数
+    return () => {
+      subscription?.remove();
+    };
+  };
+
+  // 新增：APP关闭时同步数据
+  const syncOnAppClose = async () => {
+    try {
+      console.log('🔄 开始APP关闭时同步...');
+      
+      const userId = user?.id;
+      if (!userId) {
+        console.log('⚠️ 用户未登录，跳过APP关闭同步');
+        return;
+      }
+      
+      // 获取所有需要同步的本地数据
+      const syncTasks = [];
+      
+      // 1. 同步用户统计数据
+      const localStatsData = await AsyncStorage.getItem('userStats');
+      if (localStatsData) {
+        const localStats = JSON.parse(localStatsData);
+        syncTasks.push(
+          unifiedSyncService.addToSyncQueue({
+            type: 'userStats',
+            data: {
+              ...localStats,
+              lastUpdated: Date.now()
+            },
+            userId: userId,
+            operation: 'update',
+            priority: 'high'  // 关闭时使用高优先级
+          })
+        );
+      }
+      
+      // 2. 同步通知偏好设置
+      const notificationPrefs = await notificationService.loadNotificationPreferences();
+      syncTasks.push(
+        unifiedSyncService.addToSyncQueue({
+          type: 'userSettings',
+          data: {
+            notificationPreferences: notificationPrefs,
+            lastUpdated: Date.now()
+          },
+          userId: userId,
+          operation: 'update',
+          priority: 'high'
+        })
+      );
+      
+      // 3. 同步词汇数据
+      if (vocabulary && vocabulary.length > 0) {
+        syncTasks.push(
+          unifiedSyncService.addToSyncQueue({
+            type: 'vocabulary',
+            data: vocabulary.map(word => ({
+              ...word,
+              lastUpdated: Date.now()
+            })),
+            userId: userId,
+            operation: 'update',
+            priority: 'high'
+          })
+        );
+      }
+      
+      // 4. 同步剧集数据
+      if (shows && shows.length > 0) {
+        syncTasks.push(
+          unifiedSyncService.addToSyncQueue({
+            type: 'shows',
+            data: shows.map(show => ({
+              ...show,
+              lastUpdated: Date.now()
+            })),
+            userId: userId,
+            operation: 'update',
+            priority: 'high'
+          })
+        );
+      }
+      
+      // 5. 同步搜索历史
+      const searchHistory = await wordService.getRecentWords();
+      if (searchHistory && searchHistory.length > 0) {
+        syncTasks.push(
+          unifiedSyncService.addToSyncQueue({
+            type: 'searchHistory',
+            data: searchHistory.map(item => ({
+              ...item,
+              lastUpdated: Date.now()
+            })),
+            userId: userId,
+            operation: 'update',
+            priority: 'medium'
+          })
+        );
+      }
+      
+      // 执行所有同步任务
+      await Promise.all(syncTasks);
+      
+      // 执行统一同步
+      await unifiedSyncService.syncPendingData();
+      
+      console.log('✅ APP关闭时同步数据完成');
+      
+      // 记录同步时间
+      await AsyncStorage.setItem('lastAppCloseSync', Date.now().toString());
+      
+    } catch (error) {
+      console.error('❌ APP关闭时同步数据失败:', error);
+    }
   };
 
   const handleAccountDeleted = () => {
@@ -796,6 +975,10 @@ const styles = StyleSheet.create({
   },
   editButton: {
     padding: 8,
+  },
+  syncIndicatorContainer: {
+    marginTop: 8,
+    marginBottom: 4,
   },
   statsSection: {
     backgroundColor: colors.background.secondary,
