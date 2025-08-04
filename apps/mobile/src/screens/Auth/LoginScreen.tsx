@@ -22,6 +22,7 @@ import { t } from '../../constants/translations';
 import { useAppLanguage } from '../../context/AppLanguageContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { unifiedSyncService } from '../../services/unifiedSyncService';
+import { API_BASE_URL } from '../../constants/config';
 
 interface LoginScreenProps {
   onLoginSuccess: (userData: any) => void;
@@ -35,6 +36,88 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
   const { appLanguage } = useAppLanguage();
   const [phoneModalVisible, setPhoneModalVisible] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  // 下载用户云端数据
+  const downloadUserData = async (userId: string, loginType?: string) => {
+    try {
+      // 游客登录跳过数据下载
+      if (loginType === 'guest') {
+        console.log('👤 游客登录，跳过云端数据下载');
+        return;
+      }
+      
+      console.log('📥 开始下载用户云端数据...');
+      
+      // 获取认证token
+      const userData = await AsyncStorage.getItem('userData');
+      if (!userData) {
+        console.warn('⚠️ 未找到用户数据，跳过数据下载');
+        return;
+      }
+      
+      const parsedUserData = JSON.parse(userData);
+      const token = parsedUserData.token;
+      
+      if (!token) {
+        console.warn('⚠️ 未找到认证token，跳过数据下载');
+        return;
+      }
+      
+      // 调用强制同步接口（上传+下载）
+      const response = await fetch(`${API_BASE_URL}/users/sync/force`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          // 发送空的同步数据，只触发下载
+          learningRecords: [],
+          searchHistory: [],
+          userSettings: {}
+        }),
+      });
+      
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success) {
+          console.log('✅ 用户云端数据下载成功');
+          
+          // 将下载的数据保存到本地存储
+          if (result.data && result.data.download) {
+            const downloadData = result.data.download;
+            
+            // 保存学习记录
+            if (downloadData.learningRecords) {
+              await AsyncStorage.setItem('learningRecords', JSON.stringify(downloadData.learningRecords));
+            }
+            
+            // 保存搜索历史
+            if (downloadData.searchHistory) {
+              await AsyncStorage.setItem('searchHistory', JSON.stringify(downloadData.searchHistory));
+            }
+            
+            // 保存用户设置
+            if (downloadData.userSettings) {
+              await AsyncStorage.setItem('userSettings', JSON.stringify(downloadData.userSettings));
+            }
+            
+            // 保存剧单数据
+            if (downloadData.shows) {
+              await AsyncStorage.setItem('user_shows', JSON.stringify(downloadData.shows));
+            }
+          }
+        } else {
+          console.warn('⚠️ 数据下载返回失败:', result.message);
+        }
+      } else {
+        console.warn('⚠️ 数据下载请求失败:', response.status);
+      }
+    } catch (error) {
+      console.error('❌ 下载用户数据失败:', error);
+      // 不抛出错误，避免影响登录流程
+    }
+  };
 
   // 清理所有共享数据的函数
   const clearAllSharedData = async () => {
@@ -147,6 +230,9 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
         // 额外清理：清除所有可能的共享数据
         await clearAllSharedData();
         
+        // 新增：下载新用户的云端数据
+        await downloadUserData(userData.id, loginType);
+        
         // 游客登录直接进入主应用，跳过欢迎页面
         onLoginSuccess(userData);
       } else {
@@ -225,6 +311,9 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
         // 额外清理：清除所有可能的共享数据
         console.log('💬 清除共享数据...');
         await clearAllSharedData();
+        
+        // 新增：下载新用户的云端数据
+        await downloadUserData(userData.id, 'wechat');
         
         console.log('💬 调用 onLoginSuccess...');
         onLoginSuccess(userData);
@@ -313,7 +402,11 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
       };
       const result = await AppleService.login(loginData);
       
+      console.log('🍎 Apple登录API响应:', result);
+      
       if (result.success && result.data) {
+        console.log('🍎 Apple登录成功，获取到token:', result.data.token ? '有token' : '无token');
+        
         // 保存用户信息到本地存储
         const userData = {
           id: result.data.user.id,
@@ -324,11 +417,21 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
           token: result.data.token,
         };
         
+        console.log('🍎 准备保存的用户数据:', {
+          id: userData.id,
+          nickname: userData.nickname,
+          loginType: userData.loginType,
+          hasToken: !!userData.token
+        });
+        
         // 清除旧缓存，确保新用户看到正确的数据
         await unifiedSyncService.clearSyncQueue();
         
         // 额外清理：清除所有可能的共享数据
         await clearAllSharedData();
+        
+        // 新增：下载新用户的云端数据
+        await downloadUserData(userData.id, 'apple');
         
         onLoginSuccess(userData);
       } else {
@@ -421,6 +524,9 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
         // 额外清理：清除所有可能的共享数据
         await clearAllSharedData();
         
+        // 新增：下载新用户的云端数据
+        await downloadUserData(userData.id, loginType);
+        
         // 游客登录直接进入主应用，跳过欢迎页面
         onLoginSuccess(userData);
       } else {
@@ -503,6 +609,9 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
             console.log('💬 清除旧缓存...');
             await unifiedSyncService.clearSyncQueue();
             await clearAllSharedData();
+            
+            // 新增：下载新用户的云端数据
+            await downloadUserData(userData.id, 'wechat');
             
             console.log('💬 调用 onLoginSuccess...');
             onLoginSuccess(userData);

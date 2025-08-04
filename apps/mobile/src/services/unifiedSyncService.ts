@@ -534,12 +534,18 @@ export class UnifiedSyncService {
   // 获取认证token
   private async getAuthToken(): Promise<string | null> {
     try {
+      console.log('🔍 开始获取认证token...');
+      
       // 首先尝试从authToken获取（统一存储方式）
       const authToken = await AsyncStorage.getItem('authToken');
+      console.log('🔍 authToken状态:', authToken ? '存在' : '不存在');
+      
       if (authToken) {
+        console.log('🔍 找到authToken:', authToken.substring(0, 20) + '...');
         // 验证token有效性
         const validation = await tokenValidationService.validateToken(authToken);
         if (validation.isValid) {
+          console.log('✅ authToken验证通过');
           return authToken;
         } else {
           console.warn('⚠️ authToken无效:', validation.error);
@@ -553,12 +559,22 @@ export class UnifiedSyncService {
       
       // 兼容性：从userData获取
       const userData = await AsyncStorage.getItem('userData');
+      console.log('🔍 userData状态:', userData ? '存在' : '不存在');
+      
       if (userData) {
         const parsed = JSON.parse(userData);
+        console.log('🔍 userData内容:', {
+          hasToken: !!parsed.token,
+          loginType: parsed.loginType,
+          userId: parsed.id
+        });
+        
         if (parsed.token) {
+          console.log('🔍 找到userData.token:', parsed.token.substring(0, 20) + '...');
           // 验证token有效性
           const validation = await tokenValidationService.validateToken(parsed.token);
           if (validation.isValid) {
+            console.log('✅ userData.token验证通过');
             return parsed.token;
           } else {
             console.warn('⚠️ userData.token无效:', validation.error);
@@ -571,6 +587,7 @@ export class UnifiedSyncService {
         }
       }
       
+      console.log('❌ 未找到有效的认证token');
       return null;
     } catch (error) {
       console.error('获取认证token失败:', error);

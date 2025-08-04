@@ -36,6 +36,12 @@ export class UserService {
   // 保存用户登录信息到本地存储
   async saveUserLoginInfo(userData: any, loginType: string): Promise<void> {
     try {
+      console.log('💾 开始保存用户登录信息:', {
+        loginType,
+        hasToken: !!userData.token,
+        userId: userData.id
+      });
+      
       const results = await Promise.all([
         storageService.setUserData(userData),
         storageService.setLoginType(loginType)
@@ -49,15 +55,19 @@ export class UserService {
 
       // 保存认证token
       if (userData.token) {
+        console.log('💾 保存认证token:', userData.token.substring(0, 20) + '...');
         const tokenResult = await storageService.setAuthToken(userData.token);
         if (!tokenResult.success) {
           throw new Error('认证token保存失败');
         }
         console.log('✅ 认证token已保存');
+      } else {
+        console.warn('⚠️ 用户数据中没有token');
       }
       
       console.log('✅ 用户登录信息已保存到本地存储');
     } catch (error) {
+      console.error('❌ 保存用户登录信息失败:', error);
       errorHandler.handleError(error, { userData, loginType }, {
         type: ErrorType.STORAGE,
         userMessage: '用户信息保存失败，请重试'
@@ -152,7 +162,7 @@ export class UserService {
       });
 
       console.log('📝 响应状态:', response.status);
-      console.log('📝 响应头:', Object.fromEntries(response.headers.entries()));
+      console.log('📝 响应头:', response.headers);
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -188,7 +198,7 @@ export class UserService {
       });
 
       console.log('📤 响应状态:', response.status);
-      console.log('📤 响应头:', Object.fromEntries(response.headers.entries()));
+      console.log('📤 响应头:', response.headers);
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -251,7 +261,7 @@ export class UserService {
       });
       return {
         success: false,
-        error: errorMessage
+        error: typeof errorMessage === 'string' ? errorMessage : '未知错误'
       };
     }
   }
