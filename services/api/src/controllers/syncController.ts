@@ -1,7 +1,8 @@
 import { Request, Response } from 'express';
-import syncService, { ISyncData, ConflictResolution } from '../services/syncService';
+import syncService, { ISyncData } from '../services/syncService';
 import { logger } from '../utils/logger';
-import { updateWordProgress, addToUserVocabulary } from './wordController';
+import { updateWordProgress, addToUserVocabulary, removeFromUserVocabulary } from './wordController';
+import UserVocabulary from '../models/UserVocabulary';
 
 // 从 wordController 导入 generateWordData 函数
 // 由于 generateWordData 是 wordController 中的私有函数，我们需要复制其逻辑
@@ -43,8 +44,93 @@ export class SyncController {
                 // 处理词汇表数据
                 if (syncItem.operation === 'create' && syncItem.data.word) {
                   logger.info(`📚 添加单词到词汇表: ${syncItem.data.word}`);
-                  // 这里可以调用词汇表相关的处理逻辑
-                  results.push({ type: 'vocabulary', status: 'success', word: syncItem.data.word });
+                  try {
+                    // 调用词汇表添加逻辑
+                    const result = await addToUserVocabulary({
+                      body: {
+                        userId: syncItem.userId,
+                        word: syncItem.data.word,
+                        sourceShow: syncItem.data.sourceShow,
+                        language: syncItem.data.language || 'en'
+                      }
+                    } as Request, res);
+                    results.push({ type: 'vocabulary', status: 'success', word: syncItem.data.word });
+                  } catch (error) {
+                    logger.error(`❌ 添加词汇表单词失败: ${syncItem.data.word}`, error);
+                    errors.push(`vocabulary create: ${error instanceof Error ? error.message : 'Unknown error'}`);
+                  }
+                } else if (syncItem.operation === 'delete' && syncItem.data.word) {
+                  logger.info(`🗑️ 删除词汇表单词: ${syncItem.data.word}`);
+                  try {
+                    // 调用词汇表删除逻辑
+                    const result = await removeFromUserVocabulary({
+                      body: {
+                        userId: syncItem.userId,
+                        word: syncItem.data.word,
+                        sourceShowId: syncItem.data.sourceShow?.id
+                      }
+                    } as Request, res);
+                    results.push({ type: 'vocabulary', status: 'success', operation: 'delete', word: syncItem.data.word });
+                  } catch (error) {
+                    logger.error(`❌ 删除词汇表单词失败: ${syncItem.data.word}`, error);
+                    errors.push(`vocabulary delete: ${error instanceof Error ? error.message : 'Unknown error'}`);
+                  }
+                } else if (syncItem.operation === 'update' && syncItem.data.word) {
+                  logger.info(`📝 更新词汇表单词: ${syncItem.data.word}`);
+                  try {
+                    // 调用词汇表更新逻辑
+                    const result = await updateWordProgress({
+                      body: {
+                        userId: syncItem.userId,
+                        word: syncItem.data.word,
+                        ...syncItem.data
+                      }
+                    } as Request, res);
+                    results.push({ type: 'vocabulary', status: 'success', operation: 'update', word: syncItem.data.word });
+                  } catch (error) {
+                    logger.error(`❌ 更新词汇表单词失败: ${syncItem.data.word}`, error);
+                    errors.push(`vocabulary update: ${error instanceof Error ? error.message : 'Unknown error'}`);
+                  }
+                }
+                break;
+                
+              case 'wordbooks':
+                // 处理单词本数据
+                logger.info(`📖 处理单词本数据: ${syncItem.operation}`);
+                results.push({ type: 'wordbooks', status: 'success', operation: syncItem.operation });
+                break;
+                
+              case 'shows':
+                // 处理剧单数据
+                logger.info(`📺 处理剧单数据: ${syncItem.operation}`);
+                results.push({ type: 'shows', status: 'success', operation: syncItem.operation });
+                break;
+                
+
+                
+              case 'badges':
+                // 处理徽章数据
+                logger.info(`🏅 处理徽章数据: ${syncItem.operation}`);
+                try {
+                  if (syncItem.operation === 'update' && syncItem.data.badges) {
+                    // 更新用户徽章数据
+                    const badgeData = {
+                      userId: syncItem.userId,
+                      badges: syncItem.data.badges,
+                      lastUpdated: new Date()
+                    };
+                    
+                    // 这里可以调用徽章更新服务
+                    // await badgeService.updateUserBadges(badgeData);
+                    
+                    logger.info(`✅ 徽章数据更新成功: ${syncItem.data.badges.length} 个徽章`);
+                    results.push({ type: 'badges', status: 'success', operation: 'update', badgeCount: syncItem.data.badges.length });
+                  } else {
+                    results.push({ type: 'badges', status: 'success', operation: syncItem.operation });
+                  }
+                } catch (error) {
+                  logger.error(`❌ 处理徽章数据失败`, error);
+                  errors.push(`badges: ${error instanceof Error ? error.message : 'Unknown error'}`);
                 }
                 break;
                 
@@ -64,6 +150,43 @@ export class SyncController {
                 // 处理用户统计数据
                 logger.info(`📈 处理用户统计数据`);
                 results.push({ type: 'userStats', status: 'success' });
+                break;
+                
+              case 'learningRecords':
+                // 处理学习记录数据
+                logger.info(`📊 处理学习记录数据: ${syncItem.operation}`);
+                try {
+                  if (syncItem.operation === 'update' && syncItem.data.word) {
+                    // 调用学习进度更新逻辑
+                    const result = await updateWordProgress({
+                      body: {
+                        userId: syncItem.userId,
+                        word: syncItem.data.word,
+                        mastery: syncItem.data.mastery,
+                        reviewCount: syncItem.data.reviewCount,
+                        correctCount: syncItem.data.correctCount,
+                        incorrectCount: syncItem.data.incorrectCount,
+                        consecutiveCorrect: syncItem.data.consecutiveCorrect,
+                        consecutiveIncorrect: syncItem.data.consecutiveIncorrect,
+                        lastReviewDate: syncItem.data.lastReviewDate,
+                        nextReviewDate: syncItem.data.nextReviewDate,
+                        interval: syncItem.data.interval,
+                        easeFactor: syncItem.data.easeFactor,
+                        totalStudyTime: syncItem.data.totalStudyTime,
+                        averageResponseTime: syncItem.data.averageResponseTime,
+                        confidence: syncItem.data.confidence,
+                        notes: syncItem.data.notes,
+                        tags: syncItem.data.tags
+                      }
+                    } as Request, res);
+                    results.push({ type: 'learningRecords', status: 'success', operation: 'update', word: syncItem.data.word });
+                  } else {
+                    results.push({ type: 'learningRecords', status: 'success', operation: syncItem.operation });
+                  }
+                } catch (error) {
+                  logger.error(`❌ 处理学习记录失败: ${syncItem.data.word || 'unknown'}`, error);
+                  errors.push(`learningRecords: ${error instanceof Error ? error.message : 'Unknown error'}`);
+                }
                 break;
                 
               default:
@@ -204,52 +327,7 @@ export class SyncController {
     }
   }
 
-  // 解决数据冲突
-  static async resolveConflicts(req: Request, res: Response) {
-    try {
-      const userId = (req as any).user.id;
-      const { conflicts, resolution } = req.body;
 
-      if (!conflicts || !Array.isArray(conflicts)) {
-        return res.status(400).json({
-          success: false,
-          message: '冲突数据格式不正确'
-        });
-      }
-
-      if (!resolution || !['local', 'remote', 'merge', 'manual'].includes(resolution)) {
-        return res.status(400).json({
-          success: false,
-          message: '冲突解决策略不正确'
-        });
-      }
-
-      const result = await syncService.resolveConflicts(userId, conflicts, resolution as ConflictResolution);
-
-      if (result.success) {
-        logger.info(`用户 ${userId} 冲突解决成功`);
-        res.json({
-          success: true,
-          message: '冲突解决成功',
-          data: result.data
-        });
-      } else {
-        logger.error(`用户 ${userId} 冲突解决失败:`, result.errors);
-        res.status(400).json({
-          success: false,
-          message: result.message,
-          errors: result.errors
-        });
-      }
-    } catch (error) {
-      logger.error('冲突解决失败:', error);
-      res.status(500).json({
-        success: false,
-        message: '冲突解决失败',
-        error: error instanceof Error ? error.message : 'Unknown error'
-      });
-    }
-  }
 
   // 获取同步状态
   static async getSyncStatus(req: Request, res: Response) {
@@ -394,4 +472,4 @@ export class SyncController {
       });
     }
   }
-} 
+}

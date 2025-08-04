@@ -3,6 +3,8 @@ import { UserLearningRecord } from '../models/UserLearningRecord';
 import { Word } from '../models/Word';
 import { Show } from '../models/Show';
 import { SearchHistory } from '../models/SearchHistory';
+import UserShowList from '../models/UserShowList';
+import UserVocabulary from '../models/UserVocabulary';
 import mongoose from 'mongoose';
 import { logger } from '../utils/logger';
 
@@ -14,6 +16,7 @@ export interface ISyncData {
   userSettings: any;
   lastSyncTime: Date;
   deviceId: string;
+  shows?: any[]; // 新增剧单数据
 }
 
 // 同步结果接口
@@ -25,12 +28,13 @@ export interface ISyncResult {
     searchHistory: any[];
     userSettings: any;
     conflicts?: any[];
+    shows?: any[]; // 新增剧单数据
   };
   errors?: string[];
 }
 
 // 冲突解决策略
-export type ConflictResolution = 'local' | 'remote' | 'merge' | 'manual';
+
 
 // 数据同步服务类
 export class SyncService {
@@ -78,7 +82,8 @@ export class SyncService {
         data: {
           learningRecords: [],
           searchHistory: [],
-          userSettings: {}
+          userSettings: {},
+          shows: []
         }
       };
 
@@ -128,6 +133,23 @@ export class SyncService {
           return {
             success: false,
             message: '用户设置同步失败',
+            errors: [error instanceof Error ? error.message : 'Unknown error']
+          };
+        }
+      }
+
+      // 同步剧单数据
+      if (syncData.shows) {
+        logger.info(`📺 同步剧单数据`);
+        try {
+          const showsResult = await this.syncShows(userId, syncData.shows);
+          result.data!.shows = showsResult;
+          logger.info(`✅ 剧单数据同步成功`);
+        } catch (error) {
+          logger.error(`❌ 剧单数据同步失败:`, error);
+          return {
+            success: false,
+            message: '剧单数据同步失败',
             errors: [error instanceof Error ? error.message : 'Unknown error']
           };
         }
@@ -185,13 +207,17 @@ export class SyncService {
       // 获取用户设置
       const userSettings = user.settings;
 
+      // 获取剧单数据
+      const userShowList = await UserShowList.findOne({ userId });
+
       return {
         success: true,
         message: '数据下载成功',
         data: {
           learningRecords: learningRecords ? learningRecords.records : [],
           searchHistory: searchHistory,
-          userSettings: userSettings
+          userSettings: userSettings,
+          shows: userShowList ? userShowList.shows : []
         }
       };
     } catch (error) {
@@ -367,57 +393,198 @@ export class SyncService {
     return mergedSettings;
   }
 
-  // 检查是否有冲突
-  private hasConflict(remoteRecord: any, localRecord: any): boolean {
-    // 简单的冲突检测：如果两个记录都有更新且时间接近
-    const remoteTime = new Date(remoteRecord.lastReviewDate).getTime();
-    const localTime = new Date(localRecord.lastReviewDate).getTime();
-    const timeDiff = Math.abs(remoteTime - localTime);
-    
-    // 如果时间差小于1小时且都有更新，认为有冲突
-    return timeDiff < 3600000 && 
-           remoteRecord.reviewCount > 0 && 
-           localRecord.reviewCount > 0;
+  // 同步剧单数据
+  private async syncShows(userId: string, localShowsData: any): Promise<any> {
+    try {
+      const { shows: localShows } = localShowsData;
+      
+      if (!Array.isArray(localShows)) {
+        logger.warn('⚠️ 剧单数据格式不正确，跳过同步');
+        return { shows: [] };
+      }
+
+      let userShowList = await UserShowList.findOne({ userId });
+      
+      if (!userShowList) {
+        logger.info(`📝 为用户 ${userId} 创建新的剧单文档`);
+        userShowList = new UserShowList({
+          userId,
+          shows: [],
+          updatedAt: new Date()
+        });
+      }
+
+      logger.info(`📖 同步剧单数据，本地剧集数: ${localShows.length}, 云端剧集数: ${userShowList.shows.length}`);
+
+      // 使用本地数据覆盖云端数据（多邻国原则：本地优先）
+      userShowList.shows = localShows;
+      userShowList.updatedAt = new Date();
+      
+      await userShowList.save();
+      
+      logger.info(`✅ 剧单同步成功，更新了 ${localShows.length} 个剧集`);
+      
+      return {
+        shows: localShows,
+        totalShows: localShows.length,
+        lastSyncTime: new Date()
+      };
+    } catch (error) {
+      logger.error('❌ 剧单同步失败:', error);
+      throw error;
+    }
   }
 
-  // 合并记录
-  private mergeRecords(remoteRecord: any, localRecord: any): any {
-    const merged = { ...remoteRecord };
-
-    // 合并复习次数
-    merged.reviewCount = Math.max(remoteRecord.reviewCount, localRecord.reviewCount);
-    merged.correctCount = Math.max(remoteRecord.correctCount, localRecord.correctCount);
-    merged.incorrectCount = Math.max(remoteRecord.incorrectCount, localRecord.incorrectCount);
-
-    // 使用最新的时间
-    const remoteTime = new Date(remoteRecord.lastReviewDate).getTime();
-    const localTime = new Date(localRecord.lastReviewDate).getTime();
-    merged.lastReviewDate = remoteTime > localTime ? remoteRecord.lastReviewDate : localRecord.lastReviewDate;
-
-    // 合并掌握度（取平均值）
-    merged.mastery = Math.round((remoteRecord.mastery + localRecord.mastery) / 2);
-
-    // 合并学习时间
-    merged.totalStudyTime = remoteRecord.totalStudyTime + localRecord.totalStudyTime;
-
-    // 合并平均响应时间
-    const totalReviews = remoteRecord.reviewCount + localRecord.reviewCount;
-    if (totalReviews > 0) {
-      merged.averageResponseTime = Math.round(
-        (remoteRecord.averageResponseTime * remoteRecord.reviewCount + 
-         localRecord.averageResponseTime * localRecord.reviewCount) / totalReviews
-      );
+  // 检查是否有冲突
+  private hasConflict(remoteRecord: any, localRecord: any): boolean {
+    try {
+      // 改进时间戳处理，添加安全检查
+      const remoteTime = this.safeParseDate(remoteRecord.lastReviewDate);
+      const localTime = this.safeParseDate(localRecord.lastReviewDate);
+      
+      if (!remoteTime || !localTime) {
+        // 如果时间戳无效，基于其他字段判断冲突
+        return remoteRecord.reviewCount > 0 && localRecord.reviewCount > 0 &&
+               remoteRecord.mastery !== localRecord.mastery;
+      }
+      
+      const timeDiff = Math.abs(remoteTime.getTime() - localTime.getTime());
+      
+      // 如果时间差小于1小时且都有更新，认为有冲突
+      return timeDiff < 3600000 && 
+             remoteRecord.reviewCount > 0 && 
+             localRecord.reviewCount > 0;
+    } catch (error) {
+      logger.warn(`⚠️ 冲突检测异常: ${error.message}`);
+      // 保守策略：认为有冲突
+      return true;
     }
+  }
 
-    // 合并标签 - 添加安全检查
-    const remoteTags = Array.isArray(remoteRecord.tags) ? remoteRecord.tags : [];
-    const localTags = Array.isArray(localRecord.tags) ? localRecord.tags : [];
-    const allTags = new Set([...remoteTags, ...localTags]);
-    merged.tags = Array.from(allTags);
+  // 安全解析日期
+  private safeParseDate(dateValue: any): Date | null {
+    try {
+      if (!dateValue) return null;
+      
+      if (dateValue instanceof Date) {
+        return isNaN(dateValue.getTime()) ? null : dateValue;
+      }
+      
+      if (typeof dateValue === 'string' || typeof dateValue === 'number') {
+        const date = new Date(dateValue);
+        return isNaN(date.getTime()) ? null : date;
+      }
+      
+      return null;
+    } catch (error) {
+      logger.warn(`⚠️ 日期解析失败: ${dateValue}`, error);
+      return null;
+    }
+  }
 
-    // 合并笔记（使用较长的笔记）
-    if (localRecord.notes && (!remoteRecord.notes || localRecord.notes.length > remoteRecord.notes.length)) {
-      merged.notes = localRecord.notes;
+  // 合并记录 - 修复数据覆盖问题，确保本地数据优先
+  private mergeRecords(remoteRecord: any, localRecord: any): any {
+    // 以本地数据为基础，确保本地数据优先
+    const merged = { ...localRecord };
+
+    try {
+      // 合并复习次数 - 取最大值
+      merged.reviewCount = Math.max(remoteRecord.reviewCount || 0, localRecord.reviewCount || 0);
+      merged.correctCount = Math.max(remoteRecord.correctCount || 0, localRecord.correctCount || 0);
+      merged.incorrectCount = Math.max(remoteRecord.incorrectCount || 0, localRecord.incorrectCount || 0);
+
+      // 使用最新的时间 - 本地数据优先
+      const remoteTime = this.safeParseDate(remoteRecord.lastReviewDate);
+      const localTime = this.safeParseDate(localRecord.lastReviewDate);
+      
+      if (remoteTime && localTime) {
+        // 如果本地时间更新，保持本地时间；否则使用远程时间
+        merged.lastReviewDate = localTime.getTime() >= remoteTime.getTime() 
+          ? localRecord.lastReviewDate 
+          : remoteRecord.lastReviewDate;
+      } else if (localTime) {
+        // 如果只有本地时间有效，使用本地时间
+        merged.lastReviewDate = localRecord.lastReviewDate;
+      } else if (remoteTime) {
+        // 如果只有远程时间有效，使用远程时间
+        merged.lastReviewDate = remoteRecord.lastReviewDate;
+      }
+
+      // 合并掌握度 - 本地数据优先，如果本地更高则保持本地值
+      const localMastery = localRecord.mastery || 0;
+      const remoteMastery = remoteRecord.mastery || 0;
+      merged.mastery = localMastery >= remoteMastery ? localMastery : remoteMastery;
+
+      // 合并学习时间 - 累加
+      merged.totalStudyTime = (remoteRecord.totalStudyTime || 0) + (localRecord.totalStudyTime || 0);
+
+      // 合并平均响应时间 - 加权平均
+      const totalReviews = (remoteRecord.reviewCount || 0) + (localRecord.reviewCount || 0);
+      if (totalReviews > 0) {
+        const remoteAvg = remoteRecord.averageResponseTime || 0;
+        const localAvg = localRecord.averageResponseTime || 0;
+        const remoteWeight = remoteRecord.reviewCount || 0;
+        const localWeight = localRecord.reviewCount || 0;
+        
+        merged.averageResponseTime = Math.round(
+          (remoteAvg * remoteWeight + localAvg * localWeight) / totalReviews
+        );
+      }
+
+      // 合并标签 - 本地数据优先，合并所有标签
+      const remoteTags = Array.isArray(remoteRecord.tags) ? remoteRecord.tags : [];
+      const localTags = Array.isArray(localRecord.tags) ? localRecord.tags : [];
+      const allTags = new Set([...localTags, ...remoteTags]); // 本地标签在前
+      merged.tags = Array.from(allTags);
+
+      // 合并笔记 - 本地数据优先，使用较长的笔记
+      if (localRecord.notes && (!remoteRecord.notes || localRecord.notes.length >= remoteRecord.notes.length)) {
+        merged.notes = localRecord.notes;
+      } else if (remoteRecord.notes) {
+        merged.notes = remoteRecord.notes;
+      }
+
+      // 合并其他字段 - 本地数据优先
+      if (localRecord.confidence !== undefined) {
+        merged.confidence = localRecord.confidence;
+      } else if (remoteRecord.confidence !== undefined) {
+        merged.confidence = remoteRecord.confidence;
+      }
+
+      if (localRecord.interval !== undefined) {
+        merged.interval = localRecord.interval;
+      } else if (remoteRecord.interval !== undefined) {
+        merged.interval = remoteRecord.interval;
+      }
+
+      if (localRecord.easeFactor !== undefined) {
+        merged.easeFactor = localRecord.easeFactor;
+      } else if (remoteRecord.easeFactor !== undefined) {
+        merged.easeFactor = remoteRecord.easeFactor;
+      }
+
+      if (localRecord.consecutiveCorrect !== undefined) {
+        merged.consecutiveCorrect = localRecord.consecutiveCorrect;
+      } else if (remoteRecord.consecutiveCorrect !== undefined) {
+        merged.consecutiveCorrect = remoteRecord.consecutiveCorrect;
+      }
+
+      if (localRecord.consecutiveIncorrect !== undefined) {
+        merged.consecutiveIncorrect = localRecord.consecutiveIncorrect;
+      } else if (remoteRecord.consecutiveIncorrect !== undefined) {
+        merged.consecutiveIncorrect = remoteRecord.consecutiveIncorrect;
+      }
+
+      if (localRecord.nextReviewDate) {
+        merged.nextReviewDate = localRecord.nextReviewDate;
+      } else if (remoteRecord.nextReviewDate) {
+        merged.nextReviewDate = remoteRecord.nextReviewDate;
+      }
+
+    } catch (error) {
+      logger.error(`❌ 记录合并异常: ${error.message}`);
+      // 发生异常时，完全使用本地数据
+      return { ...localRecord };
     }
 
     return merged;
@@ -462,74 +629,9 @@ export class SyncService {
     return merged;
   }
 
-  // 解决冲突
-  async resolveConflicts(userId: string, conflicts: any[], resolution: ConflictResolution): Promise<ISyncResult> {
-    try {
-      const userLearningRecord = await UserLearningRecord.findOne({ userId });
-      if (!userLearningRecord) {
-        return {
-          success: false,
-          message: '学习记录不存在',
-          errors: ['Learning record not found']
-        };
-      }
 
-      for (const conflict of conflicts) {
-        const record = userLearningRecord.records.find((r: any) => r.word === conflict.word);
-        if (!record) continue;
 
-        switch (resolution) {
-          case 'local':
-            Object.assign(record, conflict.local);
-            break;
-          case 'remote':
-            Object.assign(record, conflict.remote);
-            break;
-          case 'merge':
-            const merged = this.mergeRecords(conflict.remote, conflict.local);
-            Object.assign(record, merged);
-            break;
-          case 'manual':
-            // 手动解决冲突的逻辑可以在这里实现
-            break;
-        }
-      }
 
-      if (userLearningRecord.records.length > 0) {
-        const totalMastery = userLearningRecord.records.reduce((sum: number, record: any) => sum + record.mastery, 0);
-        userLearningRecord.averageMastery = Math.round(totalMastery / userLearningRecord.records.length);
-      } else {
-        userLearningRecord.averageMastery = 0;
-      }
-      // 使用 findOneAndUpdate 避免并行保存冲突
-      await UserLearningRecord.findByIdAndUpdate(
-        userLearningRecord._id,
-        { 
-          $set: { 
-            records: userLearningRecord.records,
-            averageMastery: userLearningRecord.averageMastery
-          } 
-        },
-        { new: true }
-      );
-
-      return {
-        success: true,
-        message: '冲突解决成功',
-        data: {
-          learningRecords: userLearningRecord.records,
-          searchHistory: [],
-          userSettings: {}
-        }
-      };
-    } catch (error) {
-      return {
-        success: false,
-        message: '冲突解决失败',
-        errors: [error instanceof Error ? error.message : 'Unknown error']
-      };
-    }
-  }
 
   // 获取同步状态
   async getSyncStatus(userId: string): Promise<{

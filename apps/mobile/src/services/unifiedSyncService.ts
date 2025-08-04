@@ -1,17 +1,15 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import NetInfo from '@react-native-community/netinfo';
 import { API_BASE_URL } from '../constants/config';
-import { DataConflictResolver } from './dataConflictResolver';
 import { experienceManager } from './experienceManager';
+import { guestModeService } from './guestModeService';
 
 export interface SyncData {
-  type: 'experience' | 'vocabulary' | 'progress' | 'achievements' | 'userStats' | 'learningRecords' | 'searchHistory' | 'userSettings' | 'badges';
+  type: 'experience' | 'vocabulary' | 'progress' | 'achievements' | 'userStats' | 'learningRecords' | 'searchHistory' | 'userSettings' | 'badges' | 'wordbooks' | 'shows';
   data: any;
   timestamp: number;
   userId: string;
   operation: 'create' | 'update' | 'delete';
-  localVersion: number;
-  serverVersion?: number;
   priority: 'high' | 'medium' | 'low';
   // 添加经验值相关字段以保持对齐
   xpGained?: number;
@@ -25,7 +23,6 @@ export interface SyncConfig {
   offlineSyncInterval: number;
   maxRetryAttempts: number;
   batchSize: number;
-  conflictResolutionStrategy: 'local-wins' | 'server-wins' | 'smart-merge';
   enableIncrementalSync: boolean;
   enableOfflineFirst: boolean;
   enableRealTimeSync: boolean;
@@ -38,7 +35,7 @@ export interface SyncStatus {
   networkType: string;
   isUserActive: boolean;
   retryCount: number;
-  syncMode: 'offline' | 'online' | 'conflict-resolution';
+  syncMode: 'offline' | 'online';
   pendingOperations: number;
   syncProgress: number;
 }
@@ -60,8 +57,7 @@ export class UnifiedSyncService {
   private lastSyncTime: number = 0;
   private isUserActive: boolean = false;
   private networkType: string = 'unknown';
-  private localDataVersions: Map<string, number> = new Map();
-  private serverDataVersions: Map<string, number> = new Map();
+
   private pendingOperations: Set<string> = new Set();
   private syncProgress: number = 0;
 
@@ -72,7 +68,6 @@ export class UnifiedSyncService {
     offlineSyncInterval: 10 * 60 * 1000, // 10分钟
     maxRetryAttempts: 5,
     batchSize: 20,
-    conflictResolutionStrategy: 'smart-merge',
     enableIncrementalSync: true,
     enableOfflineFirst: true,
     enableRealTimeSync: true
@@ -81,7 +76,6 @@ export class UnifiedSyncService {
   private constructor() {
     this.initializeNetworkListener();
     this.initializeActivityListener();
-    this.loadDataVersions();
     this.loadSyncQueue();
   }
 
@@ -161,32 +155,49 @@ export class UnifiedSyncService {
   }
 
   // 添加数据到同步队列
-  public addToSyncQueue(data: Omit<SyncData, 'timestamp' | 'localVersion'>): void {
-    const localVersion = this.getNextLocalVersion(data.type);
+  public async addToSyncQueue(data: Omit<SyncData, 'timestamp'>): Promise<void> {
+    // 检查是否为游客模式
+    const isGuestMode = await guestModeService.isGuestMode();
+    if (isGuestMode) {
+      console.log('👤 游客模式，数据仅保存本地，不加入同步队列');
+      return;
+    }
+
     const syncData: SyncData = {
       ...data,
-      timestamp: Date.now(),
-      localVersion
+      timestamp: Date.now()
     };
 
     this.syncQueue.push(syncData);
-    this.pendingOperations.add(`${data.type}-${data.operation}-${localVersion}`);
+    this.pendingOperations.add(`${data.type}-${data.operation}-${Date.now()}`);
     this.persistSyncQueue();
 
     if (this.isImportantOperation(data.type)) {
       this.syncPendingData();
     }
 
-    console.log(`📝 添加同步数据: ${data.type} (${data.operation}) - 版本 ${localVersion}`);
+    console.log(`📝 添加同步数据: ${data.type} (${data.operation})`);
   }
 
   // 判断是否为重要操作
   private isImportantOperation(type: string): boolean {
-    return ['experience', 'achievements', 'userStats'].includes(type);
+    // 重要操作类型，需要立即同步
+    const importantTypes = ['experience', 'userStats', 'vocabulary', 'wordbooks', 'shows'];
+    return importantTypes.includes(type);
   }
 
   // 同步待同步数据
   public async syncPendingData(): Promise<SyncResult> {
+    // 检查是否为游客模式
+    const isGuestMode = await guestModeService.isGuestMode();
+    if (isGuestMode) {
+      console.log('👤 游客模式，跳过云端同步，数据仅保存本地');
+      return {
+        success: true,
+        message: '游客模式，数据仅保存本地'
+      };
+    }
+
     if (this.isSyncing || this.syncQueue.length === 0) {
       return {
         success: true,
@@ -294,151 +305,199 @@ export class UnifiedSyncService {
 
   // 同步特定数据类型
   private async syncDataType(dataType: string, dataItems: SyncData[], token: string): Promise<{ conflicts?: any[], errors?: string[] }> {
-    console.log(`🔄 同步数据类型: ${dataType} (${dataItems.length} 个变更)`);
-
-    const conflicts: any[] = [];
-    const errors: string[] = [];
-
+    console.log(`🔄 同步数据类型: ${dataType} (${dataItems.length} 个变更) - 仅上传模式`);
+    
     try {
-      const serverVersion = await this.getServerVersion(dataType, token);
-      const detectedConflicts = this.detectConflicts(dataItems, serverVersion);
-      
-      if (detectedConflicts.length > 0) {
-        const resolutionResult = await this.resolveConflicts(detectedConflicts, token);
-        conflicts.push(...resolutionResult);
-      } else {
-        await this.syncDataWithoutConflicts(dataItems, token);
-      }
+      // 直接上传，无需冲突检测
+      await this.syncDataWithoutConflicts(dataItems, token);
+      console.log(`✅ 数据类型 ${dataType} 同步完成（仅上传）`);
+      return { conflicts: [], errors: [] };
     } catch (error) {
-      errors.push(`同步 ${dataType} 失败: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      return { 
+        conflicts: [], 
+        errors: [`同步 ${dataType} 失败: ${error instanceof Error ? error.message : 'Unknown error'}`] 
+      };
     }
-
-    return { conflicts, errors };
   }
 
-  // 检测冲突
-  private detectConflicts(dataItems: SyncData[], serverVersion: number): SyncData[] {
-    return dataItems.filter(item => {
-      const serverVer = this.serverDataVersions.get(item.type) || 0;
-      return item.serverVersion && item.serverVersion < serverVer;
-    });
-  }
 
-  // 解决冲突
-  private async resolveConflicts(conflicts: SyncData[], token: string): Promise<any[]> {
-    const resolutions: any[] = [];
-    
-    for (const conflict of conflicts) {
-      try {
-        const serverData = await this.getServerData(conflict.type, token);
-        
-        const resolution = DataConflictResolver.resolveConflict({
-          localData: conflict.data,
-          serverData,
-          localTimestamp: conflict.timestamp,
-          serverTimestamp: Date.now(),
-          dataType: conflict.type
-        });
-        
-        await this.applyResolvedData(conflict.type, resolution.resolvedData, token);
-        
-        resolutions.push({
-          type: conflict.type,
-          resolution: resolution.reason,
-          confidence: resolution.confidence
-        });
-        
-        console.log(`🔄 冲突解决: ${conflict.type} - ${resolution.reason}`);
-      } catch (error) {
-        console.error(`解决冲突失败: ${conflict.type}`, error);
-      }
-    }
-    
-    return resolutions;
-  }
 
-  // 无冲突同步
+  // 无冲突同步 - 遵循多邻国原则：只上传，不更新本地版本号
   private async syncDataWithoutConflicts(dataItems: SyncData[], token: string): Promise<void> {
-    const response = await fetch(`${API_BASE_URL}/users/batch-sync`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
-      },
-      body: JSON.stringify({
-        data: dataItems,
-        timestamp: Date.now()
-      }),
-    });
-
-    if (!response.ok) {
-      throw new Error(`同步失败: ${response.status}`);
-    }
-
-    const result = await response.json();
-    if (!result.success) {
-      throw new Error(result.message || '同步失败');
-    }
-
-    dataItems.forEach(item => {
-      this.serverDataVersions.set(item.type, (this.serverDataVersions.get(item.type) || 0) + 1);
-    });
-  }
-
-  // 获取服务器版本
-  private async getServerVersion(dataType: string, token: string): Promise<number> {
     try {
-      const response = await fetch(`${API_BASE_URL}/users/version/${dataType}`, {
+      // 添加数据完整性检查
+      const validatedData = dataItems.filter(item => this.validateSyncData(item));
+      
+      if (validatedData.length === 0) {
+        console.log('⚠️ 没有有效数据需要同步');
+        return;
+      }
+
+      console.log(`📤 准备同步 ${validatedData.length} 条数据`);
+
+      const response = await fetch(`${API_BASE_URL}/users/batch-sync`, {
+        method: 'POST',
         headers: {
+          'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
         },
+        body: JSON.stringify({
+          data: validatedData,
+          timestamp: Date.now(),
+          // 添加同步策略标识
+          syncStrategy: 'local-first',
+          deviceId: await this.getDeviceId()
+        }),
       });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`同步失败: ${response.status} - ${errorText}`);
+      }
+
+      const result = await response.json();
+      if (!result.success) {
+        throw new Error(result.message || '同步失败');
+      }
+
+      // 遵循多邻国原则：不更新本地服务器版本号，避免影响后续冲突检测
+      // 本地数据始终是权威的，不需要跟踪服务器版本
+      console.log(`✅ 数据类型同步完成（仅上传，不更新版本号）`);
       
-      if (response.ok) {
-        const result = await response.json();
-        return result.version || 0;
+      // 记录同步成功的数据
+      this.logSyncSuccess(validatedData);
+      
+    } catch (error) {
+      console.error(`❌ 同步失败: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw error;
+    }
+  }
+
+  // 验证同步数据
+  private validateSyncData(data: SyncData): boolean {
+    try {
+      // 基本字段验证
+      if (!data.type || !data.data || !data.userId || !data.operation) {
+        console.warn(`⚠️ 跳过无效同步数据: 缺少必需字段`, data);
+        return false;
+      }
+
+      // 时间戳验证
+      if (!data.timestamp || typeof data.timestamp !== 'number' || data.timestamp <= 0) {
+        console.warn(`⚠️ 跳过无效同步数据: 无效时间戳`, data);
+        return false;
+      }
+
+      // 数据类型特定验证
+      switch (data.type) {
+        case 'vocabulary':
+          return this.validateVocabularyData(data.data);
+        case 'learningRecords':
+          return this.validateLearningRecordsData(data.data);
+        case 'experience':
+          return this.validateExperienceData(data.data);
+        case 'userStats':
+          return this.validateUserStatsData(data.data);
+        case 'badges':
+          return this.validateBadgesData(data.data);
+        case 'wordbooks':
+          return this.validateWordbooksData(data.data);
+        case 'shows':
+          return this.validateShowsData(data.data);
+        case 'searchHistory':
+          return this.validateSearchHistoryData(data.data);
+        case 'userSettings':
+          return this.validateUserSettingsData(data.data);
+        default:
+          console.warn(`⚠️ 未知数据类型: ${data.type}`);
+          return false;
       }
     } catch (error) {
-      console.warn(`获取服务器版本失败: ${dataType}`, error);
+      console.error(`❌ 数据验证异常: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      return false;
     }
-    
-    return 0;
   }
 
-  // 获取服务器数据
-  private async getServerData(dataType: string, token: string): Promise<any> {
-    const response = await fetch(`${API_BASE_URL}/users/data/${dataType}`, {
-      headers: {
-        'Authorization': `Bearer ${token}`,
-      },
-    });
-    
-    if (!response.ok) {
-      throw new Error(`获取服务器数据失败: ${response.status}`);
-    }
-    
-    const result = await response.json();
-    return result.data;
+  // 验证词汇数据
+  private validateVocabularyData(data: any): boolean {
+    return data && typeof data === 'object' && 
+           (Array.isArray(data) ? data.length > 0 : true);
   }
 
-  // 应用解决后的数据
-  private async applyResolvedData(dataType: string, resolvedData: any, token: string): Promise<void> {
-    const response = await fetch(`${API_BASE_URL}/users/apply-resolved-data`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
-      },
-      body: JSON.stringify({
-        dataType,
-        data: resolvedData,
-        timestamp: Date.now()
-      }),
-    });
-    
-    if (!response.ok) {
-      throw new Error(`应用解决数据失败: ${response.status}`);
+  // 验证学习记录数据
+  private validateLearningRecordsData(data: any): boolean {
+    return data && Array.isArray(data) && data.length > 0 &&
+           data.every(record => record && typeof record === 'object');
+  }
+
+  // 验证经验值数据
+  private validateExperienceData(data: any): boolean {
+    return data && typeof data === 'object' && 
+           typeof data.experience === 'number' && data.experience >= 0;
+  }
+
+  // 验证用户统计数据
+  private validateUserStatsData(data: any): boolean {
+    return data && typeof data === 'object' && 
+           typeof data.experience === 'number';
+  }
+
+  // 验证徽章数据
+  private validateBadgesData(data: any): boolean {
+    return data && Array.isArray(data) && 
+           data.every(badge => badge && typeof badge === 'object');
+  }
+
+  // 验证单词本数据
+  private validateWordbooksData(data: any): boolean {
+    return data && Array.isArray(data) && 
+           data.every(wordbook => wordbook && typeof wordbook === 'object');
+  }
+
+  // 验证剧单数据
+  private validateShowsData(data: any): boolean {
+    return data && Array.isArray(data) && 
+           data.every(show => show && typeof show === 'object');
+  }
+
+  // 验证搜索历史数据
+  private validateSearchHistoryData(data: any): boolean {
+    return data && Array.isArray(data) && 
+           data.every(history => history && typeof history === 'object');
+  }
+
+  // 验证用户设置数据
+  private validateUserSettingsData(data: any): boolean {
+    return data && typeof data === 'object';
+  }
+
+  // 获取设备ID
+  private async getDeviceId(): Promise<string> {
+    try {
+      const deviceId = await AsyncStorage.getItem('deviceId');
+      if (deviceId) return deviceId;
+      
+      // 生成新的设备ID
+      const newDeviceId = `device_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      await AsyncStorage.setItem('deviceId', newDeviceId);
+      return newDeviceId;
+    } catch (error) {
+      console.warn('⚠️ 获取设备ID失败，使用默认值');
+      return 'unknown_device';
     }
+  }
+
+  // 记录同步成功
+  private logSyncSuccess(dataItems: SyncData[]): void {
+    const dataTypeCounts = dataItems.reduce((acc, item) => {
+      acc[item.type] = (acc[item.type] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+
+    console.log('📊 同步成功统计:', dataTypeCounts);
+    
+    // 更新最后同步时间
+    this.lastSyncTime = Date.now();
   }
 
   // 处理同步错误
@@ -479,37 +538,7 @@ export class UnifiedSyncService {
     }
   }
 
-  // 获取下一个本地版本号
-  private getNextLocalVersion(dataType: string): number {
-    const currentVersion = this.localDataVersions.get(dataType) || 0;
-    const nextVersion = currentVersion + 1;
-    this.localDataVersions.set(dataType, nextVersion);
-    this.persistDataVersions();
-    return nextVersion;
-  }
 
-  // 持久化数据版本
-  private async persistDataVersions(): Promise<void> {
-    try {
-      const versions = Object.fromEntries(this.localDataVersions);
-      await AsyncStorage.setItem('unifiedLocalDataVersions', JSON.stringify(versions));
-    } catch (error) {
-      console.error('持久化数据版本失败:', error);
-    }
-  }
-
-  // 加载数据版本
-  private async loadDataVersions(): Promise<void> {
-    try {
-      const versionsStr = await AsyncStorage.getItem('unifiedLocalDataVersions');
-      if (versionsStr) {
-        const versions = JSON.parse(versionsStr);
-        this.localDataVersions = new Map(Object.entries(versions));
-      }
-    } catch (error) {
-      console.error('加载数据版本失败:', error);
-    }
-  }
 
   // 持久化同步队列
   private async persistSyncQueue(): Promise<void> {
@@ -594,19 +623,12 @@ export class UnifiedSyncService {
         console.log(`✅ 迁移了 ${oldQueue.length} 条旧同步数据`);
       }
 
-      // 迁移旧的数据版本
-      const oldVersionsData = await AsyncStorage.getItem('localDataVersions');
-      if (oldVersionsData) {
-        const oldVersions = JSON.parse(oldVersionsData);
-        Object.entries(oldVersions).forEach(([type, version]) => {
-          this.localDataVersions.set(type, version);
-        });
-        await AsyncStorage.removeItem('localDataVersions');
-        console.log('✅ 迁移了旧数据版本');
-      }
+      // 清理旧的数据版本文件
+      await AsyncStorage.removeItem('localDataVersions');
+      await AsyncStorage.removeItem('unifiedLocalDataVersions');
+      console.log('✅ 清理了旧数据版本文件');
 
       this.persistSyncQueue();
-      this.persistDataVersions();
       
       console.log('✅ 旧同步数据迁移完成');
     } catch (error) {
