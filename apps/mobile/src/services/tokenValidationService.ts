@@ -11,6 +11,7 @@ export interface TokenValidationResult {
 export class TokenValidationService {
   private static instance: TokenValidationService;
   private reauthCallbacks: Array<() => void> = [];
+  private navigationCallback: ((screen: string) => void) | null = null;
 
   public static getInstance(): TokenValidationService {
     if (!TokenValidationService.instance) {
@@ -215,9 +216,23 @@ export class TokenValidationService {
     this.reauthCallbacks.push(callback);
   }
 
+  // 设置导航回调
+  public setNavigationCallback(callback: (screen: string) => void): void {
+    this.navigationCallback = callback;
+  }
+
   // 触发重新认证
   public triggerReauth(): void {
     console.log('🔄 触发重新认证...');
+    
+    // 如果有导航回调，直接导航到登录页面
+    if (this.navigationCallback) {
+      console.log('🔄 导航到登录页面');
+      this.navigationCallback('login');
+      return;
+    }
+    
+    // 否则执行其他回调
     this.reauthCallbacks.forEach(callback => {
       try {
         callback();

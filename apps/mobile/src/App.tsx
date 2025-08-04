@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { Alert } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import MainLayout from './components/navigation/MainLayout';
 import { ShowListProvider } from './context/ShowListContext';
@@ -6,10 +7,10 @@ import { VocabularyProvider } from './context/VocabularyContext';
 import { AuthProvider } from './context/AuthContext';
 import { LanguageProvider } from './context/LanguageContext';
 import { AppLanguageProvider } from './context/AppLanguageContext';
+import { NavigationProvider } from './components/navigation/NavigationContext';
 import { Audio } from 'expo-av';
 import { InterruptionModeIOS, InterruptionModeAndroid } from 'expo-av/build/Audio.types';
 import { InitialLanguageModal } from './components/common/InitialLanguageModal';
-import { ReauthModal } from './components/auth/ReauthModal';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Device from 'expo-device';
 import { unifiedSyncService } from './services/unifiedSyncService';
@@ -20,8 +21,6 @@ import { tokenValidationService } from './services/tokenValidationService';
 // 内部组件：移除自动通知初始化
 const AppContent = () => {
   const [showInitialLanguageModal, setShowInitialLanguageModal] = useState(false);
-  const [showReauthModal, setShowReauthModal] = useState(false);
-  const [reauthReason, setReauthReason] = useState('登录已过期，请重新登录');
 
   useEffect(() => {
     initializeApp();
@@ -45,9 +44,6 @@ const AppContent = () => {
       
       // 5. 初始化经验值管理器
       await initializeExperienceManager();
-      
-      // 6. 设置重新认证回调
-      setupReauthCallback();
       
       console.log('✅ 应用初始化完成');
     } catch (error) {
@@ -238,22 +234,27 @@ const AppContent = () => {
   };
 
   const setupReauthCallback = () => {
-    // 注册重新认证回调
-    tokenValidationService.onReauthRequired(() => {
-      console.log('🔄 显示重新认证弹窗');
-      setReauthReason('登录已过期，请重新登录');
-      setShowReauthModal(true);
+    // 设置导航回调，当token失效时直接导航到登录页面
+    tokenValidationService.setNavigationCallback((screen) => {
+      console.log(`🔄 导航到页面: ${screen}`);
+      // 这里可以通过全局状态管理来实现导航
+      // 暂时使用Alert提示用户
+      if (screen === 'login') {
+        Alert.alert(
+          '登录已过期',
+          '您的登录已过期，请重新登录',
+          [
+            {
+              text: '重新登录',
+              onPress: () => {
+                console.log('用户确认重新登录');
+                // 可以通过全局状态管理或事件系统来实现导航到登录页面
+              }
+            }
+          ]
+        );
+      }
     });
-  };
-
-  const handleReauthSuccess = () => {
-    console.log('✅ 重新认证成功');
-    setShowReauthModal(false);
-  };
-
-  const handleReauthClose = () => {
-    console.log('❌ 用户取消重新认证');
-    setShowReauthModal(false);
   };
 
   const handleInitialLanguageComplete = () => {
@@ -269,12 +270,6 @@ const AppContent = () => {
             <InitialLanguageModal
               visible={showInitialLanguageModal}
               onComplete={handleInitialLanguageComplete}
-            />
-            <ReauthModal
-              visible={showReauthModal}
-              onClose={handleReauthClose}
-              onLoginSuccess={handleReauthSuccess}
-              reason={reauthReason}
             />
           </VocabularyProvider>
         </ShowListProvider>
