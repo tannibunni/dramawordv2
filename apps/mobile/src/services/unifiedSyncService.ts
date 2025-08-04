@@ -3,6 +3,7 @@ import NetInfo from '@react-native-community/netinfo';
 import { API_BASE_URL } from '../constants/config';
 import { experienceManager } from './experienceManager';
 import { guestModeService } from './guestModeService';
+import { tokenValidationService } from './tokenValidationService';
 
 export interface SyncData {
   type: 'experience' | 'vocabulary' | 'progress' | 'achievements' | 'userStats' | 'learningRecords' | 'searchHistory' | 'userSettings' | 'badges' | 'wordbooks' | 'shows';
@@ -350,6 +351,15 @@ export class UnifiedSyncService {
 
       if (!response.ok) {
         const errorText = await response.text();
+        
+        // 处理401未授权错误
+        if (response.status === 401) {
+          console.warn('⚠️ Token验证失败，清除无效token并触发重新认证');
+          await tokenValidationService.clearInvalidToken();
+          tokenValidationService.triggerReauth();
+          throw new Error('Token验证失败，请重新登录');
+        }
+        
         throw new Error(`同步失败: ${response.status} - ${errorText}`);
       }
 
@@ -527,14 +537,38 @@ export class UnifiedSyncService {
       // 首先尝试从authToken获取（统一存储方式）
       const authToken = await AsyncStorage.getItem('authToken');
       if (authToken) {
-        return authToken;
+        // 验证token有效性
+        const validation = await tokenValidationService.validateToken(authToken);
+        if (validation.isValid) {
+          return authToken;
+        } else {
+          console.warn('⚠️ authToken无效:', validation.error);
+          // 清除无效token
+          await tokenValidationService.clearInvalidToken();
+          // 触发重新认证
+          tokenValidationService.triggerReauth();
+          return null;
+        }
       }
       
       // 兼容性：从userData获取
       const userData = await AsyncStorage.getItem('userData');
       if (userData) {
         const parsed = JSON.parse(userData);
-        return parsed.token || null;
+        if (parsed.token) {
+          // 验证token有效性
+          const validation = await tokenValidationService.validateToken(parsed.token);
+          if (validation.isValid) {
+            return parsed.token;
+          } else {
+            console.warn('⚠️ userData.token无效:', validation.error);
+            // 清除无效token
+            await tokenValidationService.clearInvalidToken();
+            // 触发重新认证
+            tokenValidationService.triggerReauth();
+            return null;
+          }
+        }
       }
       
       return null;
