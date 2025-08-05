@@ -11,7 +11,7 @@ import { NavigationProvider } from './components/navigation/NavigationContext';
 import { AuthGuard } from './components/auth/AuthGuard';
 import { Audio } from 'expo-av';
 import { InterruptionModeIOS, InterruptionModeAndroid } from 'expo-av/build/Audio.types';
-import { InitialLanguageModal } from './components/common/InitialLanguageModal';
+
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Device from 'expo-device';
 import { unifiedSyncService } from './services/unifiedSyncService';
@@ -21,7 +21,6 @@ import { tokenValidationService } from './services/tokenValidationService';
 
 // 内部组件：移除自动通知初始化
 const AppContent = () => {
-  const [showInitialLanguageModal, setShowInitialLanguageModal] = useState(false);
 
   useEffect(() => {
     initializeApp();
@@ -94,12 +93,10 @@ const AppContent = () => {
   const checkInitialLanguageSetup = async () => {
     try {
       const hasSetup = await AsyncStorage.getItem('initialLanguageSetup');
-      if (!hasSetup) {
-        setShowInitialLanguageModal(true);
-      }
+      // 移除自动显示语言选择窗口的逻辑，改为在登录成功后检查
+      console.log('🔍 检查初始语言设置状态:', hasSetup ? '已设置' : '未设置');
     } catch (error) {
       console.error('检查初始语言设置失败:', error);
-      setShowInitialLanguageModal(true);
     }
   };
 
@@ -258,9 +255,7 @@ const AppContent = () => {
     });
   };
 
-  const handleInitialLanguageComplete = () => {
-    setShowInitialLanguageModal(false);
-  };
+
 
   return (
     <AuthProvider>
@@ -271,10 +266,7 @@ const AppContent = () => {
               <AuthGuard>
                 <MainLayout />
               </AuthGuard>
-              <InitialLanguageModal
-                visible={showInitialLanguageModal}
-                onComplete={handleInitialLanguageComplete}
-              />
+
             </NavigationProvider>
           </VocabularyProvider>
         </ShowListProvider>

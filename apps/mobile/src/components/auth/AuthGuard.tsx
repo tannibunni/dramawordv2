@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { LoginScreen } from '../../screens/Auth/LoginScreen';
+import { InitialLanguageModal } from '../common/InitialLanguageModal';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 interface AuthGuardProps {
   children: React.ReactNode;
@@ -10,6 +12,7 @@ export const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
   const { user, loginType, isAuthenticated, getAuthToken, login } = useAuth();
   const [hasValidToken, setHasValidToken] = useState<boolean | null>(null);
   const [showLogin, setShowLogin] = useState(false);
+  const [showLanguageModal, setShowLanguageModal] = useState(false);
 
   useEffect(() => {
     checkAuthStatus();
@@ -57,12 +60,29 @@ export const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
     }
   };
 
+  const checkLanguageSetupAfterLogin = async () => {
+    try {
+      const hasSetup = await AsyncStorage.getItem('initialLanguageSetup');
+      if (!hasSetup) {
+        console.log('🔍 用户首次登录，显示语言选择窗口');
+        setShowLanguageModal(true);
+      } else {
+        console.log('🔍 用户已设置过语言，跳过语言选择');
+      }
+    } catch (error) {
+      console.error('❌ 检查语言设置失败:', error);
+    }
+  };
+
   const handleLoginSuccess = async (userData: any) => {
     try {
       console.log('🔐 AuthGuard 处理登录成功:', userData);
       await login(userData, userData.loginType || 'apple');
       setShowLogin(false);
       setHasValidToken(true);
+      
+      // 登录成功后检查语言设置
+      await checkLanguageSetupAfterLogin();
     } catch (error) {
       console.error('❌ AuthGuard 登录处理失败:', error);
     }
@@ -74,9 +94,16 @@ export const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
       // 游客登录逻辑
       setShowLogin(false);
       setHasValidToken(true);
+      
+      // 游客登录后也检查语言设置
+      await checkLanguageSetupAfterLogin();
     } catch (error) {
       console.error('❌ AuthGuard 游客登录处理失败:', error);
     }
+  };
+
+  const handleLanguageModalComplete = () => {
+    setShowLanguageModal(false);
   };
 
   // 如果正在检查认证状态，显示加载状态
@@ -94,6 +121,14 @@ export const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
     );
   }
 
-  // 认证有效，显示子组件
-  return <>{children}</>;
+  // 认证有效，显示子组件和语言选择窗口
+  return (
+    <>
+      {children}
+      <InitialLanguageModal
+        visible={showLanguageModal}
+        onComplete={handleLanguageModalComplete}
+      />
+    </>
+  );
 }; 
