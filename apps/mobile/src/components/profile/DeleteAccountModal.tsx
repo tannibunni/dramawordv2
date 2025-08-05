@@ -263,7 +263,7 @@ const styles = StyleSheet.create({
   },
   confirmInput: {
     borderWidth: 1,
-    borderColor: colors.border.primary,
+    borderColor: colors.border.light,
     borderRadius: 8,
     padding: 12,
     fontSize: 16,

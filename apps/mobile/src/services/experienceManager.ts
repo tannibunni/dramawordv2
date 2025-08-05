@@ -386,11 +386,24 @@ export class ExperienceManager {
   private async triggerExperienceAnimation(event: ExperienceGainEvent): Promise<void> {
     try {
       // 使用动画管理器触发经验值增长动画
-      await animationManager.triggerExperienceGainAnimation({
-        xpGained: event.xpGained,
-        leveledUp: event.leveledUp,
-        message: event.message,
-        type: event.type
+      // 计算动画参数
+      const oldExperience = this.currentExperience - event.xpGained;
+      const oldLevel = this.calculateLevel(oldExperience);
+      const newLevel = this.currentLevel;
+      const isLevelUp = event.leveledUp;
+      
+      const oldProgress = this.calculateProgress(oldExperience, oldLevel);
+      const newProgress = this.calculateProgress(this.currentExperience, newLevel);
+      
+      await animationManager.startExperienceAnimation({
+        oldExperience,
+        newExperience: this.currentExperience,
+        gainedExp: event.xpGained,
+        oldLevel,
+        newLevel,
+        isLevelUp,
+        oldProgress,
+        newProgress
       });
     } catch (error) {
       console.error('❌ 触发经验值动画失败:', error);
@@ -450,7 +463,7 @@ export class ExperienceManager {
   /**
    * 获取当前经验值信息
    */
-  public async getCurrentExperienceInfo(): Promise<ExperienceInfo | null> {
+  public async getCurrentExperienceInfo(): Promise<UserExperienceInfo | null> {
     try {
       return await ExperienceService.getExperienceInfo();
     } catch (error) {
@@ -534,6 +547,22 @@ export class ExperienceManager {
         userMessage: '清除经验值事件失败'
       });
     }
+  }
+
+  /**
+   * 计算等级
+   */
+  private calculateLevel(experience: number): number {
+    return Math.floor(experience / 100) + 1;
+  }
+
+  /**
+   * 计算进度
+   */
+  private calculateProgress(experience: number, level: number): number {
+    const levelStartExp = (level - 1) * 100;
+    const levelExp = experience - levelStartExp;
+    return Math.min(levelExp / 100, 1);
   }
 
   /**

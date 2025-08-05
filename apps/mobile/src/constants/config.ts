@@ -153,11 +153,11 @@ export const APP_CONFIG = {
 
 // 环境配置
 export const ENV_CONFIG = {
-  IS_DEV: __DEV__,
-  IS_PROD: !__DEV__,
-  LOG_LEVEL: __DEV__ ? 'debug' : 'error',
-  ENABLE_ANALYTICS: !__DEV__,
-  ENABLE_CRASH_REPORTING: !__DEV__,
+  IS_DEV: false, // 默认生产环境
+  IS_PROD: true, // 默认生产环境
+  LOG_LEVEL: 'error', // 默认错误级别
+  ENABLE_ANALYTICS: true, // 默认启用分析
+  ENABLE_CRASH_REPORTING: true, // 默认启用崩溃报告
 };
 
 // 主题配置

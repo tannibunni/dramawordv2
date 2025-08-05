@@ -8,6 +8,7 @@ import {
   Dimensions,
   Animated,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../constants/colors';
 import { StatsCard } from './StatsCard';
@@ -228,25 +229,12 @@ export const LearningStatsSection: React.FC<LearningStatsSectionProps> = ({
     return (
       <View style={styles.loadingContainer}>
         <Text style={styles.loadingText}>加载学习统计中...</Text>
-        {syncStatus ? (
-          <Text style={styles.syncStatusText}>{syncStatus}</Text>
-        ) : null}
       </View>
     );
   }
 
   return (
     <Animated.View style={[styles.container, { opacity: fadeAnim }]}>
-      {/* 同步状态显示 */}
-      {syncStatus ? (
-        <View style={styles.syncStatusContainer}>
-          <Text style={styles.syncStatusText}>{syncStatus}</Text>
-          <TouchableOpacity onPress={handleRefresh} style={styles.refreshButton}>
-            <Ionicons name="refresh" size={16} color={colors.primary[500]} />
-          </TouchableOpacity>
-        </View>
-      ) : null}
-
       {/* 统计卡片区域 */}
       <View style={styles.statsSection}>
         <View style={styles.sectionHeader}>
@@ -332,18 +320,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: colors.text.secondary,
     marginBottom: 8,
-  },
-  syncStatusContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 20,
-    marginBottom: 10,
-  },
-  syncStatusText: {
-    fontSize: 12,
-    color: colors.text.secondary,
-    marginRight: 8,
   },
   refreshButton: {
     padding: 4,

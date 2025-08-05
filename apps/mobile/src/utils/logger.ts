@@ -13,7 +13,7 @@ class Logger {
 
   constructor() {
     this.config = {
-      enableDebug: __DEV__, // 只在开发环境启用debug日志
+      enableDebug: false, // 默认关闭debug日志
       enableInfo: true,
       enableWarn: true,
       enableError: true,

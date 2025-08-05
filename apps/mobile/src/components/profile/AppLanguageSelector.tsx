@@ -28,7 +28,7 @@ const AppLanguageSelector: React.FC<AppLanguageSelectorProps> = ({
 }) => {
   const { appLanguage, setAppLanguage } = useAppLanguage();
   const [selectedLanguages, setSelectedLanguages] = useState<string[]>([]);
-  const [activeTab, setActiveTab] = useState<'app' | 'learning'>(defaultTab);
+  const [activeTab, setActiveTab] = useState<'app' | 'learning'>(defaultTab || 'app');
 
   // 加载学习语言设置
   useEffect(() => {

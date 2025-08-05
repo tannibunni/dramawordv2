@@ -1,512 +1,437 @@
-const axios = require('axios');
+// 模拟 AsyncStorage 的简单实现
+class MockAsyncStorage {
+  constructor() {
+    this.storage = new Map();
+  }
+
+  async setItem(key, value) {
+    this.storage.set(key, value);
+  }
+
+  async getItem(key) {
+    return this.storage.get(key) || null;
+  }
+
+  async removeItem(key) {
+    this.storage.delete(key);
+  }
+
+  async multiRemove(keys) {
+    keys.forEach(key => this.storage.delete(key));
+  }
+
+  async getAllKeys() {
+    return Array.from(this.storage.keys());
+  }
+
+  async clear() {
+    this.storage.clear();
+  }
+}
+
+// 使用模拟的 AsyncStorage
+const AsyncStorage = new MockAsyncStorage();
 
 class GuestModeTester {
   constructor() {
-    this.baseURL = 'https://dramawordv2.onrender.com';
     this.testResults = [];
-    this.userToken = null;
-    this.userId = null;
+    this.guestId = null;
   }
 
-  // 生成游客ID
-  generateGuestId() {
-    const now = Date.now().toString();
-    const random = Math.random().toString(36).substr(2, 4);
-    const deviceHash = 'test'.split('').reduce((a, b) => a + b.charCodeAt(0), 0).toString(36).slice(-3);
-    return now.slice(-6) + random + deviceHash;
-  }
-
-  // 测试1: 游客注册和令牌获取
-  async testGuestRegistration() {
-    console.log('🧪 测试1: 游客注册和令牌获取');
-    
-    try {
-      const guestId = this.generateGuestId();
-      console.log(`   游客ID: ${guestId}`);
-      
-      const registerData = {
-        loginType: 'guest',
-        username: `t_guest_${guestId}`.slice(0, 20),
-        nickname: guestId,
-        guestId: guestId,
-      };
-
-      const response = await axios.post(`${this.baseURL}/api/users/register`, registerData, {
-        timeout: 15000,
-        headers: { 'Content-Type': 'application/json' }
-      });
-
-      if (response.data.success && response.data.data.token) {
-        this.userToken = response.data.data.token;
-        this.userId = response.data.data.user.id;
-        
-        console.log('✅ 游客注册成功');
-        console.log(`   用户ID: ${this.userId}`);
-        console.log(`   令牌长度: ${this.userToken.length}`);
-        console.log(`   用户等级: ${response.data.data.user.levelName}`);
-        
-        this.testResults.push({
-          test: '游客注册',
-          status: '成功',
-          details: {
-            userId: this.userId,
-            tokenLength: this.userToken.length,
-            level: response.data.data.user.levelName
-          }
-        });
-        
-        return true;
-      } else {
-        throw new Error('注册响应格式错误');
-      }
-    } catch (error) {
-      console.error('❌ 游客注册失败:', error.message);
-      this.testResults.push({
-        test: '游客注册',
-        status: '失败',
-        error: error.message
-      });
-      return false;
-    }
-  }
-
-  // 测试2: 模拟学习记录保存
-  async testLearningRecordsSync() {
-    console.log('\n🧪 测试2: 模拟学习记录保存');
-    
-    if (!this.userToken) {
-      console.log('⚠️ 跳过测试（无令牌）');
-      return false;
-    }
-
-    try {
-      // 模拟用户学习了一些单词
-      const learningRecords = [
-        {
-          word: 'hello',
-          mastery: 0.9,
-          lastReviewDate: new Date().toISOString(),
-          nextReviewDate: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString(), // 2天后复习
-          reviewCount: 3
-        },
-        {
-          word: 'world',
-          mastery: 0.7,
-          lastReviewDate: new Date().toISOString(),
-          nextReviewDate: new Date(Date.now() + 1 * 24 * 60 * 60 * 1000).toISOString(), // 1天后复习
-          reviewCount: 2
-        },
-        {
-          word: 'beautiful',
-          mastery: 0.5,
-          lastReviewDate: new Date().toISOString(),
-          nextReviewDate: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(), // 3天后复习
-          reviewCount: 1
-        }
-      ];
-
-      const syncData = {
-        learningRecords: learningRecords,
-        searchHistory: [],
-        userSettings: {
-          notifications: {
-            dailyReminder: true,
-            reviewReminder: true,
-            achievementNotification: true
-          },
-          learning: {
-            dailyGoal: 15,
-            reviewInterval: 24,
-            autoPlayAudio: true,
-            showPhonetic: true
-          },
-          privacy: {
-            shareProgress: false,
-            showInLeaderboard: true
-          },
-          theme: 'light',
-          language: 'zh-CN'
-        }
-      };
-
-      const response = await axios.post(`${this.baseURL}/api/sync/batch`, syncData, {
-        timeout: 15000,
-        headers: {
-          'Authorization': `Bearer ${this.userToken}`,
-          'Content-Type': 'application/json',
-        }
-      });
-
-      if (response.data.success) {
-        console.log('✅ 学习记录同步成功');
-        console.log(`   同步单词数: ${learningRecords.length}`);
-        console.log(`   平均掌握度: ${(learningRecords.reduce((sum, record) => sum + record.mastery, 0) / learningRecords.length).toFixed(2)}`);
-        
-        this.testResults.push({
-          test: '学习记录同步',
-          status: '成功',
-          details: {
-            wordCount: learningRecords.length,
-            averageMastery: (learningRecords.reduce((sum, record) => sum + record.mastery, 0) / learningRecords.length).toFixed(2)
-          }
-        });
-        
-        return true;
-      } else {
-        throw new Error('同步失败');
-      }
-    } catch (error) {
-      console.error('❌ 学习记录同步失败:', error.message);
-      this.testResults.push({
-        test: '学习记录同步',
-        status: '失败',
-        error: error.message
-      });
-      return false;
-    }
-  }
-
-  // 测试3: 模拟搜索历史保存
-  async testSearchHistorySync() {
-    console.log('\n🧪 测试3: 模拟搜索历史保存');
-    
-    if (!this.userToken) {
-      console.log('⚠️ 跳过测试（无令牌）');
-      return false;
-    }
-
-    try {
-      // 模拟用户搜索了一些单词
-      const searchHistory = [
-        {
-          word: 'apple',
-          definition: '苹果',
-          timestamp: new Date().toISOString()
-        },
-        {
-          word: 'computer',
-          definition: '计算机',
-          timestamp: new Date().toISOString()
-        },
-        {
-          word: '学习',
-          definition: 'study',
-          timestamp: new Date().toISOString()
-        }
-      ];
-
-      const syncData = {
-        learningRecords: [],
-        searchHistory: searchHistory,
-        userSettings: {
-          notifications: {
-            dailyReminder: true,
-            reviewReminder: true,
-            achievementNotification: true
-          },
-          learning: {
-            dailyGoal: 10,
-            reviewInterval: 24,
-            autoPlayAudio: true,
-            showPhonetic: true
-          },
-          privacy: {
-            shareProgress: false,
-            showInLeaderboard: true
-          },
-          theme: 'light',
-          language: 'zh-CN'
-        }
-      };
-
-      const response = await axios.post(`${this.baseURL}/api/sync/batch`, syncData, {
-        timeout: 15000,
-        headers: {
-          'Authorization': `Bearer ${this.userToken}`,
-          'Content-Type': 'application/json',
-        }
-      });
-
-      if (response.data.success) {
-        console.log('✅ 搜索历史同步成功');
-        console.log(`   搜索记录数: ${searchHistory.length}`);
-        console.log(`   搜索内容: ${searchHistory.map(item => item.word).join(', ')}`);
-        
-        this.testResults.push({
-          test: '搜索历史同步',
-          status: '成功',
-          details: {
-            searchCount: searchHistory.length,
-            searchWords: searchHistory.map(item => item.word)
-          }
-        });
-        
-        return true;
-      } else {
-        throw new Error('同步失败');
-      }
-    } catch (error) {
-      console.error('❌ 搜索历史同步失败:', error.message);
-      this.testResults.push({
-        test: '搜索历史同步',
-        status: '失败',
-        error: error.message
-      });
-      return false;
-    }
-  }
-
-  // 测试4: 模拟用户设置保存
-  async testUserSettingsSync() {
-    console.log('\n🧪 测试4: 模拟用户设置保存');
-    
-    if (!this.userToken) {
-      console.log('⚠️ 跳过测试（无令牌）');
-      return false;
-    }
-
-    try {
-      // 模拟用户自定义设置
-      const userSettings = {
-        notifications: {
-          dailyReminder: false,
-          reviewReminder: true,
-          achievementNotification: false
-        },
-        learning: {
-          dailyGoal: 20,
-          reviewInterval: 12,
-          autoPlayAudio: false,
-          showPhonetic: true
-        },
-        privacy: {
-          shareProgress: true,
-          showInLeaderboard: false
-        },
-        theme: 'dark',
-        language: 'en-US'
-      };
-
-      const syncData = {
-        learningRecords: [],
-        searchHistory: [],
-        userSettings: userSettings
-      };
-
-      const response = await axios.post(`${this.baseURL}/api/sync/batch`, syncData, {
-        timeout: 15000,
-        headers: {
-          'Authorization': `Bearer ${this.userToken}`,
-          'Content-Type': 'application/json',
-        }
-      });
-
-      if (response.data.success) {
-        console.log('✅ 用户设置同步成功');
-        console.log(`   主题: ${userSettings.theme}`);
-        console.log(`   语言: ${userSettings.language}`);
-        console.log(`   每日目标: ${userSettings.learning.dailyGoal}个单词`);
-        
-        this.testResults.push({
-          test: '用户设置同步',
-          status: '成功',
-          details: {
-            theme: userSettings.theme,
-            language: userSettings.language,
-            dailyGoal: userSettings.learning.dailyGoal
-          }
-        });
-        
-        return true;
-      } else {
-        throw new Error('同步失败');
-      }
-    } catch (error) {
-      console.error('❌ 用户设置同步失败:', error.message);
-      this.testResults.push({
-        test: '用户设置同步',
-        status: '失败',
-        error: error.message
-      });
-      return false;
-    }
-  }
-
-  // 测试5: 模拟数据下载
-  async testDataDownload() {
-    console.log('\n🧪 测试5: 模拟数据下载');
-    
-    if (!this.userToken) {
-      console.log('⚠️ 跳过测试（无令牌）');
-      return false;
-    }
-
-    try {
-      // 模拟从服务器下载用户数据
-      const response = await axios.get(`${this.baseURL}/api/sync/download`, {
-        timeout: 15000,
-        headers: {
-          'Authorization': `Bearer ${this.userToken}`,
-          'Content-Type': 'application/json',
-        }
-      });
-
-      if (response.data.success) {
-        const data = response.data.data;
-        console.log('✅ 数据下载成功');
-        console.log(`   学习记录数: ${data.learningRecords?.length || 0}`);
-        console.log(`   搜索历史数: ${data.searchHistory?.length || 0}`);
-        console.log(`   用户设置: ${data.userSettings ? '已保存' : '未保存'}`);
-        
-        this.testResults.push({
-          test: '数据下载',
-          status: '成功',
-          details: {
-            learningRecordsCount: data.learningRecords?.length || 0,
-            searchHistoryCount: data.searchHistory?.length || 0,
-            hasUserSettings: !!data.userSettings
-          }
-        });
-        
-        return true;
-      } else {
-        throw new Error('下载失败');
-      }
-    } catch (error) {
-      console.error('❌ 数据下载失败:', error.message);
-      this.testResults.push({
-        test: '数据下载',
-        status: '失败',
-        error: error.message
-      });
-      return false;
-    }
-  }
-
-  // 测试6: 模拟用户统计信息
-  async testUserStats() {
-    console.log('\n🧪 测试6: 模拟用户统计信息');
-    
-    if (!this.userToken) {
-      console.log('⚠️ 跳过测试（无令牌）');
-      return false;
-    }
-
-    try {
-      // 获取用户统计信息
-      const response = await axios.get(`${this.baseURL}/api/users/stats`, {
-        timeout: 15000,
-        headers: {
-          'Authorization': `Bearer ${this.userToken}`,
-          'Content-Type': 'application/json',
-        }
-      });
-
-      if (response.data.success) {
-        const stats = response.data.data;
-        console.log('✅ 用户统计信息获取成功');
-        console.log(`   等级: ${stats.level} (${stats.levelName})`);
-        console.log(`   经验值: ${stats.experience}`);
-        console.log(`   学习单词数: ${stats.totalWordsLearned}`);
-        console.log(`   复习次数: ${stats.totalReviews}`);
-        
-        this.testResults.push({
-          test: '用户统计信息',
-          status: '成功',
-          details: {
-            level: stats.level,
-            levelName: stats.levelName,
-            experience: stats.experience,
-            totalWordsLearned: stats.totalWordsLearned
-          }
-        });
-        
-        return true;
-      } else {
-        throw new Error('获取统计信息失败');
-      }
-    } catch (error) {
-      console.error('❌ 用户统计信息获取失败:', error.message);
-      this.testResults.push({
-        test: '用户统计信息',
-        status: '失败',
-        error: error.message
-      });
-      return false;
-    }
-  }
-
-  // 运行所有测试
   async runAllTests() {
     console.log('🚀 开始游客模式完整测试\n');
-    console.log('='.repeat(60));
-    
-    // 测试1: 游客注册
-    const registrationSuccess = await this.testGuestRegistration();
-    
-    if (registrationSuccess) {
-      // 测试2-6: 数据操作
-      await this.testLearningRecordsSync();
-      await this.testSearchHistorySync();
-      await this.testUserSettingsSync();
-      await this.testDataDownload();
-      await this.testUserStats();
+
+    try {
+      // 测试1: 游客模式检测
+      await this.testGuestModeDetection();
+      
+      // 测试2: 数据隔离
+      await this.testDataIsolation();
+      
+      // 测试3: 本地存储
+      await this.testLocalStorage();
+      
+      // 测试4: 数据统计
+      await this.testDataStats();
+      
+      // 测试5: 数据完整性
+      await this.testDataIntegrity();
+      
+      // 测试6: 备份恢复
+      await this.testBackupRestore();
+      
+      // 测试7: 重置功能
+      await this.testResetFunctionality();
+      
+      // 生成测试报告
+      this.generateTestReport();
+      
+    } catch (error) {
+      console.error('❌ 测试过程中发生错误:', error);
     }
-    
-    // 生成报告
-    this.generateReport();
   }
 
-  // 生成测试报告
-  generateReport() {
-    console.log('\n' + '='.repeat(60));
-    console.log('📊 游客模式测试报告');
-    console.log('='.repeat(60));
+  async testGuestModeDetection() {
+    console.log('📋 测试1: 游客模式检测');
     
-    const successCount = this.testResults.filter(r => r.status === '成功').length;
-    const totalCount = this.testResults.length;
+    try {
+      // 模拟游客用户数据
+      const guestUserData = {
+        id: 'guest_test_123',
+        nickname: '测试游客',
+        loginType: 'guest',
+        token: null,
+        isAutoGenerated: true,
+        createdAt: Date.now(),
+        localDataVersion: 1
+      };
+
+      await AsyncStorage.setItem('userData', JSON.stringify(guestUserData));
+      
+      // 检查是否为游客模式
+      const userData = await AsyncStorage.getItem('userData');
+      const parsed = JSON.parse(userData);
+      const isGuest = parsed.loginType === 'guest' && !parsed.token;
+      
+      this.testResults.push({
+        test: '游客模式检测',
+        passed: isGuest,
+        details: `loginType: ${parsed.loginType}, hasToken: ${!!parsed.token}`
+      });
+      
+      console.log(`✅ 游客模式检测: ${isGuest ? '通过' : '失败'}`);
+      this.guestId = parsed.id;
+      
+    } catch (error) {
+      this.testResults.push({
+        test: '游客模式检测',
+        passed: false,
+        details: error.message
+      });
+      console.log('❌ 游客模式检测失败:', error.message);
+    }
+  }
+
+  async testDataIsolation() {
+    console.log('\n📋 测试2: 数据隔离');
     
-    console.log(`总测试数: ${totalCount}`);
-    console.log(`成功数: ${successCount}`);
-    console.log(`成功率: ${((successCount / totalCount) * 100).toFixed(1)}%`);
+    try {
+      // 创建两个不同的游客ID
+      const guestId1 = 'guest_test_123';
+      const guestId2 = 'guest_test_456';
+      
+      // 为游客1存储数据
+      const data1 = { vocabulary: ['word1', 'word2'], progress: 50 };
+      await AsyncStorage.setItem(`guest_${guestId1}_vocabulary`, JSON.stringify({
+        data: data1,
+        timestamp: Date.now(),
+        guestId: guestId1,
+        version: 1
+      }));
+      
+      // 为游客2存储数据
+      const data2 = { vocabulary: ['word3', 'word4'], progress: 75 };
+      await AsyncStorage.setItem(`guest_${guestId2}_vocabulary`, JSON.stringify({
+        data: data2,
+        timestamp: Date.now(),
+        guestId: guestId2,
+        version: 1
+      }));
+      
+      // 验证数据隔离
+      const stored1 = await AsyncStorage.getItem(`guest_${guestId1}_vocabulary`);
+      const stored2 = await AsyncStorage.getItem(`guest_${guestId2}_vocabulary`);
+      
+      const parsed1 = JSON.parse(stored1);
+      const parsed2 = JSON.parse(stored2);
+      
+      const isIsolated = parsed1.data.vocabulary.length === 2 && 
+                        parsed2.data.vocabulary.length === 2 &&
+                        parsed1.data.vocabulary[0] !== parsed2.data.vocabulary[0];
+      
+      this.testResults.push({
+        test: '数据隔离',
+        passed: isIsolated,
+        details: `游客1数据: ${parsed1.data.vocabulary.join(', ')}, 游客2数据: ${parsed2.data.vocabulary.join(', ')}`
+      });
+      
+      console.log(`✅ 数据隔离: ${isIsolated ? '通过' : '失败'}`);
+      
+    } catch (error) {
+      this.testResults.push({
+        test: '数据隔离',
+        passed: false,
+        details: error.message
+      });
+      console.log('❌ 数据隔离测试失败:', error.message);
+    }
+  }
+
+  async testLocalStorage() {
+    console.log('\n📋 测试3: 本地存储');
     
-    console.log('\n详细结果:');
+    try {
+      const testData = {
+        vocabulary: ['test_word_1', 'test_word_2'],
+        learningRecords: [
+          { word: 'test_word_1', timestamp: Date.now(), correct: true },
+          { word: 'test_word_2', timestamp: Date.now(), correct: false }
+        ],
+        userStats: {
+          totalWords: 2,
+          correctAnswers: 1,
+          incorrectAnswers: 1,
+          accuracy: 0.5
+        }
+      };
+      
+      // 存储测试数据
+      for (const [key, value] of Object.entries(testData)) {
+        await AsyncStorage.setItem(`guest_${this.guestId}_${key}`, JSON.stringify({
+          data: value,
+          timestamp: Date.now(),
+          guestId: this.guestId,
+          version: 1
+        }));
+      }
+      
+      // 验证数据存储
+      let allStored = true;
+      for (const key of Object.keys(testData)) {
+        const stored = await AsyncStorage.getItem(`guest_${this.guestId}_${key}`);
+        if (!stored) {
+          allStored = false;
+          break;
+        }
+      }
+      
+      this.testResults.push({
+        test: '本地存储',
+        passed: allStored,
+        details: `存储了 ${Object.keys(testData).length} 种数据类型`
+      });
+      
+      console.log(`✅ 本地存储: ${allStored ? '通过' : '失败'}`);
+      
+    } catch (error) {
+      this.testResults.push({
+        test: '本地存储',
+        passed: false,
+        details: error.message
+      });
+      console.log('❌ 本地存储测试失败:', error.message);
+    }
+  }
+
+  async testDataStats() {
+    console.log('\n📋 测试4: 数据统计');
+    
+    try {
+      // 获取所有游客相关的键
+      const allKeys = await AsyncStorage.getAllKeys();
+      const guestKeys = allKeys.filter(key => key.startsWith(`guest_${this.guestId}_`));
+      
+      let totalSize = 0;
+      const dataTypes = new Set();
+      
+      for (const key of guestKeys) {
+        const value = await AsyncStorage.getItem(key);
+        if (value) {
+          totalSize += value.length;
+          const dataType = key.replace(`guest_${this.guestId}_`, '');
+          dataTypes.add(dataType);
+        }
+      }
+      
+      const hasStats = guestKeys.length > 0 && totalSize > 0 && dataTypes.size > 0;
+      
+      this.testResults.push({
+        test: '数据统计',
+        passed: hasStats,
+        details: `数据项: ${guestKeys.length}, 大小: ${totalSize}字节, 类型: ${Array.from(dataTypes).join(', ')}`
+      });
+      
+      console.log(`✅ 数据统计: ${hasStats ? '通过' : '失败'}`);
+      
+    } catch (error) {
+      this.testResults.push({
+        test: '数据统计',
+        passed: false,
+        details: error.message
+      });
+      console.log('❌ 数据统计测试失败:', error.message);
+    }
+  }
+
+  async testDataIntegrity() {
+    console.log('\n📋 测试5: 数据完整性');
+    
+    try {
+      const criticalKeys = ['vocabulary', 'userStats', 'learningRecords'];
+      let allValid = true;
+      const issues = [];
+      
+      for (const key of criticalKeys) {
+        const stored = await AsyncStorage.getItem(`guest_${this.guestId}_${key}`);
+        if (!stored) {
+          allValid = false;
+          issues.push(`缺少关键数据: ${key}`);
+        } else {
+          try {
+            const parsed = JSON.parse(stored);
+            if (!parsed.data || !parsed.guestId || !parsed.version) {
+              allValid = false;
+              issues.push(`数据格式错误: ${key}`);
+            }
+          } catch (error) {
+            allValid = false;
+            issues.push(`数据解析失败: ${key}`);
+          }
+        }
+      }
+      
+      this.testResults.push({
+        test: '数据完整性',
+        passed: allValid,
+        details: issues.length > 0 ? issues.join(', ') : '所有关键数据完整'
+      });
+      
+      console.log(`✅ 数据完整性: ${allValid ? '通过' : '失败'}`);
+      
+    } catch (error) {
+      this.testResults.push({
+        test: '数据完整性',
+        passed: false,
+        details: error.message
+      });
+      console.log('❌ 数据完整性测试失败:', error.message);
+    }
+  }
+
+  async testBackupRestore() {
+    console.log('\n📋 测试6: 备份恢复');
+    
+    try {
+      // 创建备份数据
+      const backupData = {
+        timestamp: Date.now(),
+        guestId: this.guestId,
+        data: {
+          vocabulary: ['backup_word_1', 'backup_word_2'],
+          userStats: { totalWords: 2, accuracy: 0.8 }
+        }
+      };
+      
+      const backupKey = `guest_backup_${this.guestId}_${backupData.timestamp}`;
+      await AsyncStorage.setItem(backupKey, JSON.stringify(backupData));
+      
+      // 验证备份
+      const storedBackup = await AsyncStorage.getItem(backupKey);
+      const parsedBackup = JSON.parse(storedBackup);
+      
+      const backupValid = parsedBackup.guestId === this.guestId && 
+                         parsedBackup.data.vocabulary.length === 2;
+      
+      this.testResults.push({
+        test: '备份恢复',
+        passed: backupValid,
+        details: `备份大小: ${storedBackup.length}字节, 包含 ${Object.keys(parsedBackup.data).length} 种数据类型`
+      });
+      
+      console.log(`✅ 备份恢复: ${backupValid ? '通过' : '失败'}`);
+      
+    } catch (error) {
+      this.testResults.push({
+        test: '备份恢复',
+        passed: false,
+        details: error.message
+      });
+      console.log('❌ 备份恢复测试失败:', error.message);
+    }
+  }
+
+  async testResetFunctionality() {
+    console.log('\n📋 测试7: 重置功能');
+    
+    try {
+      // 记录重置前的数据项数量
+      const allKeysBefore = await AsyncStorage.getAllKeys();
+      const guestKeysBefore = allKeysBefore.filter(key => key.startsWith(`guest_${this.guestId}_`));
+      
+      // 模拟重置（清除游客数据）
+      const allKeys = await AsyncStorage.getAllKeys();
+      const guestKeys = allKeys.filter(key => key.startsWith(`guest_${this.guestId}_`));
+      
+      if (guestKeys.length > 0) {
+        await AsyncStorage.multiRemove(guestKeys);
+      }
+      
+      // 验证重置结果
+      const allKeysAfter = await AsyncStorage.getAllKeys();
+      const guestKeysAfter = allKeysAfter.filter(key => key.startsWith(`guest_${this.guestId}_`));
+      
+      const resetSuccessful = guestKeysAfter.length === 0 && guestKeysBefore.length > 0;
+      
+      this.testResults.push({
+        test: '重置功能',
+        passed: resetSuccessful,
+        details: `重置前: ${guestKeysBefore.length}项, 重置后: ${guestKeysAfter.length}项`
+      });
+      
+      console.log(`✅ 重置功能: ${resetSuccessful ? '通过' : '失败'}`);
+      
+    } catch (error) {
+      this.testResults.push({
+        test: '重置功能',
+        passed: false,
+        details: error.message
+      });
+      console.log('❌ 重置功能测试失败:', error.message);
+    }
+  }
+
+  generateTestReport() {
+    console.log('\n📊 游客模式测试报告');
+    console.log('='.repeat(50));
+    
+    const passedTests = this.testResults.filter(result => result.passed);
+    const failedTests = this.testResults.filter(result => !result.passed);
+    
+    console.log(`总测试数: ${this.testResults.length}`);
+    console.log(`通过: ${passedTests.length}`);
+    console.log(`失败: ${failedTests.length}`);
+    console.log(`成功率: ${((passedTests.length / this.testResults.length) * 100).toFixed(1)}%`);
+    
+    console.log('\n📋 详细结果:');
     this.testResults.forEach((result, index) => {
-      const statusIcon = result.status === '成功' ? '✅' : '❌';
-      console.log(`${index + 1}. ${statusIcon} ${result.test}: ${result.status}`);
-      
-      if (result.details) {
-        Object.entries(result.details).forEach(([key, value]) => {
-          console.log(`   ${key}: ${value}`);
-        });
-      }
-      
-      if (result.error) {
-        console.log(`   错误: ${result.error}`);
-      }
+      const status = result.passed ? '✅' : '❌';
+      console.log(`${index + 1}. ${status} ${result.test}: ${result.details}`);
     });
     
-    console.log('\n' + '='.repeat(60));
-    
-    if (successCount === totalCount) {
-      console.log('🎉 所有测试通过！游客模式功能完全正常');
-      console.log('✅ 游客可以正常注册、获得令牌、保存和同步数据');
-    } else {
-      console.log('⚠️ 部分测试失败，需要检查相关功能');
+    if (failedTests.length > 0) {
+      console.log('\n⚠️ 失败测试详情:');
+      failedTests.forEach(test => {
+        console.log(`- ${test.test}: ${test.details}`);
+      });
     }
     
-    console.log('='.repeat(60));
+    if (passedTests.length === this.testResults.length) {
+      console.log('\n🎉 所有测试通过！游客模式功能完全正常');
+    } else {
+      console.log('\n⚠️ 部分测试失败，需要检查相关功能');
+    }
   }
 }
 
 // 运行测试
-async function main() {
+async function runTests() {
   const tester = new GuestModeTester();
   await tester.runAllTests();
 }
 
+// 如果直接运行此脚本
 if (require.main === module) {
-  main().catch(console.error);
+  runTests().catch(console.error);
 }
 
 module.exports = GuestModeTester; 

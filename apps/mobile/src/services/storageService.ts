@@ -128,7 +128,7 @@ export class StorageService {
   async getAllKeys(): Promise<StorageResult<string[]>> {
     try {
       const keys = await AsyncStorage.getAllKeys();
-      return { success: true, data: keys };
+      return { success: true, data: [...keys] };
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       console.error(`❌ 获取所有存储键失败:`, errorMessage);

@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../constants/colors';
 import { API_BASE_URL } from '../../constants/config';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { guestModeService } from '../../services/guestModeService';
 
 interface SyncStatus {
   status: 'idle' | 'syncing' | 'success' | 'error' | 'offline';
@@ -49,6 +50,19 @@ export const SyncStatusIndicator: React.FC<SyncStatusIndicatorProps> = ({ visibl
         status: 'syncing',
         message: '检查同步状态...'
       });
+
+      // 检查是否为游客模式
+      const isGuestMode = await guestModeService.isGuestMode();
+      if (isGuestMode) {
+        const guestData = await guestModeService.getGuestData();
+        const stats = await guestModeService.getGuestDataStats();
+        
+        setSyncStatus({
+          status: 'idle',
+          message: `游客模式 - 本地数据: ${stats.totalKeys}项`
+        });
+        return;
+      }
 
       const isOnline = await checkNetworkStatus();
       if (!isOnline) {
@@ -125,6 +139,37 @@ export const SyncStatusIndicator: React.FC<SyncStatusIndicatorProps> = ({ visibl
         status: 'syncing',
         message: '正在同步...'
       });
+
+      // 检查是否为游客模式
+      const isGuestMode = await guestModeService.isGuestMode();
+      if (isGuestMode) {
+        Alert.alert(
+          '游客模式', 
+          '游客模式下数据仅保存在本地，不会上传到云端。如需同步数据，请登录账号。',
+          [
+            { text: '了解', style: 'default' },
+            { 
+              text: '查看数据统计', 
+              onPress: async () => {
+                try {
+                  const stats = await guestModeService.getGuestDataStats();
+                  Alert.alert(
+                    '游客数据统计',
+                    `本地数据项: ${stats.totalKeys}\n数据大小: ${Math.round(stats.totalSize / 1024)}KB\n数据类型: ${stats.dataTypes.join(', ')}`
+                  );
+                } catch (error) {
+                  Alert.alert('错误', '获取数据统计失败');
+                }
+              }
+            }
+          ]
+        );
+        setSyncStatus({
+          status: 'idle',
+          message: '游客模式 - 仅本地存储'
+        });
+        return;
+      }
 
       // 从userData中获取令牌
       const userDataString = await AsyncStorage.getItem('userData');

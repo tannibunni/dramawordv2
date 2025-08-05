@@ -25,6 +25,8 @@ import { useLanguage } from '../../context/LanguageContext';
 import { SUPPORTED_LANGUAGES, SupportedLanguageCode } from '../../constants/config';
 import { TranslationKey } from '../../constants/translations';
 import { wordService } from '../../services/wordService';
+import { unifiedSyncService } from '../../services/unifiedSyncService';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const { width } = Dimensions.get('window');
 
@@ -35,7 +37,7 @@ interface Badge {
 }
 
 const VocabularyScreen: React.FC = () => {
-  const { vocabulary, removeWord } = useVocabulary();
+  const { vocabulary, removeWord, updateWord } = useVocabulary();
   const { appLanguage } = useAppLanguage();
   const { selectedLanguage } = useLanguage();
   const [searchText, setSearchText] = useState('');
@@ -56,6 +58,7 @@ const VocabularyScreen: React.FC = () => {
   // 统一用 string 类型，避免 code 类型不一致导致的比较问题
   const [selectedFilterLanguage, setSelectedFilterLanguage] = useState<string>('ALL');
 
+
   // 徽章配置 - 使用 state 来保持状态
   const [badges, setBadges] = useState<Badge[]>([
     { id: 1, count: 10, unlocked: false },
@@ -71,6 +74,62 @@ const VocabularyScreen: React.FC = () => {
     filterWords();
     updateBadges();
   }, [vocabulary, searchText, selectedFilterLanguage]);
+
+  // 新增：加载徽章数据
+  useEffect(() => {
+    loadBadgesFromStorage();
+  }, []);
+
+  // 从本地存储加载徽章数据
+  const loadBadgesFromStorage = async () => {
+    try {
+      const storedBadges = await AsyncStorage.getItem('userBadges');
+      if (storedBadges) {
+        const parsedBadges = JSON.parse(storedBadges);
+        setBadges(parsedBadges);
+        console.log('📱 从本地存储加载徽章数据:', parsedBadges);
+      }
+    } catch (error) {
+      console.error('❌ 加载徽章数据失败:', error);
+    }
+  };
+
+  // 保存徽章数据到本地存储
+  const saveBadgesToStorage = async (badgeData: Badge[]) => {
+    try {
+      await AsyncStorage.setItem('userBadges', JSON.stringify(badgeData));
+      console.log('💾 徽章数据已保存到本地存储');
+    } catch (error) {
+      console.error('❌ 保存徽章数据失败:', error);
+    }
+  };
+
+  // 同步徽章数据到服务器
+  const syncBadgesToServer = async (badgeData: Badge[]) => {
+    try {
+      const userId = await getUserId();
+      if (!userId) {
+        console.warn('用户未登录，无法同步徽章数据');
+        return;
+      }
+
+      // 通过多邻国数据同步方案同步徽章数据
+      await unifiedSyncService.addToSyncQueue({
+        type: 'badges',
+        data: {
+          badges: badgeData,
+          lastUpdated: Date.now()
+        },
+        userId,
+        operation: 'update',
+        priority: 'medium'
+      });
+
+      console.log(`🏅 徽章数据已加入同步队列: ${badgeData.filter(b => b.unlocked).length} 个已解锁徽章`);
+    } catch (error) {
+      console.error('❌ 同步徽章数据失败:', error);
+    }
+  };
 
   useEffect(() => {
     if (isEditing && searchText.trim()) {
@@ -150,7 +209,7 @@ const VocabularyScreen: React.FC = () => {
     setFilteredWords(filtered);
   };
 
-  const updateBadges = () => {
+  const updateBadges = async () => {
     const wordCount = vocabulary.length;
     console.log('🔄 更新徽章状态，当前单词数量:', wordCount);
     
@@ -172,12 +231,20 @@ const VocabularyScreen: React.FC = () => {
       });
       
       console.log('📊 徽章状态:', newBadges.map(b => `${b.count}(${b.unlocked ? '已解锁' : '未解锁'})`));
-      // 只弹出一次庆祝动画
+      
+      // 保存到本地存储
+      saveBadgesToStorage(newBadges);
+      
+      // 如果有新解锁的徽章，同步到服务器
       if (unlockedBadge) {
         setCelebrateBadge(unlockedBadge);
         setShowBadgeCelebrate(true);
         setTimeout(() => setShowBadgeCelebrate(false), 1800);
+        
+        // 异步同步徽章数据到服务器
+        syncBadgesToServer(newBadges);
       }
+      
       return newBadges;
     });
   };
@@ -188,6 +255,21 @@ const VocabularyScreen: React.FC = () => {
       .filter(w => w.word === wordText)
       .map(w => w.sourceShow)
       .filter(Boolean);
+  };
+
+  // 获取用户ID
+  const getUserId = async (): Promise<string | null> => {
+    try {
+      const userData = await AsyncStorage.getItem('userData');
+      if (userData) {
+        const parsed = JSON.parse(userData);
+        return parsed.id || null;
+      }
+      return null;
+    } catch (error) {
+      console.error('获取用户ID失败:', error);
+      return null;
+    }
   };
 
   // 1. 点击单词卡后，优先显示本地内容，若无释义则查云词库
@@ -232,8 +314,87 @@ const VocabularyScreen: React.FC = () => {
     }
   };
 
-  const handleDeleteWord = (word: any) => {
-    removeWord((word.word || '').trim().toLowerCase(), word.sourceShow?.id);
+  // 删除单词 - 通过多邻国数据同步方案
+  const handleDeleteWord = async (word: any) => {
+    try {
+      const userId = await getUserId();
+      if (!userId) {
+        console.warn('用户未登录，无法删除单词');
+        return;
+      }
+
+      // 先更新本地状态
+      removeWord((word.word || '').trim().toLowerCase(), word.sourceShow?.id);
+
+      // 通过多邻国数据同步方案同步删除操作
+      await unifiedSyncService.addToSyncQueue({
+        type: 'vocabulary',
+        data: {
+          word: word.word,
+          sourceShow: word.sourceShow,
+          language: word.language || 'en',
+          operation: 'delete',
+          timestamp: Date.now()
+        },
+        userId,
+        operation: 'delete',
+        priority: 'high'
+      });
+
+      console.log(`🗑️ 单词删除已加入同步队列: ${word.word}`);
+    } catch (error) {
+      console.error('删除单词失败:', error);
+      Alert.alert('删除失败', '网络连接异常，请稍后重试');
+    }
+  };
+
+  // 更新单词学习进度 - 通过多邻国数据同步方案
+  const handleUpdateWordProgress = async (word: any, progressData: {
+    mastery?: number;
+    reviewCount?: number;
+    correctCount?: number;
+    incorrectCount?: number;
+    consecutiveCorrect?: number;
+    consecutiveIncorrect?: number;
+    lastReviewDate?: string;
+    nextReviewDate?: string;
+    interval?: number;
+    easeFactor?: number;
+    totalStudyTime?: number;
+    averageResponseTime?: number;
+    confidence?: number;
+    notes?: string;
+    tags?: string[];
+  }) => {
+    try {
+      const userId = await getUserId();
+      if (!userId) {
+        console.warn('用户未登录，无法更新学习进度');
+        return;
+      }
+
+      // 先更新本地状态
+      updateWord(word.word, progressData);
+
+      // 通过多邻国数据同步方案同步学习进度
+      await unifiedSyncService.addToSyncQueue({
+        type: 'learningRecords',
+        data: {
+          word: word.word,
+          sourceShow: word.sourceShow,
+          language: word.language || 'en',
+          ...progressData,
+          timestamp: Date.now()
+        },
+        userId,
+        operation: 'update',
+        priority: 'medium'
+      });
+
+      console.log(`📊 学习进度更新已加入同步队列: ${word.word}`);
+    } catch (error) {
+      console.error('更新学习进度失败:', error);
+    }
   };
 
   // 徽章icon渲染
@@ -380,7 +541,10 @@ const VocabularyScreen: React.FC = () => {
               {isLoadingWordDetail ? (
                 <Text style={{textAlign:'center',padding:32}}>加载中...</Text>
               ) : selectedWordDetail ? (
-                <WordCardContent wordData={selectedWordDetail} />
+                <WordCardContent 
+                  wordData={selectedWordDetail} 
+                  onProgressUpdate={(progressData) => handleUpdateWordProgress(selectedWord, progressData)}
+                />
               ) : (
                 <View style={{padding:32}}>
                   <Text style={{textAlign:'center',marginBottom:8}}>未找到释义</Text>
@@ -501,6 +665,26 @@ const styles = StyleSheet.create({
     paddingBottom: 8,
     backgroundColor: 'transparent',
     paddingHorizontal: 20,
+  },
+  badgesHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  badgesTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.text.primary,
+  },
+  badgeSyncIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  badgeSyncText: {
+    fontSize: 12,
+    color: colors.text.secondary,
   },
   badgesContainer: {
     flexDirection: 'row',

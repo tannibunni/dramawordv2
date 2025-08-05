@@ -340,24 +340,66 @@ export class WordService {
         return false;
       }
     }
-    // 登录用户：云端（暂不支持 candidates）
+    
+    // 登录用户：通过多邻国数据同步方案
     try {
-      const response = await fetch(`${API_BASE_URL}/words/history`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
+      // 导入unifiedSyncService
+      const { unifiedSyncService } = await import('./unifiedSyncService');
+      
+      // 获取用户ID
+      const userInfo = await AsyncStorage.getItem('userInfo');
+      let userId = '';
+      if (userInfo) {
+        try {
+          const parsed = JSON.parse(userInfo);
+          userId = parsed.id || '';
+        } catch (e) {
+          console.warn('解析用户信息失败:', e);
+        }
+      }
+      
+      if (!userId) {
+        console.warn('无法获取用户ID，降级到直接API调用');
+        throw new Error('No user ID available');
+      }
+      
+      // 通过同步队列保存搜索历史
+      await unifiedSyncService.addToSyncQueue({
+        type: 'searchHistory',
+        data: {
           word: word.toLowerCase().trim(),
           definition,
           timestamp: Date.now(),
-        }),
+          ...(candidates ? { candidates } : {})
+        },
+        userId,
+        operation: 'create',
+        priority: 'medium'
       });
-      return response.ok;
+      
+      console.log('✅ 搜索历史已加入同步队列');
+      return true;
     } catch (error) {
-      console.error(`❌ 保存查词记录错误: ${error}`);
-      return false;
+      console.error(`❌ 保存搜索历史到同步队列失败: ${error}`);
+      // 降级到直接API调用
+      try {
+        const response = await fetch(`${API_BASE_URL}/words/history`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            word: word.toLowerCase().trim(),
+            definition,
+            timestamp: Date.now(),
+          }),
+        });
+        return response.ok;
+      } catch (apiError) {
+        console.error(`❌ 直接API调用也失败: ${apiError}`);
+        return false;
+      }
     }
   }
 

@@ -248,7 +248,11 @@ export class UnifiedSyncService {
 
     const token = await this.getAuthToken();
     if (!token) {
-      throw new Error('未找到认证token');
+      console.log('ℹ️ 跳过同步：用户未登录或token无效');
+      return {
+        success: true,
+        message: '跳过同步：用户未登录'
+      };
     }
 
     const groupedData = this.groupDataByType(batch);
@@ -587,7 +591,8 @@ export class UnifiedSyncService {
         }
       }
       
-      console.log('❌ 未找到有效的认证token');
+      // 临时解决方案：如果没有token，返回null但不抛出错误
+      console.log('ℹ️ 未找到认证token，跳过同步（用户需要重新登录）');
       return null;
     } catch (error) {
       console.error('获取认证token失败:', error);

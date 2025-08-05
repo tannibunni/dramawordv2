@@ -14,6 +14,23 @@ interface WordCardContentProps {
   scrollable?: boolean; // 是否支持滚动
   onScroll?: (event: any) => void; // 滚动事件回调
   showHeader?: boolean; // 是否显示头部（单词、音标、发音按钮）
+  onProgressUpdate?: (progressData: {
+    mastery?: number;
+    reviewCount?: number;
+    correctCount?: number;
+    incorrectCount?: number;
+    consecutiveCorrect?: number;
+    consecutiveIncorrect?: number;
+    lastReviewDate?: string;
+    nextReviewDate?: string;
+    interval?: number;
+    easeFactor?: number;
+    totalStudyTime?: number;
+    averageResponseTime?: number;
+    confidence?: number;
+    notes?: string;
+    tags?: string[];
+  }) => void; // 学习进度更新回调
 }
 
 // 取消高度限制，让所有definitions都能直接显示

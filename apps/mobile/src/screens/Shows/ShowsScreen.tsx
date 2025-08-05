@@ -28,6 +28,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useAppLanguage } from '../../context/AppLanguageContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+
 // 推荐内容类型定义
 interface RecommendationCard {
   id: string;
@@ -1278,8 +1279,13 @@ const ShowsScreen: React.FC = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* iOS风格分段控制器 */}
-      {renderSegmentedControl()}
+      {/* 头部区域 */}
+      <View style={styles.headerContainer}>
+        {/* iOS风格分段控制器 */}
+        {renderSegmentedControl()}
+      </View>
+      
+
 
       {/* 搜索框 */}
       <View style={[
@@ -2599,35 +2605,41 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 16,
     backgroundColor: colors.background.primary,
+    minHeight: 60, // 确保有足够的高度
   },
   segmentedControlBackground: {
     flexDirection: 'row',
-    backgroundColor: colors.neutral[100],
+    backgroundColor: colors.neutral[200], // 增加对比度
     borderRadius: 8,
     padding: 2,
+    minHeight: 40, // 确保按钮有足够的高度
   },
   segmentedControlButton: {
     flex: 1,
     alignItems: 'center',
-    paddingVertical: 8,
+    justifyContent: 'center',
+    paddingVertical: 10,
     paddingHorizontal: 16,
     borderRadius: 6,
+    minHeight: 36, // 确保按钮有足够的高度
   },
   segmentedControlButtonActive: {
     backgroundColor: colors.background.primary,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 1,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 2,
   },
   segmentedControlText: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '600',
     color: colors.text.secondary,
+    textAlign: 'center',
   },
   segmentedControlTextActive: {
     color: colors.text.primary,
+    fontWeight: '700',
   },
   secondarySegmentedControlContainer: {
     paddingHorizontal: 20,
@@ -2663,6 +2675,10 @@ const styles = StyleSheet.create({
   secondarySegmentedControlTextActive: {
     color: colors.text.primary,
   },
+  headerContainer: {
+    backgroundColor: colors.background.primary,
+  },
+
 });
 
 export default ShowsScreen; 

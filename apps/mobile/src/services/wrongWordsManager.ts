@@ -37,6 +37,7 @@ export interface WrongWordsEventData {
   reason?: string;
   oldValue?: any;
   newValue?: any;
+  action?: string;
 }
 
 /**
@@ -115,7 +116,7 @@ export class WrongWordsManager {
     
     let wrongWordCount = 0;
     vocabulary.forEach(word => {
-      if (this.isWrongWord(word)) {
+      if (this.checkIsWrongWord(word)) {
         wrongWordCount++;
         console.log(`🔧 发现错词: ${word.word}`, {
           incorrectCount: word.incorrectCount,
@@ -129,7 +130,7 @@ export class WrongWordsManager {
     
     // 将错词添加到集合中
     vocabulary.forEach(word => {
-      if (this.isWrongWord(word)) {
+      if (this.checkIsWrongWord(word)) {
         this.addWrongWord(word.word, word);
       }
     });
@@ -138,9 +139,9 @@ export class WrongWordsManager {
   }
 
   /**
-   * 判断是否为错词
+   * 公共方法：判断是否为错词
    */
-  private isWrongWord(word: any): boolean {
+  public checkIsWrongWord(word: any): boolean {
     const consecutiveCorrect = word.consecutiveCorrect || 0;
     const incorrectCount = word.incorrectCount || 0;
     const consecutiveIncorrect = word.consecutiveIncorrect || 0;
@@ -161,13 +162,6 @@ export class WrongWordsManager {
     });
     
     return isWrong;
-  }
-
-  /**
-   * 公共方法：判断是否为错词
-   */
-  public checkIsWrongWord(word: any): boolean {
-    return this.isWrongWord(word);
   }
 
   /**
@@ -354,15 +348,7 @@ export class WrongWordsManager {
   /**
    * 检查单词是否为错词
    */
-  isWrongWord(word: any): boolean {
-    // 连续答对3次后从错词卡移除
-    if ((word.consecutiveCorrect || 0) >= 3) {
-      return false;
-    }
-    
-    // 有答错记录或连续答错
-    return (word.incorrectCount || 0) > 0 || (word.consecutiveIncorrect || 0) > 0;
-  }
+
 
   /**
    * 清空错词集合

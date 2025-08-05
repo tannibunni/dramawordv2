@@ -59,7 +59,8 @@ export class ExperienceService {
       }
       
       const leveledUp = updatedUser.learningStats.level > oldLevel;
-      const xpGained = updatedUser.learningStats.experience - oldExperience;
+      // 直接使用 5 作为 xpGained，因为收集新单词固定获得 5 XP
+      const xpGained = 5;
       
       logger.info(`用户 ${updatedUser.username} 收集新单词获得 ${xpGained} XP`);
       
@@ -99,62 +100,13 @@ export class ExperienceService {
       }
 
       const oldLevel = user.learningStats.level;
-      const oldDailyReviewXP = user.learningStats.dailyReviewXP;
       const oldExperience = user.learningStats.experience;
       
-      // 检查每日限制
-      const today = new Date();
-      const lastReset = user.learningStats.lastDailyReset;
-      const isNewDay = !lastReset || 
-        today.getFullYear() !== lastReset.getFullYear() ||
-        today.getMonth() !== lastReset.getMonth() ||
-        today.getDate() !== lastReset.getDate();
+      // 使用用户的实例方法，这样可以正确处理每日限制
+      await user.addExperienceForReview(isCorrect);
       
-      // 计算经验值
-      const xpToAdd = isCorrect ? 2 : 1;
-      const dailyLimit = 50; // 每日复习XP上限
-      const currentDailyXP = isNewDay ? 0 : user.learningStats.dailyReviewXP;
-      const actualXP = Math.min(xpToAdd, dailyLimit - currentDailyXP);
-      
-      if (actualXP <= 0) {
-        return {
-          success: true,
-          xpGained: 0,
-          newLevel: user.learningStats.level,
-          leveledUp: false,
-          message: '今日复习XP已达上限'
-        };
-      }
-      
-      // 使用 findOneAndUpdate 避免并行保存冲突
-      const updatePipeline = [
-        {
-          $set: {
-            'learningStats.experience': { $add: ['$learningStats.experience', actualXP] },
-            'learningStats.dailyReviewXP': { $add: [isNewDay ? 0 : '$learningStats.dailyReviewXP', actualXP] },
-            'learningStats.lastDailyReset': isNewDay ? today : '$learningStats.lastDailyReset',
-            'learningStats.level': {
-              $cond: {
-                if: {
-                  $gte: [
-                    { $add: ['$learningStats.experience', actualXP] },
-                    { $multiply: [50, { $pow: [{ $add: ['$learningStats.level', 1] }, 2] }] }
-                  ]
-                },
-                then: { $add: ['$learningStats.level', 1] },
-                else: '$learningStats.level'
-              }
-            }
-          }
-        }
-      ];
-      
-      const updatedUser = await User.findByIdAndUpdate(
-        userId,
-        updatePipeline,
-        { new: true }
-      );
-      
+      // 重新获取用户数据以获取最新状态
+      const updatedUser = await User.findById(userId);
       if (!updatedUser) {
         throw new Error('用户更新失败');
       }
@@ -162,19 +114,15 @@ export class ExperienceService {
       const leveledUp = updatedUser.learningStats.level > oldLevel;
       const xpGained = updatedUser.learningStats.experience - oldExperience;
       
-      if (xpGained > 0) {
-        const action = isCorrect ? '成功复习' : '复习';
-        logger.info(`用户 ${updatedUser.username} ${action}单词获得 ${xpGained} XP`);
-      }
+      const action = isCorrect ? '成功复习' : '复习';
+      logger.info(`用户 ${updatedUser.username} ${action}单词获得 ${xpGained} XP`);
       
       return {
         success: true,
         xpGained,
         newLevel: updatedUser.learningStats.level,
         leveledUp,
-        message: xpGained > 0 
-          ? (leveledUp ? `复习单词 +${xpGained} XP，恭喜升级！` : `复习单词 +${xpGained} XP`)
-          : '今日复习XP已达上限'
+        message: leveledUp ? `复习单词 +${xpGained} XP，恭喜升级！` : `复习单词 +${xpGained} XP`
       };
     } catch (error) {
       logger.error('复习单词经验值添加失败:', error);

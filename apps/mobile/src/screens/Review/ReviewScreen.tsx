@@ -181,7 +181,7 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
       const userId = user?.id;
       if (!userId) {
         apiLogger.warn('用户未登录，跳过后端更新');
-        return;
+        return null; // 返回null表示没有经验值增益
       }
       
       // 获取当前单词的学习记录
@@ -258,13 +258,15 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
           if (response.ok) {
             const result = await response.json();
             if (result.data?.experience) {
+              const xpGained = result.data.experience.xpGained || 0;
               apiLogger.info('经验值更新成功', {
                 word,
                 isCorrect,
-                xpGained: result.data.experience.xpGained,
+                xpGained,
                 newLevel: result.data.experience.newLevel,
                 leveledUp: result.data.experience.leveledUp
               });
+              return xpGained; // 返回经验值增益
             }
           } else {
             apiLogger.warn('经验值API调用失败', { status: response.status });
@@ -290,8 +292,12 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
       });
       
       apiLogger.info('学习记录已加入同步队列');
+      
+      // 如果没有从API获得经验值，使用默认值
+      return isCorrect ? 2 : 1;
     } catch (error) {
       apiLogger.error('更新后端用户词汇表失败', error);
+      return 0; // 出错时返回0经验值
     }
   };
   const [swiperIndex, setSwiperIndex] = useState(0);
@@ -324,10 +330,18 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
     // 停止之前的动画
     progressAnimation.stopAnimation();
     
-    // 使用更快的动画速度
+    // 如果是最后一张卡（进度为100%），立即设置进度条，不使用动画
+    if (newProgress >= 100) {
+      console.log(`🚀 最后一张卡，立即设置进度条为100%`);
+      progressAnimation.setValue(100);
+      setCurrentProgress(100);
+      return;
+    }
+    
+    // 使用更快的动画速度，减少动画时长以跟上快速划卡
     Animated.timing(progressAnimation, {
       toValue: newProgress,
-      duration: 200, // 减少动画时长，让动画更快
+      duration: 100, // 进一步减少动画时长，让动画更快跟上快速划卡
       useNativeDriver: false,
     }).start(({ finished }) => {
       if (finished) {
@@ -846,41 +860,80 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
       
       // 5. 立即更新后端用户词汇表
       console.log(`🌐 开始更新后端用户词汇表: ${word}, isCorrect: false`);
-      await updateBackendWordProgress(word, false);
-      console.log(`✅ 后端用户词汇表更新成功: ${word}`);
+      const xpGained = await updateBackendWordProgress(word, false);
+      console.log(`✅ 后端用户词汇表更新成功: ${word}, 获得经验值: ${xpGained}`);
+      
+      // 6. 更新统计
+      console.log(`📊 更新统计 - 忘记单词: ${word}`);
+      forgottenRef.current += 1;
+      console.log(`📊 当前统计 - rememberedRef: ${rememberedRef.current}, forgottenRef: ${forgottenRef.current}`);
+      
+      setReviewStats(prev => {
+        const remembered = prev.rememberedWords;
+        const forgotten = prev.forgottenWords + 1;
+        const total = prev.totalWords;
+        
+        // 使用后端返回的经验值，如果后端返回0说明已达到每日上限
+        const gainedExp = xpGained !== undefined ? xpGained : 1;
+        const experience = prev.experience + gainedExp;
+        const accuracy = total > 0 ? Math.round((remembered / total) * 100) : 0;
+        
+        const newStats = {
+          ...prev,
+          forgottenWords: forgotten,
+          experience,
+          accuracy,
+        };
+        
+        console.log(`📈 统计更新完成:`, {
+          remembered,
+          forgotten,
+          total,
+          gainedExp,
+          experience,
+          accuracy,
+          newStats
+        });
+        
+        return newStats;
+      });
     } catch (error) {
       console.error('❌ 更新学习记录失败:', error);
-    }
-    
-    console.log(`📊 更新统计 - 忘记单词: ${word}`);
-    forgottenRef.current += 1;
-    console.log(`📊 当前统计 - rememberedRef: ${rememberedRef.current}, forgottenRef: ${forgottenRef.current}`);
-    
-    setReviewStats(prev => {
-      const remembered = prev.rememberedWords;
-      const forgotten = prev.forgottenWords + 1;
-      const total = prev.totalWords;
-      const experience = (remembered * 2) + (forgotten * 1);
-      const accuracy = total > 0 ? Math.round((remembered / total) * 100) : 0;
       
-      const newStats = {
-        ...prev,
-        forgottenWords: forgotten,
-        experience,
-        accuracy,
-      };
+      // 即使出错也要更新统计
+      console.log(`📊 更新统计 - 忘记单词: ${word} (出错后)`);
+      forgottenRef.current += 1;
       
-      console.log(`📈 统计更新完成:`, {
-        remembered,
-        forgotten,
-        total,
-        experience,
-        accuracy,
-        newStats
+      setReviewStats(prev => {
+        const remembered = prev.rememberedWords;
+        const forgotten = prev.forgottenWords + 1;
+        const total = prev.totalWords;
+        
+        // 出错时使用默认经验值
+        const gainedExp = 1;
+        const experience = prev.experience + gainedExp;
+        const accuracy = total > 0 ? Math.round((remembered / total) * 100) : 0;
+        
+        const newStats = {
+          ...prev,
+          forgottenWords: forgotten,
+          experience,
+          accuracy,
+        };
+        
+        console.log(`📈 统计更新完成 (出错后):`, {
+          remembered,
+          forgotten,
+          total,
+          gainedExp,
+          experience,
+          accuracy,
+          newStats
+        });
+        
+        return newStats;
       });
-      
-      return newStats;
-    });
+    }
     // 获取当前单词的释义
     const currentWord = words[swiperIndex];
     const translation = currentWord?.translation || '';
@@ -939,41 +992,80 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
       
       // 5. 立即更新后端用户词汇表
       console.log(`🌐 开始更新后端用户词汇表: ${word}, isCorrect: true`);
-      await updateBackendWordProgress(word, true);
-      console.log(`✅ 后端用户词汇表更新成功: ${word}`);
+      const xpGained = await updateBackendWordProgress(word, true);
+      console.log(`✅ 后端用户词汇表更新成功: ${word}, 获得经验值: ${xpGained}`);
+      
+      // 6. 更新统计
+      console.log(`📊 更新统计 - 记住单词: ${word}`);
+      rememberedRef.current += 1;
+      console.log(`📊 当前统计 - rememberedRef: ${rememberedRef.current}, forgottenRef: ${forgottenRef.current}`);
+      
+      setReviewStats(prev => {
+        const remembered = prev.rememberedWords + 1;
+        const forgotten = prev.forgottenWords;
+        const total = prev.totalWords;
+        
+        // 使用后端返回的经验值，如果后端返回0说明已达到每日上限
+        const gainedExp = xpGained !== undefined ? xpGained : 2;
+        const experience = prev.experience + gainedExp;
+        const accuracy = total > 0 ? Math.round((remembered / total) * 100) : 0;
+        
+        const newStats = {
+          ...prev,
+          rememberedWords: remembered,
+          experience,
+          accuracy,
+        };
+        
+        console.log(`📈 统计更新完成:`, {
+          remembered,
+          forgotten,
+          total,
+          gainedExp,
+          experience,
+          accuracy,
+          newStats
+        });
+        
+        return newStats;
+      });
     } catch (error) {
       console.error('❌ 更新学习记录失败:', error);
-    }
-    
-    console.log(`📊 更新统计 - 记住单词: ${word}`);
-    rememberedRef.current += 1;
-    console.log(`📊 当前统计 - rememberedRef: ${rememberedRef.current}, forgottenRef: ${forgottenRef.current}`);
-    
-    setReviewStats(prev => {
-      const remembered = prev.rememberedWords + 1;
-      const forgotten = prev.forgottenWords;
-      const total = prev.totalWords;
-      const experience = (remembered * 2) + (forgotten * 1);
-      const accuracy = total > 0 ? Math.round((remembered / total) * 100) : 0;
       
-      const newStats = {
-        ...prev,
-        rememberedWords: remembered,
-        experience,
-        accuracy,
-      };
+      // 即使出错也要更新统计
+      console.log(`📊 更新统计 - 记住单词: ${word} (出错后)`);
+      rememberedRef.current += 1;
       
-      console.log(`📈 统计更新完成:`, {
-        remembered,
-        forgotten,
-        total,
-        experience,
-        accuracy,
-        newStats
+      setReviewStats(prev => {
+        const remembered = prev.rememberedWords + 1;
+        const forgotten = prev.forgottenWords;
+        const total = prev.totalWords;
+        
+        // 出错时使用默认经验值
+        const gainedExp = 2;
+        const experience = prev.experience + gainedExp;
+        const accuracy = total > 0 ? Math.round((remembered / total) * 100) : 0;
+        
+        const newStats = {
+          ...prev,
+          rememberedWords: remembered,
+          experience,
+          accuracy,
+        };
+        
+        console.log(`📈 统计更新完成 (出错后):`, {
+          remembered,
+          forgotten,
+          total,
+          gainedExp,
+          experience,
+          accuracy,
+          newStats
+        });
+        
+        return newStats;
       });
-      
-      return newStats;
-    });
+    }
     // 获取当前单词的释义
     const currentWord = words[swiperIndex];
     const translation = currentWord?.translation || '';
@@ -1032,7 +1124,7 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
       // 如果是最后一张卡，延迟显示完成页面
       if (newIndex === words.length) {
         console.log('🎯 最后一张卡完成，准备显示完成页面');
-        // 延迟显示完成页面，确保进度条动画完成
+        // 减少延迟时间，确保快速划卡时能及时显示完成页面
         setTimeout(() => {
           console.log('🏁 复习完成，计算最终统计数据');
           // 复习完成 - 计算最终统计数据
@@ -1040,8 +1132,11 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
             const rememberedWords = rememberedRef.current;
             const forgottenWords = forgottenRef.current;
             const currentStats = reviewStats;
-            const experience = (rememberedWords * 2) + (forgottenWords * 1);
+            
+            // 使用后端返回的经验值，而不是本地计算
+            const experience = currentStats.experience;
             const accuracy = currentStats.totalWords > 0 ? Math.round((rememberedWords / currentStats.totalWords) * 100) : 0;
+            
             const finalStats = {
               totalWords: currentStats.totalWords,
               rememberedWords,
@@ -1057,6 +1152,12 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
               experience,
               accuracy
             });
+            
+            // 保存经验值增益到本地存储，供ReviewIntroScreen使用
+            // 注意：这里保存的是累计经验值，不是增益值
+            // 真正的经验值增益会在ReviewCompleteScreen中计算
+            console.log('💾 复习完成，准备计算经验值增益');
+            
             setReviewStats(finalStats);
             setFinalStats(finalStats);
             setIsReviewComplete(true);
@@ -1064,9 +1165,9 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
           } else {
             console.log('⚠️ 复习已完成，跳过重复计算');
           }
-        }, 1200); // 增加延迟时间，确保100%动画完全加载完毕
+        }, 300); // 减少延迟时间，从1200ms减少到300ms，确保快速划卡时能及时显示完成页面
       } else {
-        console.log('📱 继续下一张卡');
+        console.log('�� 继续下一张卡');
       }
     } else {
       console.log('⚠️ swiperIndex 超出范围，无法移动到下一个单词');
@@ -1291,10 +1392,15 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
               console.error('❌ 更新复习次数失败:', error);
             }
             
+            // 计算本次复习获得的经验值增益
+            // finalStats.experience 是本次复习过程中累积的经验值
+            // 这就是本次复习的增益值（从0开始累积）
+            const experienceGained = finalStats?.experience || 0;
+            
             // 保存经验值增加参数到AsyncStorage
             const params = {
               showExperienceAnimation: true,
-              experienceGained: finalStats?.experience || 0
+              experienceGained: experienceGained
             };
             await AsyncStorage.setItem('navigationParams', JSON.stringify(params));
             
@@ -1448,6 +1554,32 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
             const word = words[cardIndex]?.word;
             if (word) {
               await handleSwipeRight(word);
+            }
+          }}
+          onSwipedAll={() => {
+            console.log('🎯 Swiper onSwipedAll 触发 - 所有卡片已划完');
+            // 确保进度条立即设置为100%
+            progressAnimation.setValue(100);
+            setCurrentProgress(100);
+            // 触发完成页面显示
+            if (!isReviewComplete) {
+              const rememberedWords = rememberedRef.current;
+              const forgottenWords = forgottenRef.current;
+              const currentStats = reviewStats;
+              const experience = (rememberedWords * 2) + (forgottenWords * 1);
+              const accuracy = currentStats.totalWords > 0 ? Math.round((rememberedWords / currentStats.totalWords) * 100) : 0;
+              const finalStats = {
+                totalWords: currentStats.totalWords,
+                rememberedWords,
+                forgottenWords,
+                experience,
+                accuracy,
+              };
+              console.log('📊 onSwipedAll - 最终统计数据:', finalStats);
+              setReviewStats(finalStats);
+              setFinalStats(finalStats);
+              setIsReviewComplete(true);
+              console.log('✅ onSwipedAll - 复习完成状态已设置');
             }
           }}
           cardVerticalMargin={8}

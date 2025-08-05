@@ -473,23 +473,11 @@ UserSchema.methods.addExperienceForNewWord = function() {
 
 // 方法：复习单词获得经验值（记得+2，不记得+1）
 UserSchema.methods.addExperienceForReview = function(isCorrect = true) {
-  // 检查并重置每日限制
-  this.checkAndResetDailyLimits();
-  
-  // 检查每日复习XP限制
-  const dailyLimit = 90; // 每日上限90点，允许更多复习
-  if (this.learningStats.dailyReviewXP >= dailyLimit) {
-    console.log('⚠️ 今日复习XP已达上限90点');
-    return Promise.resolve(this);
-  }
-  
-  // 根据是否正确给予不同经验值
+  // 移除每日限制，每次复习都能获得经验值
   const xpToAdd = isCorrect ? 2 : 1;
-  const actualXpToAdd = Math.min(xpToAdd, dailyLimit - this.learningStats.dailyReviewXP);
-  this.learningStats.dailyReviewXP += actualXpToAdd;
   
   const message = isCorrect ? '成功复习单词' : '复习单词';
-  return this.addExperience(actualXpToAdd, message);
+  return this.addExperience(xpToAdd, message);
 };
 
 // 方法：连续学习打卡获得经验值
