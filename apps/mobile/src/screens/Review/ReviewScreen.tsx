@@ -1331,7 +1331,8 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
     
     // 使用当前的 reviewStats，确保 totalWords 正确
     const currentStats = reviewStats;
-    const experience = (rememberedWords * 2) + (forgottenWords * 1);
+    // 使用 reviewStats.experience，这是从后端API返回的真实经验值
+    const experience = currentStats.experience;
     const accuracy = currentStats.totalWords > 0 ? Math.round((rememberedWords / currentStats.totalWords) * 100) : 0;
     const finalStats = {
       totalWords: currentStats.totalWords,
