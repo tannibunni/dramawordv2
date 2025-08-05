@@ -8,6 +8,7 @@ import { AuthProvider } from './context/AuthContext';
 import { LanguageProvider } from './context/LanguageContext';
 import { AppLanguageProvider } from './context/AppLanguageContext';
 import { NavigationProvider } from './components/navigation/NavigationContext';
+import { AuthGuard } from './components/auth/AuthGuard';
 import { Audio } from 'expo-av';
 import { InterruptionModeIOS, InterruptionModeAndroid } from 'expo-av/build/Audio.types';
 import { InitialLanguageModal } from './components/common/InitialLanguageModal';
@@ -266,11 +267,15 @@ const AppContent = () => {
       <LanguageProvider>
         <ShowListProvider>
           <VocabularyProvider>
-            <MainLayout />
-            <InitialLanguageModal
-              visible={showInitialLanguageModal}
-              onComplete={handleInitialLanguageComplete}
-            />
+            <NavigationProvider>
+              <AuthGuard>
+                <MainLayout />
+              </AuthGuard>
+              <InitialLanguageModal
+                visible={showInitialLanguageModal}
+                onComplete={handleInitialLanguageComplete}
+              />
+            </NavigationProvider>
           </VocabularyProvider>
         </ShowListProvider>
       </LanguageProvider>
