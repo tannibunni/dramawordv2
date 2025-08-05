@@ -49,8 +49,33 @@ export const LanguageProvider: React.FC<{ children: ReactNode }> = ({ children }
       const savedLanguage = await AsyncStorage.getItem(APP_CONFIG.STORAGE_KEYS.SELECTED_LANGUAGE);
       const savedProgress = await AsyncStorage.getItem(APP_CONFIG.STORAGE_KEYS.LANGUAGE_PROGRESS);
       
+      // 检查用户的学习语言设置
+      const learningLanguages = await AsyncStorage.getItem('learningLanguages');
+      let defaultLanguage = APP_CONFIG.DEFAULT_LANGUAGE;
+      
+      if (learningLanguages) {
+        try {
+          const languages = JSON.parse(learningLanguages);
+          if (languages.length > 0) {
+            // 使用用户选择的第一个语言作为默认语言
+            const firstLanguageCode = languages[0];
+            const languageKey = getLanguageKeyByCode(firstLanguageCode);
+            if (languageKey) {
+              defaultLanguage = languageKey;
+              console.log('🎯 使用用户选择的第一个语言作为默认语言:', firstLanguageCode, languageKey);
+            }
+          }
+        } catch (error) {
+          console.error('解析学习语言设置失败:', error);
+        }
+      }
+      
       if (savedLanguage && isLanguageSupported(savedLanguage)) {
         setSelectedLanguageState(savedLanguage as SupportedLanguageCode);
+      } else {
+        // 如果没有保存的语言设置，使用用户选择的第一个语言
+        setSelectedLanguageState(defaultLanguage);
+        console.log('🎯 设置默认语言为:', defaultLanguage);
       }
       
       if (savedProgress) {
@@ -103,6 +128,12 @@ export const LanguageProvider: React.FC<{ children: ReactNode }> = ({ children }
 
   const isLanguageSupported = (languageCode: string): languageCode is SupportedLanguageCode => {
     return languageCode in SUPPORTED_LANGUAGES;
+  };
+
+  // 根据language.code找到对应的SupportedLanguageCode
+  const getLanguageKeyByCode = (code: string): SupportedLanguageCode | null => {
+    const entry = Object.entries(SUPPORTED_LANGUAGES).find(([key, lang]) => lang.code === code);
+    return entry ? (entry[0] as SupportedLanguageCode) : null;
   };
 
   const value: LanguageContextType = {

@@ -57,7 +57,9 @@ const LanguagePicker: React.FC<LanguagePickerProps> = ({ onLanguageChange, onNav
           console.log('LanguagePicker - 重新检查：当前语言不在学习列表中，切换到:', languages[0]);
           const newLanguageKey = getLanguageKeyByCode(languages[0]);
           console.log('LanguagePicker - 重新检查：切换到语言键:', newLanguageKey);
-          setSelectedLanguage(newLanguageKey);
+          if (newLanguageKey) {
+            setSelectedLanguage(newLanguageKey);
+          }
         }
       }
     };
@@ -107,7 +109,9 @@ const LanguagePicker: React.FC<LanguagePickerProps> = ({ onLanguageChange, onNav
           console.log('LanguagePicker - 当前语言不在学习列表中，切换到:', languages[0]);
           const newLanguageKey = getLanguageKeyByCode(languages[0]);
           console.log('LanguagePicker - 切换到语言键:', newLanguageKey);
-          setSelectedLanguage(newLanguageKey);
+          if (newLanguageKey) {
+            setSelectedLanguage(newLanguageKey);
+          }
         }
       } else {
         // 如果没有设置学习语言，默认显示所有语言
