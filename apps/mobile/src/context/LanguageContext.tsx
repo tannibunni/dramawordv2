@@ -71,9 +71,11 @@ export const LanguageProvider: React.FC<{ children: ReactNode }> = ({ children }
       }
       
       if (savedLanguage && isLanguageSupported(savedLanguage)) {
+        console.log('🎯 LanguageContext - 使用保存的语言设置:', savedLanguage);
         setSelectedLanguageState(savedLanguage as SupportedLanguageCode);
       } else {
         // 如果没有保存的语言设置，使用用户选择的第一个语言
+        console.log('🎯 LanguageContext - 没有保存的语言设置，使用默认语言:', defaultLanguage);
         setSelectedLanguageState(defaultLanguage);
         console.log('🎯 设置默认语言为:', defaultLanguage);
       }
@@ -92,8 +94,10 @@ export const LanguageProvider: React.FC<{ children: ReactNode }> = ({ children }
 
   const setSelectedLanguage = async (language: SupportedLanguageCode) => {
     try {
+      console.log('🎯 LanguageContext - setSelectedLanguage被调用:', language);
       setSelectedLanguageState(language);
       await AsyncStorage.setItem(APP_CONFIG.STORAGE_KEYS.SELECTED_LANGUAGE, language);
+      console.log('🎯 LanguageContext - 语言设置已保存到AsyncStorage:', language);
     } catch (error) {
       console.error('Failed to save selected language:', error);
     }

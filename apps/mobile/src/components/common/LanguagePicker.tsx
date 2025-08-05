@@ -29,6 +29,11 @@ const LanguagePicker: React.FC<LanguagePickerProps> = ({ onLanguageChange, onNav
 
   // 计算当前语言，确保在selectedLanguage更新后重新计算
   const currentLanguage = SUPPORTED_LANGUAGES[selectedLanguage];
+  
+  // 添加图标显示调试日志
+  console.log('🎯 LanguagePicker图标调试 - selectedLanguage:', selectedLanguage);
+  console.log('🎯 LanguagePicker图标调试 - currentLanguage:', currentLanguage);
+  console.log('🎯 LanguagePicker图标调试 - 图标显示:', currentLanguage.flag, currentLanguage.name);
 
   // 加载学习语言设置
   useEffect(() => {
@@ -126,9 +131,12 @@ const LanguagePicker: React.FC<LanguagePickerProps> = ({ onLanguageChange, onNav
   };
 
   const handleLanguageSwitch = (languageCode: SupportedLanguageCode) => {
+    console.log('🎯 LanguagePicker - handleLanguageSwitch被调用:', languageCode);
+    console.log('🎯 LanguagePicker - 切换前selectedLanguage:', selectedLanguage);
     setSelectedLanguage(languageCode);
     // 传递实际的语言代码而不是SupportedLanguageCode
     const actualLanguageCode = SUPPORTED_LANGUAGES[languageCode].code;
+    console.log('🎯 LanguagePicker - 实际语言代码:', actualLanguageCode);
     onLanguageChange?.(actualLanguageCode);
     setIsModalVisible(false);
   };
