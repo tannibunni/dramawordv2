@@ -342,6 +342,7 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
         console.log('📊 初始化统计数据:', initialStats);
         setReviewStats(initialStats);
         // 重置计数器
+        console.log('🔄 重置计数器前 - rememberedRef:', rememberedRef.current, 'forgottenRef:', forgottenRef.current);
         rememberedRef.current = 0;
         forgottenRef.current = 0;
         console.log('🔄 计数器已重置 - rememberedRef: 0, forgottenRef: 0');
@@ -832,8 +833,9 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
       
       // 6. 更新统计
       console.log(`📊 更新统计 - 忘记单词: ${word}`);
+      console.log(`📊 更新统计前 - rememberedRef: ${rememberedRef.current}, forgottenRef: ${forgottenRef.current}`);
       forgottenRef.current += 1;
-      console.log(`📊 当前统计 - rememberedRef: ${rememberedRef.current}, forgottenRef: ${forgottenRef.current}`);
+      console.log(`📊 更新统计后 - rememberedRef: ${rememberedRef.current}, forgottenRef: ${forgottenRef.current}`);
       
       setReviewStats(prev => {
         const remembered = prev.rememberedWords;
@@ -964,8 +966,9 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
       
       // 6. 更新统计
       console.log(`📊 更新统计 - 记住单词: ${word}`);
+      console.log(`📊 更新统计前 - rememberedRef: ${rememberedRef.current}, forgottenRef: ${forgottenRef.current}`);
       rememberedRef.current += 1;
-      console.log(`📊 当前统计 - rememberedRef: ${rememberedRef.current}, forgottenRef: ${forgottenRef.current}`);
+      console.log(`📊 更新统计后 - rememberedRef: ${rememberedRef.current}, forgottenRef: ${forgottenRef.current}`);
       
       setReviewStats(prev => {
         const remembered = prev.rememberedWords + 1;
