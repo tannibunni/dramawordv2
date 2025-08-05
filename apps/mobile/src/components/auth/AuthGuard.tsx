@@ -1,13 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import LoginScreen from '../../screens/Auth/LoginScreen';
+import { LoginScreen } from '../../screens/Auth/LoginScreen';
 
 interface AuthGuardProps {
   children: React.ReactNode;
 }
 
 export const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
-  const { user, loginType, isAuthenticated, getAuthToken } = useAuth();
+  const { user, loginType, isAuthenticated, getAuthToken, login } = useAuth();
   const [hasValidToken, setHasValidToken] = useState<boolean | null>(null);
   const [showLogin, setShowLogin] = useState(false);
 
@@ -57,6 +57,28 @@ export const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
     }
   };
 
+  const handleLoginSuccess = async (userData: any) => {
+    try {
+      console.log('🔐 AuthGuard 处理登录成功:', userData);
+      await login(userData, userData.loginType || 'apple');
+      setShowLogin(false);
+      setHasValidToken(true);
+    } catch (error) {
+      console.error('❌ AuthGuard 登录处理失败:', error);
+    }
+  };
+
+  const handleGuestLogin = async () => {
+    try {
+      console.log('👤 AuthGuard 处理游客登录');
+      // 游客登录逻辑
+      setShowLogin(false);
+      setHasValidToken(true);
+    } catch (error) {
+      console.error('❌ AuthGuard 游客登录处理失败:', error);
+    }
+  };
+
   // 如果正在检查认证状态，显示加载状态
   if (hasValidToken === null) {
     return null; // 或者显示加载指示器
@@ -64,7 +86,12 @@ export const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
 
   // 如果需要登录，显示登录界面
   if (showLogin) {
-    return <LoginScreen />;
+    return (
+      <LoginScreen 
+        onLoginSuccess={handleLoginSuccess}
+        onGuestLogin={handleGuestLogin}
+      />
+    );
   }
 
   // 认证有效，显示子组件
