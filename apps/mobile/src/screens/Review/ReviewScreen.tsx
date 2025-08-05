@@ -327,8 +327,8 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
     if (words.length > 0) {
       console.log('📚 第一个单词:', words[0]);
       
-      // 检查是否是新的复习会话（swiperIndex为0且没有进行中的复习且reviewStats为空）
-      const isNewSession = swiperIndex === 0 && !isReviewComplete && reviewStats.totalWords === 0;
+      // 检查是否是新的复习会话（swiperIndex为0且没有进行中的复习）
+      const isNewSession = swiperIndex === 0 && !isReviewComplete;
       
       if (isNewSession) {
         // 初始化统计数据 - 保持经验值不被重置
@@ -357,7 +357,7 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
     } else {
       console.log('⚠️ words 数组为空');
     }
-  }, [words, swiperIndex, isReviewComplete, reviewStats.totalWords]);
+  }, [words, swiperIndex, isReviewComplete]); // 移除reviewStats.totalWords依赖，避免重复重置
   
   // 监控复习统计变化
   useEffect(() => {
