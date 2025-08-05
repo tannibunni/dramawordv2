@@ -137,7 +137,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
         'user_vocabulary_cache',
         'badges_cache',
         'selectedLanguage',
-        'learningLanguages',
+        // 'learningLanguages', // 不移除学习语言设置，保持用户选择
         'appLanguage',
         'initialLanguageSetup'
       ];
