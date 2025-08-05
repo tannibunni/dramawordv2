@@ -266,7 +266,8 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
                 newLevel: result.data.experience.newLevel,
                 leveledUp: result.data.experience.leveledUp
               });
-              return xpGained; // 返回经验值增益
+              // 如果API返回的经验值是0，使用默认值
+              return xpGained > 0 ? xpGained : (isCorrect ? 2 : 1);
             }
           } else {
             apiLogger.warn('经验值API调用失败', { status: response.status });
