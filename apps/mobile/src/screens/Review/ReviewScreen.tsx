@@ -181,7 +181,7 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
       const userId = user?.id;
       if (!userId) {
         apiLogger.warn('用户未登录，跳过后端更新');
-        return null; // 返回null表示没有经验值增益
+        return isCorrect ? 2 : 1; // 返回默认经验值
       }
       
       // 获取当前单词的学习记录
@@ -236,47 +236,13 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
         }
       });
       
-      // 调用经验值API
-      try {
-        const token = await AsyncStorage.getItem('userData');
-        if (token) {
-          const userData = JSON.parse(token);
-          const response = await fetch(`${API_BASE_URL}/words/user/progress`, {
-            method: 'PUT',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${userData.token}`,
-            },
-            body: JSON.stringify({
-              userId: userId,
-              word: word,
-              isSuccessfulReview: isCorrect,
-              progress: progress
-            }),
-          });
-          
-          if (response.ok) {
-            const result = await response.json();
-            if (result.data?.experience) {
-              const xpGained = result.data.experience.xpGained || 0;
-              apiLogger.info('经验值更新成功', {
-                word,
-                isCorrect,
-                xpGained,
-                newLevel: result.data.experience.newLevel,
-                leveledUp: result.data.experience.leveledUp
-              });
-              // 如果API返回的经验值是0，使用默认值
-              return xpGained > 0 ? xpGained : (isCorrect ? 2 : 1);
-            }
-          } else {
-            apiLogger.warn('经验值API调用失败', { status: response.status });
-          }
-        }
-      } catch (xpError) {
-        apiLogger.error('调用经验值API失败', xpError);
-        // 不中断流程，继续执行
-      }
+      // 遵循多邻国方案：本地计算经验值，不调用后端API
+      const experienceGained = isCorrect ? 2 : 1;
+      apiLogger.info('本地经验值计算', {
+        word,
+        isCorrect,
+        experienceGained
+      });
       
       // 使用统一同步服务 - 批量同步学习记录
       await unifiedSyncService.addToSyncQueue({
@@ -294,11 +260,11 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
       
       apiLogger.info('学习记录已加入同步队列');
       
-      // 如果没有从API获得经验值，使用默认值
-      return isCorrect ? 2 : 1;
+      // 返回本地计算的经验值
+      return experienceGained;
     } catch (error) {
-      apiLogger.error('更新后端用户词汇表失败', error);
-      return 0; // 出错时返回0经验值
+      apiLogger.error('更新学习记录失败', error);
+      return isCorrect ? 2 : 1; // 出错时返回默认经验值
     }
   };
   const [swiperIndex, setSwiperIndex] = useState(0);
@@ -365,12 +331,12 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
       const isNewSession = swiperIndex === 0 && !isReviewComplete && reviewStats.totalWords === 0;
       
       if (isNewSession) {
-        // 初始化统计数据
+        // 初始化统计数据 - 保持经验值不被重置
         const initialStats = {
           totalWords: words.length,
           rememberedWords: 0,
           forgottenWords: 0,
-          experience: 0,
+          experience: reviewStats.experience || 0, // 保持现有经验值，不重置为0
           accuracy: 0,
         };
         console.log('📊 初始化统计数据:', initialStats);
@@ -1329,21 +1295,29 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
     const totalActions = rememberedWords + forgottenWords;
     console.log('ReviewScreen: Data validation - total actions:', totalActions, 'remembered:', rememberedWords, 'forgotten:', forgottenWords);
     
+    // 计算本次复习新获得的经验值：记住的单词*2 + 忘记的单词*1
+    const experienceGained = (rememberedWords * 2) + (forgottenWords * 1);
+    
     // 使用当前的 reviewStats，确保 totalWords 正确
     const currentStats = reviewStats;
-    // 使用 reviewStats.experience，这是从后端API返回的真实经验值
-    const experience = currentStats.experience;
     const accuracy = currentStats.totalWords > 0 ? Math.round((rememberedWords / currentStats.totalWords) * 100) : 0;
     const finalStats = {
       totalWords: currentStats.totalWords,
       rememberedWords,
       forgottenWords,
-      experience,
+      experience: experienceGained, // 使用本次复习新获得的经验值，而不是累计值
       accuracy,
     };
     console.log('ReviewScreen: Final stats:', finalStats);
+    console.log('🎯 本次复习新获得经验值:', experienceGained, '(记住:', rememberedWords, '*2 + 忘记:', forgottenWords, '*1)');
     setReviewStats(finalStats);
     setFinalStats(finalStats);
+    
+    // 保存当前复习会话的经验值增益，用于后续显示
+    if (experienceGained > 0) {
+      AsyncStorage.setItem('currentReviewExperienceGain', experienceGained.toString());
+      console.log('💾 保存当前复习经验值增益:', experienceGained);
+    }
     
     // 延迟显示完成页面，确保进度条动画完成
     setTimeout(() => {
@@ -1395,9 +1369,9 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
             }
             
             // 计算本次复习获得的经验值增益
-            // finalStats.experience 是本次复习过程中累积的经验值
-            // 这就是本次复习的增益值（从0开始累积）
-            const experienceGained = finalStats?.experience || 0;
+            // 从AsyncStorage中获取保存的经验值，这是从后端API返回的真实值
+            const savedExperienceGain = await AsyncStorage.getItem('currentReviewExperienceGain');
+            const experienceGained = savedExperienceGain ? parseInt(savedExperienceGain) : 0;
             
             // 保存经验值增加参数到AsyncStorage
             const params = {
@@ -1568,19 +1542,29 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
               const rememberedWords = rememberedRef.current;
               const forgottenWords = forgottenRef.current;
               const currentStats = reviewStats;
-              // 使用 reviewStats.experience，这是从后端API返回的真实经验值
-              const experience = currentStats.experience;
+              
+              // 计算本次复习新获得的经验值：记住的单词*2 + 忘记的单词*1
+              const experienceGained = (rememberedWords * 2) + (forgottenWords * 1);
+              
               const accuracy = currentStats.totalWords > 0 ? Math.round((rememberedWords / currentStats.totalWords) * 100) : 0;
               const finalStats = {
                 totalWords: currentStats.totalWords,
                 rememberedWords,
                 forgottenWords,
-                experience,
+                experience: experienceGained, // 使用本次复习新获得的经验值，而不是累计值
                 accuracy,
               };
               console.log('📊 onSwipedAll - 最终统计数据:', finalStats);
+              console.log('🎯 本次复习新获得经验值:', experienceGained, '(记住:', rememberedWords, '*2 + 忘记:', forgottenWords, '*1)');
               setReviewStats(finalStats);
               setFinalStats(finalStats);
+              
+              // 保存当前复习会话的经验值增益，用于后续显示
+              if (experienceGained > 0) {
+                AsyncStorage.setItem('currentReviewExperienceGain', experienceGained.toString());
+                console.log('💾 保存当前复习经验值增益:', experienceGained);
+              }
+              
               setIsReviewComplete(true);
               console.log('✅ onSwipedAll - 复习完成状态已设置');
             }
