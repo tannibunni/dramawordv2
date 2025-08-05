@@ -1,13 +1,13 @@
-import { ExperienceService, ExperienceGainResult } from './experienceService';
 import { animationManager } from './animationManager';
 import { unifiedSyncService } from './unifiedSyncService';
 import { storageService } from './storageService';
 import { errorHandler, ErrorType } from '../utils/errorHandler';
-import { experienceCalculationService } from './experienceCalculationService';
+import { API_BASE_URL } from '../constants/config';
 import type { 
   UserExperienceInfo, 
   ExperienceEvent, 
-  ExperienceGainResult as CalculationResult 
+  ExperienceGainResult,
+  ExperienceWays
 } from '../types/experience';
 
 export interface ExperienceGainEvent {
@@ -25,9 +25,38 @@ export interface ExperienceManagerConfig {
   autoSync: boolean;
 }
 
+// 经验值配置
+interface ExperienceConfig {
+  baseXP: number;
+  levelMultiplier: number;
+  xpRewards: {
+    review: {
+      correct: number;
+      incorrect: number;
+    };
+    smartChallenge: number;
+    wrongWordChallenge: number;
+    newWord: number;
+    contribution: number;
+    dailyCheckin: number;
+    dailyCards: number;
+    studyTime: number;
+  };
+}
+
+/**
+ * 经验值管理器 - 统一管理经验值业务逻辑和API通信
+ * 
+ * 职责：
+ * 1. 本地经验值计算
+ * 2. 业务逻辑处理（动画、通知、同步）
+ * 3. API通信（获取初始数据、同步结果）
+ * 4. 事件记录和统计
+ */
 export class ExperienceManager {
   private static instance: ExperienceManager;
   private config: ExperienceManagerConfig;
+  private experienceConfig: ExperienceConfig;
   private currentExperience: number = 0;
   private currentLevel: number = 1;
   private isProcessing: boolean = false;
@@ -39,6 +68,24 @@ export class ExperienceManager {
       enableSound: true,
       autoSync: true
     };
+    
+    this.experienceConfig = {
+      baseXP: 50,
+      levelMultiplier: 2,
+      xpRewards: {
+        review: {
+          correct: 2,
+          incorrect: 1,
+        },
+        smartChallenge: 5,
+        wrongWordChallenge: 3,
+        newWord: 5,
+        contribution: 10,
+        dailyCheckin: 20,
+        dailyCards: 15,
+        studyTime: 1, // 每分钟1经验值
+      },
+    };
   }
 
   public static getInstance(): ExperienceManager {
@@ -46,6 +93,102 @@ export class ExperienceManager {
       ExperienceManager.instance = new ExperienceManager();
     }
     return ExperienceManager.instance;
+  }
+
+  /**
+   * 获取认证token
+   */
+  private async getAuthToken(): Promise<string | null> {
+    try {
+      const result = await storageService.getUserData();
+      if (result.success && result.data && result.data.token) {
+        return result.data.token;
+      }
+      return null;
+    } catch (error) {
+      errorHandler.handleError(error, {}, {
+        type: ErrorType.STORAGE,
+        userMessage: '获取认证token失败'
+      });
+      return null;
+    }
+  }
+
+  /**
+   * 从API获取用户经验值信息
+   */
+  private async getExperienceInfoFromAPI(): Promise<UserExperienceInfo | null> {
+    try {
+      const token = await this.getAuthToken();
+      if (!token) {
+        console.log('⚠️ 未找到认证token');
+        return null;
+      }
+
+      const response = await fetch(`${API_BASE_URL}/experience/info`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`获取经验值信息失败: ${response.status}`);
+      }
+
+      const result = await response.json();
+      if (result.success && result.data) {
+        console.log('✅ 获取经验值信息成功:', result.data);
+        return result.data;
+      } else {
+        throw new Error(result.error || '经验值信息格式错误');
+      }
+    } catch (error) {
+      errorHandler.handleError(error, {}, {
+        type: ErrorType.NETWORK,
+        userMessage: '获取经验值信息失败，请检查网络连接'
+      });
+      return null;
+    }
+  }
+
+  /**
+   * 从API获取经验值获取方式说明
+   */
+  private async getExperienceWaysFromAPI(): Promise<ExperienceWays | null> {
+    try {
+      const token = await this.getAuthToken();
+      if (!token) {
+        console.log('⚠️ 未找到认证token');
+        return null;
+      }
+
+      const response = await fetch(`${API_BASE_URL}/experience/ways`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        console.warn('⚠️ 获取经验值获取方式失败:', response.status);
+        return null;
+      }
+
+      const result = await response.json();
+      if (result.success && result.data) {
+        console.log('✅ 获取经验值获取方式成功:', result.data);
+        return result.data;
+      } else {
+        console.warn('⚠️ 经验值获取方式格式错误');
+        return null;
+      }
+    } catch (error) {
+      console.error('❌ 获取经验值获取方式失败:', error);
+      return null;
+    }
   }
 
   /**
@@ -63,16 +206,98 @@ export class ExperienceManager {
   }
 
   /**
+   * 计算等级所需经验值
+   */
+  private calculateLevelRequiredExp(level: number): number {
+    return this.experienceConfig.baseXP * Math.pow(level + 1, this.experienceConfig.levelMultiplier);
+  }
+
+  /**
+   * 计算当前等级
+   */
+  private calculateLevel(experience: number): number {
+    if (experience <= 0) return 1;
+
+    let level = 1;
+    while (this.calculateLevelRequiredExp(level) <= experience) {
+      level++;
+    }
+    return level;
+  }
+
+  /**
+   * 计算升级所需经验值
+   */
+  private calculateExpToNextLevel(experience: number): number {
+    const currentLevel = this.calculateLevel(experience);
+    const requiredExp = this.calculateLevelRequiredExp(currentLevel);
+    return Math.max(0, requiredExp - experience);
+  }
+
+  /**
+   * 计算进度百分比
+   */
+  private calculateProgressPercentage(experience: number): number {
+    if (experience <= 0) return 0;
+
+    const currentLevel = this.calculateLevel(experience);
+    const levelStartExp = currentLevel > 1 ? this.calculateLevelRequiredExp(currentLevel - 1) : 0;
+    const levelEndExp = this.calculateLevelRequiredExp(currentLevel);
+    const expInCurrentLevel = experience - levelStartExp;
+    const expNeededForLevel = levelEndExp - levelStartExp;
+
+    const percentage = (expInCurrentLevel / expNeededForLevel) * 100;
+    return Math.min(100, Math.max(0, percentage));
+  }
+
+  /**
+   * 计算经验值增益
+   */
+  private calculateExperienceGain(
+    currentExperience: number,
+    xpToGain: number,
+    reason: string = '未知'
+  ): ExperienceGainResult {
+    const oldLevel = this.calculateLevel(currentExperience);
+    const newExperience = currentExperience + xpToGain;
+    const newLevel = this.calculateLevel(newExperience);
+    const leveledUp = newLevel > oldLevel;
+    const oldProgress = this.calculateProgressPercentage(currentExperience);
+    const newProgress = this.calculateProgressPercentage(newExperience);
+
+    return {
+      success: true,
+      xpGained: xpToGain,
+      newLevel,
+      leveledUp,
+      message: `${reason} +${xpToGain}经验值`,
+      oldLevel,
+      oldExperience: currentExperience,
+      newExperience,
+      progressChange: newProgress - oldProgress,
+    };
+  }
+
+  /**
+   * 计算复习经验值
+   */
+  private calculateReviewExperience(isCorrect: boolean): number {
+    return isCorrect
+      ? this.experienceConfig.xpRewards.review.correct
+      : this.experienceConfig.xpRewards.review.incorrect;
+  }
+
+  /**
    * 复习单词获得经验值
    */
   public async addReviewExperience(isCorrect: boolean = true): Promise<ExperienceGainResult | null> {
     try {
       this.isProcessing = true;
       
-      // 使用计算服务计算经验值
-      const xpGained = experienceCalculationService.calculateReviewExperience(isCorrect);
+      // 本地计算经验值
+      const xpGained = this.calculateReviewExperience(isCorrect);
       const currentExp = this.currentExperience;
-      const calculationResult = experienceCalculationService.calculateExperienceGain(
+      const calculationResult = this.calculateExperienceGain(
         currentExp,
         xpGained,
         isCorrect ? '复习正确' : '复习错误'
@@ -110,19 +335,28 @@ export class ExperienceManager {
     try {
       this.isProcessing = true;
       
-      const result = await ExperienceService.addSmartChallengeExperience();
+      const xpGained = this.experienceConfig.xpRewards.smartChallenge;
+      const currentExp = this.currentExperience;
+      const calculationResult = this.calculateExperienceGain(
+        currentExp,
+        xpGained,
+        '智能挑战'
+      );
       
-      if (result && result.success) {
-        await this.handleExperienceGain({
-          type: 'smartChallenge',
-          xpGained: result.xpGained,
-          leveledUp: result.leveledUp,
-          message: result.message,
-          timestamp: Date.now()
-        });
-      }
+      // 更新当前经验值
+      this.currentExperience = calculationResult.newExperience;
+      this.currentLevel = calculationResult.newLevel;
       
-      return result;
+      // 处理经验值增益事件
+      await this.handleExperienceGain({
+        type: 'smartChallenge',
+        xpGained: calculationResult.xpGained,
+        leveledUp: calculationResult.leveledUp,
+        message: calculationResult.message,
+        timestamp: Date.now()
+      });
+      
+      return calculationResult;
     } catch (error) {
       console.error('❌ 智能挑战经验值添加失败:', error);
       return null;
@@ -138,19 +372,28 @@ export class ExperienceManager {
     try {
       this.isProcessing = true;
       
-      const result = await ExperienceService.addWrongWordChallengeExperience();
+      const xpGained = this.experienceConfig.xpRewards.wrongWordChallenge;
+      const currentExp = this.currentExperience;
+      const calculationResult = this.calculateExperienceGain(
+        currentExp,
+        xpGained,
+        '错词挑战'
+      );
       
-      if (result && result.success) {
-        await this.handleExperienceGain({
-          type: 'wrongWordChallenge',
-          xpGained: result.xpGained,
-          leveledUp: result.leveledUp,
-          message: result.message,
-          timestamp: Date.now()
-        });
-      }
+      // 更新当前经验值
+      this.currentExperience = calculationResult.newExperience;
+      this.currentLevel = calculationResult.newLevel;
       
-      return result;
+      // 处理经验值增益事件
+      await this.handleExperienceGain({
+        type: 'wrongWordChallenge',
+        xpGained: calculationResult.xpGained,
+        leveledUp: calculationResult.leveledUp,
+        message: calculationResult.message,
+        timestamp: Date.now()
+      });
+      
+      return calculationResult;
     } catch (error) {
       console.error('❌ 错词挑战经验值添加失败:', error);
       return null;
@@ -166,19 +409,28 @@ export class ExperienceManager {
     try {
       this.isProcessing = true;
       
-      const result = await ExperienceService.addNewWordExperience();
+      const xpGained = this.experienceConfig.xpRewards.newWord;
+      const currentExp = this.currentExperience;
+      const calculationResult = this.calculateExperienceGain(
+        currentExp,
+        xpGained,
+        '收集新单词'
+      );
       
-      if (result && result.success) {
-        await this.handleExperienceGain({
-          type: 'newWord',
-          xpGained: result.xpGained,
-          leveledUp: result.leveledUp,
-          message: result.message,
-          timestamp: Date.now()
-        });
-      }
+      // 更新当前经验值
+      this.currentExperience = calculationResult.newExperience;
+      this.currentLevel = calculationResult.newLevel;
       
-      return result;
+      // 处理经验值增益事件
+      await this.handleExperienceGain({
+        type: 'newWord',
+        xpGained: calculationResult.xpGained,
+        leveledUp: calculationResult.leveledUp,
+        message: calculationResult.message,
+        timestamp: Date.now()
+      });
+      
+      return calculationResult;
     } catch (error) {
       console.error('❌ 收集新单词经验值添加失败:', error);
       return null;
@@ -194,19 +446,28 @@ export class ExperienceManager {
     try {
       this.isProcessing = true;
       
-      const result = await ExperienceService.addContributionExperience();
+      const xpGained = this.experienceConfig.xpRewards.contribution;
+      const currentExp = this.currentExperience;
+      const calculationResult = this.calculateExperienceGain(
+        currentExp,
+        xpGained,
+        '贡献新词'
+      );
       
-      if (result && result.success) {
-        await this.handleExperienceGain({
-          type: 'contribution',
-          xpGained: result.xpGained,
-          leveledUp: result.leveledUp,
-          message: result.message,
-          timestamp: Date.now()
-        });
-      }
+      // 更新当前经验值
+      this.currentExperience = calculationResult.newExperience;
+      this.currentLevel = calculationResult.newLevel;
       
-      return result;
+      // 处理经验值增益事件
+      await this.handleExperienceGain({
+        type: 'contribution',
+        xpGained: calculationResult.xpGained,
+        leveledUp: calculationResult.leveledUp,
+        message: calculationResult.message,
+        timestamp: Date.now()
+      });
+      
+      return calculationResult;
     } catch (error) {
       console.error('❌ 贡献新词经验值添加失败:', error);
       return null;
@@ -222,19 +483,28 @@ export class ExperienceManager {
     try {
       this.isProcessing = true;
       
-      const result = await ExperienceService.dailyCheckin();
+      const xpGained = this.experienceConfig.xpRewards.dailyCheckin;
+      const currentExp = this.currentExperience;
+      const calculationResult = this.calculateExperienceGain(
+        currentExp,
+        xpGained,
+        '连续学习打卡'
+      );
       
-      if (result && result.success) {
-        await this.handleExperienceGain({
-          type: 'dailyCheckin',
-          xpGained: result.xpGained,
-          leveledUp: result.leveledUp,
-          message: result.message,
-          timestamp: Date.now()
-        });
-      }
+      // 更新当前经验值
+      this.currentExperience = calculationResult.newExperience;
+      this.currentLevel = calculationResult.newLevel;
       
-      return result;
+      // 处理经验值增益事件
+      await this.handleExperienceGain({
+        type: 'dailyCheckin',
+        xpGained: calculationResult.xpGained,
+        leveledUp: calculationResult.leveledUp,
+        message: calculationResult.message,
+        timestamp: Date.now()
+      });
+      
+      return calculationResult;
     } catch (error) {
       console.error('❌ 连续学习打卡失败:', error);
       return null;
@@ -250,19 +520,28 @@ export class ExperienceManager {
     try {
       this.isProcessing = true;
       
-      const result = await ExperienceService.completeDailyCards();
+      const xpGained = this.experienceConfig.xpRewards.dailyCards;
+      const currentExp = this.currentExperience;
+      const calculationResult = this.calculateExperienceGain(
+        currentExp,
+        xpGained,
+        '完成每日词卡'
+      );
       
-      if (result && result.success) {
-        await this.handleExperienceGain({
-          type: 'dailyCards',
-          xpGained: result.xpGained,
-          leveledUp: result.leveledUp,
-          message: result.message,
-          timestamp: Date.now()
-        });
-      }
+      // 更新当前经验值
+      this.currentExperience = calculationResult.newExperience;
+      this.currentLevel = calculationResult.newLevel;
       
-      return result;
+      // 处理经验值增益事件
+      await this.handleExperienceGain({
+        type: 'dailyCards',
+        xpGained: calculationResult.xpGained,
+        leveledUp: calculationResult.leveledUp,
+        message: calculationResult.message,
+        timestamp: Date.now()
+      });
+      
+      return calculationResult;
     } catch (error) {
       console.error('❌ 完成每日词卡任务失败:', error);
       return null;
@@ -278,19 +557,28 @@ export class ExperienceManager {
     try {
       this.isProcessing = true;
       
-      const result = await ExperienceService.addStudyTime(minutes);
+      const xpGained = Math.floor(minutes * this.experienceConfig.xpRewards.studyTime);
+      const currentExp = this.currentExperience;
+      const calculationResult = this.calculateExperienceGain(
+        currentExp,
+        xpGained,
+        '学习时长奖励'
+      );
       
-      if (result && result.success) {
-        await this.handleExperienceGain({
-          type: 'studyTime',
-          xpGained: result.xpGained,
-          leveledUp: result.leveledUp,
-          message: result.message,
-          timestamp: Date.now()
-        });
-      }
+      // 更新当前经验值
+      this.currentExperience = calculationResult.newExperience;
+      this.currentLevel = calculationResult.newLevel;
       
-      return result;
+      // 处理经验值增益事件
+      await this.handleExperienceGain({
+        type: 'studyTime',
+        xpGained: calculationResult.xpGained,
+        leveledUp: calculationResult.leveledUp,
+        message: calculationResult.message,
+        timestamp: Date.now()
+      });
+      
+      return calculationResult;
     } catch (error) {
       console.error('❌ 学习时长奖励失败:', error);
       return null;
@@ -392,8 +680,8 @@ export class ExperienceManager {
       const newLevel = this.currentLevel;
       const isLevelUp = event.leveledUp;
       
-      const oldProgress = this.calculateProgress(oldExperience, oldLevel);
-      const newProgress = this.calculateProgress(this.currentExperience, newLevel);
+      const oldProgress = this.calculateProgressPercentage(oldExperience);
+      const newProgress = this.calculateProgressPercentage(this.currentExperience);
       
       await animationManager.startExperienceAnimation({
         oldExperience,
@@ -461,11 +749,28 @@ export class ExperienceManager {
   }
 
   /**
-   * 获取当前经验值信息
+   * 获取当前经验值信息 - 本地计算
    */
   public async getCurrentExperienceInfo(): Promise<UserExperienceInfo | null> {
     try {
-      return await ExperienceService.getExperienceInfo();
+      // 使用本地计算的经验值信息
+      const level = this.currentLevel;
+      const experience = this.currentExperience;
+      const experienceToNextLevel = this.calculateExpToNextLevel(experience);
+      const progressPercentage = this.calculateProgressPercentage(experience);
+      
+      return {
+        level,
+        experience,
+        experienceToNextLevel,
+        progressPercentage,
+        totalExperience: experience,
+        dailyReviewXP: 0, // 这些值需要从API获取或本地存储
+        dailyStudyTimeXP: 0,
+        completedDailyCards: false,
+        currentStreak: 0,
+        contributedWords: 0,
+      };
     } catch (error) {
       console.error('❌ 获取当前经验值信息失败:', error);
       return null;
@@ -473,11 +778,27 @@ export class ExperienceManager {
   }
 
   /**
-   * 获取经验值获取方式说明
+   * 从API同步经验值信息
+   */
+  public async syncExperienceFromAPI(): Promise<void> {
+    try {
+      const apiInfo = await this.getExperienceInfoFromAPI();
+      if (apiInfo) {
+        this.currentExperience = apiInfo.experience;
+        this.currentLevel = apiInfo.level;
+        console.log('✅ 从API同步经验值信息成功:', apiInfo);
+      }
+    } catch (error) {
+      console.error('❌ 从API同步经验值信息失败:', error);
+    }
+  }
+
+  /**
+   * 获取经验值获取方式说明 - API调用
    */
   public async getExperienceWays() {
     try {
-      return await ExperienceService.getExperienceWays();
+      return await this.getExperienceWaysFromAPI();
     } catch (error) {
       console.error('❌ 获取经验值获取方式失败:', error);
       return null;
@@ -547,22 +868,6 @@ export class ExperienceManager {
         userMessage: '清除经验值事件失败'
       });
     }
-  }
-
-  /**
-   * 计算等级
-   */
-  private calculateLevel(experience: number): number {
-    return Math.floor(experience / 100) + 1;
-  }
-
-  /**
-   * 计算进度
-   */
-  private calculateProgress(experience: number, level: number): number {
-    const levelStartExp = (level - 1) * 100;
-    const levelExp = experience - levelStartExp;
-    return Math.min(levelExp / 100, 1);
   }
 
   /**

@@ -20,7 +20,8 @@ import { TMDBService, TMDBShow } from '../../services/tmdbService';
 import { colors } from '../../constants/colors';
 import { useShowList, Show } from '../../context/ShowListContext';
 import { useVocabulary, WordWithSource } from '../../context/VocabularyContext';
-import WordCard, { WordData } from '../../components/cards/WordCard';
+import WordCard from '../../components/cards/WordCard';
+import type { WordData } from '../../types/word';
 import WordList from '../../components/vocabulary/WordList';
 import WordbookEditModal from '../../components/wordbook/WordbookEditModal';
 import { Swipeable } from 'react-native-gesture-handler';
@@ -141,7 +142,7 @@ const ShowsScreen: React.FC = () => {
   
   // 新增搜索相关状态
   const [isSearchFocused, setIsSearchFocused] = useState(false);
-  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const searchInputRef = useRef<TextInput>(null);
   const [showCheckmark, setShowCheckmark] = useState(false);
   

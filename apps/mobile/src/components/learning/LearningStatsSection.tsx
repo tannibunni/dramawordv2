@@ -14,7 +14,7 @@ import { colors } from '../../constants/colors';
 import { StatsCard } from './StatsCard';
 import { BadgeSection } from './BadgeSection';
 import { BadgeModal } from './BadgeModal';
-import { LearningStatsService, LearningStats, Badge as LearningBadge } from '../../services/learningStatsService';
+import { LearningStatsService, UserStatsDisplay, Badge as LearningBadge } from '../../services/learningStatsService';
 import { unifiedSyncService } from '../../services/unifiedSyncService';
 
 interface LearningStatsSectionProps {
@@ -26,7 +26,7 @@ const { width: screenWidth } = Dimensions.get('window');
 export const LearningStatsSection: React.FC<LearningStatsSectionProps> = ({
   onBadgePress,
 }) => {
-  const [stats, setStats] = useState<LearningStats>({
+  const [stats, setStats] = useState<UserStatsDisplay>({
     totalWords: 0,
     contributedWords: 0,
     learningDays: 0,
@@ -119,7 +119,7 @@ export const LearningStatsSection: React.FC<LearningStatsSectionProps> = ({
     }
   };
 
-  const getStatsData = async (): Promise<LearningStats | null> => {
+  const getStatsData = async (): Promise<UserStatsDisplay | null> => {
     try {
       // 先尝试从本地存储获取
       const cachedStatsStr = await AsyncStorage.getItem('userStats');
@@ -131,7 +131,7 @@ export const LearningStatsSection: React.FC<LearningStatsSectionProps> = ({
 
       // 缓存不存在，从服务器获取
       console.log('🌐 从服务器获取统计数据');
-      return await learningStatsService.getLearningStats();
+              return await learningStatsService.getUserStatsDisplay();
     } catch (error) {
       console.error('❌ 获取统计数据失败:', error);
       return {

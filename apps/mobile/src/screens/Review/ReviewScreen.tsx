@@ -14,7 +14,8 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../constants/colors';
 import Swiper from 'react-native-deck-swiper';
-import WordCard, { WordData } from '../../components/cards/WordCard';
+import WordCard from '../../components/cards/WordCard';
+import type { WordData } from '../../types/word';
 import { audioService } from '../../services/audioService';
 import { learningDataService } from '../../services/learningDataService';
 import { wrongWordsManager } from '../../services/wrongWordsManager';
@@ -33,95 +34,9 @@ import { API_BASE_URL } from '../../constants/config';
 import Toast from '../../components/common/Toast';
 import { reviewLogger, wrongWordLogger, apiLogger } from '../../utils/logger';
 import { unifiedSyncService } from '../../services/unifiedSyncService';
+import ReviewCompleteScreen, { ReviewStats, ReviewAction } from './ReviewCompleteScreen';
 
-// 复习完成统计接口
-interface ReviewStats {
-  totalWords: number;
-  rememberedWords: number;
-  forgottenWords: number;
-  experience: number;
-  accuracy: number;
-}
-
-// 复习完成页面组件
-const ReviewCompleteScreen: React.FC<{
-  stats: ReviewStats;
-  actions: { word: string; remembered: boolean; translation?: string }[];
-  onBack: () => void;
-}> = ({ stats, actions, onBack }) => {
-  return (
-    <View style={{ flex: 1, padding: 24, justifyContent: 'flex-start', backgroundColor: colors.background.primary }}>
-      {/* 记住统计 */}
-      <View style={{ alignItems: 'center', marginBottom: 16 }}>
-        <Text style={{ fontSize: 22, fontWeight: 'bold', color: colors.text.primary, marginBottom: 8 }}>你记住：</Text>
-        <Text style={{ fontSize: 32, fontWeight: 'bold', color: colors.success[500] }}>{stats.rememberedWords} / {stats.totalWords}</Text>
-      </View>
-      {/* 成功率 */}
-      <View style={{ alignItems: 'center', marginBottom: 24 }}>
-        <Text style={{ fontSize: 18, color: colors.text.primary, marginBottom: 4 }}>成功率</Text>
-        <Text style={{ fontSize: 28, fontWeight: 'bold', color: colors.primary[500] }}>{stats.accuracy}%</Text>
-      </View>
-      {/* 单词列表 */}
-      <View style={{ flex: 1, marginBottom: 24 }}>
-        <ScrollView style={{ maxHeight: 1000 }}>
-          {actions.map((item, idx) => (
-            <View key={item.word + idx} style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: colors.background.tertiary }}>
-              <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}>
-                <Text style={{ fontSize: 18, color: colors.text.primary, marginRight: 8 }}>{item.word}</Text>
-                {item.translation && (
-                  <Text 
-                    style={{ fontSize: 16, color: colors.text.secondary, flex: 1 }}
-                    numberOfLines={1}
-                    ellipsizeMode="tail"
-                  >
-                    - {item.translation.length > 20 ? item.translation.substring(0, 20) + '...' : item.translation}
-                  </Text>
-                )}
-              </View>
-              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                {item.remembered ? (
-                  <>
-                    <Ionicons name="checkmark-circle" size={24} color={colors.success[500]} />
-                    <Text style={{ fontSize: 14, color: colors.success[500], fontWeight: 'bold', marginLeft: 4 }}>+2XP</Text>
-                  </>
-                ) : (
-                  <>
-                    <Ionicons name="close-circle" size={24} color={colors.error[500]} />
-                    <Text style={{ fontSize: 14, color: colors.error[500], fontWeight: 'bold', marginLeft: 4 }}>+1XP</Text>
-                  </>
-                )}
-              </View>
-            </View>
-          ))}
-        </ScrollView>
-      </View>
-      {/* 总经验值 */}
-      <View style={{ alignItems: 'center', marginBottom: 16, paddingVertical: 12, backgroundColor: colors.background.secondary, borderRadius: 12 }}>
-        <Text style={{ fontSize: 16, color: colors.text.secondary, marginBottom: 4 }}>本次复习获得</Text>
-        <Text style={{ fontSize: 24, fontWeight: 'bold', color: colors.primary[500] }}>+{stats.experience} XP</Text>
-      </View>
-      {/* 按钮组 */}
-      <View style={{ alignItems: 'center', marginBottom: 16 }}>
-        <TouchableOpacity
-          style={{
-            backgroundColor: colors.primary[500],
-            paddingHorizontal: 48,
-            paddingVertical: 16,
-            borderRadius: 25,
-            shadowColor: colors.primary[200],
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.1,
-            shadowRadius: 4,
-            elevation: 3,
-          }}
-          onPress={onBack}
-        >
-          <Text style={{ color: 'white', fontSize: 18, fontWeight: 'bold' }}>完成</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
-  );
-};
+// 复习完成统计接口 - 使用导入的类型
 // import { useRoute } from '@react-navigation/native';
 
 const { width, height } = Dimensions.get('window');
@@ -135,6 +50,10 @@ interface ReviewWord {
   show?: string;
   lastReviewed: string;
   reviewCount: number;
+  // 添加错词相关属性
+  incorrectCount?: number;
+  consecutiveIncorrect?: number;
+  consecutiveCorrect?: number;
 }
 
 interface ReviewSession {
@@ -160,7 +79,7 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
   const [isReviewComplete, setIsReviewComplete] = useState(false);
   const [cardMode, setCardMode] = useState<'swipe' | 'flip'>('swipe');
   const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
-  const [reviewStats, setReviewStats] = useState({
+  const [reviewStats, setReviewStats] = useState<ReviewStats>({
     totalWords: 0,
     rememberedWords: 0,
     forgottenWords: 0,
@@ -168,7 +87,7 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
     accuracy: 0,
   });
   const [finalStats, setFinalStats] = useState<ReviewStats | null>(null);
-  const [reviewActions, setReviewActions] = useState<{ word: string; remembered: boolean }[]>([]);
+  const [reviewActions, setReviewActions] = useState<ReviewAction[]>([]);
   const { vocabulary, updateWord } = useVocabulary();
   const { navigate } = useNavigation();
   const { appLanguage } = useAppLanguage();
@@ -327,8 +246,8 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
     if (words.length > 0) {
       console.log('📚 第一个单词:', words[0]);
       
-      // 检查是否是新的复习会话（swiperIndex为0且没有进行中的复习）
-      const isNewSession = swiperIndex === 0 && !isReviewComplete;
+      // 检查是否是新的复习会话（swiperIndex为0且没有进行中的复习且reviewStats为空）
+      const isNewSession = swiperIndex === 0 && !isReviewComplete && reviewStats.totalWords === 0;
       
       if (isNewSession) {
         // 初始化统计数据 - 保持经验值不被重置
@@ -357,7 +276,7 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
     } else {
       console.log('⚠️ words 数组为空');
     }
-  }, [words, swiperIndex, isReviewComplete]); // 移除reviewStats.totalWords依赖，避免重复重置
+  }, [words, swiperIndex, isReviewComplete, reviewStats.totalWords]); // 需要依赖reviewStats.totalWords来判断新会话
   
   // 监控复习统计变化
   useEffect(() => {
@@ -428,12 +347,12 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
             .filter(Boolean); // 过滤掉未找到的单词
           
           console.log(`🔍 错词卡筛选结果: ${wrongWordsWithDetails.length} 个错词`);
-          console.log('🔍 错词详情:', wrongWordsWithDetails.map(w => ({
+          console.log('🔍 错词详情:', wrongWordsWithDetails.map(w => w ? {
             word: w.word,
             incorrectCount: w.incorrectCount,
             consecutiveIncorrect: w.consecutiveIncorrect,
             consecutiveCorrect: w.consecutiveCorrect
-          })));
+          } : null).filter(Boolean));
           
           wrongWordLogger.info(`从错词管理器获取到 ${wrongWordsWithDetails.length} 个错词`);
           return wrongWordsWithDetails.slice(0, MIN_REVIEW_BATCH);
@@ -567,8 +486,8 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
     if (words.length > 0) {
       console.log('ReviewScreen: Words loaded, checking if this is a new session');
       
-      // 检查是否是新的复习会话（swiperIndex为0且没有进行中的复习）
-      const isNewSession = swiperIndex === 0 && !isReviewComplete;
+      // 检查是否是新的复习会话（swiperIndex为0且没有进行中的复习且reviewStats为空）
+      const isNewSession = swiperIndex === 0 && !isReviewComplete && reviewStats.totalWords === 0;
       
       if (isNewSession) {
         console.log('ReviewScreen: 这是新的复习会话，初始化swiperIndex为0');
@@ -640,7 +559,7 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
       const wordDetail = await wordService.getWordDetail(reviewWord.word);
       if (wordDetail) {
         console.log(`✅ 获取到真实词卡数据: ${reviewWord.word}`);
-        return wordDetail;
+        return wordDetail; // 现在 wordService 已经返回统一格式的 WordData
       }
     } catch (error) {
       console.warn(`⚠️ 获取词卡数据失败，使用 fallback: ${reviewWord.word}`, error);
@@ -842,15 +761,17 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
         const forgotten = prev.forgottenWords + 1;
         const total = prev.totalWords;
         
-        // 使用后端返回的经验值，如果后端返回0说明已达到每日上限
-        const gainedExp = xpGained !== undefined ? xpGained : 1;
-        const experience = prev.experience + gainedExp;
+        // 从actions数组计算总XP - 与最终计算保持一致
+        const totalExperience = reviewActions.reduce((sum, action) => {
+          return sum + (action.remembered ? 2 : 1);
+        }, 0);
+        
         const accuracy = total > 0 ? Math.round((remembered / total) * 100) : 0;
         
         const newStats = {
           ...prev,
           forgottenWords: forgotten,
-          experience,
+          experience: totalExperience, // 使用从actions计算的总XP
           accuracy,
         };
         
@@ -858,8 +779,7 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
           remembered,
           forgotten,
           total,
-          gainedExp,
-          experience,
+          totalExperience,
           accuracy,
           newStats
         });
@@ -878,15 +798,17 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
         const forgotten = prev.forgottenWords + 1;
         const total = prev.totalWords;
         
-        // 出错时使用默认经验值
-        const gainedExp = 1;
-        const experience = prev.experience + gainedExp;
+        // 从actions数组计算总XP - 与最终计算保持一致
+        const totalExperience = reviewActions.reduce((sum, action) => {
+          return sum + (action.remembered ? 2 : 1);
+        }, 0);
+        
         const accuracy = total > 0 ? Math.round((remembered / total) * 100) : 0;
         
         const newStats = {
           ...prev,
           forgottenWords: forgotten,
-          experience,
+          experience: totalExperience, // 使用从actions计算的总XP
           accuracy,
         };
         
@@ -894,8 +816,7 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
           remembered,
           forgotten,
           total,
-          gainedExp,
-          experience,
+          totalExperience,
           accuracy,
           newStats
         });
@@ -975,15 +896,17 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
         const forgotten = prev.forgottenWords;
         const total = prev.totalWords;
         
-        // 使用后端返回的经验值，如果后端返回0说明已达到每日上限
-        const gainedExp = xpGained !== undefined ? xpGained : 2;
-        const experience = prev.experience + gainedExp;
+        // 从actions数组计算总XP - 与最终计算保持一致
+        const totalExperience = reviewActions.reduce((sum, action) => {
+          return sum + (action.remembered ? 2 : 1);
+        }, 0);
+        
         const accuracy = total > 0 ? Math.round((remembered / total) * 100) : 0;
         
         const newStats = {
           ...prev,
           rememberedWords: remembered,
-          experience,
+          experience: totalExperience, // 使用从actions计算的总XP
           accuracy,
         };
         
@@ -991,8 +914,7 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
           remembered,
           forgotten,
           total,
-          gainedExp,
-          experience,
+          totalExperience,
           accuracy,
           newStats
         });
@@ -1011,15 +933,17 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
         const forgotten = prev.forgottenWords;
         const total = prev.totalWords;
         
-        // 出错时使用默认经验值
-        const gainedExp = 2;
-        const experience = prev.experience + gainedExp;
+        // 从actions数组计算总XP - 与最终计算保持一致
+        const totalExperience = reviewActions.reduce((sum, action) => {
+          return sum + (action.remembered ? 2 : 1);
+        }, 0);
+        
         const accuracy = total > 0 ? Math.round((remembered / total) * 100) : 0;
         
         const newStats = {
           ...prev,
           rememberedWords: remembered,
-          experience,
+          experience: totalExperience, // 使用从actions计算的总XP
           accuracy,
         };
         
@@ -1027,8 +951,7 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
           remembered,
           forgotten,
           total,
-          gainedExp,
-          experience,
+          totalExperience,
           accuracy,
           newStats
         });
@@ -1293,13 +1216,16 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
       return;
     }
     
-    const rememberedWords = rememberedRef.current;
-    const forgottenWords = forgottenRef.current;
+    // 从actions数组计算总XP - 更可靠的方式
+    const totalExperience = reviewActions.reduce((sum, action) => {
+      return sum + (action.remembered ? 2 : 1);
+    }, 0);
+    
+    // 从actions数组计算记住和忘记的单词数量
+    const rememberedWords = reviewActions.filter(action => action.remembered).length;
+    const forgottenWords = reviewActions.filter(action => !action.remembered).length;
     const totalActions = rememberedWords + forgottenWords;
     console.log('ReviewScreen: Data validation - total actions:', totalActions, 'remembered:', rememberedWords, 'forgotten:', forgottenWords);
-    
-    // 计算本次复习新获得的经验值：记住的单词*2 + 忘记的单词*1
-    const experienceGained = (rememberedWords * 2) + (forgottenWords * 1);
     
     // 使用当前的 reviewStats，确保 totalWords 正确
     const currentStats = reviewStats;
@@ -1308,18 +1234,18 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
       totalWords: currentStats.totalWords,
       rememberedWords,
       forgottenWords,
-      experience: experienceGained, // 使用本次复习新获得的经验值，而不是累计值
+      experience: totalExperience, // 使用从actions计算的总XP
       accuracy,
     };
     console.log('ReviewScreen: Final stats:', finalStats);
-    console.log('🎯 本次复习新获得经验值:', experienceGained, '(记住:', rememberedWords, '*2 + 忘记:', forgottenWords, '*1)');
+    console.log('🎯 本次复习新获得经验值:', totalExperience, '(从actions数组计算，记住:', rememberedWords, '个，忘记:', forgottenWords, '个)');
     setReviewStats(finalStats);
     setFinalStats(finalStats);
     
     // 保存当前复习会话的经验值增益，用于后续显示
-    if (experienceGained > 0) {
-      AsyncStorage.setItem('currentReviewExperienceGain', experienceGained.toString());
-      console.log('💾 保存当前复习经验值增益:', experienceGained);
+    if (totalExperience > 0) {
+      AsyncStorage.setItem('currentReviewExperienceGain', totalExperience.toString());
+      console.log('💾 保存当前复习经验值增益:', totalExperience);
     }
     
     // 延迟显示完成页面，确保进度条动画完成
@@ -1372,14 +1298,14 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
             }
             
             // 计算本次复习获得的经验值增益
-            // 从AsyncStorage中获取保存的经验值，这是从后端API返回的真实值
+            // 从AsyncStorage中获取保存的经验值，这是从actions数组计算的总XP
             const savedExperienceGain = await AsyncStorage.getItem('currentReviewExperienceGain');
-            const experienceGained = savedExperienceGain ? parseInt(savedExperienceGain) : 0;
+            const totalExperience = savedExperienceGain ? parseInt(savedExperienceGain) : 0;
             
             // 保存经验值增加参数到AsyncStorage
             const params = {
               showExperienceAnimation: true,
-              experienceGained: experienceGained
+              experienceGained: totalExperience
             };
             await AsyncStorage.setItem('navigationParams', JSON.stringify(params));
             
@@ -1542,30 +1468,35 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
             setCurrentProgress(100);
             // 触发完成页面显示
             if (!isReviewComplete) {
-              const rememberedWords = rememberedRef.current;
-              const forgottenWords = forgottenRef.current;
               const currentStats = reviewStats;
               
-              // 计算本次复习新获得的经验值：记住的单词*2 + 忘记的单词*1
-              const experienceGained = (rememberedWords * 2) + (forgottenWords * 1);
+              // 从actions数组计算总XP - 更可靠的方式
+              const totalExperience = reviewActions.reduce((sum, action) => {
+                return sum + (action.remembered ? 2 : 1);
+              }, 0);
+              
+              // 从actions数组计算记住和忘记的单词数量
+              const rememberedWords = reviewActions.filter(action => action.remembered).length;
+              const forgottenWords = reviewActions.filter(action => !action.remembered).length;
               
               const accuracy = currentStats.totalWords > 0 ? Math.round((rememberedWords / currentStats.totalWords) * 100) : 0;
               const finalStats = {
                 totalWords: currentStats.totalWords,
                 rememberedWords,
                 forgottenWords,
-                experience: experienceGained, // 使用本次复习新获得的经验值，而不是累计值
+                experience: totalExperience, // 使用从actions计算的总XP
                 accuracy,
               };
               console.log('📊 onSwipedAll - 最终统计数据:', finalStats);
-              console.log('🎯 本次复习新获得经验值:', experienceGained, '(记住:', rememberedWords, '*2 + 忘记:', forgottenWords, '*1)');
+              console.log('🎯 本次复习新获得经验值:', totalExperience, '(从actions数组计算，记住:', rememberedWords, '个，忘记:', forgottenWords, '个)');
+              console.log('📝 actions数组详情:', reviewActions.map(action => `${action.word}: ${action.remembered ? '+2XP' : '+1XP'}`));
               setReviewStats(finalStats);
               setFinalStats(finalStats);
               
               // 保存当前复习会话的经验值增益，用于后续显示
-              if (experienceGained > 0) {
-                AsyncStorage.setItem('currentReviewExperienceGain', experienceGained.toString());
-                console.log('💾 保存当前复习经验值增益:', experienceGained);
+              if (totalExperience > 0) {
+                AsyncStorage.setItem('currentReviewExperienceGain', totalExperience.toString());
+                console.log('💾 保存当前复习经验值增益:', totalExperience);
               }
               
               setIsReviewComplete(true);

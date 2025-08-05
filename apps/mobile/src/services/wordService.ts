@@ -4,53 +4,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_BASE_URL } from '../constants/config';
 import { cacheService, CACHE_KEYS } from './cacheService';
 
-// 类型定义
-export interface WordDefinition {
-  partOfSpeech: string;
-  definition: string;
-  examples: Array<{
-    english: string;
-    chinese: string;
-    pinyin?: string; // 新增：例句拼音，兼容新后端
-    romaji?: string; // 日语罗马音（原有）
-    japanese?: string; // 日语例句
-    korean?: string; // 韩语例句
-    french?: string; // 法语例句
-    spanish?: string; // 西班牙语例句
-    hangul?: string; // 韩语谚文
-  }>;
-}
-
-// 俚语/短语解释结构
-export interface SpecialMeaning {
-  definition: string;
-  examples?: Array<{
-    english?: string;
-    chinese?: string;
-    pinyin?: string; // 例句拼音
-    romaji?: string; // 日语罗马音
-    japanese?: string; // 日语例句
-    korean?: string; // 韩语例句
-    french?: string; // 法语例句
-    spanish?: string; // 西班牙语例句
-    hangul?: string; // 韩语谚文
-  }>;
-}
-
-export interface WordData {
-  word: string;                // 词条本身（如"我爱你"或"woaini"）
-  phonetic?: string;           // 拼音（如"wǒ ài nǐ"），原有
-  pinyin?: string;             // 新增：标准拼音，兼容新后端
-  definitions: WordDefinition[];
-  audioUrl?: string;           // 发音音频链接
-  isCollected?: boolean;       // 是否已收藏
-  correctedWord?: string;      // 标准化词条
-  slangMeaning?: SpecialMeaning | string | null;// 网络俚语解释（支持新旧格式）
-  phraseExplanation?: SpecialMeaning | string | null;// 短语解释（支持新旧格式）
-  kana?: string;               // 日语假名（中文查词一般无）
-  language?: string;           // 新增：语言代码 (en, ja, ko, fr, es, zh)
-  // 其它字段如来源、反馈等
-}
+// 导入统一的类型定义
+import type { WordData, WordDefinition, ServiceWordData, adaptServiceWordData } from '../types/word';
 
 export interface SearchResult {
   success: boolean;
@@ -555,9 +510,11 @@ export class WordService {
       const cloudResult = await this.getFromCloudWords(word, language, uiLanguage);
       if (cloudResult) {
         console.log(`✅ 从云词库获取成功: ${word}`);
+        // 使用类型转换函数将服务层数据转换为统一格式
+        const adaptedResult = adaptServiceWordData(cloudResult as ServiceWordData);
         // 缓存到统一缓存服务
-        await cacheService.set(CACHE_KEYS.WORD_DETAIL, cacheKey, cloudResult);
-        return cloudResult;
+        await cacheService.set(CACHE_KEYS.WORD_DETAIL, cacheKey, adaptedResult);
+        return adaptedResult;
       }
       console.log(`❌ 云词库未找到: ${word}`);
       
@@ -566,10 +523,12 @@ export class WordService {
       const result = await this.searchWord(word, language, uiLanguage);
       
       if (result.success && result.data) {
+        // 使用类型转换函数将服务层数据转换为统一格式
+        const adaptedData = adaptServiceWordData(result.data as ServiceWordData);
         // 4. 缓存到统一缓存服务
-        await cacheService.set(CACHE_KEYS.WORD_DETAIL, cacheKey, result.data);
+        await cacheService.set(CACHE_KEYS.WORD_DETAIL, cacheKey, adaptedData);
         console.log(`✅ API获取成功并缓存: ${cacheKey}`);
-        return result.data;
+        return adaptedData;
       } else {
         console.warn(`⚠️ API获取失败: ${word}`, result.error);
         return null;

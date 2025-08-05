@@ -18,33 +18,8 @@ import { t } from '../../constants/translations';
 import { wordFeedbackService } from '../../services/wordFeedbackService';
 import WordCardContent from './WordCardContent';
 
-export interface WordDefinition {
-  partOfSpeech: string;
-  definition: string;
-  examples: Array<{
-    english: string;
-    chinese: string;
-    romaji?: string; // 新增：日语例句的罗马音
-  }>;
-}
-
-export interface WordData {
-  word: string;
-  phonetic?: string;
-  pinyin?: string; // 新增：标准拼音，兼容新后端
-  definitions: WordDefinition[];
-  audioUrl?: string;
-  isCollected?: boolean;
-  searchCount?: number;
-  lastSearched?: string;
-  correctedWord?: string; // 新增：标准单词
-  sources?: Array<{ id: string; type: 'wordbook' | 'episode'; name: string }>; // 新增：单词来源
-  feedbackStats?: { positive: number; negative: number; total: number }; // 新增：反馈统计
-  kana?: string; // 新增：日语假名标注
-  language?: string; // 新增：单词语言
-  slangMeaning?: string; // 新增：俚语/缩写含义
-  phraseExplanation?: string; // 新增：短语解释
-}
+// 导入统一的类型定义
+import type { WordData, WordDefinition } from '../../types/word';
 
 interface WordCardProps {
   wordData: WordData;

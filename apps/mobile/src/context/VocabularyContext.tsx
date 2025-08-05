@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { WordData } from '../components/cards/WordCard';
+import { WordData } from '../types/word';
 import { Show } from './ShowListContext';
 import { wordService } from '../services/wordService';
 import { API_BASE_URL } from '../constants/config';

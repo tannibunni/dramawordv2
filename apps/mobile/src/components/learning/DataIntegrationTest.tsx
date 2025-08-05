@@ -82,7 +82,7 @@ export const DataIntegrationTest: React.FC = () => {
       addResult('📊 开始测试学习统计API...');
       
       const statsService = LearningStatsService.getInstance();
-      const stats = await statsService.getLearningStats();
+              const stats = await statsService.getUserStatsDisplay();
       
       if (stats) {
         addResult(`✅ 学习统计获取成功: ${JSON.stringify(stats)}`);

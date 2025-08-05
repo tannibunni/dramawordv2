@@ -1,8 +1,8 @@
 import { API_BASE_URL } from '../constants/config';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// 学习统计数据接口
-export interface LearningStats {
+// 用户统计展示接口（用于UI展示）
+export interface UserStatsDisplay {
   totalWords: number;
   contributedWords: number;
   learningDays: number;
@@ -23,8 +23,8 @@ export interface Badge {
   maxProgress?: number;
 }
 
-// 学习记录接口
-export interface LearningRecord {
+// 简单学习记录接口（用于统计展示）
+export interface DailyLearningRecord {
   date: string;
   wordsLearned: number;
   reviewsCompleted: number;
@@ -76,8 +76,8 @@ export class LearningStatsService {
     }
   }
 
-  // 获取学习统计数据
-  async getLearningStats(): Promise<LearningStats | null> {
+  // 获取用户学习统计数据（用于UI展示）
+  async getUserStatsDisplay(): Promise<UserStatsDisplay | null> {
     try {
       const userId = await this.getUserId();
       if (!userId) {
@@ -163,8 +163,8 @@ export class LearningStatsService {
     }
   }
 
-  // 获取学习记录
-  async getLearningRecords(): Promise<LearningRecord[]> {
+  // 获取每日学习记录（用于统计展示）
+  async getDailyLearningRecords(): Promise<DailyLearningRecord[]> {
     try {
       const userId = await this.getUserId();
       if (!userId) {
@@ -212,7 +212,7 @@ export class LearningStatsService {
   }
 
   // 新用户默认统计数据
-  private getNewUserStats(): LearningStats {
+  private getNewUserStats(): UserStatsDisplay {
     return {
       totalWords: 0,
       contributedWords: 0,
@@ -225,7 +225,7 @@ export class LearningStatsService {
   }
 
   // 模拟学习统计数据（仅用于测试）
-  private getMockLearningStats(): LearningStats {
+  private getMockLearningStats(): UserStatsDisplay {
     return {
       totalWords: 1250,
       contributedWords: 45,
@@ -288,8 +288,8 @@ export class LearningStatsService {
   }
 
   // 模拟学习记录数据
-  private getMockLearningRecords(): LearningRecord[] {
-    const records: LearningRecord[] = [];
+  private getMockLearningRecords(): DailyLearningRecord[] {
+    const records: DailyLearningRecord[] = [];
     const today = new Date();
     
     for (let i = 29; i >= 0; i--) {

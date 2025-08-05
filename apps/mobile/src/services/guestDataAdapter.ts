@@ -203,7 +203,7 @@ export class GuestDataAdapterImpl implements GuestDataAdapter {
     const isGuestMode = await guestModeService.isGuestMode();
     
     if (isGuestMode) {
-      const guestData = await guestModeService.getGuestData();
+      const guestData = await guestModeService.getGuestInfo();
       return {
         isGuestMode: true,
         storageType: 'local',
@@ -237,7 +237,7 @@ export class GuestDataAdapterImpl implements GuestDataAdapter {
       const stats = await guestModeService.getGuestDataStats();
       const backupData = {
         timestamp: Date.now(),
-        guestId: (await guestModeService.getGuestData())?.id,
+        guestId: (await guestModeService.getGuestInfo())?.id,
         data: {
           vocabulary: await this.getVocabulary(),
           learningRecords: await this.getLearningRecords(),

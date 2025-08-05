@@ -74,9 +74,9 @@ export class GuestModeService {
   }
 
   /**
-   * 获取游客数据
+   * 获取游客基本信息
    */
-  async getGuestData(): Promise<GuestData | null> {
+  async getGuestInfo(): Promise<GuestData | null> {
     if (!(await this.isGuestMode())) {
       return null;
     }
