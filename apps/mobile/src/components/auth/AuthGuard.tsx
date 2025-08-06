@@ -51,6 +51,9 @@ export const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
           console.log('✅ 认证状态正常');
           setHasValidToken(true);
           setShowLogin(false);
+          
+          // 认证成功后检查语言设置
+          await checkLanguageSetupAfterLogin();
         }
       }
     } catch (error) {
@@ -63,14 +66,21 @@ export const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
   const checkLanguageSetupAfterLogin = async () => {
     try {
       const hasSetup = await AsyncStorage.getItem('initialLanguageSetup');
-      if (!hasSetup) {
-        console.log('🔍 用户首次登录，显示语言选择窗口');
+      const learningLanguages = await AsyncStorage.getItem('learningLanguages');
+      
+      console.log('🔍 检查语言设置 - hasSetup:', hasSetup, 'learningLanguages:', learningLanguages);
+      
+      // 如果没有设置过语言，或者没有学习语言设置，显示语言选择窗口
+      if (!hasSetup || !learningLanguages) {
+        console.log('🔍 用户首次登录或语言设置不完整，显示语言选择窗口');
         setShowLanguageModal(true);
       } else {
         console.log('🔍 用户已设置过语言，跳过语言选择');
       }
     } catch (error) {
       console.error('❌ 检查语言设置失败:', error);
+      // 出错时也显示语言选择窗口
+      setShowLanguageModal(true);
     }
   };
 
