@@ -205,6 +205,12 @@ export class WrongWordsManager {
 
     console.log(`🔧 WrongWordsManager: 成功添加错词 ${word}，当前错词总数: ${this.collection.statistics.totalWrongWords}`);
     vocabularyLogger.info(`添加错词: ${word}，当前错词总数: ${this.collection.statistics.totalWrongWords}`);
+    
+    // 保存到本地存储
+    this.saveToStorage().catch(error => {
+      console.error('🔧 WrongWordsManager: 保存错词到本地存储失败:', error);
+    });
+    
     return true;
   }
 
@@ -236,6 +242,12 @@ export class WrongWordsManager {
     });
 
     vocabularyLogger.info(`移除错词: ${word}，原因: ${reason}，当前错词总数: ${this.collection.statistics.totalWrongWords}`);
+    
+    // 保存到本地存储
+    this.saveToStorage().catch(error => {
+      console.error('🔧 WrongWordsManager: 保存错词移除到本地存储失败:', error);
+    });
+    
     return true;
   }
 
@@ -306,6 +318,11 @@ export class WrongWordsManager {
       incorrectCount: wordInfo.incorrectCount
     });
     vocabularyLogger.debug(`更新错词: ${word}，正确: ${isCorrect}，连续正确: ${wordInfo.consecutiveCorrect}`);
+    
+    // 保存到本地存储
+    this.saveToStorage().catch(error => {
+      console.error('🔧 WrongWordsManager: 保存错词更新到本地存储失败:', error);
+    });
   }
 
   /**
