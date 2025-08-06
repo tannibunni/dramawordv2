@@ -357,16 +357,13 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
       return;
     }
     
-    // 从actions数组计算总XP - 更可靠的方式
-    const totalExperience = reviewActions.reduce((sum, action) => {
-      return sum + (action.remembered ? 2 : 1);
-    }, 0);
+    // 使用 reviewStats 中的经验值，而不是从 actions 数组计算
+    // 因为 actions 数组的更新是异步的，可能还没有更新
+    const totalExperience = reviewStats.experience;
+    const rememberedWords = reviewStats.rememberedWords;
+    const forgottenWords = reviewStats.forgottenWords;
     
-    // 从actions数组计算记住和忘记的单词数量
-    const rememberedWords = reviewActions.filter(action => action.remembered).length;
-    const forgottenWords = reviewActions.filter(action => !action.remembered).length;
-    const totalActions = rememberedWords + forgottenWords;
-    console.log('ReviewScreen: Data validation - total actions:', totalActions, 'remembered:', rememberedWords, 'forgotten:', forgottenWords);
+    console.log('ReviewScreen: Data validation - total experience:', totalExperience, 'remembered:', rememberedWords, 'forgotten:', forgottenWords);
     
     // 使用当前的 reviewStats，确保 totalWords 正确
     const currentStats = reviewStats;
@@ -375,11 +372,11 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
       totalWords: currentStats.totalWords,
       rememberedWords,
       forgottenWords,
-      experience: totalExperience, // 使用从actions计算的总XP
+      experience: totalExperience, // 使用 reviewStats 中的经验值
       accuracy,
     };
     console.log('ReviewScreen: Final stats:', finalStats);
-    console.log('🎯 本次复习新获得经验值:', totalExperience, '(从actions数组计算，记住:', rememberedWords, '个，忘记:', forgottenWords, '个)');
+    console.log('🎯 本次复习新获得经验值:', totalExperience, '(从reviewStats计算，记住:', rememberedWords, '个，忘记:', forgottenWords, '个)');
     
     // 保存当前复习会话的经验值增益，用于后续显示
     if (totalExperience > 0) {

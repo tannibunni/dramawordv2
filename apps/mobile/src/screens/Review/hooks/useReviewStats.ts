@@ -140,10 +140,9 @@ export const useReviewStats = () => {
       const forgotten = prev.forgottenWords + (isCorrect ? 0 : 1);
       const total = prev.totalWords;
       
-      // 从actions数组计算总XP
-      const totalExperience = reviewActions.reduce((sum, action) => {
-        return sum + (action.remembered ? 2 : 1);
-      }, 0) + (isCorrect ? 2 : 1);
+      // 直接计算经验值，不依赖 actions 数组
+      const currentExperience = prev.experience;
+      const newExperience = currentExperience + (isCorrect ? 2 : 1);
       
       const accuracy = total > 0 ? Math.round((remembered / total) * 100) : 0;
       
@@ -151,7 +150,7 @@ export const useReviewStats = () => {
         ...prev,
         rememberedWords: remembered,
         forgottenWords: forgotten,
-        experience: totalExperience,
+        experience: newExperience,
         accuracy,
       };
       
@@ -159,7 +158,8 @@ export const useReviewStats = () => {
         remembered,
         forgotten,
         total,
-        totalExperience,
+        currentExperience,
+        newExperience,
         accuracy,
         newStats
       });
@@ -169,7 +169,7 @@ export const useReviewStats = () => {
     
     // 添加复习动作
     addReviewAction(word, isCorrect, translation);
-  }, [reviewActions, addReviewAction]);
+  }, [addReviewAction]);
 
   // 初始化统计数据
   const initializeStats = useCallback((totalWords: number) => {
@@ -196,10 +196,8 @@ export const useReviewStats = () => {
     const forgottenWords = forgottenRef.current;
     const currentStats = reviewStats;
     
-    // 从actions数组计算总XP
-    const totalExperience = reviewActions.reduce((sum, action) => {
-      return sum + (action.remembered ? 2 : 1);
-    }, 0);
+    // 使用 reviewStats 中的经验值，而不是从 actions 数组计算
+    const totalExperience = currentStats.experience;
     
     const accuracy = currentStats.totalWords > 0 ? Math.round((rememberedWords / currentStats.totalWords) * 100) : 0;
     
@@ -216,7 +214,7 @@ export const useReviewStats = () => {
     setFinalStats(finalStats);
     
     return finalStats;
-  }, [reviewStats, reviewActions]);
+  }, [reviewStats]);
 
   return {
     reviewStats,
