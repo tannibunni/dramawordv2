@@ -62,7 +62,7 @@ const LanguagePicker: React.FC<LanguagePickerProps> = ({ onLanguageChange, onNav
           console.log('LanguagePicker - 重新检查：当前语言不在学习列表中，切换到:', languages[0]);
           const newLanguageKey = getLanguageKeyByCode(languages[0]);
           console.log('LanguagePicker - 重新检查：切换到语言键:', newLanguageKey);
-          if (newLanguageKey) {
+          if (newLanguageKey && newLanguageKey !== selectedLanguage) {
             setSelectedLanguage(newLanguageKey);
           }
         }
@@ -72,7 +72,7 @@ const LanguagePicker: React.FC<LanguagePickerProps> = ({ onLanguageChange, onNav
     // 延迟检查，确保首次启动弹窗完成后执行
     const timer = setTimeout(checkLearningLanguages, 1000);
     return () => clearTimeout(timer);
-  }, [selectedLanguage]); // 添加selectedLanguage作为依赖
+  }, []); // 移除selectedLanguage依赖，避免无限循环
 
   // 添加实时监听AsyncStorage变化
   useEffect(() => {
@@ -114,7 +114,7 @@ const LanguagePicker: React.FC<LanguagePickerProps> = ({ onLanguageChange, onNav
           console.log('LanguagePicker - 当前语言不在学习列表中，切换到:', languages[0]);
           const newLanguageKey = getLanguageKeyByCode(languages[0]);
           console.log('LanguagePicker - 切换到语言键:', newLanguageKey);
-          if (newLanguageKey) {
+          if (newLanguageKey && newLanguageKey !== selectedLanguage) {
             setSelectedLanguage(newLanguageKey);
           }
         }
