@@ -378,12 +378,6 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
     console.log('ReviewScreen: Final stats:', finalStats);
     console.log('🎯 本次复习新获得经验值:', totalExperience, '(从reviewStats计算，记住:', rememberedWords, '个，忘记:', forgottenWords, '个)');
     
-    // 保存当前复习会话的经验值增益，用于后续显示
-    if (totalExperience > 0) {
-      AsyncStorage.setItem('currentReviewExperienceGain', totalExperience.toString());
-      console.log('💾 保存当前复习经验值增益:', totalExperience);
-    }
-    
     // 延迟显示完成页面，确保进度条动画完成
     setTimeout(() => {
       setComplete();
@@ -433,10 +427,8 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
               console.error('❌ 更新复习次数失败:', error);
             }
             
-            // 计算本次复习获得的经验值增益
-            // 从AsyncStorage中获取保存的经验值，这是从actions数组计算的总XP
-            const savedExperienceGain = await AsyncStorage.getItem('currentReviewExperienceGain');
-            const totalExperience = savedExperienceGain ? parseInt(savedExperienceGain) : 0;
+            // 直接使用 reviewStats 中的经验值，无需存储到本地
+            const totalExperience = reviewStats.experience;
             
             // 保存经验值增加参数到AsyncStorage
             const params = {
@@ -446,8 +438,7 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
             await AsyncStorage.setItem('navigationParams', JSON.stringify(params));
             
             // 经验值已在复习过程中通过 updateWordProgress 同步到后端
-            // 不需要额外调用经验值API，避免重复计算
-            console.log('✅ 复习经验值已在复习过程中同步到后端');
+            console.log('✅ 复习经验值已在复习过程中同步到后端，本次获得:', totalExperience);
             
             // 标记需要刷新vocabulary数据
             await AsyncStorage.setItem('refreshVocabulary', 'true');
