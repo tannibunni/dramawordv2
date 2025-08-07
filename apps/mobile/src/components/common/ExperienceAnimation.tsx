@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -11,30 +11,96 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { colors } from '../../constants/colors';
 
 interface ExperienceAnimationProps {
+  onAnimationComplete?: () => void;
+}
+
+interface AnimationState {
   visible: boolean;
   experienceGained: number;
   userLevel: number;
   userExperience: number;
-  opacityAnimation: Animated.Value;
-  scaleAnimation: Animated.Value;
-  onAnimationComplete?: () => void;
 }
 
 const ExperienceAnimation: React.FC<ExperienceAnimationProps> = ({
-  visible,
-  experienceGained,
-  userLevel,
-  userExperience,
-  opacityAnimation,
-  scaleAnimation,
   onAnimationComplete
 }) => {
-  if (!visible) {
+  const [animationState, setAnimationState] = useState<AnimationState>({
+    visible: false,
+    experienceGained: 0,
+    userLevel: 1,
+    userExperience: 0
+  });
+
+  const opacityAnimation = useRef(new Animated.Value(0)).current;
+  const scaleAnimation = useRef(new Animated.Value(1)).current;
+
+  // 开始经验动画
+  const startExperienceAnimation = (
+    experienceGained: number,
+    userLevel: number,
+    userExperience: number
+  ) => {
+    setAnimationState({
+      visible: true,
+      experienceGained,
+      userLevel,
+      userExperience
+    });
+
+    // 重置动画值
+    opacityAnimation.setValue(0);
+    scaleAnimation.setValue(1);
+
+    // 动画序列
+    Animated.sequence([
+      // 淡入弹窗
+      Animated.timing(opacityAnimation, {
+        toValue: 1,
+        duration: 300,
+        useNativeDriver: true,
+      }),
+      // 弹窗缩放动画
+      Animated.sequence([
+        Animated.timing(scaleAnimation, {
+          toValue: 1.2,
+          duration: 200,
+          useNativeDriver: true,
+        }),
+        Animated.timing(scaleAnimation, {
+          toValue: 1,
+          duration: 200,
+          useNativeDriver: true,
+        }),
+      ]),
+      // 等待一段时间
+      Animated.delay(800),
+      // 等待动画完成
+      Animated.delay(500),
+      // 淡出弹窗
+      Animated.timing(opacityAnimation, {
+        toValue: 0,
+        duration: 300,
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      // 动画完成后的回调
+      setAnimationState(prev => ({ ...prev, visible: false }));
+      onAnimationComplete?.();
+    });
+  };
+
+  // 暴露给外部的方法
+  const ref = useRef<any>(null);
+  React.useImperativeHandle(ref, () => ({
+    startExperienceAnimation
+  }));
+
+  if (!animationState.visible) {
     return null;
   }
 
   // 检查是否升级
-  const isLevelUp = userLevel < Math.floor((userExperience + experienceGained) / 100) + 1;
+  const isLevelUp = animationState.userLevel < Math.floor((animationState.userExperience + animationState.experienceGained) / 100) + 1;
 
   return (
     <Animated.View 
@@ -55,7 +121,7 @@ const ExperienceAnimation: React.FC<ExperienceAnimationProps> = ({
         <View style={styles.content}>
           <Ionicons name="star" size={32} color="#FFF" />
           <Text style={styles.mainText}>
-            +{experienceGained} 经验值
+            +{animationState.experienceGained} 经验值
           </Text>
           <Text style={styles.subText}>
             恭喜获得经验！
