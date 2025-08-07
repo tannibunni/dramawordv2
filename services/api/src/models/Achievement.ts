@@ -29,13 +29,11 @@ const AchievementSchema = new Schema<IAchievement>({
   userId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
-    required: true,
-    index: true
+    required: true
   },
   achievementId: {
     type: String,
-    required: true,
-    index: true
+    required: true
   },
   name: {
     type: String,
@@ -51,13 +49,11 @@ const AchievementSchema = new Schema<IAchievement>({
   },
   category: {
     type: String,
-    required: true,
-    index: true
+    required: true
   },
   isUnlocked: {
     type: Boolean,
-    default: false,
-    index: true
+    default: false
   },
   unlockedAt: {
     type: Date,

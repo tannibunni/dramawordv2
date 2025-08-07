@@ -28,14 +28,12 @@ const PaymentSchema = new Schema<IPayment>({
   userId: {
     type: Schema.Types.ObjectId,
     ref: 'User',
-    required: true,
-    index: true
+    required: true
   },
   orderId: {
     type: String,
     required: true,
-    unique: true,
-    index: true
+    unique: true
   },
   amount: {
     type: Number,

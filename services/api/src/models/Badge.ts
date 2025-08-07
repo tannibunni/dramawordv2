@@ -30,13 +30,11 @@ const BadgeSchema = new Schema<IBadge>({
   userId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
-    required: true,
-    index: true
+    required: true
   },
   badgeId: {
     type: String,
-    required: true,
-    index: true
+    required: true
   },
   name: {
     type: String,
@@ -52,19 +50,16 @@ const BadgeSchema = new Schema<IBadge>({
   },
   category: {
     type: String,
-    required: true,
-    index: true
+    required: true
   },
   rarity: {
     type: String,
     enum: ['common', 'rare', 'epic', 'legendary'],
-    default: 'common',
-    index: true
+    default: 'common'
   },
   isUnlocked: {
     type: Boolean,
-    default: false,
-    index: true
+    default: false
   },
   unlockedAt: {
     type: Date,

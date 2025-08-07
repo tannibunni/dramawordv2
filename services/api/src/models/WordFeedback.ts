@@ -11,13 +11,11 @@ export interface IWordFeedback extends Document {
 const WordFeedbackSchema = new Schema<IWordFeedback>({
   userId: {
     type: String,
-    required: true,
-    index: true,
+    required: true
   },
   word: {
     type: String,
-    required: true,
-    index: true,
+    required: true
   },
   feedback: {
     type: String,

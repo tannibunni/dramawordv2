@@ -39,7 +39,7 @@ const UserShowSchema = new Schema<IUserShow>({
 }, { _id: false });
 
 const UserShowListSchema = new Schema<IUserShowList>({
-  userId: { type: String, required: true, unique: true, index: true },
+  userId: { type: String, required: true, unique: true },
   shows: { type: [UserShowSchema], default: [] },
   updatedAt: { type: Date, default: Date.now },
 });

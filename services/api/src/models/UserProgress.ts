@@ -33,14 +33,12 @@ const UserProgressSchema = new Schema<IUserProgress>({
   userId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
-    required: true,
-    index: true
+    required: true
   },
   language: {
     type: String,
     required: true,
-    default: 'en',
-    index: true
+    default: 'en'
   },
   level: {
     type: Number,

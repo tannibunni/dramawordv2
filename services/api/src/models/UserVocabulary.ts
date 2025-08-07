@@ -42,8 +42,7 @@ export interface IUserVocabulary extends Document {
 const UserVocabularySchema = new Schema<IUserVocabulary>({
   userId: {
     type: String,
-    required: true,
-    index: true
+    required: true
   },
   wordId: {
     type: Schema.Types.ObjectId,
@@ -60,8 +59,7 @@ const UserVocabularySchema = new Schema<IUserVocabulary>({
     type: String,
     required: true,
     enum: ['en', 'ko', 'ja'],
-    default: 'en',
-    index: true,
+    default: 'en'
   },
   
   // 用户个性化数据

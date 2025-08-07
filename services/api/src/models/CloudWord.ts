@@ -27,21 +27,18 @@ export interface ICloudWord extends Document {
 const CloudWordSchema = new Schema<ICloudWord>({
   word: {
     type: String,
-    required: true,
-    index: true,
+    required: true
   },
   language: {
     type: String,
     required: true,
     enum: ['en', 'ko', 'ja', 'zh', 'fr', 'es'], // 支持中、英、日、韩、法、西班牙语查词
-    default: 'en',
-    index: true,
+    default: 'en'
   },
   uiLanguage: {
     type: String,
     required: true,
-    default: 'zh-CN',
-    index: true,
+    default: 'zh-CN'
   },
   phonetic: {
     type: String,

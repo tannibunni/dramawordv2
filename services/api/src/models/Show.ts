@@ -48,14 +48,12 @@ const ShowSchema = new Schema<IShow>({
   tmdbId: {
     type: Number,
     required: true,
-    unique: true,
-    index: true
+    unique: true
   },
   title: {
     type: String,
     required: true,
-    trim: true,
-    index: true
+    trim: true
   },
   originalTitle: {
     type: String,
@@ -77,8 +75,7 @@ const ShowSchema = new Schema<IShow>({
   },
   firstAirDate: {
     type: Date,
-    required: true,
-    index: true
+    required: true
   },
   lastAirDate: {
     type: Date,
