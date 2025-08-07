@@ -4,7 +4,10 @@ import { wrongWordsManager } from '../../../services/wrongWordsManager';
 import { unifiedSyncService } from '../../../services/unifiedSyncService';
 import { useVocabulary } from '../../../context/VocabularyContext';
 import { useAuth } from '../../../context/AuthContext';
-import { apiLogger } from '../../../utils/logger';
+import Logger from '../../../utils/logger';
+
+// 创建页面专用日志器
+const logger = Logger.forPage('ReviewStats');
 
 export interface ReviewStats {
   totalWords: number;
@@ -41,7 +44,7 @@ export const useReviewStats = () => {
     try {
       const userId = user?.id;
       if (!userId) {
-        apiLogger.warn('用户未登录，跳过后端更新');
+        logger.warn('用户未登录，跳过后端更新');
         return isCorrect ? 2 : 1;
       }
       
@@ -82,20 +85,11 @@ export const useReviewStats = () => {
         confidence: record?.confidenceLevel || 1,
       };
       
-      apiLogger.debug('发送进度更新请求', { 
-        userId, 
-        word, 
-        isCorrect, 
-        progress
-      });
+      logger.log('发送进度更新请求', 'updateBackendWordProgress');
       
       // 遵循多邻国方案：本地计算经验值
       const experienceGained = isCorrect ? 2 : 1;
-      apiLogger.info('本地经验值计算', {
-        word,
-        isCorrect,
-        experienceGained
-      });
+      logger.info('本地经验值计算', 'updateBackendWordProgress');
       
       // 使用统一同步服务
       await unifiedSyncService.addToSyncQueue({
@@ -111,11 +105,11 @@ export const useReviewStats = () => {
         priority: 'medium'
       });
       
-      apiLogger.info('学习记录已加入同步队列');
+      logger.info('学习记录已加入同步队列', 'updateBackendWordProgress');
       
       return experienceGained;
     } catch (error) {
-      apiLogger.error('更新学习记录失败', error);
+      logger.error('更新学习记录失败', 'updateBackendWordProgress');
       return isCorrect ? 2 : 1;
     }
   }, [user]);
