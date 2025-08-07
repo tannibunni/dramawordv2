@@ -2,6 +2,10 @@ import axios from 'axios';
 import { API_BASE_URL } from '../constants/config';
 import { storageService } from '../services/storageService';
 import { errorHandler, ErrorType } from '../utils/errorHandler';
+import Logger from '../utils/logger';
+
+// 创建页面专用日志器
+const logger = Logger.forPage('UserService');
 
 export interface UserProfile {
   id: string;
@@ -36,11 +40,7 @@ export class UserService {
   // 保存用户登录信息到本地存储
   async saveUserLoginInfo(userData: any, loginType: string): Promise<void> {
     try {
-      console.log('💾 开始保存用户登录信息:', {
-        loginType,
-        hasToken: !!userData.token,
-        userId: userData.id
-      });
+      logger.log('开始保存用户登录信息', 'saveUserLoginInfo');
       
       const results = await Promise.all([
         storageService.setUserData(userData),
@@ -55,19 +55,19 @@ export class UserService {
 
       // 保存认证token
       if (userData.token) {
-        console.log('💾 保存认证token:', userData.token.substring(0, 20) + '...');
+        logger.log('保存认证token', 'saveUserLoginInfo');
         const tokenResult = await storageService.setAuthToken(userData.token);
         if (!tokenResult.success) {
           throw new Error('认证token保存失败');
         }
-        console.log('✅ 认证token已保存');
+        logger.log('认证token已保存', 'saveUserLoginInfo');
       } else {
-        console.warn('⚠️ 用户数据中没有token');
+        logger.warn('用户数据中没有token', 'saveUserLoginInfo');
       }
       
-      console.log('✅ 用户登录信息已保存到本地存储');
+      logger.log('用户登录信息已保存到本地存储', 'saveUserLoginInfo');
     } catch (error) {
-      console.error('❌ 保存用户登录信息失败:', error);
+      logger.error('保存用户登录信息失败', 'saveUserLoginInfo');
       errorHandler.handleError(error, { userData, loginType }, {
         type: ErrorType.STORAGE,
         userMessage: '用户信息保存失败，请重试'

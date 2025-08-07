@@ -3,10 +3,14 @@ import { colors } from '../constants/colors';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_BASE_URL } from '../constants/config';
 import { cacheService, CACHE_KEYS } from './cacheService';
+import Logger from '../utils/logger';
 
 // 导入统一的类型定义
 import type { WordData, WordDefinition, ServiceWordData } from '../types/word';
 import { adaptServiceWordData } from '../types/word';
+
+// 创建页面专用日志器
+const logger = Logger.forPage('WordService');
 
 export interface SearchResult {
   success: boolean;
@@ -492,35 +496,35 @@ export class WordService {
   // 获取单词详情（使用统一缓存服务）
   async getWordDetail(word: string, language?: string, uiLanguage?: string): Promise<WordData | null> {
     try {
-      console.log(`🔍 获取单词详情: ${word} (语言: ${language}, UI语言: ${uiLanguage})`);
+      logger.log(`获取单词详情: ${word} (语言: ${language}, UI语言: ${uiLanguage})`, 'getWordDetail');
       
       // 生成包含语言信息的缓存键
       const cacheKey = `${word}_${language || 'en'}_${uiLanguage || 'zh-CN'}`;
-      console.log(`🔍 生成的缓存键: ${cacheKey}`);
+      logger.log(`生成的缓存键: ${cacheKey}`, 'getWordDetail');
       
       // 1. 先查统一缓存
       const cached = await cacheService.get<WordData>(CACHE_KEYS.WORD_DETAIL, cacheKey);
       if (cached) {
-        console.log(`✅ 从统一缓存获取单词详情: ${cacheKey}`);
+        logger.log(`从统一缓存获取单词详情: ${cacheKey}`, 'getWordDetail');
         return cached;
       }
-      console.log(`❌ 统一缓存未找到: ${cacheKey}`);
+      logger.log(`统一缓存未找到: ${cacheKey}`, 'getWordDetail');
       
       // 2. 从云词库（CloudWords）获取数据
-      console.log(`☁️ 尝试从云词库获取: ${word}`);
+      logger.log(`尝试从云词库获取: ${word}`, 'getWordDetail');
       const cloudResult = await this.getFromCloudWords(word, language, uiLanguage);
       if (cloudResult) {
-        console.log(`✅ 从云词库获取成功: ${word}`);
+        logger.log(`从云词库获取成功: ${word}`, 'getWordDetail');
         // 使用类型转换函数将服务层数据转换为统一格式
         const adaptedResult = adaptServiceWordData(cloudResult as ServiceWordData);
         // 缓存到统一缓存服务
         await cacheService.set(CACHE_KEYS.WORD_DETAIL, cacheKey, adaptedResult);
         return adaptedResult;
       }
-      console.log(`❌ 云词库未找到: ${word}`);
+      logger.log(`云词库未找到: ${word}`, 'getWordDetail');
       
       // 3. 云词库没有数据，调用搜索API
-      console.log(`📡 云词库无数据，调用搜索API: ${word}`);
+      logger.log(`云词库无数据，调用搜索API: ${word}`, 'getWordDetail');
       const result = await this.searchWord(word, language, uiLanguage);
       
       if (result.success && result.data) {
@@ -528,14 +532,14 @@ export class WordService {
         const adaptedData = adaptServiceWordData(result.data as ServiceWordData);
         // 4. 缓存到统一缓存服务
         await cacheService.set(CACHE_KEYS.WORD_DETAIL, cacheKey, adaptedData);
-        console.log(`✅ API获取成功并缓存: ${cacheKey}`);
+        logger.log(`API获取成功并缓存: ${cacheKey}`, 'getWordDetail');
         return adaptedData;
       } else {
-        console.warn(`⚠️ API获取失败: ${word}`, result.error);
+        logger.warn(`API获取失败: ${word}`, 'getWordDetail');
         return null;
       }
     } catch (error) {
-      console.error(`❌ 获取单词详情失败: ${word}`, error);
+      logger.error(`获取单词详情失败: ${word}`, 'getWordDetail');
       return null;
     }
   }
