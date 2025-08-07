@@ -5,7 +5,8 @@ import { API_BASE_URL } from '../constants/config';
 import { cacheService, CACHE_KEYS } from './cacheService';
 
 // 导入统一的类型定义
-import type { WordData, WordDefinition, ServiceWordData, adaptServiceWordData } from '../types/word';
+import type { WordData, WordDefinition, ServiceWordData } from '../types/word';
+import { adaptServiceWordData } from '../types/word';
 
 export interface SearchResult {
   success: boolean;
