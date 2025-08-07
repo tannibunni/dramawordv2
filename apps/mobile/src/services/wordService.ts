@@ -140,7 +140,7 @@ export class WordService {
           return { success: true, data: wordData };
         }
         // 处理 Mongoose 文档结构，优先使用 _doc 字段
-        const data = result.data._doc || result.data;
+        const data = result.data ? (result.data._doc || result.data) : null;
         
         // 转换API返回的数据格式
         const wordData: WordData = {
@@ -204,7 +204,7 @@ export class WordService {
 
       const result = await response.json();
       
-      if (result.success) {
+      if (result.success && result.data) {
         return result.data.map((word: any, index: number) => ({
           id: `popular-${index}`,
           word: word.word,
@@ -249,7 +249,7 @@ export class WordService {
       });
       if (!response.ok) throw new WordServiceError(`获取最近查词失败: ${response.status}`, response.status);
       const result = await response.json();
-      if (result.success) {
+      if (result.success && result.data) {
         return result.data.map((word: any, index: number) => ({
           id: `recent-${index}`,
           word: word.word,
