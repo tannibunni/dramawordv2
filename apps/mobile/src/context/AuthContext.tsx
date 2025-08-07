@@ -63,9 +63,34 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const userLoginInfo = await userService.getUserLoginInfo();
       if (userLoginInfo) {
         logger.log('找到用户数据', 'loadUserInfo');
-        setUser(userLoginInfo.userData);
-        setLoginType(userLoginInfo.loginType);
-        setIsAuthenticated(true);
+        
+        // 验证token是否有效
+        const token = await userService.getAuthToken();
+        if (token) {
+          // 导入tokenValidationService
+          const { TokenValidationService } = await import('../services/tokenValidationService');
+          const tokenValidationService = TokenValidationService.getInstance();
+          const validation = await tokenValidationService.validateToken(token);
+          
+          if (validation.isValid) {
+            logger.log('token验证通过，设置认证状态', 'loadUserInfo');
+            setUser(userLoginInfo.userData);
+            setLoginType(userLoginInfo.loginType);
+            setIsAuthenticated(true);
+          } else {
+            logger.log('token验证失败，清除无效数据', 'loadUserInfo');
+            // token无效，清除数据
+            await userService.clearUserLoginInfo();
+            setUser(null);
+            setLoginType(null);
+            setIsAuthenticated(false);
+          }
+        } else {
+          logger.log('没有找到token，清除认证状态', 'loadUserInfo');
+          setUser(null);
+          setLoginType(null);
+          setIsAuthenticated(false);
+        }
       } else {
         logger.log('没有找到用户数据', 'loadUserInfo');
         

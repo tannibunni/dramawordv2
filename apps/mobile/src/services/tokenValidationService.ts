@@ -36,7 +36,8 @@ export class TokenValidationService {
     try {
       parts.forEach(part => {
         if (part) {
-          atob(part.replace(/-/g, '+').replace(/_/g, '/'));
+          // 使用Buffer替代atob，兼容React Native
+          Buffer.from(part.replace(/-/g, '+').replace(/_/g, '/'), 'base64');
         }
       });
       return true;
@@ -53,7 +54,7 @@ export class TokenValidationService {
         return true;
       }
       
-      const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
+      const payload = JSON.parse(Buffer.from(parts[1].replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString());
       const exp = payload.exp;
       
       if (!exp) {
