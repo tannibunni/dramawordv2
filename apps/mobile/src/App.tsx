@@ -10,6 +10,7 @@ import { AppLanguageProvider } from './context/AppLanguageContext';
 import { NavigationProvider } from './components/navigation/NavigationContext';
 import { AuthGuard } from './components/auth/AuthGuard';
 import { Audio } from 'expo-av';
+import AnimationContainer from './components/common/AnimationContainer';
 import { InterruptionModeIOS, InterruptionModeAndroid } from 'expo-av/build/Audio.types';
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -293,6 +294,7 @@ export default function App() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <AppLanguageProvider>
         <AppContent />
+        <AnimationContainer />
       </AppLanguageProvider>
     </GestureHandlerRootView>
   );
