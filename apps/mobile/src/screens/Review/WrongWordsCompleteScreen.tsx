@@ -54,7 +54,7 @@ const WrongWordsCompleteScreen: React.FC<WrongWordsCompleteScreenProps> = ({
     wrongWordsRemaining: 0
   };
   
-  const safeActions = actions || [];
+  const safeActions = (actions || []).filter(action => action && typeof action === 'object');
   const { navigate } = useNavigation();
   const { appLanguage } = useAppLanguage();
 

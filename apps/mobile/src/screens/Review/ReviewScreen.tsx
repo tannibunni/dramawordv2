@@ -389,15 +389,21 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
   if (isReviewComplete) {
     // 错词挑战模式使用专门的完成页面
     if (type === 'wrong_words') {
+      console.log('🔧 ReviewScreen: 进入错词挑战完成页面逻辑');
+      console.log('🔧 ReviewScreen: reviewActions:', reviewActions);
+      console.log('🔧 ReviewScreen: finalStats:', finalStats);
+      console.log('🔧 ReviewScreen: reviewStats:', reviewStats);
+      
       // 计算错词相关的统计数据
                const wrongWordsActions: WrongWordsReviewAction[] = (reviewActions || []).map(action => {
+           if (!action) return null;
            const wordData = words.find(w => w.word === action.word);
            return {
              ...action,
              wasWrongWord: wrongWordsManager.hasWrongWord(action.word),
              consecutiveCorrect: wordData?.consecutiveCorrect || 0
            };
-         });
+         }).filter(Boolean);
 
       const wrongWordsStats: WrongWordsReviewStats = {
         ...(finalStats || reviewStats || {
