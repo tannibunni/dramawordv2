@@ -146,7 +146,7 @@ export class ErrorHandler {
     }
     
     if (error && typeof error === 'object') {
-      return error.message || error.error || JSON.stringify(error);
+      return error.message || (error.error ? error.error : JSON.stringify(error));
     }
     
     return 'Unknown error occurred';
