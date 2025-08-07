@@ -1771,7 +1771,6 @@ const ReviewIntroScreen = () => {
                 ? `${t('wrong_words_count', { count: wrongWordsCount })}`
                 : '暂无错词，继续学习吧！'
               }
-              {'\n'}🔍 调试: {vocabulary?.length || 0}个单词
             </Text>
             <View style={styles.challengeCardFooter}>
               <Text style={styles.challengeCardExp}>+20 {t('exp_gained')}</Text>
