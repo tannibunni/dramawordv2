@@ -170,11 +170,24 @@ export class StorageService {
   }
 
   async getAuthToken(): Promise<StorageResult<string>> {
-    return this.getItem(STORAGE_KEYS.AUTH_TOKEN);
+    const result = await this.getItem(STORAGE_KEYS.AUTH_TOKEN);
+    console.log('🔍 [StorageService] getAuthToken结果:', {
+      success: result.success,
+      hasData: !!result.data,
+      dataLength: result.data ? result.data.length : 0,
+      dataPreview: result.data ? result.data.substring(0, 50) + '...' : 'null'
+    });
+    return result;
   }
 
   async setAuthToken(token: string): Promise<StorageResult<void>> {
-    return this.setItem(STORAGE_KEYS.AUTH_TOKEN, token);
+    console.log('🔍 [StorageService] setAuthToken:', {
+      tokenLength: token.length,
+      tokenPreview: token.substring(0, 50) + '...'
+    });
+    const result = await this.setItem(STORAGE_KEYS.AUTH_TOKEN, token);
+    console.log('🔍 [StorageService] setAuthToken结果:', result.success ? '成功' : '失败');
+    return result;
   }
 
   async getUserStats(): Promise<StorageResult<any>> {

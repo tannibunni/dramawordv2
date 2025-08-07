@@ -36,13 +36,50 @@ export class TokenValidationService {
     try {
       parts.forEach(part => {
         if (part) {
-          // 使用Buffer替代atob，兼容React Native
-          Buffer.from(part.replace(/-/g, '+').replace(/_/g, '/'), 'base64');
+          // 使用更兼容的base64解码方法
+          this.decodeBase64(part.replace(/-/g, '+').replace(/_/g, '/'));
         }
       });
       return true;
     } catch {
       return false;
+    }
+  }
+
+  // 兼容的base64解码方法
+  private decodeBase64(str: string): string {
+    try {
+      // 尝试使用Buffer（Node.js环境）
+      if (typeof Buffer !== 'undefined') {
+        return Buffer.from(str, 'base64').toString();
+      }
+      // 尝试使用atob（浏览器环境）
+      else if (typeof atob !== 'undefined') {
+        return atob(str);
+      }
+      // 手动实现base64解码
+      else {
+        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+        let result = '';
+        let i = 0;
+        while (i < str.length) {
+          const encoded1 = chars.indexOf(str.charAt(i++));
+          const encoded2 = chars.indexOf(str.charAt(i++));
+          const encoded3 = chars.indexOf(str.charAt(i++));
+          const encoded4 = chars.indexOf(str.charAt(i++));
+          
+          const byte1 = (encoded1 << 2) | (encoded2 >> 4);
+          const byte2 = ((encoded2 & 15) << 4) | (encoded3 >> 2);
+          const byte3 = ((encoded3 & 3) << 6) | encoded4;
+          
+          result += String.fromCharCode(byte1);
+          if (encoded3 !== 64) result += String.fromCharCode(byte2);
+          if (encoded4 !== 64) result += String.fromCharCode(byte3);
+        }
+        return result;
+      }
+    } catch {
+      throw new Error('Invalid base64 string');
     }
   }
 
@@ -54,7 +91,7 @@ export class TokenValidationService {
         return true;
       }
       
-      const payload = JSON.parse(Buffer.from(parts[1].replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString());
+      const payload = JSON.parse(this.decodeBase64(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
       const exp = payload.exp;
       
       if (!exp) {
@@ -72,8 +109,13 @@ export class TokenValidationService {
   // 验证token有效性
   public async validateToken(token: string): Promise<TokenValidationResult> {
     try {
+      console.log('🔍 [TokenValidationService] 开始验证token:', token.substring(0, 50) + '...');
+      
       // 1. 检查token格式
-      if (!this.validateTokenFormat(token)) {
+      const formatValid = this.validateTokenFormat(token);
+      console.log('🔍 [TokenValidationService] Token格式验证:', formatValid ? '通过' : '失败');
+      
+      if (!formatValid) {
         return {
           isValid: false,
           isExpired: false,
@@ -83,7 +125,10 @@ export class TokenValidationService {
       }
 
       // 2. 检查token是否过期
-      if (this.isTokenExpired(token)) {
+      const isExpired = this.isTokenExpired(token);
+      console.log('🔍 [TokenValidationService] Token过期检查:', isExpired ? '已过期' : '未过期');
+      
+      if (isExpired) {
         return {
           isValid: false,
           isExpired: true,
