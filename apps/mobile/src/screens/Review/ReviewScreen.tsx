@@ -342,7 +342,7 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
   if (!words || words.length === 0) {
     return (
       <SafeAreaView style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.background.primary }}>
-        <ReviewEmptyState />
+        <ReviewEmptyState type={type} />
       </SafeAreaView>
     );
   }
