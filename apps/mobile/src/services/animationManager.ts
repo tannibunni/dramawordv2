@@ -2,7 +2,10 @@
 // 避免重复的动画代码和逻辑
 
 import { Animated } from 'react-native';
-import { experienceLogger } from '../utils/logger';
+import Logger from '../utils/logger';
+
+// 创建页面专用日志器
+const logger = Logger.forPage('AnimationManager');
 
 export interface AnimationConfig {
   duration?: number;
@@ -98,7 +101,7 @@ export class AnimationManager {
   // 防止重复动画
   public canStartAnimation(): boolean {
     if (this.isAnimating) {
-      experienceLogger.info('动画正在进行中，跳过重复动画');
+      logger.info('动画正在进行中，跳过重复动画', 'canStartAnimation');
       return false;
     }
     return true;
@@ -140,16 +143,7 @@ export class AnimationManager {
     this.scaleAnimation.setValue(1);
     this.levelAnimation.setValue(1);
 
-    experienceLogger.info('开始统一经验值动画', {
-      oldExperience,
-      newExperience,
-      gainedExp,
-      oldProgress,
-      newProgress,
-      oldLevel,
-      newLevel,
-      isLevelUp
-    });
+    logger.info('开始统一经验值动画', 'startExperienceAnimation');
 
     // 数字动画监听器
     this.numberAnimation.addListener(({ value }) => {
@@ -229,11 +223,7 @@ export class AnimationManager {
       this.cleanupListeners();
       callbacks.onComplete?.(newExperience, newProgress);
       
-      experienceLogger.info('统一经验值动画完成', {
-        newExperience,
-        newLevel,
-        finalProgress: newProgress
-      });
+      logger.info('统一经验值动画完成', 'startExperienceAnimation');
     });
   }
 
@@ -259,7 +249,7 @@ export class AnimationManager {
     config: AnimationConfig = {}
   ): void {
     if (this.isAnimating) {
-      experienceLogger.info('经验值动画进行中，跳过进度条动画');
+      logger.info('经验值动画进行中，跳过进度条动画', 'startProgressBarAnimation');
       return;
     }
 
@@ -275,7 +265,7 @@ export class AnimationManager {
       duration,
       useNativeDriver,
     }).start(() => {
-      experienceLogger.info('进度条动画完成', { fromProgress, toProgress });
+      logger.info('进度条动画完成', 'startProgressBarAnimation');
     });
   }
 
