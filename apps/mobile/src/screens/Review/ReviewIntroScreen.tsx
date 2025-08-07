@@ -14,14 +14,14 @@ import { colors } from '../../constants/colors';
 import Logger from '../../utils/logger';
 import { SyncStatusIndicator } from '../../components/common/SyncStatusIndicator';
 
-// 创建页面专用日志器
-const logger = Logger.forPage('ReviewIntroScreen');
 import { wrongWordsManager } from '../../services/wrongWordsManager';
 import { animationManager } from '../../services/animationManager';
 import { unifiedSyncService } from '../../services/unifiedSyncService';
 import { ExperienceLogic } from '../../utils/conditionalLogic';
 
 const ReviewIntroScreen = () => {
+  // 创建页面专用日志器
+  const logger = Logger.forPage('ReviewIntroScreen');
   const vocabularyContext = useVocabulary();
   const { shows } = useShowList();
   const { navigate } = useNavigation();
@@ -106,14 +106,14 @@ const ReviewIntroScreen = () => {
         const gainAppliedKey = await storageUtils.experience.getGainApplied();
         if (!ExperienceLogic.shouldApplyExperienceGain(gainData, gainAppliedKey)) {
           if (ExperienceLogic.isExperienceGainApplied(gainAppliedKey)) {
-            logger.info('经验值增益已应用过，跳过重复计算', { currentExperience });
+            logger.info(`经验值增益已应用过，跳过重复计算，当前经验值: ${currentExperience}`);
           }
           return currentExperience;
         }
         
         // 验证经验值增益的有效性
         if (!ExperienceLogic.isValidExperienceGain(gainData)) {
-          logger.warn('经验值增益数据无效', { gainData });
+          logger.warn("经验值增益数据无效");
           return currentExperience;
         }
         
@@ -138,7 +138,7 @@ const ReviewIntroScreen = () => {
         
         return finalExperience;
       } catch (error) {
-        logger.error('检查并应用经验值增益失败', error);
+        logger.error("检查并应用经验值增益失败");
         return currentExperience;
       }
     },
@@ -149,7 +149,7 @@ const ReviewIntroScreen = () => {
         await storageUtils.experience.clearAll();
         logger.info('清理经验值增益状态');
       } catch (error) {
-        logger.error('清理经验值增益状态失败', error);
+        logger.error("检查并应用经验值增益失败");
       }
     },
     
@@ -159,9 +159,9 @@ const ReviewIntroScreen = () => {
         await storageUtils.experience.setGain(gainedExp);
         // 清除之前的应用状态
         await storageUtils.experience.removeGainApplied();
-        logger.info('设置新的经验值增益', { gainedExp });
+        logger.info("设置新的经验值增益");
       } catch (error) {
-        logger.error('设置经验值增益失败', error);
+        logger.error("检查并应用经验值增益失败");
       }
     }
   };
@@ -230,7 +230,7 @@ const ReviewIntroScreen = () => {
       }, 0);
     } catch (error) {
       console.error('🔍 ReviewIntroScreen: 手动刷新错词数量失败', error);
-      logger.error('手动刷新错词数量失败', error);
+      logger.error("检查并应用经验值增益失败");
       // 使用setTimeout来避免在useInsertionEffect中调用setState
       setTimeout(() => {
         setWrongWordsCount(0);
@@ -288,7 +288,7 @@ const ReviewIntroScreen = () => {
         }, 0);
       } catch (error) {
         console.error('🔍 ReviewIntroScreen useEffect: 获取错词数量失败', error);
-        logger.error('获取错词数量失败', error);
+        logger.error("检查并应用经验值增益失败");
         // 使用setTimeout来避免在useInsertionEffect中调用setState
         setTimeout(() => {
           setWrongWordsCount(0);
@@ -424,7 +424,7 @@ const ReviewIntroScreen = () => {
         }
         
       } catch (error) {
-        logger.error('统一数据加载失败', error);
+        logger.error("检查并应用经验值增益失败");
         hasLoaded = false; // 出错时重置标记
       }
     };
@@ -510,7 +510,7 @@ const ReviewIntroScreen = () => {
               setIsSyncingExperience(false);
               return;
             } catch (error) {
-              logger.error('解析保护的经验值失败', error);
+              logger.error("检查并应用经验值增益失败");
             }
           }
           
@@ -554,7 +554,7 @@ const ReviewIntroScreen = () => {
             
             return updatedStats;
           } catch (error) {
-            logger.error('解析经验值增益失败', error);
+            logger.error("检查并应用经验值增益失败");
           }
         }
         
@@ -641,7 +641,7 @@ const ReviewIntroScreen = () => {
       
       await storageUtils.user.setStats(defaultStats);
     } catch (error) {
-      logger.error('加载用户统计数据失败', error);
+      logger.error("检查并应用经验值增益失败");
     } finally {
       // 释放同步锁
       setIsSyncingExperience(false);
@@ -1102,7 +1102,7 @@ const ReviewIntroScreen = () => {
       // 标记已检查过经验值
       setHasCheckedExperience(true);
     } catch (error) {
-      logger.error('检查经验值增益失败', error);
+      logger.error("检查并应用经验值增益失败");
       setHasCheckedExperience(true);
     } finally {
       // 释放同步锁
@@ -1143,7 +1143,7 @@ const ReviewIntroScreen = () => {
       logger.info('本地无数据，从后端获取用户数据');
       return await getCurrentUserData();
     } catch (error) {
-      logger.error('获取本地用户数据失败', error);
+      logger.error("检查并应用经验值增益失败");
       return null;
     }
   };
@@ -1173,7 +1173,7 @@ const ReviewIntroScreen = () => {
       logger.info('本地无数据，返回默认值');
       return null;
     } catch (error) {
-      logger.error('获取本地用户数据失败', error);
+      logger.error("检查并应用经验值增益失败");
       return null;
     }
   };
