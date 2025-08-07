@@ -33,8 +33,7 @@ export interface IRecommendation extends Document {
 const RecommendationSchema = new Schema<IRecommendation>({
   tmdbShowId: {
     type: Number,
-    required: true,
-    index: true,
+    required: true
   },
   title: {
     type: String,
