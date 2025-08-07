@@ -27,7 +27,7 @@ export const ReviewEmptyState: React.FC<ReviewEmptyStateProps> = ({ type }) => {
           ? '快去复习一些单词吧！\n巩固记忆，提升掌握度。'
           : 'Go review some words!\nStrengthen memory and improve mastery.',
         buttonText: appLanguage === 'zh-CN' ? '开始复习吧' : 'Start Review',
-        onPress: () => navigate('ReviewScreen', { type: 'wrong_words' })
+        onPress: () => navigate('main', { tab: 'review' })
       };
     } else {
       return {
