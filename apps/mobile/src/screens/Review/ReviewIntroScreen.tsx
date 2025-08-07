@@ -215,26 +215,26 @@ const ReviewIntroScreen = () => {
         
         console.log(`🔍 ReviewIntroScreen: 错词数量计算结果: ${localWrongWords.length}`);
         console.log('🔍 错词列表:', localWrongWords.map(w => w.word));
-        // 使用setTimeout来避免在useInsertionEffect中调用setState
-        setTimeout(() => {
+        // 使用requestAnimationFrame来确保在下一个渲染周期执行
+        requestAnimationFrame(() => {
           setWrongWordsCount(localWrongWords.length);
-        }, 0);
+        });
         return;
       }
 
       // 如果本地vocabulary为空，直接设置为0，不依赖云端数据
       console.log('🔍 ReviewIntroScreen: vocabulary为空，错词数量设为0');
-      // 使用setTimeout来避免在useInsertionEffect中调用setState
-      setTimeout(() => {
+      // 使用requestAnimationFrame来确保在下一个渲染周期执行
+      requestAnimationFrame(() => {
         setWrongWordsCount(0);
-      }, 0);
+      });
     } catch (error) {
       console.error('🔍 ReviewIntroScreen: 手动刷新错词数量失败', error);
       logger.error("检查并应用经验值增益失败");
-      // 使用setTimeout来避免在useInsertionEffect中调用setState
-      setTimeout(() => {
+      // 使用requestAnimationFrame来确保在下一个渲染周期执行
+      requestAnimationFrame(() => {
         setWrongWordsCount(0);
-      }, 0);
+      });
     }
   };
   
@@ -282,24 +282,24 @@ const ReviewIntroScreen = () => {
 
         // 如果本地vocabulary为空，直接设置为0，不依赖云端数据
         console.log('🔍 ReviewIntroScreen useEffect: vocabulary为空，错词数量设为0');
-        // 使用setTimeout来避免在useInsertionEffect中调用setState
-        setTimeout(() => {
+        // 使用requestAnimationFrame来确保在下一个渲染周期执行
+        requestAnimationFrame(() => {
           setWrongWordsCount(0);
-        }, 0);
+        });
       } catch (error) {
         console.error('🔍 ReviewIntroScreen useEffect: 获取错词数量失败', error);
         logger.error("检查并应用经验值增益失败");
-        // 使用setTimeout来避免在useInsertionEffect中调用setState
-        setTimeout(() => {
+        // 使用requestAnimationFrame来确保在下一个渲染周期执行
+        requestAnimationFrame(() => {
           setWrongWordsCount(0);
-        }, 0);
+        });
       }
     };
 
-    // 使用setTimeout来避免在useInsertionEffect中调用setState
-    setTimeout(() => {
+    // 使用requestAnimationFrame来确保在下一个渲染周期执行
+    requestAnimationFrame(() => {
       fetchWrongWordsCount();
-    }, 0);
+    });
   }, [vocabulary]); // 当vocabulary变化时重新获取，确保数据同步
   
   // 状态管理
@@ -1588,10 +1588,10 @@ const ReviewIntroScreen = () => {
     console.log('🔍 ReviewIntroScreen: 组件初始化，立即计算错词数量');
     console.log('🔍 vocabulary 状态:', vocabulary ? `有${vocabulary.length}个单词` : '无数据');
     if (vocabulary && vocabulary.length > 0) {
-      // 使用setTimeout来避免在useInsertionEffect中调用setState
-      setTimeout(() => {
+      // 使用requestAnimationFrame来确保在下一个渲染周期执行
+      requestAnimationFrame(() => {
         refreshWrongWordsCount();
-      }, 0);
+      });
     }
   }, []); // 只在组件初始化时执行一次
 
