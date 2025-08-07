@@ -35,7 +35,7 @@ import Toast from '../../components/common/Toast';
 import { reviewLogger, wrongWordLogger, apiLogger } from '../../utils/logger';
 import { unifiedSyncService } from '../../services/unifiedSyncService';
 import ReviewCompleteScreen, { ReviewStats, ReviewAction } from './ReviewCompleteScreen';
-import WrongWordsCompleteScreen, { WrongWordsReviewStats, WrongWordsReviewAction } from './WrongWordsCompleteScreen';
+// import WrongWordsCompleteScreen, { WrongWordsReviewStats, WrongWordsReviewAction } from './WrongWordsCompleteScreen';
 
 // 导入新的hooks和组件
 import { useReviewLogic } from './hooks/useReviewLogic';
@@ -387,41 +387,19 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
 
   // 根据复习类型选择完成页面
   if (isReviewComplete) {
-    // 错词挑战模式使用专门的完成页面
+        // 错词挑战模式暂时使用普通完成页面
     if (type === 'wrong_words') {
-      console.log('🔧 ReviewScreen: 进入错词挑战完成页面逻辑');
+      console.log('🔧 ReviewScreen: 进入错词挑战完成页面逻辑（使用普通完成页面）');
       console.log('🔧 ReviewScreen: reviewActions:', reviewActions);
       console.log('🔧 ReviewScreen: finalStats:', finalStats);
       console.log('🔧 ReviewScreen: reviewStats:', reviewStats);
       
-      // 计算错词相关的统计数据
-               const wrongWordsActions: WrongWordsReviewAction[] = (reviewActions || []).map(action => {
-           if (!action) return null;
-           const wordData = words.find(w => w.word === action.word);
-           return {
-             ...action,
-             wasWrongWord: wrongWordsManager.hasWrongWord(action.word),
-             consecutiveCorrect: wordData?.consecutiveCorrect || 0
-           };
-         }).filter(Boolean);
-
-      const wrongWordsStats: WrongWordsReviewStats = {
-        ...(finalStats || reviewStats || {
-          totalWords: 0,
-          rememberedWords: 0,
-          forgottenWords: 0,
-          experience: 0,
-          accuracy: 0
-        }),
-        wrongWordsRemoved: wrongWordsActions.filter(a => a.wasWrongWord && a.remembered && a.consecutiveCorrect >= 3).length,
-        wrongWordsRemaining: wrongWordsManager.getWrongWordsCount()
-      };
-
+      // 暂时使用普通完成页面
       return (
         <SafeAreaView style={{ flex: 1, backgroundColor: colors.background.primary }}>
-          <WrongWordsCompleteScreen 
-            stats={wrongWordsStats}
-            actions={wrongWordsActions}
+          <ReviewCompleteScreen 
+            stats={finalStats || reviewStats}
+            actions={reviewActions}
             onBack={async () => {
               // 增加复习次数统计
               try {
