@@ -43,6 +43,18 @@ const WrongWordsCompleteScreen: React.FC<WrongWordsCompleteScreenProps> = ({
   actions, 
   onBack 
 }) => {
+  // 添加防护措施，确保props不为undefined
+  const safeStats = stats || {
+    totalWords: 0,
+    rememberedWords: 0,
+    forgottenWords: 0,
+    experience: 0,
+    accuracy: 0,
+    wrongWordsRemoved: 0,
+    wrongWordsRemaining: 0
+  };
+  
+  const safeActions = actions || [];
   const { navigate } = useNavigation();
   const { appLanguage } = useAppLanguage();
 
@@ -70,7 +82,7 @@ const WrongWordsCompleteScreen: React.FC<WrongWordsCompleteScreenProps> = ({
             {appLanguage === 'zh-CN' ? '记住的单词' : 'Words Remembered'}
           </Text>
           <Text style={styles.statValue}>
-            {stats.rememberedWords} / {stats.totalWords}
+            {safeStats.rememberedWords} / {safeStats.totalWords}
           </Text>
         </View>
         
@@ -79,7 +91,7 @@ const WrongWordsCompleteScreen: React.FC<WrongWordsCompleteScreenProps> = ({
             {appLanguage === 'zh-CN' ? '成功率' : 'Accuracy'}
           </Text>
           <Text style={styles.statValue}>
-            {stats.accuracy}%
+            {safeStats.accuracy}%
           </Text>
         </View>
       </View>
@@ -93,13 +105,13 @@ const WrongWordsCompleteScreen: React.FC<WrongWordsCompleteScreenProps> = ({
           <View style={styles.wrongWordsStat}>
             <Ionicons name="remove-circle" size={24} color={colors.success[500]} />
             <Text style={styles.wrongWordsStatText}>
-              {appLanguage === 'zh-CN' ? '已移除' : 'Removed'}: {stats.wrongWordsRemoved}
+              {appLanguage === 'zh-CN' ? '已移除' : 'Removed'}: {safeStats.wrongWordsRemoved}
             </Text>
           </View>
           <View style={styles.wrongWordsStat}>
             <Ionicons name="alert-circle" size={24} color={colors.warning[500]} />
             <Text style={styles.wrongWordsStatText}>
-              {appLanguage === 'zh-CN' ? '仍需复习' : 'Still Need Review'}: {stats.wrongWordsRemaining}
+              {appLanguage === 'zh-CN' ? '仍需复习' : 'Still Need Review'}: {safeStats.wrongWordsRemaining}
             </Text>
           </View>
         </View>
@@ -111,7 +123,7 @@ const WrongWordsCompleteScreen: React.FC<WrongWordsCompleteScreenProps> = ({
           {appLanguage === 'zh-CN' ? '本次复习单词' : 'Words Reviewed'}
         </Text>
         <ScrollView style={styles.wordList} showsVerticalScrollIndicator={false}>
-          {actions.map((item, idx) => (
+          {safeActions.map((item, idx) => (
             <View key={item.word + idx} style={styles.wordItem}>
               <View style={styles.wordInfo}>
                 <Text style={styles.wordText}>{item.word}</Text>
@@ -166,7 +178,7 @@ const WrongWordsCompleteScreen: React.FC<WrongWordsCompleteScreenProps> = ({
         <Text style={styles.experienceLabel}>
           {appLanguage === 'zh-CN' ? '本次复习获得' : 'Experience Gained'}
         </Text>
-        <Text style={styles.experienceValue}>+{stats.experience} XP</Text>
+        <Text style={styles.experienceValue}>+{safeStats.experience} XP</Text>
       </View>
 
       {/* 按钮区域 */}
