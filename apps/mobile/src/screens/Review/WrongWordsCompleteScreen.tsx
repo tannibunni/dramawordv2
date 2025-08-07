@@ -164,7 +164,7 @@ const WrongWordsCompleteScreen: React.FC<WrongWordsCompleteScreenProps> = ({
                 ) : (
                   <>
                     <Ionicons name="close-circle" size={24} color={colors.error[500]} />
-                    <Text style={[styles.xpText, { color: colors.error[500] }]}>+1XP</Text>
+                    <Text style={[styles.xpText, { color: colors.text.secondary }]}>+0XP</Text>
                   </>
                 )}
               </View>
