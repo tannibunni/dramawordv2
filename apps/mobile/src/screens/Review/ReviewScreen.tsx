@@ -400,6 +400,7 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
           <ReviewCompleteScreen 
             stats={finalStats || reviewStats}
             actions={reviewActions}
+            type={type}
             onBack={async () => {
               // 增加复习次数统计
               try {
@@ -465,6 +466,7 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
           <ReviewCompleteScreen 
             stats={finalStats || reviewStats}
             actions={reviewActions}
+            type={type}
             onBack={async () => {
               // 增加复习次数统计
               try {

@@ -29,12 +29,14 @@ interface ReviewCompleteScreenProps {
   stats: ReviewStats;
   actions: ReviewAction[];
   onBack: () => void;
+  type?: string; // 添加复习类型参数
 }
 
 const ReviewCompleteScreen: React.FC<ReviewCompleteScreenProps> = ({ 
   stats, 
   actions, 
-  onBack 
+  onBack,
+  type 
 }) => {
   return (
     <View style={styles.container}>
@@ -80,7 +82,12 @@ const ReviewCompleteScreen: React.FC<ReviewCompleteScreenProps> = ({
                 ) : (
                   <>
                     <Ionicons name="close-circle" size={24} color={colors.error[500]} />
-                    <Text style={[styles.xpText, { color: colors.error[500] }]}>+1XP</Text>
+                    <Text style={[
+                      styles.xpText, 
+                      { color: type === 'wrong_words' ? colors.text.secondary : colors.error[500] }
+                    ]}>
+                      {type === 'wrong_words' ? '+0XP' : '+1XP'}
+                    </Text>
                   </>
                 )}
               </View>
