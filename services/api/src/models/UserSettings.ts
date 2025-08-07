@@ -131,6 +131,6 @@ const UserSettingsSchema = new Schema<IUserSettings>({
 });
 
 // 创建索引以提高查询性能
-UserSettingsSchema.index({ userId: 1 });
+// UserSettingsSchema.index({ userId: 1 }); // 移除重复索引，unique: true已自动创建
 
 export const UserSettings = mongoose.model<IUserSettings>('UserSettings', UserSettingsSchema); 

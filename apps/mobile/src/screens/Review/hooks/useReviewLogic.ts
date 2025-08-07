@@ -58,6 +58,9 @@ export const useReviewLogic = ({ type, id, reviewMode }: ReviewLogicProps) => {
         console.log('🔍 ReviewScreen: 进入错词挑战模式');
         setIsEbbinghaus(false);
         
+        // 调试：打印错词管理器状态
+        wrongWordsManager.debugStatus();
+        
         // 使用错词管理器获取错词列表
         const wrongWordsList = wrongWordsManager.getWrongWords();
         console.log('🔍 错词管理器返回错词列表:', wrongWordsList);
@@ -69,6 +72,18 @@ export const useReviewLogic = ({ type, id, reviewMode }: ReviewLogicProps) => {
             .filter(Boolean);
           
           console.log(`🔍 错词卡筛选结果: ${wrongWordsWithDetails.length} 个错词`);
+          
+          // 如果错词数量不足，补充一些需要复习的单词
+          if (wrongWordsWithDetails.length < MIN_REVIEW_BATCH) {
+            const remainingWords = vocabulary.filter(w => 
+              !wrongWordsList.includes(w.word) && 
+              (w.incorrectCount > 0 || w.consecutiveIncorrect > 0)
+            );
+            const additionalWords = remainingWords.slice(0, MIN_REVIEW_BATCH - wrongWordsWithDetails.length);
+            wrongWordsWithDetails.push(...additionalWords);
+            console.log(`🔍 补充了 ${additionalWords.length} 个需要复习的单词`);
+          }
+          
           return wrongWordsWithDetails.slice(0, MIN_REVIEW_BATCH);
         } else {
           console.log('🔍 错词管理器中没有错词，返回空数组');
@@ -143,7 +158,15 @@ export const useReviewLogic = ({ type, id, reviewMode }: ReviewLogicProps) => {
   useEffect(() => {
     if (vocabulary && vocabulary.length > 0) {
       console.log('🔧 ReviewScreen: 初始化错词管理器');
-      wrongWordsManager.initialize(vocabulary);
+      wrongWordsManager.initialize(vocabulary).then(() => {
+        console.log('🔧 ReviewScreen: 错词管理器初始化完成');
+        // 初始化完成后重新加载复习单词
+        loadReviewWords();
+      }).catch(error => {
+        console.error('🔧 ReviewScreen: 错词管理器初始化失败:', error);
+        // 即使初始化失败也要加载复习单词
+        loadReviewWords();
+      });
     }
   }, [vocabulary]);
 

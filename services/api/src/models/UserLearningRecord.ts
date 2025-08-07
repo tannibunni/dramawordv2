@@ -145,7 +145,7 @@ const UserLearningRecordSchema = new Schema<IUserLearningRecord>({
 });
 
 // 创建索引
-UserLearningRecordSchema.index({ userId: 1 });
+// UserLearningRecordSchema.index({ userId: 1 }); // 移除重复索引，unique: true已自动创建
 UserLearningRecordSchema.index({ 'records.word': 1 });
 UserLearningRecordSchema.index({ 'records.nextReviewDate': 1 });
 UserLearningRecordSchema.index({ 'records.mastery': -1 });

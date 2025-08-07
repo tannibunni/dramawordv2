@@ -3,6 +3,7 @@ import { useAuth } from '../../context/AuthContext';
 import { LoginScreen } from '../../screens/Auth/LoginScreen';
 import { InitialLanguageModal } from '../common/InitialLanguageModal';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { APP_CONFIG } from '../../constants/config';
 
 interface AuthGuardProps {
   children: React.ReactNode;
@@ -67,8 +68,15 @@ export const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
     try {
       const hasSetup = await AsyncStorage.getItem('initialLanguageSetup');
       const learningLanguages = await AsyncStorage.getItem('learningLanguages');
+      const selectedLanguage = await AsyncStorage.getItem(APP_CONFIG.STORAGE_KEYS.SELECTED_LANGUAGE);
       
-      console.log('🔍 检查语言设置 - hasSetup:', hasSetup, 'learningLanguages:', learningLanguages);
+      console.log('🔍 检查语言设置 - hasSetup:', hasSetup, 'learningLanguages:', learningLanguages, 'selectedLanguage:', selectedLanguage);
+      
+      // 如果用户已经选择了语言（selectedLanguage存在），就不显示语言选择窗口
+      if (selectedLanguage) {
+        console.log('🔍 用户已选择语言，跳过语言选择窗口');
+        return;
+      }
       
       // 如果没有设置过语言，或者没有学习语言设置，显示语言选择窗口
       if (!hasSetup || !learningLanguages) {

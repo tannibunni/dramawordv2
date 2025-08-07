@@ -36,7 +36,7 @@ const ChineseTranslationSchema = new Schema<IChineseTranslation>({
 });
 
 // 创建索引
-ChineseTranslationSchema.index({ chineseWord: 1 });
+// ChineseTranslationSchema.index({ chineseWord: 1 }); // 移除重复索引，unique: true已自动创建
 ChineseTranslationSchema.index({ searchCount: -1 });
 ChineseTranslationSchema.index({ lastSearched: -1 });
 

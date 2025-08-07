@@ -30,10 +30,10 @@ const LanguagePicker: React.FC<LanguagePickerProps> = ({ onLanguageChange, onNav
   // 计算当前语言，确保在selectedLanguage更新后重新计算
   const currentLanguage = SUPPORTED_LANGUAGES[selectedLanguage];
   
-  // 添加图标显示调试日志
-  console.log('🎯 LanguagePicker图标调试 - selectedLanguage:', selectedLanguage);
-  console.log('🎯 LanguagePicker图标调试 - currentLanguage:', currentLanguage);
-  console.log('🎯 LanguagePicker图标调试 - 图标显示:', currentLanguage.flag, currentLanguage.name);
+  // 减少调试日志，只在必要时输出
+  // console.log('🎯 LanguagePicker图标调试 - selectedLanguage:', selectedLanguage);
+  // console.log('🎯 LanguagePicker图标调试 - currentLanguage:', currentLanguage);
+  // console.log('🎯 LanguagePicker图标调试 - 图标显示:', currentLanguage.flag, currentLanguage.name);
 
   // 加载学习语言设置
   useEffect(() => {
@@ -43,25 +43,23 @@ const LanguagePicker: React.FC<LanguagePickerProps> = ({ onLanguageChange, onNav
   // 监听学习语言变化，重新加载
   useEffect(() => {
     const checkLearningLanguages = async () => {
-      // 强制刷新AsyncStorage
-      await AsyncStorage.flushGetRequests();
       const saved = await AsyncStorage.getItem('learningLanguages');
-      console.log('LanguagePicker - 重新检查学习语言 (强制刷新):', saved);
+      // console.log('LanguagePicker - 重新检查学习语言:', saved);
       
       if (saved) {
         const languages = JSON.parse(saved);
-        console.log('LanguagePicker - 解析后的学习语言:', languages);
+        // console.log('LanguagePicker - 解析后的学习语言:', languages);
         setLearningLanguages(languages);
         
         // 重新计算当前语言
         const currentLang = SUPPORTED_LANGUAGES[selectedLanguage];
-        console.log('LanguagePicker - 重新检查：当前语言:', currentLang.code);
+        // console.log('LanguagePicker - 重新检查：当前语言:', currentLang.code);
         
         // 如果当前选择的语言不在学习语言列表中，自动切换到第一个可用的语言
         if (languages.length > 0 && !languages.includes(currentLang.code)) {
           console.log('LanguagePicker - 重新检查：当前语言不在学习列表中，切换到:', languages[0]);
           const newLanguageKey = getLanguageKeyByCode(languages[0]);
-          console.log('LanguagePicker - 重新检查：切换到语言键:', newLanguageKey);
+          // console.log('LanguagePicker - 重新检查：切换到语言键:', newLanguageKey);
           if (newLanguageKey && newLanguageKey !== selectedLanguage) {
             setSelectedLanguage(newLanguageKey);
           }
@@ -72,40 +70,40 @@ const LanguagePicker: React.FC<LanguagePickerProps> = ({ onLanguageChange, onNav
     // 延迟检查，确保首次启动弹窗完成后执行
     const timer = setTimeout(checkLearningLanguages, 1000);
     return () => clearTimeout(timer);
-  }, []); // 移除selectedLanguage依赖，避免无限循环
+  }, [selectedLanguage]); // 只在selectedLanguage变化时执行
 
-  // 添加实时监听AsyncStorage变化
-  useEffect(() => {
-    const interval = setInterval(async () => {
-      const saved = await AsyncStorage.getItem('learningLanguages');
-      if (saved) {
-        const languages = JSON.parse(saved);
-        setLearningLanguages(prev => {
-          // 只有当数据真正发生变化时才更新
-          if (JSON.stringify(prev) !== JSON.stringify(languages)) {
-            console.log('LanguagePicker - 检测到学习语言变化:', languages);
-            return languages;
-          }
-          return prev;
-        });
-      }
-    }, 500); // 每500ms检查一次
+  // 移除实时监听AsyncStorage变化的useEffect，避免无限循环
+  // useEffect(() => {
+  //   const interval = setInterval(async () => {
+  //     const saved = await AsyncStorage.getItem('learningLanguages');
+  //     if (saved) {
+  //       const languages = JSON.parse(saved);
+  //       setLearningLanguages(prev => {
+  //         // 只有当数据真正发生变化时才更新
+  //         if (JSON.stringify(prev) !== JSON.stringify(languages)) {
+  //           console.log('LanguagePicker - 检测到学习语言变化:', languages);
+  //           return languages;
+  //         }
+  //         return prev;
+  //       });
+  //     }
+  //   }, 500); // 每500ms检查一次
 
-    return () => clearInterval(interval);
-  }, []);
+  //   return () => clearInterval(interval);
+  // }, []);
 
   const loadLearningLanguages = async () => {
     try {
       const saved = await AsyncStorage.getItem('learningLanguages');
-      console.log('LanguagePicker - 加载的学习语言:', saved);
+      // console.log('LanguagePicker - 加载的学习语言:', saved);
       
       if (saved) {
         const languages = JSON.parse(saved);
-        console.log('LanguagePicker - 解析后的学习语言:', languages);
+        // console.log('LanguagePicker - 解析后的学习语言:', languages);
         
         // 重新计算当前语言
         const currentLang = SUPPORTED_LANGUAGES[selectedLanguage];
-        console.log('LanguagePicker - 当前语言:', currentLang.code);
+        // console.log('LanguagePicker - 当前语言:', currentLang.code);
         
         setLearningLanguages(languages);
         
@@ -113,14 +111,14 @@ const LanguagePicker: React.FC<LanguagePickerProps> = ({ onLanguageChange, onNav
         if (languages.length > 0 && !languages.includes(currentLang.code)) {
           console.log('LanguagePicker - 当前语言不在学习列表中，切换到:', languages[0]);
           const newLanguageKey = getLanguageKeyByCode(languages[0]);
-          console.log('LanguagePicker - 切换到语言键:', newLanguageKey);
+          // console.log('LanguagePicker - 切换到语言键:', newLanguageKey);
           if (newLanguageKey && newLanguageKey !== selectedLanguage) {
             setSelectedLanguage(newLanguageKey);
           }
         }
       } else {
         // 如果没有设置学习语言，默认显示所有语言
-        console.log('LanguagePicker - 没有学习语言设置，显示所有语言');
+        // console.log('LanguagePicker - 没有学习语言设置，显示所有语言');
         setLearningLanguages(Object.values(SUPPORTED_LANGUAGES).map(lang => lang.code));
       }
     } catch (error) {
@@ -189,9 +187,10 @@ const LanguagePicker: React.FC<LanguagePickerProps> = ({ onLanguageChange, onNav
 
             <ScrollView style={styles.languageList} showsVerticalScrollIndicator={false}>
               {(() => {
-                console.log('🎯 LanguagePicker渲染 - learningLanguages状态:', learningLanguages);
-                console.log('🎯 LanguagePicker渲染 - appLanguage状态:', appLanguage);
-                console.log('🎯 LanguagePicker渲染 - 过滤前语言数量:', Object.entries(SUPPORTED_LANGUAGES).length);
+                // 减少调试日志
+                // console.log('🎯 LanguagePicker渲染 - learningLanguages状态:', learningLanguages);
+                // console.log('🎯 LanguagePicker渲染 - appLanguage状态:', appLanguage);
+                // console.log('🎯 LanguagePicker渲染 - 过滤前语言数量:', Object.entries(SUPPORTED_LANGUAGES).length);
                 
                 const filteredLanguages = Object.entries(SUPPORTED_LANGUAGES)
                   .filter(([key, language]) => {
@@ -204,21 +203,21 @@ const LanguagePicker: React.FC<LanguagePickerProps> = ({ onLanguageChange, onNav
                     // 当界面语言是英文时，隐藏English选项
                     if (appLanguage === 'en-US' && language.code === 'en') {
                       shouldShow = false;
-                      console.log(`🔍 过滤语言 ${language.code}: ❌ 隐藏 (界面语言为英文)`);
+                      // console.log(`🔍 过滤语言 ${language.code}: ❌ 隐藏 (界面语言为英文)`);
                     }
                     // 当界面语言是中文时，隐藏Chinese选项
                     else if (appLanguage === 'zh-CN' && language.code === 'zh') {
                       shouldShow = false;
-                      console.log(`🔍 过滤语言 ${language.code}: ❌ 隐藏 (界面语言为中文)`);
+                      // console.log(`🔍 过滤语言 ${language.code}: ❌ 隐藏 (界面语言为中文)`);
                     }
-                    else {
-                      console.log(`🔍 过滤语言 ${language.code}: ${isIncluded ? '✅ 包含' : '❌ 不包含'} (学习语言: ${learningLanguages.join(', ')})`);
-                    }
+                    // else {
+                    //   console.log(`🔍 过滤语言 ${language.code}: ${isIncluded ? '✅ 包含' : '❌ 不包含'} (学习语言: ${learningLanguages.join(', ')})`);
+                    // }
                     
                     return shouldShow;
                   });
                 
-                console.log('🎯 LanguagePicker渲染 - 过滤后语言数量:', filteredLanguages.length);
+                // console.log('🎯 LanguagePicker渲染 - 过滤后语言数量:', filteredLanguages.length);
                 
                                 return filteredLanguages.map(([key, language]) => (
                 <TouchableOpacity

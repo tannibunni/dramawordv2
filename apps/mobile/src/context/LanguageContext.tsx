@@ -44,37 +44,37 @@ export const LanguageProvider: React.FC<{ children: ReactNode }> = ({ children }
     loadLanguageSettings();
   }, []);
 
-  // 监听学习语言变化，重新加载语言设置
-  useEffect(() => {
-    const checkLearningLanguages = async () => {
-      const learningLanguages = await AsyncStorage.getItem('learningLanguages');
-      if (learningLanguages) {
-        try {
-          const languages = JSON.parse(learningLanguages);
-          if (languages.length > 0) {
-            // 检查当前选择的语言是否在学习语言列表中
-            const currentLang = SUPPORTED_LANGUAGES[selectedLanguage];
-            if (!languages.includes(currentLang.code)) {
-              // 如果当前语言不在学习列表中，切换到第一个可用的语言
-              const firstLanguageCode = languages[0];
-              const languageKey = getLanguageKeyByCode(firstLanguageCode);
-              if (languageKey && languageKey !== selectedLanguage) {
-                console.log('🎯 LanguageContext - 检测到学习语言变化，切换到:', firstLanguageCode, languageKey);
-                setSelectedLanguageState(languageKey);
-                await AsyncStorage.setItem(APP_CONFIG.STORAGE_KEYS.SELECTED_LANGUAGE, languageKey);
-              }
-            }
-          }
-        } catch (error) {
-          console.error('解析学习语言设置失败:', error);
-        }
-      }
-    };
+  // 移除会导致无限循环的useEffect
+  // useEffect(() => {
+  //   const checkLearningLanguages = async () => {
+  //     const learningLanguages = await AsyncStorage.getItem('learningLanguages');
+  //     if (learningLanguages) {
+  //       try {
+  //         const languages = JSON.parse(learningLanguages);
+  //         if (languages.length > 0) {
+  //           // 检查当前选择的语言是否在学习语言列表中
+  //           const currentLang = SUPPORTED_LANGUAGES[selectedLanguage];
+  //           if (!languages.includes(currentLang.code)) {
+  //             // 如果当前语言不在学习列表中，切换到第一个可用的语言
+  //             const firstLanguageCode = languages[0];
+  //             const languageKey = getLanguageKeyByCode(firstLanguageCode);
+  //             if (languageKey && languageKey !== selectedLanguage) {
+  //               console.log('🎯 LanguageContext - 检测到学习语言变化，切换到:', firstLanguageCode, languageKey);
+  //               setSelectedLanguageState(languageKey);
+  //               await AsyncStorage.setItem(APP_CONFIG.STORAGE_KEYS.SELECTED_LANGUAGE, languageKey);
+  //             }
+  //           }
+  //         }
+  //       } catch (error) {
+  //         console.error('解析学习语言设置失败:', error);
+  //       }
+  //     }
+  //   };
 
-    // 延迟检查，确保学习语言设置完成后再检查
-    const timer = setTimeout(checkLearningLanguages, 2000);
-    return () => clearTimeout(timer);
-  }, [selectedLanguage]);
+  //   // 延迟检查，确保学习语言设置完成后再检查
+  //   const timer = setTimeout(checkLearningLanguages, 2000);
+  //   return () => clearTimeout(timer);
+  // }, [selectedLanguage]);
 
   const loadLanguageSettings = async () => {
     try {

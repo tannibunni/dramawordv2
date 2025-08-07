@@ -12,7 +12,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../constants/colors';
 import { useAppLanguage } from '../../context/AppLanguageContext';
 import { t } from '../../constants/translations';
-import { SUPPORTED_LANGUAGES, SupportedLanguageCode } from '../../constants/config';
+import { SUPPORTED_LANGUAGES, SupportedLanguageCode, APP_CONFIG } from '../../constants/config';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 interface InitialLanguageModalProps {
@@ -40,6 +40,12 @@ export const InitialLanguageModal: React.FC<InitialLanguageModalProps> = ({
     });
   };
 
+  // 根据language.code找到对应的SupportedLanguageCode
+  const getLanguageKeyByCode = (code: string): SupportedLanguageCode => {
+    const entry = Object.entries(SUPPORTED_LANGUAGES).find(([key, lang]) => lang.code === code);
+    return entry ? (entry[0] as SupportedLanguageCode) : 'ENGLISH';
+  };
+
   const handleComplete = async () => {
     if (selectedLanguages.length === 0) {
       Alert.alert(
@@ -54,6 +60,14 @@ export const InitialLanguageModal: React.FC<InitialLanguageModalProps> = ({
       // 保存学习语言设置
       await AsyncStorage.setItem('learningLanguages', JSON.stringify(selectedLanguages));
       console.log('✅ 已保存学习语言:', selectedLanguages);
+      
+      // 将第一个选择的语言设为默认语言
+      const firstLanguageCode = selectedLanguages[0];
+      const languageKey = getLanguageKeyByCode(firstLanguageCode);
+      if (languageKey) {
+        await AsyncStorage.setItem(APP_CONFIG.STORAGE_KEYS.SELECTED_LANGUAGE, languageKey);
+        console.log('✅ 已设置默认语言:', firstLanguageCode, languageKey);
+      }
       
       // 强制刷新AsyncStorage
       await AsyncStorage.flushGetRequests();

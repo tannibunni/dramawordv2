@@ -99,7 +99,10 @@ export const VocabularyProvider = ({ children }: { children: ReactNode }) => {
   // 同步后端学习进度数据
   useEffect(() => {
     if (isLoaded && vocabulary.length > 0) {
-      syncLearningProgress();
+      // 使用setTimeout来避免在useInsertionEffect中调用setState
+      setTimeout(() => {
+        syncLearningProgress();
+      }, 0);
     }
   }, [isLoaded, vocabulary.length]);
 
@@ -313,7 +316,10 @@ export const VocabularyProvider = ({ children }: { children: ReactNode }) => {
 
   const refreshLearningProgress = async () => {
     vocabularyLogger.info('手动刷新学习进度数据');
-    await syncLearningProgress();
+    // 使用setTimeout来避免在useInsertionEffect中调用setState
+    setTimeout(async () => {
+      await syncLearningProgress();
+    }, 0);
   };
 
   return (

@@ -79,7 +79,6 @@ const PaymentSchema = new Schema<IPayment>({
 
 // 创建索引
 PaymentSchema.index({ userId: 1, status: 1 });
-PaymentSchema.index({ orderId: 1 });
 PaymentSchema.index({ createdAt: -1 });
 
 export const Payment = mongoose.model<IPayment>('Payment', PaymentSchema); 

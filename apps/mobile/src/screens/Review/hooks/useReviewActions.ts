@@ -93,6 +93,13 @@ export const useReviewActions = ({
         if (added) {
           console.log('✅ 错词已实时添加到错词集合:', word);
           console.log('📊 当前错词总数:', wrongWordsManager.getWrongWordsCount());
+          
+          // 立即保存错词集合到本地存储
+          wrongWordsManager.saveToStorage().then(() => {
+            console.log('✅ 错词集合已保存到本地存储');
+          }).catch(error => {
+            console.error('❌ 保存错词集合失败:', error);
+          });
         } else {
           console.log('ℹ️ 错词已存在于错词集合中:', word);
         }
