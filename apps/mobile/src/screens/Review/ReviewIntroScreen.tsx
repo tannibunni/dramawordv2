@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, Animated, Platform, Alert } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useVocabulary } from '../../context/VocabularyContext';
@@ -18,11 +18,15 @@ import { wrongWordsManager } from '../../services/wrongWordsManager';
 import { animationManager } from '../../services/animationManager';
 import { unifiedSyncService } from '../../services/unifiedSyncService';
 import { ExperienceLogic } from '../../utils/conditionalLogic';
+import ExperienceAnimation from '../../components/common/ExperienceAnimation';
 
 const ReviewIntroScreen = () => {
   // 创建页面专用日志器
   const logger = Logger.forPage('ReviewIntroScreen');
   const vocabularyContext = useVocabulary();
+  
+  // 经验动画引用
+  const experienceAnimationRef = useRef<any>(null);
   const { shows } = useShowList();
   const { navigate } = useNavigation();
   const { appLanguage } = useAppLanguage();
@@ -1072,13 +1076,12 @@ const ReviewIntroScreen = () => {
             setUserStats(updatedStats);
             setAnimatedExperience(currentExperience);
             
-            // 经验值动画已迁移到独立组件，这里只更新状态
-            // TODO: 使用新的 ExperienceAnimationManager 组件
-            console.log('🎉 经验值动画触发:', {
-              experienceGained: params.experienceGained,
-              currentExperience,
-              userLevel: updatedStats.level
-            });
+            // 使用新的经验动画组件
+            experienceAnimationRef.current?.startExperienceAnimation(
+              params.experienceGained,
+              updatedStats.level,
+              currentExperience
+            );
             
             // 动画完成后清理
             setTimeout(async () => {
@@ -1425,7 +1428,13 @@ const ReviewIntroScreen = () => {
     <View style={styles.container}>
       <SyncStatusIndicator visible={true} />
       
-      {/* 经验值动画已迁移到独立组件 ExperienceAnimation */}
+      {/* 经验值动画组件 */}
+      <ExperienceAnimation
+        ref={experienceAnimationRef}
+        onAnimationComplete={() => {
+          logger.info('经验值动画完成');
+        }}
+      />
       
       {/* 学习统计板块 - 包含问候语 */}
       <View style={styles.learningStatsContainer}>
