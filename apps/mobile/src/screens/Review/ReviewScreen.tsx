@@ -35,6 +35,7 @@ import Toast from '../../components/common/Toast';
 import { reviewLogger, wrongWordLogger, apiLogger } from '../../utils/logger';
 import { unifiedSyncService } from '../../services/unifiedSyncService';
 import ReviewCompleteScreen, { ReviewStats, ReviewAction } from './ReviewCompleteScreen';
+import WrongWordsCompleteScreen, { WrongWordsReviewStats, WrongWordsReviewAction } from './WrongWordsCompleteScreen';
 
 // 导入新的hooks和组件
 import { useReviewLogic } from './hooks/useReviewLogic';
@@ -384,71 +385,155 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
     }, 1200);
   };
 
-  // ReviewCompleteScreen 传入 actions
+  // 根据复习类型选择完成页面
   if (isReviewComplete) {
-    return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: colors.background.primary }}>
-        <ReviewCompleteScreen 
-          stats={finalStats || reviewStats}
-          actions={reviewActions}
-          onBack={async () => {
-            // 增加复习次数统计
-            try {
-              // 更新本地存储的复习次数
-              const currentStats = await AsyncStorage.getItem('userStats');
-              if (currentStats) {
-                const stats = JSON.parse(currentStats);
-                const updatedStats = {
-                  ...stats,
-                  totalReviews: (stats.totalReviews || 0) + 1
-                };
-                await AsyncStorage.setItem('userStats', JSON.stringify(updatedStats));
-                console.log('✅ 本地复习次数已更新:', updatedStats.totalReviews);
+    // 错词挑战模式使用专门的完成页面
+    if (type === 'wrong_words') {
+      // 计算错词相关的统计数据
+               const wrongWordsActions: WrongWordsReviewAction[] = reviewActions.map(action => {
+           const wordData = words.find(w => w.word === action.word);
+           return {
+             ...action,
+             wasWrongWord: wrongWordsManager.hasWrongWord(action.word),
+             consecutiveCorrect: wordData?.consecutiveCorrect || 0
+           };
+         });
+
+      const wrongWordsStats: WrongWordsReviewStats = {
+        ...finalStats || reviewStats,
+        wrongWordsRemoved: wrongWordsActions.filter(a => a.wasWrongWord && a.remembered && a.consecutiveCorrect >= 3).length,
+        wrongWordsRemaining: wrongWordsManager.getWrongWordsCount()
+      };
+
+      return (
+        <SafeAreaView style={{ flex: 1, backgroundColor: colors.background.primary }}>
+          <WrongWordsCompleteScreen 
+            stats={wrongWordsStats}
+            actions={wrongWordsActions}
+            onBack={async () => {
+              // 增加复习次数统计
+              try {
+                // 更新本地存储的复习次数
+                const currentStats = await AsyncStorage.getItem('userStats');
+                if (currentStats) {
+                  const stats = JSON.parse(currentStats);
+                  const updatedStats = {
+                    ...stats,
+                    totalReviews: (stats.totalReviews || 0) + 1
+                  };
+                  await AsyncStorage.setItem('userStats', JSON.stringify(updatedStats));
+                  console.log('✅ 本地复习次数已更新:', updatedStats.totalReviews);
+                }
+                
+                // 同步到后端
+                const token = await AsyncStorage.getItem('authToken');
+                if (token) {
+                  // 更新复习次数和连续学习
+                  await fetch(`${API_BASE_URL}/users/stats`, {
+                    method: 'PUT',
+                    headers: {
+                      'Content-Type': 'application/json',
+                      'Authorization': `Bearer ${token}`,
+                    },
+                    body: JSON.stringify({
+                      totalReviews: 1, // 增加1次复习
+                      updateContinuousLearning: true // 标记需要更新连续学习
+                    }),
+                  });
+                  console.log('✅ 复习次数和连续学习已同步到后端');
+                }
+              } catch (error) {
+                console.error('❌ 更新复习次数失败:', error);
               }
               
-              // 同步到后端
-              const token = await AsyncStorage.getItem('authToken');
-              if (token) {
-                // 更新复习次数和连续学习
-                await fetch(`${API_BASE_URL}/users/stats`, {
-                  method: 'PUT',
-                  headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`,
-                  },
-                  body: JSON.stringify({
-                    totalReviews: 1, // 增加1次复习
-                    updateContinuousLearning: true // 标记需要更新连续学习
-                  }),
-                });
-                console.log('✅ 复习次数和连续学习已同步到后端');
+              // 直接使用 reviewStats 中的经验值，无需存储到本地
+              const totalExperience = reviewStats.experience;
+              
+              // 保存经验值增加参数到AsyncStorage
+              const params = {
+                showExperienceAnimation: true,
+                experienceGained: totalExperience
+              };
+              await AsyncStorage.setItem('navigationParams', JSON.stringify(params));
+              
+              // 经验值已在复习过程中通过 updateWordProgress 同步到后端
+              console.log('✅ 复习经验值已在复习过程中同步到后端，本次获得:', totalExperience);
+              
+              // 标记需要刷新vocabulary数据
+              await AsyncStorage.setItem('refreshVocabulary', 'true');
+              
+              // 导航回review intro页面
+              navigate('main', { tab: 'review' });
+            }}
+          />
+        </SafeAreaView>
+      );
+    } else {
+      // 普通复习模式使用原有的完成页面
+      return (
+        <SafeAreaView style={{ flex: 1, backgroundColor: colors.background.primary }}>
+          <ReviewCompleteScreen 
+            stats={finalStats || reviewStats}
+            actions={reviewActions}
+            onBack={async () => {
+              // 增加复习次数统计
+              try {
+                // 更新本地存储的复习次数
+                const currentStats = await AsyncStorage.getItem('userStats');
+                if (currentStats) {
+                  const stats = JSON.parse(currentStats);
+                  const updatedStats = {
+                    ...stats,
+                    totalReviews: (stats.totalReviews || 0) + 1
+                  };
+                  await AsyncStorage.setItem('userStats', JSON.stringify(updatedStats));
+                  console.log('✅ 本地复习次数已更新:', updatedStats.totalReviews);
+                }
+                
+                // 同步到后端
+                const token = await AsyncStorage.getItem('authToken');
+                if (token) {
+                  // 更新复习次数和连续学习
+                  await fetch(`${API_BASE_URL}/users/stats`, {
+                    method: 'PUT',
+                    headers: {
+                      'Content-Type': 'application/json',
+                      'Authorization': `Bearer ${token}`,
+                    },
+                    body: JSON.stringify({
+                      totalReviews: 1, // 增加1次复习
+                      updateContinuousLearning: true // 标记需要更新连续学习
+                    }),
+                  });
+                  console.log('✅ 复习次数和连续学习已同步到后端');
+                }
+              } catch (error) {
+                console.error('❌ 更新复习次数失败:', error);
               }
-            } catch (error) {
-              console.error('❌ 更新复习次数失败:', error);
-            }
-            
-            // 直接使用 reviewStats 中的经验值，无需存储到本地
-            const totalExperience = reviewStats.experience;
-            
-            // 保存经验值增加参数到AsyncStorage
-            const params = {
-              showExperienceAnimation: true,
-              experienceGained: totalExperience
-            };
-            await AsyncStorage.setItem('navigationParams', JSON.stringify(params));
-            
-            // 经验值已在复习过程中通过 updateWordProgress 同步到后端
-            console.log('✅ 复习经验值已在复习过程中同步到后端，本次获得:', totalExperience);
-            
-            // 标记需要刷新vocabulary数据
-            await AsyncStorage.setItem('refreshVocabulary', 'true');
-            
-            // 导航回review intro页面
-            navigate('main', { tab: 'review' });
-          }}
-        />
-      </SafeAreaView>
-    );
+              
+              // 直接使用 reviewStats 中的经验值，无需存储到本地
+              const totalExperience = reviewStats.experience;
+              
+              // 保存经验值增加参数到AsyncStorage
+              const params = {
+                showExperienceAnimation: true,
+                experienceGained: totalExperience
+              };
+              await AsyncStorage.setItem('navigationParams', JSON.stringify(params));
+              
+              // 经验值已在复习过程中通过 updateWordProgress 同步到后端
+              console.log('✅ 复习经验值已在复习过程中同步到后端，本次获得:', totalExperience);
+              
+              // 标记需要刷新vocabulary数据
+              await AsyncStorage.setItem('refreshVocabulary', 'true');
+              
+              // 导航回review intro页面
+              navigate('main', { tab: 'review' });
+            }}
+          />
+        </SafeAreaView>
+      );
+    }
   }
 
   console.log('ReviewScreen: Rendering Swiper with words length:', words.length, 'swiperIndex:', swiperIndex);
