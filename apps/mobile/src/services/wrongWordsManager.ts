@@ -1,5 +1,8 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { vocabularyLogger } from '../utils/logger';
+import Logger from '../utils/logger';
+
+// 创建页面专用日志器
+const logger = Logger.forPage('WrongWordsManager');
 
 // 错词集合数据结构
 export interface WrongWordsCollection {
@@ -98,10 +101,10 @@ export class WrongWordsManager {
       }
 
       this.isInitialized = true;
-      vocabularyLogger.info(`错词集合初始化完成，共 ${this.collection.wrongWordsSet.size} 个错词`);
+      logger.log(`错词集合初始化完成，共 ${this.collection.wrongWordsSet.size} 个错词`, 'initialize');
     } catch (error) {
       console.error('🔧 WrongWordsManager: 初始化失败', error);
-      vocabularyLogger.error('错词集合初始化失败', error);
+      logger.error('错词集合初始化失败', 'initialize');
       // 初始化失败时从词汇表重新构建
       this.initializeFromVocabulary(vocabulary);
     }
@@ -135,7 +138,14 @@ export class WrongWordsManager {
       }
     });
     
-    vocabularyLogger.info(`从词汇表初始化错词集合，共 ${this.collection.wrongWordsSet.size} 个错词`);
+    // 立即保存到本地存储
+    this.saveToStorage().then(() => {
+      console.log('🔧 WrongWordsManager: 错词集合已保存到本地存储');
+    }).catch(error => {
+      console.error('🔧 WrongWordsManager: 保存错词集合失败:', error);
+    });
+    
+    logger.log(`从词汇表初始化错词集合，共 ${this.collection.wrongWordsSet.size} 个错词`, 'initializeFromVocabulary');
   }
 
   /**
@@ -146,8 +156,8 @@ export class WrongWordsManager {
     const incorrectCount = word.incorrectCount || 0;
     const consecutiveIncorrect = word.consecutiveIncorrect || 0;
     
-    // 连续答对3次后从错词卡移除
-    if (consecutiveCorrect >= 3) {
+    // 连续答对2次后从错词卡移除（降低阈值，让用户更容易从错词卡中移除）
+    if (consecutiveCorrect >= 2) {
       console.log(`🔍 WrongWordsManager: ${word.word} 连续答对${consecutiveCorrect}次，不是错词`);
       return false;
     }
@@ -204,7 +214,7 @@ export class WrongWordsManager {
     });
 
     console.log(`🔧 WrongWordsManager: 成功添加错词 ${word}，当前错词总数: ${this.collection.statistics.totalWrongWords}`);
-    vocabularyLogger.info(`添加错词: ${word}，当前错词总数: ${this.collection.statistics.totalWrongWords}`);
+    logger.log(`添加错词: ${word}，当前错词总数: ${this.collection.statistics.totalWrongWords}`, 'addWrongWord');
     
     // 保存到本地存储
     this.saveToStorage().catch(error => {
@@ -241,7 +251,7 @@ export class WrongWordsManager {
       timestamp: Date.now() 
     });
 
-    vocabularyLogger.info(`移除错词: ${word}，原因: ${reason}，当前错词总数: ${this.collection.statistics.totalWrongWords}`);
+    logger.log(`移除错词: ${word}，原因: ${reason}，当前错词总数: ${this.collection.statistics.totalWrongWords}`, 'removeWrongWord');
     
     // 保存到本地存储
     this.saveToStorage().catch(error => {
@@ -278,9 +288,9 @@ export class WrongWordsManager {
       
       console.log(`🔧 WrongWordsManager: ${word} 答对了，连续正确次数: ${wordInfo.consecutiveCorrect}`);
       
-      // 连续答对3次后移除
-      if (wordInfo.consecutiveCorrect >= 3) {
-        console.log(`🔧 WrongWordsManager: ${word} 连续答对3次，从错词集合移除`);
+      // 连续答对2次后移除（降低阈值）
+      if (wordInfo.consecutiveCorrect >= 2) {
+        console.log(`🔧 WrongWordsManager: ${word} 连续答对2次，从错词集合移除`);
         this.removeWrongWord(word, 'consecutiveCorrect');
         return;
       }
@@ -317,7 +327,7 @@ export class WrongWordsManager {
       consecutiveIncorrect: wordInfo.consecutiveIncorrect,
       incorrectCount: wordInfo.incorrectCount
     });
-    vocabularyLogger.debug(`更新错词: ${word}，正确: ${isCorrect}，连续正确: ${wordInfo.consecutiveCorrect}`);
+    logger.log(`更新错词: ${word}，正确: ${isCorrect}，连续正确: ${wordInfo.consecutiveCorrect}`, 'updateWrongWord');
     
     // 保存到本地存储
     this.saveToStorage().catch(error => {
@@ -377,7 +387,7 @@ export class WrongWordsManager {
     this.collection.statistics.totalWrongWords = 0;
     this.collection.statistics.lastUpdated = new Date();
 
-    vocabularyLogger.info(`清空错词集合，原数量: ${oldSize}`);
+    logger.log(`清空错词集合，原数量: ${oldSize}`, 'clearWrongWords');
   }
 
   /**
@@ -411,7 +421,7 @@ export class WrongWordsManager {
         try {
           callback(data);
         } catch (error) {
-          vocabularyLogger.error(`错词事件回调执行失败: ${event}`, error);
+          logger.error(`错词事件回调执行失败: ${event}`, 'publishEvent');
         }
       });
     }
@@ -430,9 +440,9 @@ export class WrongWordsManager {
       };
 
       await AsyncStorage.setItem('wrong_words_collection', JSON.stringify(dataToSave));
-      vocabularyLogger.debug('错词集合已保存到本地存储');
+      logger.log('错词集合已保存到本地存储', 'saveToStorage');
     } catch (error) {
-      vocabularyLogger.error('保存错词集合到本地存储失败', error);
+      logger.error('保存错词集合到本地存储失败', 'saveToStorage');
     }
   }
 
@@ -452,10 +462,10 @@ export class WrongWordsManager {
           lastUpdated: new Date(parsedData.statistics?.lastUpdated || Date.now())
         };
 
-        vocabularyLogger.info(`从本地存储加载错词集合，共 ${this.collection.wrongWordsSet.size} 个错词`);
+        logger.log(`从本地存储加载错词集合，共 ${this.collection.wrongWordsSet.size} 个错词`, 'loadFromStorage');
       }
     } catch (error) {
-      vocabularyLogger.error('从本地存储加载错词集合失败', error);
+      logger.error('从本地存储加载错词集合失败', 'loadFromStorage');
     }
   }
 
@@ -472,16 +482,39 @@ export class WrongWordsManager {
   }
 
   /**
+   * 调试方法：打印错词管理器的详细状态
+   */
+  debugStatus(): void {
+    console.log('🔧 WrongWordsManager 调试信息:');
+    console.log('  - 是否已初始化:', this.isInitialized);
+    console.log('  - 错词总数:', this.collection.statistics.totalWrongWords);
+    console.log('  - 错词列表:', Array.from(this.collection.wrongWordsSet));
+    console.log('  - 统计信息:', this.collection.statistics);
+    
+    // 打印每个错词的详细信息
+    this.collection.wrongWordsMap.forEach((info, word) => {
+      console.log(`  - ${word}:`, {
+        incorrectCount: info.incorrectCount,
+        consecutiveIncorrect: info.consecutiveIncorrect,
+        consecutiveCorrect: info.consecutiveCorrect,
+        reviewCount: info.reviewCount,
+        addedAt: info.addedAt,
+        lastReviewed: info.lastReviewed
+      });
+    });
+  }
+
+  /**
    * 清除本地存储缓存
    */
   async clearStorage(): Promise<void> {
     try {
       await AsyncStorage.removeItem('wrong_words_collection');
       console.log('🔧 WrongWordsManager: 本地存储缓存已清除');
-      vocabularyLogger.info('错词集合本地存储缓存已清除');
+      logger.log('错词集合本地存储缓存已清除', 'clearStorage');
     } catch (error) {
       console.error('🔧 WrongWordsManager: 清除缓存失败', error);
-      vocabularyLogger.error('清除错词集合缓存失败', error);
+      logger.error('清除错词集合缓存失败', 'clearStorage');
     }
   }
 
@@ -508,7 +541,7 @@ export class WrongWordsManager {
     this.isInitialized = false;
     
     console.log('🔧 WrongWordsManager: 错词集合重置完成');
-    vocabularyLogger.info('错词集合已重置');
+    logger.log('错词集合已重置', 'reset');
   }
 }
 
