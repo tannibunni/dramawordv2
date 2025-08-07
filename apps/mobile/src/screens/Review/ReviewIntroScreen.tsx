@@ -11,19 +11,26 @@ import { useAuth } from '../../context/AuthContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_BASE_URL } from '../../constants/config';
 import { colors } from '../../constants/colors';
-import { wrongWordLogger, experienceLogger, userDataLogger, vocabularyLogger } from '../../utils/logger';
+import Logger from '../../utils/logger';
 import { SyncStatusIndicator } from '../../components/common/SyncStatusIndicator';
+
+// 创建页面专用日志器
+const logger = Logger.forPage('ReviewIntroScreen');
 import { wrongWordsManager } from '../../services/wrongWordsManager';
 import { animationManager } from '../../services/animationManager';
 import { unifiedSyncService } from '../../services/unifiedSyncService';
 import { ExperienceLogic } from '../../utils/conditionalLogic';
 
 const ReviewIntroScreen = () => {
-  const { vocabulary, refreshLearningProgress } = useVocabulary();
+  const vocabularyContext = useVocabulary();
   const { shows } = useShowList();
   const { navigate } = useNavigation();
   const { appLanguage } = useAppLanguage();
   const { user } = useAuth();
+  
+  // 安全检查，确保vocabularyContext存在
+  const vocabulary = vocabularyContext?.vocabulary || [];
+  const refreshLearningProgress = vocabularyContext?.refreshLearningProgress || (() => Promise.resolve());
   
   const todayCount = vocabulary?.length || 0;
   // 计算真实的错词数量 - 从用户词汇表中获取学习记录数据
@@ -99,20 +106,20 @@ const ReviewIntroScreen = () => {
         const gainAppliedKey = await storageUtils.experience.getGainApplied();
         if (!ExperienceLogic.shouldApplyExperienceGain(gainData, gainAppliedKey)) {
           if (ExperienceLogic.isExperienceGainApplied(gainAppliedKey)) {
-            experienceLogger.info('经验值增益已应用过，跳过重复计算', { currentExperience });
+            logger.info('经验值增益已应用过，跳过重复计算', { currentExperience });
           }
           return currentExperience;
         }
         
         // 验证经验值增益的有效性
         if (!ExperienceLogic.isValidExperienceGain(gainData)) {
-          experienceLogger.warn('经验值增益数据无效', { gainData });
+          logger.warn('经验值增益数据无效', { gainData });
           return currentExperience;
         }
         
         // 此时gainData已经验证为有效，确保不为null
         if (!gainData) {
-          experienceLogger.warn('经验值增益数据为空');
+          logger.warn('经验值增益数据为空');
           return currentExperience;
         }
         
@@ -122,7 +129,7 @@ const ReviewIntroScreen = () => {
         // 标记为已应用
         await storageUtils.experience.setGainApplied(Date.now().toString());
         
-        experienceLogger.info('应用经验值增益', {
+        logger.info('应用经验值增益', {
           currentExperience,
           gainedExp,
           finalExperience,
@@ -131,7 +138,7 @@ const ReviewIntroScreen = () => {
         
         return finalExperience;
       } catch (error) {
-        experienceLogger.error('检查并应用经验值增益失败', error);
+        logger.error('检查并应用经验值增益失败', error);
         return currentExperience;
       }
     },
@@ -140,9 +147,9 @@ const ReviewIntroScreen = () => {
     async clearExperienceGainStatus(): Promise<void> {
       try {
         await storageUtils.experience.clearAll();
-        experienceLogger.info('清理经验值增益状态');
+        logger.info('清理经验值增益状态');
       } catch (error) {
-        experienceLogger.error('清理经验值增益状态失败', error);
+        logger.error('清理经验值增益状态失败', error);
       }
     },
     
@@ -152,9 +159,9 @@ const ReviewIntroScreen = () => {
         await storageUtils.experience.setGain(gainedExp);
         // 清除之前的应用状态
         await storageUtils.experience.removeGainApplied();
-        experienceLogger.info('设置新的经验值增益', { gainedExp });
+        logger.info('设置新的经验值增益', { gainedExp });
       } catch (error) {
-        experienceLogger.error('设置经验值增益失败', error);
+        logger.error('设置经验值增益失败', error);
       }
     }
   };
@@ -181,29 +188,53 @@ const ReviewIntroScreen = () => {
       if (vocabulary && vocabulary.length > 0) {
         console.log('🔍 ReviewIntroScreen: 开始计算错词数量');
         console.log('🔍 vocabulary 总数:', vocabulary.length);
+        console.log('🔍 vocabulary 数据结构示例:', vocabulary[0]);
         
-        // 使用错词管理器计算错词数量
+        // 直接使用本地筛选逻辑计算错词数量
         const localWrongWords = vocabulary.filter((word: any) => {
-            console.log(`🔍 ReviewIntroScreen 检查单词: ${word.word}`, {
-              incorrectCount: word.incorrectCount,
-              consecutiveIncorrect: word.consecutiveIncorrect,
-              consecutiveCorrect: word.consecutiveCorrect,
-              isWrongWord: wrongWordsManager.checkIsWrongWord(word)
-            });
-            return wrongWordsManager.checkIsWrongWord(word);
+          const consecutiveCorrect = word.consecutiveCorrect || 0;
+          const incorrectCount = word.incorrectCount || 0;
+          const consecutiveIncorrect = word.consecutiveIncorrect || 0;
+          
+          // 连续答对2次后从错词卡移除
+          if (consecutiveCorrect >= 2) {
+            console.log(`🔍 ReviewIntroScreen 检查单词: ${word.word} - 连续答对${consecutiveCorrect}次，不是错词`);
+            return false;
+          }
+          
+          // 有答错记录或连续答错
+          const isWrong = incorrectCount > 0 || consecutiveIncorrect > 0;
+          console.log(`🔍 ReviewIntroScreen 检查单词: ${word.word}`, {
+            incorrectCount,
+            consecutiveIncorrect,
+            consecutiveCorrect,
+            isWrongWord: isWrong
           });
+          return isWrong;
+        });
         
         console.log(`🔍 ReviewIntroScreen: 错词数量计算结果: ${localWrongWords.length}`);
-        setWrongWordsCount(localWrongWords.length);
+        console.log('🔍 错词列表:', localWrongWords.map(w => w.word));
+        // 使用setTimeout来避免在useInsertionEffect中调用setState
+        setTimeout(() => {
+          setWrongWordsCount(localWrongWords.length);
+        }, 0);
         return;
       }
 
       // 如果本地vocabulary为空，直接设置为0，不依赖云端数据
       console.log('🔍 ReviewIntroScreen: vocabulary为空，错词数量设为0');
-      setWrongWordsCount(0);
+      // 使用setTimeout来避免在useInsertionEffect中调用setState
+      setTimeout(() => {
+        setWrongWordsCount(0);
+      }, 0);
     } catch (error) {
       console.error('🔍 ReviewIntroScreen: 手动刷新错词数量失败', error);
-      wrongWordLogger.error('手动刷新错词数量失败', error);
+      logger.error('手动刷新错词数量失败', error);
+      // 使用setTimeout来避免在useInsertionEffect中调用setState
+      setTimeout(() => {
+        setWrongWordsCount(0);
+      }, 0);
     }
   };
   
@@ -215,34 +246,60 @@ const ReviewIntroScreen = () => {
         if (vocabulary && vocabulary.length > 0) {
           console.log('🔍 ReviewIntroScreen useEffect: 开始计算错词数量');
           console.log('🔍 vocabulary 总数:', vocabulary.length);
+          console.log('🔍 vocabulary 数据结构示例:', vocabulary[0]);
           
-          // 使用错词管理器计算错词数量
+          // 直接使用本地筛选逻辑计算错词数量
           const localWrongWords = vocabulary.filter((word: any) => {
+            const consecutiveCorrect = word.consecutiveCorrect || 0;
+            const incorrectCount = word.incorrectCount || 0;
+            const consecutiveIncorrect = word.consecutiveIncorrect || 0;
+            
+            // 连续答对2次后从错词卡移除
+            if (consecutiveCorrect >= 2) {
+              console.log(`🔍 ReviewIntroScreen 检查单词: ${word.word} - 连续答对${consecutiveCorrect}次，不是错词`);
+              return false;
+            }
+            
+            // 有答错记录或连续答错
+            const isWrong = incorrectCount > 0 || consecutiveIncorrect > 0;
             console.log(`🔍 ReviewIntroScreen 检查单词: ${word.word}`, {
-              incorrectCount: word.incorrectCount,
-              consecutiveIncorrect: word.consecutiveIncorrect,
-              consecutiveCorrect: word.consecutiveCorrect,
-              isWrongWord: wrongWordsManager.checkIsWrongWord(word)
+              incorrectCount,
+              consecutiveIncorrect,
+              consecutiveCorrect,
+              isWrongWord: isWrong
             });
-            return wrongWordsManager.checkIsWrongWord(word);
+            return isWrong;
           });
           
           console.log(`🔍 ReviewIntroScreen useEffect: 错词数量计算结果: ${localWrongWords.length}`);
-          setWrongWordsCount(localWrongWords.length);
+          console.log('🔍 错词列表:', localWrongWords.map(w => w.word));
+          // 使用setTimeout来避免在useInsertionEffect中调用setState
+          setTimeout(() => {
+            setWrongWordsCount(localWrongWords.length);
+          }, 0);
           return;
         }
 
         // 如果本地vocabulary为空，直接设置为0，不依赖云端数据
         console.log('🔍 ReviewIntroScreen useEffect: vocabulary为空，错词数量设为0');
-        setWrongWordsCount(0);
+        // 使用setTimeout来避免在useInsertionEffect中调用setState
+        setTimeout(() => {
+          setWrongWordsCount(0);
+        }, 0);
       } catch (error) {
         console.error('🔍 ReviewIntroScreen useEffect: 获取错词数量失败', error);
-        wrongWordLogger.error('获取错词数量失败', error);
-        setWrongWordsCount(0);
+        logger.error('获取错词数量失败', error);
+        // 使用setTimeout来避免在useInsertionEffect中调用setState
+        setTimeout(() => {
+          setWrongWordsCount(0);
+        }, 0);
       }
     };
 
-    fetchWrongWordsCount();
+    // 使用setTimeout来避免在useInsertionEffect中调用setState
+    setTimeout(() => {
+      fetchWrongWordsCount();
+    }, 0);
   }, [vocabulary]); // 当vocabulary变化时重新获取，确保数据同步
   
   // 状态管理
@@ -289,11 +346,11 @@ const ReviewIntroScreen = () => {
   useEffect(() => {
     setHasCheckedExperience(false);
     setIsProgressBarAnimating(false); // 同时重置动画状态
-    experienceLogger.info('重置经验值检查状态和动画状态');
+    logger.info('重置经验值检查状态和动画状态');
     
     // 延迟检查经验值动画，确保所有状态都已加载
     const timer = setTimeout(() => {
-      experienceLogger.info('延迟检查经验值动画');
+      logger.info('延迟检查经验值动画');
       checkForExperienceGain();
     }, 1000);
     
@@ -333,7 +390,7 @@ const ReviewIntroScreen = () => {
         
         // 如果正在进行经验值动画或同步，跳过加载
         if (isProgressBarAnimating || isSyncingExperience) {
-          experienceLogger.info('经验值动画或同步进行中，跳过数据加载');
+          logger.info('经验值动画或同步进行中，跳过数据加载');
           return;
         }
         
@@ -341,7 +398,7 @@ const ReviewIntroScreen = () => {
         
         // 如果已经检查过经验值增益，只加载用户统计
         if (hasCheckedExperience) {
-          experienceLogger.info('已检查过经验值增益，只加载用户统计');
+          logger.info('已检查过经验值增益，只加载用户统计');
           await loadUserStats();
           return;
         }
@@ -349,7 +406,7 @@ const ReviewIntroScreen = () => {
         // 检查是否有经验值增益标记
         const gainData = await AsyncStorage.getItem('experienceGain');
         if (gainData) {
-          experienceLogger.info('检测到经验值增益标记，优先处理经验值动画');
+          logger.info('检测到经验值增益标记，优先处理经验值动画');
           await checkForExperienceGain();
           return;
         }
@@ -367,7 +424,7 @@ const ReviewIntroScreen = () => {
         }
         
       } catch (error) {
-        experienceLogger.error('统一数据加载失败', error);
+        logger.error('统一数据加载失败', error);
         hasLoaded = false; // 出错时重置标记
       }
     };
@@ -395,7 +452,7 @@ const ReviewIntroScreen = () => {
     const checkRefreshVocabulary = async () => {
       const refreshFlag = await AsyncStorage.getItem('refreshVocabulary');
       if (refreshFlag === 'true') {
-        vocabularyLogger.info('检测到vocabulary刷新标记，重新加载数据');
+        logger.info('检测到vocabulary刷新标记，重新加载数据');
         await AsyncStorage.removeItem('refreshVocabulary');
         // 触发vocabulary重新加载
         await refreshLearningProgress();
@@ -410,7 +467,7 @@ const ReviewIntroScreen = () => {
     try {
       // 改进的同步锁机制 - 防止重复加载
       if (isSyncingExperience || isProgressBarAnimating) {
-        userDataLogger.info('经验值同步或动画进行中，跳过用户统计加载');
+        logger.info('经验值同步或动画进行中，跳过用户统计加载');
         return;
       }
       
@@ -424,14 +481,14 @@ const ReviewIntroScreen = () => {
         const timeDiff = Date.now() - completedTime;
         // 如果动画完成时间在10秒内，保护经验值
         if (timeDiff < 10 * 1000) {
-          userDataLogger.info('经验值动画刚刚完成，保护经验值不被覆盖', { timeDiff });
+          logger.info('经验值动画刚刚完成，保护经验值不被覆盖', { timeDiff });
           
           // 获取最新的用户统计数据，确保经验值是最新的
           const currentStatsData = await AsyncStorage.getItem('userStats');
           if (currentStatsData) {
             try {
               const currentStats = JSON.parse(currentStatsData);
-              userDataLogger.info('使用保护的最新经验值', {
+              logger.info('使用保护的最新经验值', {
                 protectedExperience: currentStats.experience
               });
               
@@ -453,7 +510,7 @@ const ReviewIntroScreen = () => {
               setIsSyncingExperience(false);
               return;
             } catch (error) {
-              userDataLogger.error('解析保护的经验值失败', error);
+              logger.error('解析保护的经验值失败', error);
             }
           }
           
@@ -462,7 +519,7 @@ const ReviewIntroScreen = () => {
         }
       }
       
-      userDataLogger.info('开始加载用户统计数据');
+      logger.info('开始加载用户统计数据');
       
       // 优先使用本地数据
       const localStatsData = await storageUtils.user.getStats();
@@ -481,7 +538,7 @@ const ReviewIntroScreen = () => {
           try {
             const gainedExp = JSON.parse(gainData) as number;
             const totalExperience = safeExperience + gainedExp;
-            experienceLogger.info('应用新的经验值增益', {
+            logger.info('应用新的经验值增益', {
               currentExperience: safeExperience,
               gainedExp,
               totalExperience
@@ -497,7 +554,7 @@ const ReviewIntroScreen = () => {
             
             return updatedStats;
           } catch (error) {
-            experienceLogger.error('解析经验值增益失败', error);
+            logger.error('解析经验值增益失败', error);
           }
         }
         
@@ -506,7 +563,7 @@ const ReviewIntroScreen = () => {
           experience: safeExperience
         };
         
-        userDataLogger.info('从本地存储加载统计数据', updatedStats);
+        logger.info('从本地存储加载统计数据', updatedStats);
         setUserStats(updatedStats);
         setAnimatedExperience(updatedStats.experience);
         setAnimatedCollectedWords(vocabulary?.length || 0);
@@ -529,7 +586,7 @@ const ReviewIntroScreen = () => {
       // 如果本地没有数据，才从后端获取
       const userId = await getUserId();
       if (!userId) {
-        userDataLogger.warn('用户未登录，初始化默认数据');
+        logger.warn('用户未登录，初始化默认数据');
         
         // 初始化默认数据
         const defaultStats = {
@@ -540,7 +597,7 @@ const ReviewIntroScreen = () => {
           totalReviews: 0,
           currentStreak: 0
         };
-        userDataLogger.info('初始化默认统计数据', defaultStats);
+        logger.info('初始化默认统计数据', defaultStats);
         setUserStats(defaultStats);
         setAnimatedExperience(0);
         setAnimatedCollectedWords(vocabulary?.length || 0);
@@ -558,7 +615,7 @@ const ReviewIntroScreen = () => {
       }
       
       // 遵循多邻国原则：以本地数据为准，不主动拉取服务器数据
-      userDataLogger.info('本地无数据但用户已登录，遵循多邻国原则以本地数据为准');
+      logger.info('本地无数据但用户已登录，遵循多邻国原则以本地数据为准');
       
       // 初始化默认数据（用户已登录但本地无数据的情况）
       const defaultStats = {
@@ -569,7 +626,7 @@ const ReviewIntroScreen = () => {
         totalReviews: 0,
         currentStreak: 0
       };
-      userDataLogger.info('初始化默认统计数据（用户已登录）', defaultStats);
+      logger.info('初始化默认统计数据（用户已登录）', defaultStats);
       setUserStats(defaultStats);
       setAnimatedExperience(0);
       setAnimatedCollectedWords(vocabulary?.length || 0);
@@ -584,7 +641,7 @@ const ReviewIntroScreen = () => {
       
       await storageUtils.user.setStats(defaultStats);
     } catch (error) {
-      userDataLogger.error('加载用户统计数据失败', error);
+      logger.error('加载用户统计数据失败', error);
     } finally {
       // 释放同步锁
       setIsSyncingExperience(false);
@@ -620,14 +677,14 @@ const ReviewIntroScreen = () => {
           const updatedStats = JSON.parse(updatedStatsStr);
           setUserStats(updatedStats);
           setAnimatedExperience(updatedStats.experience);
-          userDataLogger.info('增量同步完成，数据已更新');
+          logger.info('增量同步完成，数据已更新');
         }
       } else {
         // 无待同步变更，遵循多邻国原则：以本地数据为准，不主动拉取服务器数据
-        userDataLogger.info('无待同步变更，以本地数据为准');
+        logger.info('无待同步变更，以本地数据为准');
       }
     } catch (error) {
-      userDataLogger.warn('增量同步失败，继续使用本地数据', error);
+      logger.warn('增量同步失败，继续使用本地数据', error);
     }
   };
 
@@ -636,13 +693,13 @@ const ReviewIntroScreen = () => {
     try {
       const userId = await getUserId();
       if (!userId) {
-        userDataLogger.info('用户未登录，跳过启动时同步');
+        logger.info('用户未登录，跳过启动时同步');
         return;
       }
       
       const userDataStr = await storageUtils.user.getData();
       if (!userDataStr) {
-        userDataLogger.info('无用户数据，跳过启动时同步');
+        logger.info('无用户数据，跳过启动时同步');
         return;
       }
       
@@ -650,12 +707,12 @@ const ReviewIntroScreen = () => {
       const token = userData.token;
       
       if (!token) {
-        userDataLogger.info('无用户token，跳过启动时同步');
+        logger.info('无用户token，跳过启动时同步');
         return;
       }
       
       // 严格遵循多邻国原则：只同步本地数据到后端，绝不拉取服务器数据
-      userDataLogger.info('启动时同步本地数据到后端（仅上传，不下载）');
+      logger.info('启动时同步本地数据到后端（仅上传，不下载）');
       
       // 获取本地数据
       const localStatsData = await storageUtils.user.getStats();
@@ -674,12 +731,12 @@ const ReviewIntroScreen = () => {
         // 执行同步 - 只上传本地数据
         await unifiedSyncService.syncPendingData();
         
-        userDataLogger.info('启动时同步本地数据到后端完成（仅上传）');
+        logger.info('启动时同步本地数据到后端完成（仅上传）');
       } else {
-        userDataLogger.info('本地无数据，跳过启动时同步');
+        logger.info('本地无数据，跳过启动时同步');
       }
     } catch (error) {
-      userDataLogger.warn('启动时同步本地数据到后端失败', error);
+      logger.warn('启动时同步本地数据到后端失败', error);
     }
   };
 
@@ -716,7 +773,7 @@ const ReviewIntroScreen = () => {
       
       // 如果距离上次同步不到5分钟，跳过同步
       if (timeSinceLastSync < 5 * 60 * 1000) {
-        userDataLogger.info('距离上次同步时间过短，跳过本次同步');
+        logger.info('距离上次同步时间过短，跳过本次同步');
         return;
       }
       
@@ -825,9 +882,9 @@ const ReviewIntroScreen = () => {
       // 记录本次同步时间
       await AsyncStorage.setItem('lastSyncTime', now.toString());
       
-      userDataLogger.info('智能定时同步本地数据到后端成功（通过多邻国数据同步方案）');
+      logger.info('智能定时同步本地数据到后端成功（通过多邻国数据同步方案）');
     } catch (error) {
-      userDataLogger.warn('智能定时同步本地数据到后端失败', error);
+      logger.warn('智能定时同步本地数据到后端失败', error);
     }
   };
 
@@ -974,7 +1031,7 @@ const ReviewIntroScreen = () => {
     try {
       // 防止重复检查
       if (hasCheckedExperience || isSyncingExperience || isProgressBarAnimating) {
-        experienceLogger.info('已检查过经验值增益或正在同步/动画，跳过重复检查');
+        logger.info('已检查过经验值增益或正在同步/动画，跳过重复检查');
         return;
       }
       
@@ -983,14 +1040,14 @@ const ReviewIntroScreen = () => {
       
       // 检查是否有经验值增加的参数
       const navigationParams = await AsyncStorage.getItem('navigationParams');
-      experienceLogger.info('检查navigationParams:', navigationParams);
+      logger.info('检查navigationParams:', navigationParams);
       
       if (navigationParams) {
         const params = JSON.parse(navigationParams);
-        experienceLogger.info('解析的params:', params);
+        logger.info('解析的params:', params);
         
         if (params.showExperienceAnimation) {
-          experienceLogger.info('满足经验值动画条件，开始处理', {
+          logger.info('满足经验值动画条件，开始处理', {
             experienceGained: params.experienceGained
           });
           
@@ -1007,7 +1064,7 @@ const ReviewIntroScreen = () => {
           if (localUserData) {
             const { currentExperience, userStats: updatedStats } = localUserData;
             
-            experienceLogger.info('使用本地数据开始经验值动画', {
+            logger.info('使用本地数据开始经验值动画', {
               currentExperience: currentExperience,
               gainedExperience: params.experienceGained,
               targetExperience: currentExperience + params.experienceGained
@@ -1028,24 +1085,24 @@ const ReviewIntroScreen = () => {
               setIsSyncingExperience(false);
             }, 3000);
           } else {
-            experienceLogger.warn('无法获取本地用户数据，跳过经验值动画');
+            logger.warn('无法获取本地用户数据，跳过经验值动画');
             setIsSyncingExperience(false);
           }
           
         } else {
-          experienceLogger.info('不满足经验值动画条件', {
+          logger.info('不满足经验值动画条件', {
             showExperienceAnimation: params.showExperienceAnimation,
             experienceGained: params.experienceGained
           });
         }
       } else {
-        experienceLogger.info('没有找到navigationParams');
+        logger.info('没有找到navigationParams');
       }
       
       // 标记已检查过经验值
       setHasCheckedExperience(true);
     } catch (error) {
-      experienceLogger.error('检查经验值增益失败', error);
+      logger.error('检查经验值增益失败', error);
       setHasCheckedExperience(true);
     } finally {
       // 释放同步锁
@@ -1069,7 +1126,7 @@ const ReviewIntroScreen = () => {
             const gainedExp = JSON.parse(gainData);
             // 动画起点应该是当前经验值（不包括即将获得的经验值）
             finalExperience = Math.max(0, finalExperience - gainedExp);
-            experienceLogger.info('使用本地数据计算动画起点', {
+            logger.info('使用本地数据计算动画起点', {
               localExp: stats.experience,
               gainedExp,
               animationStartExp: finalExperience
@@ -1083,10 +1140,10 @@ const ReviewIntroScreen = () => {
       }
       
       // 如果本地没有数据，才从后端获取（作为备选方案）
-      experienceLogger.info('本地无数据，从后端获取用户数据');
+      logger.info('本地无数据，从后端获取用户数据');
       return await getCurrentUserData();
     } catch (error) {
-      experienceLogger.error('获取本地用户数据失败', error);
+      logger.error('获取本地用户数据失败', error);
       return null;
     }
   };
@@ -1101,7 +1158,7 @@ const ReviewIntroScreen = () => {
         // 使用本地经验值重复计算防止器，防止重复计算
         const finalExperience = await localExperienceDuplicationPreventer.checkAndApplyExperienceGain(stats.experience || 0);
         
-        experienceLogger.info('使用本地数据获取用户信息', {
+        logger.info('使用本地数据获取用户信息', {
           localExperience: stats.experience,
           finalExperience
         });
@@ -1113,10 +1170,10 @@ const ReviewIntroScreen = () => {
       }
       
       // 如果本地没有数据，返回默认值而不是从后端获取
-      experienceLogger.info('本地无数据，返回默认值');
+      logger.info('本地无数据，返回默认值');
       return null;
     } catch (error) {
-      experienceLogger.error('获取本地用户数据失败', error);
+      logger.error('获取本地用户数据失败', error);
       return null;
     }
   };
@@ -1131,7 +1188,7 @@ const ReviewIntroScreen = () => {
     
     // 更新状态值
     setProgressBarValue(toProgress);
-    experienceLogger.info('统一进度条动画完成', { fromProgress, toProgress });
+    logger.info('统一进度条动画完成', { fromProgress, toProgress });
   };
 
 
@@ -1139,7 +1196,7 @@ const ReviewIntroScreen = () => {
   // 已禁用：从后端加载数据（违反多邻国原则）
   // 遵循多邻国原则：应用以本地数据为准，不主动从后端拉取数据
   const loadBackendData = async () => {
-    userDataLogger.info('loadBackendData 函数已禁用，遵循多邻国原则使用本地数据');
+    logger.info('loadBackendData 函数已禁用，遵循多邻国原则使用本地数据');
     // 此函数已被禁用，不再从后端拉取数据
     // 所有数据操作都基于本地存储，确保用户数据的一致性
   };
@@ -1171,7 +1228,7 @@ const ReviewIntroScreen = () => {
       level: newLevel
     });
     
-    experienceLogger.info('开始统一经验值动画', {
+    logger.info('开始统一经验值动画', {
       oldExperience,
       newExperience,
       gainedExp,
@@ -1223,7 +1280,7 @@ const ReviewIntroScreen = () => {
         // 设置一个标记，防止后续的数据加载覆盖刚刚更新的经验值
         AsyncStorage.setItem('experienceAnimationCompleted', Date.now().toString());
         
-        experienceLogger.info('统一经验值动画完成', {
+        logger.info('统一经验值动画完成', {
           newExperience: newExperience,
           newLevel: newLevel,
           finalProgress
@@ -1250,7 +1307,7 @@ const ReviewIntroScreen = () => {
       level: newLevel
     });
     
-    experienceLogger.info('开始统一经验值动画（指定当前经验值）', {
+    logger.info('开始统一经验值动画（指定当前经验值）', {
       oldExperience,
       newExperience,
       gainedExp,
@@ -1295,7 +1352,7 @@ const ReviewIntroScreen = () => {
             experience: newExperience
           };
           
-          experienceLogger.info('更新用户统计状态（动画完成）', {
+          logger.info('更新用户统计状态（动画完成）', {
             oldExperience: prevStats.experience,
             newExperience,
             gainedExp
@@ -1313,7 +1370,7 @@ const ReviewIntroScreen = () => {
         // 设置一个标记，防止后续的数据加载覆盖刚刚更新的经验值
         AsyncStorage.setItem('experienceAnimationCompleted', Date.now().toString());
         
-        experienceLogger.info('统一经验值动画完成（指定当前经验值）', {
+        logger.info('统一经验值动画完成（指定当前经验值）', {
           newExperience: newExperience,
           finalProgress
         });
@@ -1526,6 +1583,18 @@ const ReviewIntroScreen = () => {
   // 在组件顶部添加常量
   const EMPTY_SECTION_HEIGHT = 120;
 
+  // 组件初始化时立即计算错词数量
+  useEffect(() => {
+    console.log('🔍 ReviewIntroScreen: 组件初始化，立即计算错词数量');
+    console.log('🔍 vocabulary 状态:', vocabulary ? `有${vocabulary.length}个单词` : '无数据');
+    if (vocabulary && vocabulary.length > 0) {
+      // 使用setTimeout来避免在useInsertionEffect中调用setState
+      setTimeout(() => {
+        refreshWrongWordsCount();
+      }, 0);
+    }
+  }, []); // 只在组件初始化时执行一次
+
   return (
     <View style={styles.container}>
       <SyncStatusIndicator visible={true} />
@@ -1698,7 +1767,11 @@ const ReviewIntroScreen = () => {
               </TouchableOpacity>
             </View>
             <Text style={styles.challengeCardSubtitle}>
-              {t('wrong_words_count', { count: wrongWordsCount })}
+              {wrongWordsCount > 0 
+                ? `${t('wrong_words_count', { count: wrongWordsCount })}`
+                : '暂无错词，继续学习吧！'
+              }
+              {'\n'}🔍 调试: {vocabulary?.length || 0}个单词
             </Text>
             <View style={styles.challengeCardFooter}>
               <Text style={styles.challengeCardExp}>+20 {t('exp_gained')}</Text>
