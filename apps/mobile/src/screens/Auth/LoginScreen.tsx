@@ -397,8 +397,11 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
       // 调用后端登录API，传递完整的用户信息
       const loginData = {
         idToken: credential.identityToken,
-        email: credential.email,
-        fullName: credential.fullName,
+        email: credential.email || undefined,
+        fullName: credential.fullName ? {
+          givenName: credential.fullName.givenName || undefined,
+          familyName: credential.fullName.familyName || undefined,
+        } : undefined,
       };
       const result = await AppleService.login(loginData);
       
@@ -622,9 +625,9 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
           }
         } catch (error) {
           console.error('💬 ===== 微信回调处理失败 =====');
-          console.error('💬 错误类型:', error.constructor.name);
-          console.error('💬 错误消息:', error.message);
-          console.error('💬 错误堆栈:', error.stack);
+          console.error('💬 错误类型:', (error as any).constructor?.name || 'Unknown');
+          console.error('💬 错误消息:', (error as any).message || 'Unknown error');
+          console.error('💬 错误堆栈:', (error as any).stack || 'No stack trace');
           Alert.alert('登录失败', '微信登录回调处理失败');
         }
       } else {

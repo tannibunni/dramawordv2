@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import NetInfo from '@react-native-community/netinfo';
 import { API_BASE_URL } from '../constants/config';
-import { experienceManager } from './experienceManager';
+import { experienceManager } from '../screens/Review/services/experienceManager';
 import { guestModeService } from './guestModeService';
 import { tokenValidationService } from './tokenValidationService';
 
@@ -53,7 +53,7 @@ export class UnifiedSyncService {
   private static instance: UnifiedSyncService;
   private syncQueue: SyncData[] = [];
   private isSyncing: boolean = false;
-  private syncTimer: NodeJS.Timeout | null = null;
+  private syncTimer: number | null = null;
   private retryCount: number = 0;
   private lastSyncTime: number = 0;
   private isUserActive: boolean = false;

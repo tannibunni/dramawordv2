@@ -134,6 +134,7 @@ export type TranslationKey =
   | 'no_definition'
   | 'continue_learning_for_suggestions'
   | 'start_learning_to_see_progress'
+  | 'no_learning_data'
   | 'no_learning_records'
   | 'start_learning'
   | 'learning_analytics'
@@ -207,7 +208,126 @@ export type TranslationKey =
   | 'all_languages'
   | 'english_language'
   | 'japanese_language'
-  | 'korean_language';
+  | 'korean_language'
+  
+  // 新增的翻译键（从translationService.ts合并）
+  | 'collected_words'
+  | 'contributed_words'
+  | 'out_of'
+  | 'level_text'
+  | 'collected_vocabulary'
+  | 'cumulative_review'
+  | 'continuous_learning'
+  | 'words_unit'
+  | 'times_unit'
+  | 'days_unit'
+  | 'hello_greeting'
+  | 'review_subtitle'
+  | 'exp_gained'
+  | 'congratulations_exp'
+  | 'level_up_congratulations'
+  | 'add_shows'
+  | 'add_wordbook'
+  | 'challenge_cards'
+  | 'smart_challenge'
+  | 'wrong_words_challenge'
+  | 'wrong_words_count'
+  | 'ebbinghaus_activated'
+  | 'wrong_words_challenge_title'
+  | 'series_review_title'
+  | 'wordbook_review_title'
+  | 'audio_play_failed'
+  | 'audio_play_failed_message'
+  | 'review_complete_message'
+  | 'wrong_words_empty_title'
+  | 'wrong_words_empty_subtitle'
+  | 'start_review'
+  | 'general_empty_subtitle'
+  | 'smart_review_mode'
+  | 'all_review_mode'
+  | 'smart_review_description'
+  | 'all_review_description'
+  | 'switch_to_all'
+  | 'switch_to_smart'
+  | 'language_config_error'
+  | 'query_failed'
+  | 'search_failed'
+  | 'get_word_detail_failed'
+  | 'keep_current_language'
+  | 'target_language'
+  | 'chinese_to_target'
+  | 'badge_unlocked'
+  | 'show_answer'
+  | 'examples'
+  | 'learning_record'
+  | 'search_count'
+  | 'last_learned'
+  | 'search_shows'
+  | 'search_wordbooks'
+  | 'searching'
+  | 'no_results'
+  | 'try_other_keywords'
+  | 'no_shows'
+  | 'no_recommendations'
+  | 'shows_count'
+  | 'watching_status'
+  | 'completed_status'
+  | 'plan_to_watch_status'
+  | 'unknown_status'
+  | 'wordbook'
+  | 'unknown_genre'
+  | 'last_watched'
+  | 'mark_completed'
+  | 'delete_show'
+  | 'delete_confirm'
+  | 'add_to_showlist'
+  | 'already_added'
+  | 'ongoing'
+  | 'finished'
+  | 'no_overview'
+  | 'loading_overview'
+  | 'no_collected_words'
+  | 'word_details'
+  | 'no_wordbooks'
+  | 'no_wordbook_results'
+  | 'try_other_wordbook_keywords'
+  | 'recommendations_tab'
+  | 'shows_tab'
+  | 'wordbooks_tab'
+  | 'not_completed'
+  | 'edit_wordbook'
+  | 'name'
+  | 'description'
+  | 'icon'
+  | 'create'
+  | 'name_required'
+  | 'save_success'
+  | 'save_failed'
+  | 'enable_notifications'
+  | 'notification_permission_required'
+  | 'permission_denied'
+  | 'notifications_enabled'
+  | 'notifications_disabled'
+  | 'review_reminder'
+  | 'daily_review'
+  | 'weekly_review'
+  | 'new_words'
+  | 'streak_reminder'
+  | 'achievement'
+  | 'motivation'
+  | 'review_now'
+  | 'continue_learning'
+  | 'check_progress'
+  | 'daily_goal'
+  | 'weekly_goal'
+  | 'monthly_goal'
+  | 'time_to_review'
+  | 'keep_streak'
+  | 'new_achievement'
+  | 'learning_reminder'
+  | 'vocabulary_growth'
+  | 'practice_makes_perfect'
+  | 'knowledge_power';
 
 // 翻译内容
 export const translations: Record<AppLanguage, Record<TranslationKey, string>> = {
@@ -343,6 +463,7 @@ export const translations: Record<AppLanguage, Record<TranslationKey, string>> =
     no_definition: '暂无释义',
     continue_learning_for_suggestions: '继续学习获取个性化建议',
     start_learning_to_see_progress: '开始学习后这里会显示你的进度',
+    no_learning_data: '暂无学习数据',
     no_learning_records: '还没有学习记录',
     start_learning: '开始学习',
     learning_analytics: '学习分析',
@@ -417,6 +538,124 @@ export const translations: Record<AppLanguage, Record<TranslationKey, string>> =
     english_language: '英语',
     japanese_language: '日语',
     korean_language: '韩语',
+    
+    // 新增的翻译键（从translationService.ts合并）
+    collected_words: '收集单词',
+    contributed_words: '贡献新词',
+    out_of: '共 {total}',
+    level_text: '等级',
+    collected_vocabulary: '已收集词汇',
+    cumulative_review: '累计复习',
+    continuous_learning: '连续学习',
+    words_unit: '个词',
+    times_unit: '次',
+    days_unit: '天',
+    hello_greeting: 'HELLO，',
+    review_subtitle: '最近都收集了啥单词？我们来回顾一下吧',
+    exp_gained: '经验值',
+    congratulations_exp: '恭喜获得经验值！',
+    level_up_congratulations: '恭喜升级！',
+    add_shows: '请添加剧集吧！',
+    add_wordbook: '去添加自己的单词本吧！',
+    challenge_cards: '挑战词卡',
+    smart_challenge: '智能挑战',
+    wrong_words_challenge: '错词挑战',
+    wrong_words_count: '有 {count} 个错词待复习',
+    ebbinghaus_activated: '☑️ 已切入艾宾浩斯记忆法',
+    wrong_words_challenge_title: '⚠️ 错词挑战 - 专注记忆不熟悉的单词',
+    series_review_title: '📚 剧集复习 - 显示所有单词',
+    wordbook_review_title: '📚 单词本复习 - 显示所有单词',
+    audio_play_failed: '播放失败',
+    audio_play_failed_message: '音频播放功能暂时不可用，请稍后再试',
+    review_complete_message: '🎯 本次复习完成 (记住: {remembered} 个，忘记: {forgotten} 个)',
+    wrong_words_empty_title: '还没有复习单词',
+    wrong_words_empty_subtitle: '快去复习一些单词吧！\n巩固记忆，提升掌握度。',
+    start_review: '开始复习吧',
+    general_empty_subtitle: '快去搜索并收藏一些单词吧！\n积累词汇量，提升学习效果。',
+    smart_review_mode: '🧠 智能复习模式',
+    all_review_mode: '📚 全部复习模式',
+    smart_review_description: '优先显示需要复习的单词',
+    all_review_description: '显示所有单词，不受时间限制',
+    switch_to_all: '切换全部',
+    switch_to_smart: '切换智能',
+    language_config_error: '无法获取语言配置，请重试',
+    query_failed: '查询失败',
+    search_failed: '搜索失败',
+    get_word_detail_failed: '无法获取单词详情',
+    keep_current_language: '保持当前语言',
+    target_language: '目标语言',
+    chinese_to_target: '中文转{target}',
+    badge_unlocked: '恭喜解锁 {count} 个单词徽章！',
+    show_answer: '显示答案',
+    examples: '例句：',
+    learning_record: '学习记录',
+    search_count: '搜索次数:',
+    last_learned: '最后学习:',
+    search_wordbooks: '搜索单词本...',
+    searching: '搜索中...',
+    no_results: '没有找到相关剧集',
+    try_other_keywords: '尝试其他关键词',
+    no_shows: '暂无剧集数据，请搜索添加',
+    no_recommendations: '暂无推荐内容',
+    shows_count: '{count} 个剧集',
+    watching_status: '观看中',
+    completed_status: '已完成',
+    plan_to_watch_status: '想看',
+    unknown_status: '未知',
+    wordbook: '单词本',
+    unknown_genre: '未知类型',
+    last_watched: '最后观看',
+    mark_completed: '已看完',
+    delete_show: '删除剧集',
+    delete_confirm: '确定要删除"{name}"吗？',
+    add_to_showlist: '加入剧单',
+    already_added: '已添加',
+    ongoing: '连载中',
+    finished: '已完结',
+    no_overview: '暂无剧情简介',
+    loading_overview: '加载剧情简介中...',
+    no_collected_words: '暂无收藏单词',
+    word_details: '单词详情',
+    no_wordbooks: '暂无单词本，请创建',
+    no_wordbook_results: '没有找到相关单词本',
+    try_other_wordbook_keywords: '尝试其他关键词',
+    recommendations_tab: '推荐',
+    shows_tab: '剧单',
+    wordbooks_tab: '单词本',
+    not_completed: '未看',
+    edit_wordbook: '编辑单词本',
+    name: '名称',
+    description: '描述',
+    icon: '图标',
+    create: '创建',
+    name_required: '请输入单词本名称',
+    save_success: '保存成功',
+    save_failed: '保存失败',
+    enable_notifications: '启用通知',
+    notification_permission_required: '需要通知权限',
+    permission_denied: '权限被拒绝',
+    notifications_enabled: '通知已启用',
+    notifications_disabled: '通知已禁用',
+    review_reminder: '复习提醒',
+    daily_review: '每日复习时间到了！',
+    weekly_review: '本周复习总结',
+    new_words: '新单词等你学习',
+    streak_reminder: '保持学习连续',
+    achievement: '学习成就',
+    motivation: '学习激励',
+    review_now: '立即复习',
+    continue_learning: '继续学习',
+    check_progress: '查看进度',
+    daily_goal: '每日目标',
+    weekly_goal: '每周目标',
+    monthly_goal: '每月目标',
+    time_to_review: '该复习了',
+    keep_streak: '保持连续学习',
+    new_achievement: '新成就解锁',
+    learning_reminder: '学习提醒',
+    vocabulary_growth: '词汇增长',
+    practice_makes_perfect: '熟能生巧',
+    knowledge_power: '知识就是力量',
   },
   
   'en-US': {
@@ -552,6 +791,7 @@ export const translations: Record<AppLanguage, Record<TranslationKey, string>> =
     no_definition: 'No definition',
     continue_learning_for_suggestions: 'Continue learning to get personalized suggestions',
     start_learning_to_see_progress: 'Your progress will be shown here after you start learning',
+    no_learning_data: 'No learning data available',
     no_learning_records: 'No learning records yet',
     start_learning: 'Start Learning',
     learning_analytics: 'Learning Analytics',
@@ -626,8 +866,165 @@ export const translations: Record<AppLanguage, Record<TranslationKey, string>> =
     english_language: 'English',
     japanese_language: 'Japanese',
     korean_language: 'Korean',
+    
+    // 新增的翻译键（从translationService.ts合并）
+    collected_words: 'Collected Words',
+    contributed_words: 'Contributed Words',
+    out_of: 'Out of {total}',
+    level_text: 'Level',
+    collected_vocabulary: 'Collected',
+    cumulative_review: 'Review Times',
+    continuous_learning: 'Streak Days',
+    words_unit: ' ',
+    times_unit: ' ',
+    days_unit: ' ',
+    hello_greeting: 'HELLO, ',
+    review_subtitle: 'What words have you collected recently? Let\'s review them',
+    exp_gained: 'EXP',
+    congratulations_exp: 'Congratulations! You gained experience!',
+    level_up_congratulations: 'Congratulations! Level Up!',
+    add_shows: ' Add some shows!',
+    add_wordbook: 'Go add your own wordbook!',
+    challenge_cards: 'Challenge Cards',
+    smart_challenge: 'Smart Challenge',
+    wrong_words_challenge: 'Wrong Words Challenge',
+    wrong_words_count: '{count} wrong words to review',
+    ebbinghaus_activated: '☑️ Ebbinghaus Memory Method Activated',
+    wrong_words_challenge_title: '⚠️ Wrong Words Challenge - Focus on unfamiliar words',
+    series_review_title: '📚 Series Review - Show all words',
+    wordbook_review_title: '📚 Wordbook Review - Show all words',
+    audio_play_failed: 'Playback Failed',
+    audio_play_failed_message: 'Audio playback is temporarily unavailable, please try again later',
+    review_complete_message: '🎯 Review completed (Remembered: {remembered}, Forgotten: {forgotten})',
+    wrong_words_empty_title: 'No words to review',
+    wrong_words_empty_subtitle: 'Go review some words!\nStrengthen memory and improve mastery.',
+    start_review: 'Start Review',
+    general_empty_subtitle: 'Go search and collect some words!\nBuild your vocabulary and improve learning.',
+    smart_review_mode: '🧠 Smart Review Mode',
+    all_review_mode: '📚 All Review Mode',
+    smart_review_description: 'Prioritize words that need review',
+    all_review_description: 'Show all words without time restrictions',
+    switch_to_all: 'Switch to All',
+    switch_to_smart: 'Switch to Smart',
+    language_config_error: 'Unable to get language configuration, please try again',
+    query_failed: 'Query Failed',
+    search_failed: 'Search Failed',
+    get_word_detail_failed: 'Unable to get word details',
+    keep_current_language: 'Keep Current',
+    target_language: 'Target Language',
+    chinese_to_target: 'Chinese to {target}',
+    badge_unlocked: 'Congratulations! Unlocked {count} word badge!',
+    show_answer: 'Show Answer',
+    examples: 'Examples:',
+    learning_record: 'Learning Record',
+    search_count: 'Search Count:',
+    last_learned: 'Last Learned:',
+    search_wordbooks: 'Search wordbooks...',
+    searching: 'Searching...',
+    no_results: 'No shows found',
+    try_other_keywords: 'Try other keywords',
+    no_shows: 'No shows yet, search to add',
+    no_recommendations: 'No recommendations yet',
+    shows_count: '{count} shows',
+    watching_status: 'Watching',
+    completed_status: 'Completed',
+    plan_to_watch_status: 'Plan to Watch',
+    unknown_status: 'Unknown',
+    wordbook: 'Wordbook',
+    unknown_genre: 'Unknown Genre',
+    last_watched: 'Last watched',
+    mark_completed: 'Mark Completed',
+    delete_show: 'Delete Show',
+    delete_confirm: 'Are you sure you want to delete "{name}"?',
+    add_to_showlist: 'Add to Showlist',
+    already_added: 'Already Added',
+    ongoing: 'Ongoing',
+    finished: 'Finished',
+    no_overview: 'No overview available',
+    loading_overview: 'Loading overview...',
+    no_collected_words: 'No collected words',
+    word_details: 'Word Details',
+    no_wordbooks: 'No wordbooks yet, create one',
+    no_wordbook_results: 'No wordbooks found',
+    try_other_wordbook_keywords: 'Try other keywords',
+    recommendations_tab: 'Recommendations',
+    shows_tab: 'Shows',
+    wordbooks_tab: 'Wordbooks',
+    not_completed: 'Not Watched',
+    edit_wordbook: 'Edit Wordbook',
+    name: 'Name',
+    description: 'Description',
+    icon: 'Icon',
+    create: 'Create',
+    name_required: 'Please enter wordbook name',
+    save_success: 'Save successful',
+    save_failed: 'Save failed',
+    enable_notifications: 'Enable Notifications',
+    notification_permission_required: 'Notification Permission Required',
+    permission_denied: 'Permission Denied',
+    notifications_enabled: 'Notifications enabled',
+    notifications_disabled: 'Notifications disabled',
+    review_reminder: 'Review Reminder',
+    daily_review: 'Time for daily review!',
+    weekly_review: 'Weekly Review Summary',
+    new_words: 'New words waiting for you',
+    streak_reminder: 'Keep your learning streak',
+    achievement: 'Learning Achievement',
+    motivation: 'Learning Motivation',
+    review_now: 'Review Now',
+    continue_learning: 'Continue Learning',
+    check_progress: 'Check Progress',
+    daily_goal: 'Daily Goal',
+    weekly_goal: 'Weekly Goal',
+    monthly_goal: 'Monthly Goal',
+    time_to_review: 'Time to Review',
+    keep_streak: 'Keep Your Streak',
+    new_achievement: 'New Achievement Unlocked',
+    learning_reminder: 'Learning Reminder',
+    vocabulary_growth: 'Vocabulary Growth',
+    practice_makes_perfect: 'Practice Makes Perfect',
+    knowledge_power: 'Knowledge is Power',
   },
 };
+
+// 翻译服务类
+export class TranslationService {
+  private static instance: TranslationService;
+  private currentLanguage: AppLanguage = 'zh-CN';
+
+  private constructor() {}
+
+  static getInstance(): TranslationService {
+    if (!TranslationService.instance) {
+      TranslationService.instance = new TranslationService();
+    }
+    return TranslationService.instance;
+  }
+
+  // 设置当前语言
+  setLanguage(language: AppLanguage): void {
+    this.currentLanguage = language;
+  }
+
+  // 获取当前语言
+  getLanguage(): AppLanguage {
+    return this.currentLanguage;
+  }
+
+  // 翻译函数
+  translate(key: TranslationKey, params?: Record<string, string | number>): string {
+    let text = translations[this.currentLanguage][key] || key;
+    
+    // 替换参数
+    if (params) {
+      Object.entries(params).forEach(([param, value]) => {
+        text = text.replace(new RegExp(`{${param}}`, 'g'), String(value));
+      });
+    }
+    
+    return text;
+  }
+}
 
 // 翻译函数
 export const t = (key: TranslationKey, language: AppLanguage = 'zh-CN', params?: Record<string, string | number>): string => {
@@ -659,4 +1056,7 @@ export const APP_LANGUAGES = {
   },
 } as const;
 
-export type AppLanguageCode = keyof typeof APP_LANGUAGES; 
+export type AppLanguageCode = keyof typeof APP_LANGUAGES;
+
+// 导出单例实例
+export const translationService = TranslationService.getInstance(); 

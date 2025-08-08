@@ -10,6 +10,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../constants/colors';
 import notificationService, { NotificationPreferences } from '../../services/notificationService';
 import { useAppLanguage } from '../../context/AppLanguageContext';
+import { t } from '../../constants/translations';
 
 interface NotificationManagerProps {
   visible: boolean;
@@ -23,19 +24,7 @@ const NotificationManager: React.FC<NotificationManagerProps> = ({
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
   const { appLanguage } = useAppLanguage();
 
-  // 翻译函数
-  const t = (key: string): string => {
-    const translations = {
-      'enable_notifications': appLanguage === 'zh-CN' ? '启用通知' : 'Enable Notifications',
-      'notification_permission_required': appLanguage === 'zh-CN' ? '需要通知权限' : 'Notification Permission Required',
-      'permission_denied': appLanguage === 'zh-CN' ? '权限被拒绝' : 'Permission Denied',
-      'notifications_enabled': appLanguage === 'zh-CN' ? '通知已启用' : 'Notifications enabled',
-      'notifications_disabled': appLanguage === 'zh-CN' ? '通知已禁用' : 'Notifications disabled',
-      'ok': appLanguage === 'zh-CN' ? '确定' : 'OK',
-    };
-    
-    return translations[key as keyof typeof translations] || key;
-  };
+  // 使用统一的翻译函数
 
   useEffect(() => {
     if (visible) {
@@ -89,9 +78,9 @@ const NotificationManager: React.FC<NotificationManagerProps> = ({
         // 通知会在适当的时候自动触发，避免立即推送
       } else {
         Alert.alert(
-          t('notification_permission_required'),
-          t('permission_denied'),
-          [{ text: t('ok') }]
+          t('notification_permission_required', appLanguage),
+          t('permission_denied', appLanguage),
+          [{ text: t('ok', appLanguage) }]
         );
       }
     } else {
@@ -115,7 +104,7 @@ const NotificationManager: React.FC<NotificationManagerProps> = ({
     <View style={styles.settingItem}>
       <View style={styles.settingLeft}>
         <Ionicons name="notifications-outline" size={24} color={colors.primary[500]} />
-        <Text style={styles.settingLabel}>{t('enable_notifications')}</Text>
+        <Text style={styles.settingLabel}>{t('enable_notifications', appLanguage)}</Text>
       </View>
       <Switch
         value={notificationsEnabled}

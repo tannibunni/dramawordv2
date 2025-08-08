@@ -4,7 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../../constants/colors';
 import { useNavigation } from '../../../components/navigation/NavigationContext';
 import { useAppLanguage } from '../../../context/AppLanguageContext';
-import { t, TranslationKey } from '../../../constants/translations';
+import { t } from '../../../constants/translations';
 
 interface ReviewEmptyStateProps {
   type?: string;
@@ -14,6 +14,11 @@ export const ReviewEmptyState: React.FC<ReviewEmptyStateProps> = ({ type }) => {
   const { navigate } = useNavigation();
   const { appLanguage } = useAppLanguage();
 
+  // 设置翻译服务语言
+  React.useEffect(() => {
+    // 翻译函数会自动使用当前语言，无需手动设置
+  }, [appLanguage]);
+
   // 判断是否为错词挑战模式
   const isWrongWordsChallenge = type === 'wrong_words';
 
@@ -22,21 +27,17 @@ export const ReviewEmptyState: React.FC<ReviewEmptyStateProps> = ({ type }) => {
     if (isWrongWordsChallenge) {
       return {
         icon: 'checkmark-circle-outline',
-        title: appLanguage === 'zh-CN' ? '还没有复习单词' : 'No words to review',
-        subtitle: appLanguage === 'zh-CN' 
-          ? '快去复习一些单词吧！\n巩固记忆，提升掌握度。'
-          : 'Go review some words!\nStrengthen memory and improve mastery.',
-        buttonText: appLanguage === 'zh-CN' ? '开始复习吧' : 'Start Review',
+        title: t('wrong_words_empty_title', appLanguage),
+        subtitle: t('wrong_words_empty_subtitle', appLanguage),
+        buttonText: t('start_review', appLanguage),
         onPress: () => navigate('main', { tab: 'review' })
       };
     } else {
       return {
         icon: 'book-outline',
-        title: t('no_review_words' as TranslationKey, appLanguage),
-        subtitle: appLanguage === 'zh-CN' 
-          ? '快去搜索并收藏一些单词吧！\n积累词汇量，提升学习效果。'
-          : 'Go search and collect some words!\nBuild your vocabulary and improve learning.',
-        buttonText: appLanguage === 'zh-CN' ? '去搜索单词' : 'Search Words',
+        title: t('no_review_words', appLanguage),
+        subtitle: t('general_empty_subtitle', appLanguage),
+        buttonText: t('search_words', appLanguage),
         onPress: () => navigate('main', { tab: 'home' })
       };
     }

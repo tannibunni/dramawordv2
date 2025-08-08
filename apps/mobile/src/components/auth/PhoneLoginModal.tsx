@@ -37,7 +37,7 @@ export const PhoneLoginModal: React.FC<PhoneLoginModalProps> = ({
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    let timer: NodeJS.Timeout;
+    let timer: number;
     if (countdown > 0) {
       timer = setTimeout(() => setCountdown(countdown - 1), 1000);
     }

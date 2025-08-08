@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback } from 'react';
 import { learningDataService } from '../../../services/learningDataService';
-import { wrongWordsManager } from '../../../services/wrongWordsManager';
+import { wrongWordsManager } from '../services/wrongWordsManager';
 import { unifiedSyncService } from '../../../services/unifiedSyncService';
 import { useVocabulary } from '../../../context/VocabularyContext';
 import { useAuth } from '../../../context/AuthContext';
@@ -38,6 +38,7 @@ export const useReviewStats = () => {
   
   const rememberedRef = useRef(0);
   const forgottenRef = useRef(0);
+  const reviewActionsRef = useRef<ReviewAction[]>([]);
 
   // 优化的后端用户词汇表进度更新函数
   const updateBackendWordProgress = useCallback(async (word: string, isCorrect: boolean) => {
@@ -116,7 +117,14 @@ export const useReviewStats = () => {
 
   // 统一封装添加 action 的逻辑
   const addReviewAction = useCallback((word: string, remembered: boolean, translation?: string) => {
-    setReviewActions(prev => ([...prev, { word, remembered, translation }]));
+    console.log(`📝 添加复习动作: ${word}, remembered: ${remembered}, translation: ${translation}`);
+    setReviewActions(prev => {
+      const newActions = [...prev, { word, remembered, translation }];
+      console.log(`📝 复习动作数组更新: 从 ${prev.length} 个增加到 ${newActions.length} 个`);
+      // 同时更新 ref
+      reviewActionsRef.current = newActions;
+      return newActions;
+    });
   }, []);
 
   // 更新统计
@@ -134,17 +142,14 @@ export const useReviewStats = () => {
       const forgotten = prev.forgottenWords + (isCorrect ? 0 : 1);
       const total = prev.totalWords;
       
-      // 直接计算经验值，不依赖 actions 数组
-      const currentExperience = prev.experience;
-      const newExperience = currentExperience + (isCorrect ? 2 : 1);
-      
+      // 不在这里累加经验值，让calculateFinalStats基于reviewActions计算
       const accuracy = total > 0 ? Math.round((remembered / total) * 100) : 0;
       
       const newStats = {
         ...prev,
         rememberedWords: remembered,
         forgottenWords: forgotten,
-        experience: newExperience,
+        experience: 0, // 重置为0，让calculateFinalStats重新计算
         accuracy,
       };
       
@@ -152,8 +157,6 @@ export const useReviewStats = () => {
         remembered,
         forgotten,
         total,
-        currentExperience,
-        newExperience,
         accuracy,
         newStats
       });
@@ -190,29 +193,84 @@ export const useReviewStats = () => {
 
   // 计算最终统计数据
   const calculateFinalStats = useCallback(() => {
-    const currentStats = reviewStats;
+    console.log('📊 开始计算最终统计数据');
     
-    // 直接使用 reviewStats 中的数据，这是累积的统计数据
-    const rememberedWords = currentStats.rememberedWords;
-    const forgottenWords = currentStats.forgottenWords;
-    const totalExperience = currentStats.experience;
+    // 使用 ref 获取最新的 reviewActions 数据
+    const currentReviewActions = reviewActionsRef.current;
+    console.log('📊 reviewActions 数组 (从 ref):', currentReviewActions);
+    console.log('📊 reviewActions 数组长度 (从 ref):', currentReviewActions.length);
+    console.log('📊 reviewActions 数组内容 (从 ref):', JSON.stringify(currentReviewActions, null, 2));
     
-    const accuracy = currentStats.totalWords > 0 ? Math.round((rememberedWords / currentStats.totalWords) * 100) : 0;
+    // 如果 reviewActions 为空，尝试延迟计算
+    if (currentReviewActions.length === 0) {
+      console.log('⚠️ reviewActions 为空，延迟计算统计数据');
+      setTimeout(() => {
+        const delayedReviewActions = reviewActionsRef.current;
+        console.log('📊 延迟后重新计算 - reviewActions 数组 (从 ref):', delayedReviewActions);
+        console.log('📊 延迟后 reviewActions 数组长度 (从 ref):', delayedReviewActions.length);
+        
+        // 直接统计 reviewActions 数组中的数据
+        const totalWords = delayedReviewActions.length;
+        const rememberedWords = delayedReviewActions.filter(action => action.remembered).length;
+        const forgottenWords = delayedReviewActions.filter(action => !action.remembered).length;
+        
+        // 计算经验值：记得的单词*2 + 不记得的单词*1
+        const totalExperience = (rememberedWords * 2) + (forgottenWords * 1);
+        
+        const accuracy = totalWords > 0 ? Math.round((rememberedWords / totalWords) * 100) : 0;
+        
+        const finalStats = {
+          totalWords,
+          rememberedWords,
+          forgottenWords,
+          experience: totalExperience,
+          accuracy,
+        };
+        
+        console.log('📊 延迟后最终统计数据（基于 reviewActions）:', finalStats);
+        setFinalStats(finalStats);
+      }, 100);
+      
+      // 返回默认值
+      return {
+        totalWords: 0,
+        rememberedWords: 0,
+        forgottenWords: 0,
+        experience: 0,
+        accuracy: 0,
+      };
+    }
+    
+    // 直接统计 reviewActions 数组中的数据
+    const totalWords = currentReviewActions.length;
+    const rememberedWords = currentReviewActions.filter(action => action.remembered).length;
+    const forgottenWords = currentReviewActions.filter(action => !action.remembered).length;
+    
+    // 计算经验值：记得的单词*2 + 不记得的单词*1
+    const totalExperience = (rememberedWords * 2) + (forgottenWords * 1);
+    
+    const accuracy = totalWords > 0 ? Math.round((rememberedWords / totalWords) * 100) : 0;
     
     const finalStats = {
-      totalWords: currentStats.totalWords,
+      totalWords,
       rememberedWords,
       forgottenWords,
       experience: totalExperience,
       accuracy,
     };
     
-    console.log('📊 最终统计数据:', finalStats);
-    console.log('📊 数据来源 - reviewStats:', currentStats);
+    console.log('📊 最终统计数据（基于 reviewActions）:', finalStats);
+    console.log('📊 统计详情:', {
+      totalActions: currentReviewActions.length,
+      rememberedActions: currentReviewActions.filter(a => a.remembered).length,
+      forgottenActions: currentReviewActions.filter(a => !a.remembered).length,
+      experienceCalculation: `(${rememberedWords} * 2) + (${forgottenWords} * 1) = ${totalExperience}`
+    });
+    
     setFinalStats(finalStats);
     
     return finalStats;
-  }, [reviewStats]);
+  }, []);
 
   return {
     reviewStats,

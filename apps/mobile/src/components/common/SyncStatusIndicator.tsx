@@ -54,7 +54,7 @@ export const SyncStatusIndicator: React.FC<SyncStatusIndicatorProps> = ({ visibl
       // 检查是否为游客模式
       const isGuestMode = await guestModeService.isGuestMode();
       if (isGuestMode) {
-        const guestData = await guestModeService.getGuestData();
+        const guestData = await guestModeService.getGuestInfo();
         const stats = await guestModeService.getGuestDataStats();
         
         setSyncStatus({

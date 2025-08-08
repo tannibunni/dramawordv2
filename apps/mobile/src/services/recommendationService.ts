@@ -1,4 +1,4 @@
-import { apiClient } from './apiClient';
+import apiClient from './apiClient';
 
 export interface RecommendationCard {
   _id?: string;
@@ -133,7 +133,7 @@ export class RecommendationService {
       recommendation: {
         text: recommendationText,
         difficulty,
-        language: 'zh-CN',
+        language: 'zh-CN' as const,
         category: tmdbShow.genre_ids?.map((id: number) => {
           const genreMap: { [key: number]: string } = {
             35: 'comedy',
@@ -154,7 +154,7 @@ export class RecommendationService {
         genre: tmdbShow.genre_ids || [],
         rating: tmdbShow.vote_average || 0,
         year: tmdbShow.first_air_date ? new Date(tmdbShow.first_air_date).getFullYear() : 0,
-        status: 'draft',
+        status: 'draft' as const,
         priority: 5,
         views: 0,
         likes: 0

@@ -44,9 +44,9 @@ class RealWechatSDK implements WechatSDKInterface {
       } catch (moduleError) {
         console.error('🔍 加载 react-native-wechat-lib 模块失败:', moduleError);
         console.error('🔍 模块错误详情:', {
-          message: moduleError.message,
-          stack: moduleError.stack,
-          code: moduleError.code
+          message: (moduleError as any).message || 'Unknown error',
+          stack: (moduleError as any).stack || 'No stack trace',
+          code: (moduleError as any).code || 'Unknown code'
         });
         throw new Error('微信SDK模块加载失败，请确保已正确安装react-native-wechat-lib');
       }
@@ -87,10 +87,10 @@ class RealWechatSDK implements WechatSDKInterface {
     } catch (error) {
       console.error('🔍 微信SDK注册失败:', error);
       console.error('🔍 错误详情:', {
-        name: error.name,
-        message: error.message,
-        stack: error.stack,
-        code: error.code
+        name: (error as any).name || 'Unknown',
+        message: (error as any).message || 'Unknown error',
+        stack: (error as any).stack || 'No stack trace',
+        code: (error as any).code || 'Unknown code'
       });
       throw error;
     }
@@ -122,9 +122,9 @@ class RealWechatSDK implements WechatSDKInterface {
     } catch (error) {
       console.error('🔍 检查微信安装状态失败:', error);
       console.error('🔍 错误详情:', {
-        name: error.name,
-        message: error.message,
-        stack: error.stack
+        name: (error as any).name || 'Unknown',
+        message: (error as any).message || 'Unknown error',
+        stack: (error as any).stack || 'No stack trace'
       });
       throw error;
     }

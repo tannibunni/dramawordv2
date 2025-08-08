@@ -143,12 +143,18 @@ export const RecommendationManager: React.FC<RecommendationManagerProps> = ({
         recommendation: {
           text: createForm.recommendationText,
           difficulty: createForm.difficulty,
+          language: 'zh-CN' as const,
           category: createForm.category,
           tags: createForm.tags,
         },
         metadata: {
           status: createForm.status,
           priority: parseInt(createForm.priority),
+          genre: [],
+          rating: 0,
+          year: new Date().getFullYear(),
+          views: 0,
+          likes: 0,
         },
       };
 

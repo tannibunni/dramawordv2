@@ -32,7 +32,7 @@ export const GuestModeIndicator: React.FC<GuestModeIndicatorProps> = ({
       setIsGuestMode(guestMode);
 
       if (guestMode) {
-        const data = await guestModeService.getGuestData();
+        const data = await guestModeService.getGuestInfo();
         setGuestData(data);
 
         if (showStats) {
@@ -139,7 +139,7 @@ export const GuestModeIndicator: React.FC<GuestModeIndicatorProps> = ({
       disabled={isLoading}
     >
       <View style={styles.iconContainer}>
-        <Ionicons name="person-outline" size={16} color={colors.primary} />
+        <Ionicons name="person-outline" size={16} color={colors.primary[500]} />
       </View>
       
       <View style={styles.content}>
@@ -166,20 +166,20 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.lightPurple,
+    backgroundColor: colors.lightPurple as string,
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 8,
     marginHorizontal: 16,
     marginVertical: 4,
     borderWidth: 1,
-    borderColor: colors.primary + '20',
+    borderColor: colors.primary[500] + '20',
   },
   iconContainer: {
     width: 24,
     height: 24,
     borderRadius: 12,
-    backgroundColor: colors.primary + '15',
+    backgroundColor: colors.primary[500] + '15',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 8,
@@ -190,7 +190,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 14,
     fontWeight: '600',
-    color: colors.primary,
+    color: colors.primary[500],
     marginBottom: 2,
   },
   subtitle: {

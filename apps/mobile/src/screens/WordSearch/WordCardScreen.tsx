@@ -12,7 +12,8 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../constants/colors';
-import { wordService, WordData } from '../../services/wordService';
+import { wordService } from '../../services/wordService';
+import type { WordData } from '../../types/word';
 import { audioService } from '../../services/audioService';
 import { useShowList } from '../../context/ShowListContext';
 import { useVocabulary } from '../../context/VocabularyContext';
@@ -129,7 +130,7 @@ const WordCardScreen: React.FC<WordCardScreenProps> = ({ navigation = {}, route 
   const confirmCollect = (sourceShow?: any) => {
     if (wordData) {
       addWord(wordData, sourceShow);
-      setWordData(prev => prev ? { ...prev, isCollected: true } : null);
+      setWordData((prev: WordData | null) => prev ? { ...prev, isCollected: true } : null);
       const showName = sourceShow ? sourceShow.name : '默认词库';
       Alert.alert('收藏成功', `已收藏到 ${showName}`);
     }
@@ -174,7 +175,7 @@ const WordCardScreen: React.FC<WordCardScreenProps> = ({ navigation = {}, route 
   // 切换收藏状态
   const toggleCollect = () => {
     if (wordData?.isCollected) {
-      setWordData(prev => prev ? { ...prev, isCollected: false } : null);
+      setWordData((prev: WordData | null) => prev ? { ...prev, isCollected: false } : null);
       Alert.alert('已取消收藏');
     } else {
       handleCollect();
@@ -289,7 +290,7 @@ const WordCardScreen: React.FC<WordCardScreenProps> = ({ navigation = {}, route 
           {isExpanded && (
             <View style={styles.expandedContent}>
               <View style={styles.definitionsList}>
-                {wordData.definitions.map((definition, index) => (
+                {wordData.definitions.map((definition: any, index: number) => (
                   <View key={index} style={styles.definitionItem}>
                     <View style={styles.definitionHeader}>
                       <Text style={styles.partOfSpeech}>{definition.partOfSpeech}</Text>
@@ -298,7 +299,7 @@ const WordCardScreen: React.FC<WordCardScreenProps> = ({ navigation = {}, route 
                     
                     {definition.examples.length > 0 && (
                       <View style={styles.examplesList}>
-                        {definition.examples.map((example, exampleIndex) => (
+                        {definition.examples.map((example: any, exampleIndex: number) => (
                           <View key={exampleIndex} style={styles.exampleItem}>
                             <Text style={styles.exampleEnglish}>{example.english}</Text>
                             <Text style={styles.exampleChinese}>{example.chinese}</Text>

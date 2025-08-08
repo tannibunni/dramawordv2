@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useCallback } from 'react';
-import { View, Text, Animated, StyleSheet } from 'react-native';
+import { View, Text, Animated, StyleSheet, InteractionManager } from 'react-native';
 import { PanGestureHandler, State } from 'react-native-gesture-handler';
 import { colors } from '../../constants/colors';
 
@@ -19,29 +19,34 @@ const Toast: React.FC<ToastProps> = ({
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(-100)).current;
   const gestureAnim = useRef(new Animated.Value(0)).current;
-  const autoHideTimer = useRef<NodeJS.Timeout | null>(null);
+  const autoHideTimer = useRef<number | null>(null);
 
   useEffect(() => {
-    // 显示动画
-    Animated.parallel([
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 300,
-        useNativeDriver: true,
-      }),
-      Animated.timing(slideAnim, {
-        toValue: 0,
-        duration: 300,
-        useNativeDriver: true,
-      }),
-    ]).start();
+    let isCancelled = false;
+    // 将初始动画与定时隐藏放到交互完成后，避免在插入阶段安排更新
+    const task = InteractionManager.runAfterInteractions(() => {
+      if (isCancelled) return;
+      Animated.parallel([
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+        Animated.timing(slideAnim, {
+          toValue: 0,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+      ]).start();
 
-    // 自动隐藏
-    autoHideTimer.current = setTimeout(() => {
-      hideToast();
-    }, duration);
+      autoHideTimer.current = setTimeout(() => {
+        hideToast();
+      }, duration) as unknown as number;
+    });
 
     return () => {
+      isCancelled = true;
+      task.cancel?.();
       if (autoHideTimer.current) {
         clearTimeout(autoHideTimer.current);
       }

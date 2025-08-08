@@ -15,7 +15,7 @@ import { InterruptionModeIOS, InterruptionModeAndroid } from 'expo-av/build/Audi
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Device from 'expo-device';
 import { unifiedSyncService } from './services/unifiedSyncService';
-import { experienceManager } from './services/experienceManager';
+
 import { guestModeService } from './services/guestModeService';
 import { tokenValidationService } from './services/tokenValidationService';
 
@@ -42,8 +42,7 @@ const AppContent = () => {
       // 4. 初始化统一同步服务
       await initializeUnifiedSync();
       
-      // 5. 初始化经验值管理器
-      await initializeExperienceManager();
+
       
       console.log('✅ 应用初始化完成');
     } catch (error) {
@@ -72,23 +71,7 @@ const AppContent = () => {
     }
   };
 
-  const initializeExperienceManager = async () => {
-    try {
-      console.log('⭐ 初始化经验值管理器...');
-      
-      // 配置经验值管理器
-      experienceManager.updateConfig({
-        enableAnimations: true,
-        enableNotifications: true,
-        enableSound: true,
-        autoSync: true
-      });
-      
-      console.log('✅ 经验值管理器初始化完成');
-    } catch (error) {
-      console.error('❌ 经验值管理器初始化失败:', error);
-    }
-  };
+
 
   const checkInitialLanguageSetup = async () => {
     try {

@@ -159,28 +159,24 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
     if (!user) {
       return {
         level: 1,
-        experience: 0,
-        displayText: appLanguage === 'zh-CN' ? '等级 1 (0 XP)' : 'Level 1 (0 XP)'
+        displayText: appLanguage === 'zh-CN' ? '等级 1' : 'Level 1'
       };
     }
 
     // 从用户数据中获取学习统计信息
     const learningStats = user.learningStats || {};
     const level = learningStats.level || 1;
-    const experience = learningStats.experience || 0;
 
     // 根据语言返回不同的显示文本
     if (appLanguage === 'zh-CN') {
       return {
         level,
-        experience,
-        displayText: `等级 ${level} (${experience} XP)`
+        displayText: `等级 ${level}`
       };
     } else {
       return {
         level,
-        experience,
-        displayText: `Level ${level} (${experience} XP)`
+        displayText: `Level ${level}`
       };
     }
   };
@@ -556,7 +552,6 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                   await unifiedSyncService.addToSyncQueue({
                     type: 'userStats',
                     data: {
-                      experience: 0,
                       level: 1,
                       totalReviews: 0,
                       currentStreak: 0,

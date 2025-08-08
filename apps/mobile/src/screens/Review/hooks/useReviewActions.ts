@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
 import { learningDataService } from '../../../services/learningDataService';
-import { wrongWordsManager } from '../../../services/wrongWordsManager';
+import { wrongWordsManager } from '../services/wrongWordsManager';
 import { LearningRecord, updateWordReview, Word } from '../../../services/learningAlgorithm';
 import { useVocabulary } from '../../../context/VocabularyContext';
 
@@ -25,6 +25,7 @@ interface ReviewActionsProps {
   updateStats: (word: string, isCorrect: boolean, translation?: string) => void;
   moveToNextWord: (totalWords: number) => void;
   updateSession: (action: 'correct' | 'incorrect' | 'skipped' | 'collected') => void;
+  onReviewComplete?: () => void;
 }
 
 export const useReviewActions = ({
@@ -33,7 +34,8 @@ export const useReviewActions = ({
   updateBackendWordProgress,
   updateStats,
   moveToNextWord,
-  updateSession
+  updateSession,
+  onReviewComplete
 }: ReviewActionsProps) => {
   const { updateWord } = useVocabulary();
 
@@ -124,7 +126,20 @@ export const useReviewActions = ({
     const currentWord = words[swiperIndex];
     const translation = currentWord?.translation || '';
     updateSession('incorrect');
-    moveToNextWord(words.length);
+    
+    // 检查是否是最后一张卡片
+    const isLastCard = swiperIndex === words.length - 1;
+    console.log(`🔍 检查是否是最后一张卡片: swiperIndex=${swiperIndex}, words.length=${words.length}, isLastCard=${isLastCard}`);
+    
+    if (isLastCard && onReviewComplete) {
+      console.log('🎯 最后一张卡片，直接调用完成处理函数');
+      // 延迟一点时间确保统计数据已更新
+      setTimeout(() => {
+        onReviewComplete();
+      }, 100);
+    } else {
+      moveToNextWord(words.length);
+    }
   }, [words, swiperIndex, convertReviewWordToWord, updateBackendWordProgress, updateStats, updateSession, moveToNextWord, updateWord]);
 
   // 处理右滑操作（记住）
@@ -195,7 +210,20 @@ export const useReviewActions = ({
     const currentWord = words[swiperIndex];
     const translation = currentWord?.translation || '';
     updateSession('correct');
-    moveToNextWord(words.length);
+    
+    // 检查是否是最后一张卡片
+    const isLastCard = swiperIndex === words.length - 1;
+    console.log(`🔍 检查是否是最后一张卡片: swiperIndex=${swiperIndex}, words.length=${words.length}, isLastCard=${isLastCard}`);
+    
+    if (isLastCard && onReviewComplete) {
+      console.log('🎯 最后一张卡片，直接调用完成处理函数');
+      // 延迟一点时间确保统计数据已更新
+      setTimeout(() => {
+        onReviewComplete();
+      }, 100);
+    } else {
+      moveToNextWord(words.length);
+    }
   }, [words, swiperIndex, convertReviewWordToWord, updateBackendWordProgress, updateStats, updateSession, moveToNextWord, updateWord]);
 
   // 处理下滑操作（跳过）

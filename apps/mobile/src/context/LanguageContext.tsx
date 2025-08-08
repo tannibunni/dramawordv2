@@ -37,6 +37,9 @@ export const LanguageProvider: React.FC<{ children: ReactNode }> = ({ children }
     ENGLISH: { ...initialProgress },
     KOREAN: { ...initialProgress },
     JAPANESE: { ...initialProgress },
+    CHINESE: { ...initialProgress },
+    FRENCH: { ...initialProgress },
+    SPANISH: { ...initialProgress },
   });
 
   // 加载保存的语言设置

@@ -1,6 +1,8 @@
 import React from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { colors } from '../../../constants/colors';
+import { t } from '../../../constants/translations';
+import { useAppLanguage } from '../../../context/AppLanguageContext';
 
 interface ReviewModeSelectorProps {
   mode: 'smart' | 'all';
@@ -15,6 +17,13 @@ export const ReviewModeSelector: React.FC<ReviewModeSelectorProps> = ({
   type,
   isEbbinghaus
 }) => {
+  const { appLanguage } = useAppLanguage();
+
+  // 设置翻译服务语言
+  React.useEffect(() => {
+    // 翻译函数会自动使用当前语言，无需手动设置
+  }, [appLanguage]);
+
   // 只在智能挑战词卡模式下显示
   if (type && type !== 'shuffle' && type !== 'random') {
     return null;
@@ -39,10 +48,10 @@ export const ReviewModeSelector: React.FC<ReviewModeSelectorProps> = ({
     }}>
       <View style={{flex: 1}}>
         <Text style={{color: colors.primary[700], fontWeight: '600', fontSize: 15}}>
-          {mode === 'smart' ? '🧠 智能复习模式' : '📚 全部复习模式'}
+          {mode === 'smart' ? t('smart_review_mode', appLanguage) : t('all_review_mode', appLanguage)}
         </Text>
         <Text style={{color: colors.primary[600], fontSize: 13, marginTop: 4, lineHeight: 18}}>
-          {mode === 'smart' ? '优先显示需要复习的单词' : '显示所有单词，不受时间限制'}
+          {mode === 'smart' ? t('smart_review_description', appLanguage) : t('all_review_description', appLanguage)}
         </Text>
       </View>
       <TouchableOpacity 
@@ -60,7 +69,7 @@ export const ReviewModeSelector: React.FC<ReviewModeSelectorProps> = ({
         onPress={() => onModeChange(mode === 'smart' ? 'all' : 'smart')}
       >
         <Text style={{color: 'white', fontSize: 13, fontWeight: '600'}}>
-          {mode === 'smart' ? '切换全部' : '切换智能'}
+          {mode === 'smart' ? t('switch_to_all', appLanguage) : t('switch_to_smart', appLanguage)}
         </Text>
       </TouchableOpacity>
     </View>

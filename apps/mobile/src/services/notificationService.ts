@@ -4,6 +4,7 @@ import Constants from 'expo-constants';
 import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AppLanguage } from '../constants/translations';
+import { t } from '../constants/translations';
 
 // 配置通知行为
 Notifications.setNotificationHandler({
@@ -107,33 +108,9 @@ export class NotificationService {
     }
   }
 
-  // 翻译函数
+  // 使用统一的翻译函数
   private t = (key: string): string => {
-    const isChinese = this.appLanguage === 'zh-CN';
-    const translations = {
-      'review_reminder': isChinese ? '复习提醒' : 'Review Reminder',
-      'daily_review': isChinese ? '每日复习时间到了！' : 'Time for daily review!',
-      'weekly_review': isChinese ? '本周复习总结' : 'Weekly Review Summary',
-      'new_words': isChinese ? '新单词等你学习' : 'New words waiting for you',
-      'streak_reminder': isChinese ? '保持学习连续' : 'Keep your learning streak',
-      'achievement': isChinese ? '学习成就' : 'Learning Achievement',
-      'motivation': isChinese ? '学习激励' : 'Learning Motivation',
-      'review_now': isChinese ? '立即复习' : 'Review Now',
-      'continue_learning': isChinese ? '继续学习' : 'Continue Learning',
-      'check_progress': isChinese ? '查看进度' : 'Check Progress',
-      'daily_goal': isChinese ? '每日目标' : 'Daily Goal',
-      'weekly_goal': isChinese ? '每周目标' : 'Weekly Goal',
-      'monthly_goal': isChinese ? '每月目标' : 'Monthly Goal',
-      'time_to_review': isChinese ? '该复习了' : 'Time to Review',
-      'keep_streak': isChinese ? '保持连续学习' : 'Keep Your Streak',
-      'new_achievement': isChinese ? '新成就解锁' : 'New Achievement Unlocked',
-      'learning_reminder': isChinese ? '学习提醒' : 'Learning Reminder',
-      'vocabulary_growth': isChinese ? '词汇增长' : 'Vocabulary Growth',
-      'practice_makes_perfect': isChinese ? '熟能生巧' : 'Practice Makes Perfect',
-      'knowledge_power': isChinese ? '知识就是力量' : 'Knowledge is Power',
-    };
-    
-    return translations[key as keyof typeof translations] || key;
+    return t(key as any, this.appLanguage);
   };
 
   // 获取单例实例

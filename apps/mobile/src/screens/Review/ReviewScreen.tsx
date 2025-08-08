@@ -18,7 +18,7 @@ import WordCard from '../../components/cards/WordCard';
 import type { WordData } from '../../types/word';
 import { audioService } from '../../services/audioService';
 import { learningDataService } from '../../services/learningDataService';
-import { wrongWordsManager } from '../../services/wrongWordsManager';
+import { wrongWordsManager } from './services/wrongWordsManager';
 import { LearningRecord, updateWordReview, Word } from '../../services/learningAlgorithm';
 import { SwipeableWordCard } from '../../components/cards';
 import { UserService } from '../../services/userService';
@@ -28,11 +28,11 @@ import { useAuth } from '../../context/AuthContext';
 import dayjs from 'dayjs';
 import { wordService } from '../../services/wordService';
 import { useAppLanguage } from '../../context/AppLanguageContext';
-import { t, TranslationKey } from '../../constants/translations';
+import { t } from '../../constants/translations';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_BASE_URL } from '../../constants/config';
 import Toast from '../../components/common/Toast';
-import { reviewLogger, wrongWordLogger, apiLogger } from '../../utils/logger';
+import Logger from '../../utils/logger';
 import { unifiedSyncService } from '../../services/unifiedSyncService';
 import ReviewCompleteScreen, { ReviewStats, ReviewAction } from './ReviewCompleteScreen';
 // import WrongWordsCompleteScreen, { WrongWordsReviewStats, WrongWordsReviewAction } from './WrongWordsCompleteScreen';
@@ -81,7 +81,8 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
   // 使用新的hooks
   const [reviewMode, setReviewMode] = useState<'smart' | 'all'>('smart');
   const [showToast, setShowToast] = useState(false);
-  const [showEbbinghausTip, setShowEbbinghausTip] = useState(true);
+  // 进入复习时不显示艾宾浩斯提示，仅在切换复习模式后显示一次
+  const [showEbbinghausTip, setShowEbbinghausTip] = useState(false);
   const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
   const [cardMode, setCardMode] = useState<'swipe' | 'flip'>('swipe');
   const [showAnswer, setShowAnswer] = useState(false);
@@ -91,6 +92,11 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
   const { appLanguage } = useAppLanguage();
   const { user } = useAuth();
   const swiperRef = useRef<any>(null);
+  
+  // 设置翻译服务语言
+  useEffect(() => {
+    // 翻译函数会自动使用当前语言，无需手动设置
+  }, [appLanguage]);
   
   // 使用新的hooks
   const { 
@@ -128,7 +134,7 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
     resetProgress,
     setComplete,
     moveToNextWord
-  } = useReviewProgress();
+  } = useReviewProgress(words.length);
   
   const {
     handleSwipeLeft,
@@ -150,19 +156,31 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
           collectedCount: prev.collectedCount + (action === 'collected' ? 1 : 0),
         } : null);
       }
+    },
+    onReviewComplete: () => {
+      console.log('🎯 从 handleSwipeRight 调用完成处理函数');
+      if (!isReviewComplete) {
+        handleSwipedAll();
+      }
     }
   });
 
-  // 监控艾宾浩斯记忆法状态变化，显示Toast提示
+  // 监控艾宾浩斯记忆法状态变化，显示Toast提示（仅在切换复习模式后）
   useEffect(() => {
-    if (isEbbinghaus && reviewMode === 'smart' && (!type || type === 'shuffle' || type === 'random') && showEbbinghausTip) {
+    if (
+      showEbbinghausTip && // 仅在切换模式后允许显示
+      isEbbinghaus &&
+      reviewMode === 'smart' &&
+      (!type || type === 'shuffle' || type === 'random')
+    ) {
       setShowToast(true);
-      setShowEbbinghausTip(false);
+      setShowEbbinghausTip(false); // 显示一次后关闭
     }
   }, [isEbbinghaus, reviewMode, type, showEbbinghausTip]);
 
   const [wordDataCache, setWordDataCache] = useState<{ [key: string]: WordData }>({});
   const [isWordDataLoading, setIsWordDataLoading] = useState(true);
+  const [pendingOperations, setPendingOperations] = useState(0);
 
   // 词卡数据批量预加载
   useEffect(() => {
@@ -292,7 +310,7 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
     const wordData = wordDataCache[item.word];
     if (!wordData) {
       console.log(`❌ 没有找到 ${item.word} 的缓存数据，显示加载中...`);
-      return <View style={{ height: 300, justifyContent: 'center', alignItems: 'center' }}><Text>加载中...</Text></View>;
+      return <View style={{ height: 300, justifyContent: 'center', alignItems: 'center' }}><Text>{t('loading', appLanguage)}</Text></View>;
     }
     
     console.log(`✅ 找到 ${item.word} 的缓存数据，渲染卡片`);
@@ -333,7 +351,10 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
         console.log('✅ ReviewScreen - Web Speech API 播放成功');
       } catch (webSpeechError) {
         console.error('❌ ReviewScreen - Web Speech API 也失败了:', webSpeechError);
-        Alert.alert('播放失败', '音频播放功能暂时不可用，请稍后再试');
+        Alert.alert(
+          t('audio_play_failed', appLanguage), 
+          t('audio_play_failed_message', appLanguage)
+        );
       }
     }
   };
@@ -369,7 +390,10 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
     // 使用 calculateFinalStats 获取正确的统计数据
     const finalStats = calculateFinalStats();
     console.log('ReviewScreen: Final stats from calculateFinalStats:', finalStats);
-    console.log('🎯 本次复习新获得经验值:', finalStats.experience, '(记住:', finalStats.rememberedWords, '个，忘记:', finalStats.forgottenWords, '个)');
+        console.log(t('review_complete_message', appLanguage, {
+      remembered: finalStats.rememberedWords, 
+      forgotten: finalStats.forgottenWords 
+    }));
     
     // 确保 finalStats 被正确设置
     console.log('ReviewScreen: Setting final stats for completion screen');
@@ -397,21 +421,8 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
             actions={reviewActions}
             type={type}
             onBack={async () => {
-              // 增加复习次数统计
+              // 同步到后端
               try {
-                // 更新本地存储的复习次数
-                const currentStats = await AsyncStorage.getItem('userStats');
-                if (currentStats) {
-                  const stats = JSON.parse(currentStats);
-                  const updatedStats = {
-                    ...stats,
-                    totalReviews: (stats.totalReviews || 0) + 1
-                  };
-                  await AsyncStorage.setItem('userStats', JSON.stringify(updatedStats));
-                  console.log('✅ 本地复习次数已更新:', updatedStats.totalReviews);
-                }
-                
-                // 同步到后端
                 const token = await AsyncStorage.getItem('authToken');
                 if (token) {
                   // 更新复习次数和连续学习
@@ -432,18 +443,27 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
                 console.error('❌ 更新复习次数失败:', error);
               }
               
-              // 直接使用 reviewStats 中的经验值，无需存储到本地
-              const totalExperience = reviewStats.experience;
-              
-              // 保存经验值增加参数到AsyncStorage
-              const params = {
-                showExperienceAnimation: true,
-                experienceGained: totalExperience
-              };
-              await AsyncStorage.setItem('navigationParams', JSON.stringify(params));
-              
-              // 经验值已在复习过程中通过 updateWordProgress 同步到后端
-              console.log('✅ 复习经验值已在复习过程中同步到后端，本次获得:', totalExperience);
+              // 更新本地 userStats
+              const currentStats = await AsyncStorage.getItem('userStats');
+              if (currentStats) {
+                const stats = JSON.parse(currentStats);
+                const updatedStats = {
+                  ...stats,
+                  totalReviews: (stats.totalReviews || 0) + 1
+                };
+                await AsyncStorage.setItem('userStats', JSON.stringify(updatedStats));
+                console.log('✅ 本地 userStats 已更新');
+              } else {
+                // 如果本地没有 userStats，创建新的
+                const newStats = {
+                  collectedWords: 0,
+                  contributedWords: 0,
+                  totalReviews: 1,
+                  currentStreak: 0
+                };
+                await AsyncStorage.setItem('userStats', JSON.stringify(newStats));
+                console.log('✅ 创建新的 userStats');
+              }
               
               // 标记需要刷新vocabulary数据
               await AsyncStorage.setItem('refreshVocabulary', 'true');
@@ -463,21 +483,8 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
             actions={reviewActions}
             type={type}
             onBack={async () => {
-              // 增加复习次数统计
+              // 同步到后端
               try {
-                // 更新本地存储的复习次数
-                const currentStats = await AsyncStorage.getItem('userStats');
-                if (currentStats) {
-                  const stats = JSON.parse(currentStats);
-                  const updatedStats = {
-                    ...stats,
-                    totalReviews: (stats.totalReviews || 0) + 1
-                  };
-                  await AsyncStorage.setItem('userStats', JSON.stringify(updatedStats));
-                  console.log('✅ 本地复习次数已更新:', updatedStats.totalReviews);
-                }
-                
-                // 同步到后端
                 const token = await AsyncStorage.getItem('authToken');
                 if (token) {
                   // 更新复习次数和连续学习
@@ -498,18 +505,27 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
                 console.error('❌ 更新复习次数失败:', error);
               }
               
-              // 直接使用 reviewStats 中的经验值，无需存储到本地
-              const totalExperience = reviewStats.experience;
-              
-              // 保存经验值增加参数到AsyncStorage
-              const params = {
-                showExperienceAnimation: true,
-                experienceGained: totalExperience
-              };
-              await AsyncStorage.setItem('navigationParams', JSON.stringify(params));
-              
-              // 经验值已在复习过程中通过 updateWordProgress 同步到后端
-              console.log('✅ 复习经验值已在复习过程中同步到后端，本次获得:', totalExperience);
+              // 更新本地 userStats
+              const currentStats = await AsyncStorage.getItem('userStats');
+              if (currentStats) {
+                const stats = JSON.parse(currentStats);
+                const updatedStats = {
+                  ...stats,
+                  totalReviews: (stats.totalReviews || 0) + 1
+                };
+                await AsyncStorage.setItem('userStats', JSON.stringify(updatedStats));
+                console.log('✅ 本地 userStats 已更新');
+              } else {
+                // 如果本地没有 userStats，创建新的
+                const newStats = {
+                  collectedWords: 0,
+                  contributedWords: 0,
+                  totalReviews: 1,
+                  currentStreak: 0
+                };
+                await AsyncStorage.setItem('userStats', JSON.stringify(newStats));
+                console.log('✅ 创建新的 userStats');
+              }
               
               // 标记需要刷新vocabulary数据
               await AsyncStorage.setItem('refreshVocabulary', 'true');
@@ -531,7 +547,7 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
       {/* Toast提示 */}
       {showToast && (
         <Toast
-          message="☑️ 已切入艾宾浩斯记忆法"
+          message={t('ebbinghaus_activated', appLanguage)}
           type="success"
           duration={3000}
           onHide={() => setShowToast(false)}
@@ -543,6 +559,7 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
         mode={reviewMode}
         onModeChange={(mode) => {
           setReviewMode(mode);
+          // 切换复习模式后允许显示一次艾宾浩斯提示
           setShowEbbinghausTip(true);
           setShowToast(false);
           setTimeout(() => loadReviewWords(), 100);
@@ -566,7 +583,7 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
           elevation: 2
         }}>
           <Text style={{color: colors.error[700], fontWeight: '600', fontSize: 15}}>
-            ⚠️ 错词挑战 - 专注记忆不熟悉的单词
+            {t('wrong_words_challenge_title', appLanguage)}
           </Text>
         </View>
       )}
@@ -586,7 +603,7 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
           elevation: 2
         }}>
           <Text style={{color: colors.accent[700], fontWeight: '600', fontSize: 15}}>
-            📚 {type === 'show' ? '剧集复习' : '单词本复习'} - 显示所有单词
+            {t(type === 'show' ? 'series_review_title' : 'wordbook_review_title', appLanguage)}
           </Text>
         </View>
       )}
@@ -616,22 +633,39 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
           onSwipedLeft={async (cardIndex) => {
             const word = words[cardIndex]?.word;
             if (word) {
-              await handleSwipeLeft(word);
+              setPendingOperations(prev => prev + 1);
+              try {
+                await handleSwipeLeft(word);
+              } finally {
+                setPendingOperations(prev => Math.max(0, prev - 1));
+              }
             }
           }}
           onSwipedRight={async (cardIndex) => {
             const word = words[cardIndex]?.word;
             if (word) {
-              await handleSwipeRight(word);
+              setPendingOperations(prev => prev + 1);
+              try {
+                await handleSwipeRight(word);
+              } finally {
+                setPendingOperations(prev => Math.max(0, prev - 1));
+              }
             }
           }}
           onSwipedAll={() => {
             console.log('🎯 Swiper onSwipedAll 触发 - 所有卡片已划完');
+            console.log('🔍 检查待处理操作数量 - pendingOperations:', pendingOperations);
+            
             // 确保进度条立即设置为100%
             progressAnimation.setValue(100);
-            // 触发完成页面显示
-            if (!isReviewComplete) {
+            
+            // 由于 Swiper 组件的限制，onSwipedAll 可能在 onSwipedRight 之前触发
+            // 我们改为在 handleSwipeRight 中处理完成逻辑，这里只做备用处理
+            if (pendingOperations === 0 && !isReviewComplete) {
+              console.log('✅ 无待处理操作，立即触发完成页面（备用）');
               handleSwipedAll();
+            } else {
+              console.log('⏳ 有待处理操作，等待 handleSwipeRight 中的完成逻辑');
             }
           }}
           cardVerticalMargin={8}

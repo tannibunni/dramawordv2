@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,13 +8,15 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../constants/colors';
+import { experienceManager } from './services/experienceManager';
+import { animationManager } from '../../services/animationManager';
 
 // 复习完成统计接口
 export interface ReviewStats {
   totalWords: number;
   rememberedWords: number;
   forgottenWords: number;
-  experience: number;
+
   accuracy: number;
 }
 
@@ -38,6 +40,63 @@ const ReviewCompleteScreen: React.FC<ReviewCompleteScreenProps> = ({
   onBack,
   type 
 }) => {
+  // 计算总经验值
+  const experienceGained = experienceManager.calculateReviewTotalExperience(actions);
+  
+  // 处理经验值增益和动画
+  useEffect(() => {
+    const handleExperienceGain = async () => {
+      if (experienceGained > 0) {
+        console.log('[ReviewCompleteScreen] 开始处理经验值增益:', experienceGained);
+        
+        // 强制重置动画状态，确保可以启动新动画
+        animationManager.resetAnimatingState();
+        
+        // 先获取添加前的经验值信息
+        const oldInfo = await experienceManager.getCurrentExperienceInfo();
+        if (!oldInfo) {
+          console.log('[ReviewCompleteScreen] 无法获取当前经验值信息');
+          return;
+        }
+        
+        console.log('[ReviewCompleteScreen] 添加前经验值:', oldInfo.experience);
+        
+        // 添加总经验值
+        const result = await experienceManager.addReviewTotalExperience(experienceGained);
+        
+        if (result && result.success) {
+          console.log('[ReviewCompleteScreen] 经验值增益成功:', result);
+          
+          // 获取添加后的经验值信息
+          const newInfo = await experienceManager.getCurrentExperienceInfo();
+          if (newInfo) {
+            console.log('[ReviewCompleteScreen] 添加后经验值:', newInfo.experience);
+            
+            // 触发经验值动画（使用 experienceManager 的方法来更新状态）
+            console.log('[ReviewCompleteScreen] 准备触发经验值动画:', {
+              gainedExp: experienceGained,
+              oldExperience: oldInfo.experience,
+              newExperience: newInfo.experience
+            });
+            
+            // 使用 experienceManager 的动画方法，这样会更新 animatedExperience 状态
+            await experienceManager.startExperienceAnimationWithState(
+              experienceGained,
+              (currentExp: number, progress: number) => {
+                console.log('[ReviewCompleteScreen] 经验值动画进度:', { currentExp, progress });
+              },
+              (finalExp: number, finalLevel: number) => {
+                console.log('[ReviewCompleteScreen] 经验值动画完成:', { finalExp, finalLevel });
+              }
+            );
+          }
+        }
+      }
+    };
+    
+    handleExperienceGain();
+  }, [experienceGained, actions]);
+
   return (
     <View style={styles.container}>
       {/* 记住统计 */}
@@ -96,11 +155,7 @@ const ReviewCompleteScreen: React.FC<ReviewCompleteScreenProps> = ({
         </ScrollView>
       </View>
       
-      {/* 总经验值 */}
-      <View style={styles.experienceSection}>
-        <Text style={styles.experienceLabel}>本次复习获得</Text>
-        <Text style={styles.experienceValue}>+{stats.experience} XP</Text>
-      </View>
+
       
       {/* 完成按钮 */}
       <View style={styles.buttonContainer}>
@@ -187,23 +242,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginLeft: 4,
   },
-  experienceSection: {
-    alignItems: 'center',
-    marginBottom: 16,
-    paddingVertical: 12,
-    backgroundColor: colors.background.secondary,
-    borderRadius: 12,
-  },
-  experienceLabel: {
-    fontSize: 16,
-    color: colors.text.secondary,
-    marginBottom: 4,
-  },
-  experienceValue: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: colors.primary[500],
-  },
+
   buttonContainer: {
     alignItems: 'center',
     marginBottom: 16,

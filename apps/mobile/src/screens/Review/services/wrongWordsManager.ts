@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import Logger from '../utils/logger';
+import Logger from '../../../utils/logger';
+import { experienceManager } from './experienceManager';
 
 // 创建页面专用日志器
 const logger = Logger.forPage('WrongWordsManager');
@@ -43,6 +44,16 @@ export interface WrongWordsEventData {
   action?: string;
 }
 
+// 错词数量状态接口
+export interface WrongWordsCountState {
+  wrongWordsCount: number;
+  isLoading: boolean;
+  lastUpdated: number;
+}
+
+// 错词数量更新回调
+export type WrongWordsCountCallback = (count: number) => void;
+
 /**
  * 错词集合管理器
  * 负责错词的添加、移除、更新和查询
@@ -52,6 +63,15 @@ export class WrongWordsManager {
   private collection: WrongWordsCollection;
   private eventListeners: Map<WrongWordsEvent, Function[]> = new Map();
   private isInitialized = false;
+
+  // 错词数量状态管理
+  private wrongWordsCountState: WrongWordsCountState = {
+    wrongWordsCount: 0,
+    isLoading: false,
+    lastUpdated: Date.now()
+  };
+
+  private countCallbacks: WrongWordsCountCallback[] = [];
 
   private constructor() {
     this.collection = {
@@ -542,6 +562,213 @@ export class WrongWordsManager {
     
     console.log('🔧 WrongWordsManager: 错词集合重置完成');
     logger.log('错词集合已重置', 'reset');
+  }
+
+  // ==================== 错词数量管理 ====================
+  
+  // 注册错词数量更新回调
+  public registerCountCallback(callback: WrongWordsCountCallback): () => void {
+    this.countCallbacks.push(callback);
+    return () => {
+      const index = this.countCallbacks.indexOf(callback);
+      if (index > -1) {
+        this.countCallbacks.splice(index, 1);
+      }
+    };
+  }
+
+  // 更新错词数量状态
+  private updateWrongWordsCount(count: number): void {
+    this.wrongWordsCountState = {
+      wrongWordsCount: count,
+      isLoading: false,
+      lastUpdated: Date.now()
+    };
+    
+    // 通知所有回调
+    this.countCallbacks.forEach(callback => {
+      try {
+        callback(count);
+      } catch (error) {
+        console.error('🔧 WrongWordsManager: 错词数量回调执行失败:', error);
+      }
+    });
+  }
+
+  // 获取当前错词数量状态
+  public getWrongWordsCountState(): WrongWordsCountState {
+    return { ...this.wrongWordsCountState };
+  }
+
+  // 计算错词数量（从词汇表）
+  public calculateWrongWordsCount(vocabulary: any[]): number {
+    console.log('🔧 WrongWordsManager: 开始计算错词数量');
+    console.log('🔧 vocabulary 总数:', vocabulary.length);
+    
+    if (!vocabulary || vocabulary.length === 0) {
+      console.log('🔧 WrongWordsManager: vocabulary为空，错词数量设为0');
+      this.updateWrongWordsCount(0);
+      return 0;
+    }
+
+    // 使用错词管理器的逻辑计算错词数量
+    const wrongWords = vocabulary.filter((word: any) => {
+      return this.checkIsWrongWord(word);
+    });
+    
+    const count = wrongWords.length;
+    console.log(`🔧 WrongWordsManager: 错词数量计算结果: ${count}`);
+    console.log('🔧 错词列表:', wrongWords.map(w => w.word));
+    
+    this.updateWrongWordsCount(count);
+    return count;
+  }
+
+  // 刷新错词数量
+  public async refreshWrongWordsCount(vocabulary: any[]): Promise<number> {
+    console.log('🔧 WrongWordsManager: 开始刷新错词数量');
+    
+    try {
+      this.wrongWordsCountState.isLoading = true;
+      
+      // 确保错词管理器已初始化
+      if (!this.isInitialized) {
+        console.log('🔧 WrongWordsManager: 错词管理器未初始化，先初始化');
+        await this.initialize(vocabulary);
+      }
+      
+      // 计算错词数量
+      const count = this.calculateWrongWordsCount(vocabulary);
+      
+      console.log('🔧 WrongWordsManager: 错词数量刷新完成:', count);
+      return count;
+    } catch (error) {
+      console.error('🔧 WrongWordsManager: 刷新错词数量失败', error);
+      logger.error('刷新错词数量失败', 'refreshWrongWordsCount');
+      this.updateWrongWordsCount(0);
+      return 0;
+    }
+  }
+
+  // 自动管理错词数量（整合初始化、计算、更新等功能）
+  public async autoManageWrongWordsCount(
+    vocabulary: any[],
+    onCountUpdate?: (count: number) => void
+  ): Promise<void> {
+    console.log('🔧 WrongWordsManager: 开始自动管理错词数量');
+    
+    try {
+      // 1. 初始化错词管理器
+      await this.initialize(vocabulary);
+      
+      // 2. 计算错词数量
+      const count = this.calculateWrongWordsCount(vocabulary);
+      
+      // 3. 回调通知
+      if (onCountUpdate) {
+        onCountUpdate(count);
+      }
+      
+      console.log('🔧 WrongWordsManager: 错词数量自动管理完成');
+    } catch (error) {
+      console.error('🔧 WrongWordsManager: 自动管理错词数量失败', error);
+      if (onCountUpdate) {
+        onCountUpdate(0);
+      }
+    }
+  }
+
+  // ==================== 页面错词数量管理 ====================
+  
+  // 统一管理页面错词数量
+  public async managePageWrongWordsCount(
+    vocabulary: any[],
+    onCountUpdate?: (count: number) => void
+  ): Promise<{
+    wrongWordsCount: number;
+    challengeCardConfig: {
+      key: string;
+      icon: string;
+      title: string;
+      subtitle: string;
+      experienceGained: number;
+      count: number;
+      hasRefreshButton: boolean;
+    };
+    unsubscribe: () => void;
+  }> {
+    console.log('[wrongWordsManager] 开始统一管理页面错词数量');
+    
+    // 1. 自动管理错词数量
+    await this.autoManageWrongWordsCount(vocabulary, (count) => {
+      console.log('[wrongWordsManager] 错词数量更新:', count);
+      
+      // 回调通知
+      if (onCountUpdate) {
+        onCountUpdate(count);
+      }
+    });
+    
+    // 2. 获取当前错词数量
+    const currentCount = this.getWrongWordsCount();
+    
+    // 3. 构建挑战卡片配置
+    const challengeCardConfig = {
+      key: 'wrong_words',
+      icon: 'alert-circle',
+      title: 'wrong_words_challenge',
+      subtitle: 'wrong_words_count',
+      experienceGained: experienceManager.getWrongWordChallengeExperience(),
+      count: currentCount,
+      hasRefreshButton: true
+    };
+    
+    // 4. 返回结果和取消订阅函数
+    return {
+      wrongWordsCount: currentCount,
+      challengeCardConfig,
+      unsubscribe: () => {
+        // 清理回调
+        this.countCallbacks = [];
+      }
+    };
+  }
+
+  // 获取错词挑战卡片配置
+  public getWrongWordsChallengeConfig(wrongWordsCount: number): {
+    key: string;
+    icon: string;
+    title: string;
+    subtitle: string;
+    experienceGained: number;
+    count: number;
+    hasRefreshButton: boolean;
+  } {
+    return {
+      key: 'wrong_words',
+      icon: 'alert-circle',
+      title: 'wrong_words_challenge',
+      subtitle: 'wrong_words_count',
+      experienceGained: experienceManager.getWrongWordChallengeExperience(),
+      count: wrongWordsCount,
+      hasRefreshButton: true
+    };
+  }
+
+  // 页面组件错词数量Hook（简化版）
+  public createPageWrongWordsHook(
+    vocabulary: any[],
+    onCountUpdate?: (count: number) => void
+  ) {
+    return {
+      wrongWordsCount: this.getWrongWordsCount(),
+      challengeCardConfig: this.getWrongWordsChallengeConfig(this.getWrongWordsCount()),
+      initialize: () => this.managePageWrongWordsCount(vocabulary, onCountUpdate),
+      refresh: () => this.refreshWrongWordsCount(vocabulary),
+      unsubscribe: () => {
+        this.countCallbacks = [];
+      }
+    };
   }
 }
 

@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { Animated } from 'react-native';
 
-export const useReviewProgress = () => {
+export const useReviewProgress = (totalWords: number) => {
   const [swiperIndex, setSwiperIndex] = useState(0);
   const [currentProgress, setCurrentProgress] = useState(0);
   const [isReviewComplete, setIsReviewComplete] = useState(false);
@@ -17,7 +17,10 @@ export const useReviewProgress = () => {
     // 开始状态：进度条为0%（swiperIndex=0时）
     // 滑完第一张卡：进度条为50%（swiperIndex=1时，2张卡的情况下）
     // 滑完第二张卡：进度条为100%（swiperIndex=2时，2张卡的情况下）
-    const newProgress = Math.min(100, Math.max(0, (swiperIndex / 1) * 100));
+    const denominator = totalWords > 0 ? totalWords : 1;
+    const computedProgress = Math.min(100, Math.max(0, (swiperIndex / denominator) * 100));
+    // 进度条不允许回退，保证单调递增
+    const newProgress = Math.max(currentProgress, computedProgress);
     
     console.log(`📊 进度条更新: swiperIndex=${swiperIndex}, progress=${newProgress.toFixed(2)}%`);
     console.log(`🎯 进度条状态: currentProgress=${currentProgress.toFixed(2)}%, newProgress=${newProgress.toFixed(2)}%`);
@@ -53,7 +56,7 @@ export const useReviewProgress = () => {
     });
     
     setCurrentProgress(newProgress);
-  }, [swiperIndex, currentProgress]);
+  }, [swiperIndex, currentProgress, totalWords]);
   
   // 重置进度
   const resetProgress = () => {

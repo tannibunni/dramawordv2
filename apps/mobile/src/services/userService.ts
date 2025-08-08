@@ -222,7 +222,7 @@ export class UserService {
   async getAuthToken(): Promise<string | null> {
     try {
       const result = await storageService.getAuthToken();
-      return result.success ? result.data : null;
+      return result.success ? (result.data || null) : null;
     } catch (error) {
       console.error('❌ 获取认证token失败:', error);
       return null;

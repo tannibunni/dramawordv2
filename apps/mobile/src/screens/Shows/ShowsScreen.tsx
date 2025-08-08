@@ -27,6 +27,7 @@ import WordbookEditModal from '../../components/wordbook/WordbookEditModal';
 import { Swipeable } from 'react-native-gesture-handler';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAppLanguage } from '../../context/AppLanguageContext';
+import { t } from '../../constants/translations';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 
@@ -59,69 +60,7 @@ const ShowsScreen: React.FC = () => {
   const { shows, addShow, changeShowStatus, removeShow, updateShow } = useShowList();
   const { appLanguage } = useAppLanguage();
   
-  // 翻译函数
-  const t = (key: string, params?: Record<string, string | number>): string => {
-    const isChinese = appLanguage === 'zh-CN';
-    const translations = {
-      'search_shows': isChinese ? '搜索剧集...' : 'Search shows...',
-      'search_wordbooks': isChinese ? '搜索单词本...' : 'Search wordbooks...',
-      'all': isChinese ? '全部' : 'All',
-      'plan_to_watch': isChinese ? '想看' : 'Plan to Watch',
-      'watching': isChinese ? '观看中' : 'Watching',
-      'completed': isChinese ? '已完成' : 'Completed',
-      'searching': isChinese ? '搜索中...' : 'Searching...',
-      'no_results': isChinese ? '没有找到相关剧集' : 'No shows found',
-      'try_other_keywords': isChinese ? '尝试其他关键词' : 'Try other keywords',
-      'no_shows': isChinese ? '暂无剧集数据，请搜索添加' : 'No shows yet, search to add',
-      'no_recommendations': isChinese ? '暂无推荐内容' : 'No recommendations yet',
-      'current_filter': isChinese ? '当前筛选' : 'Current filter',
-      'shows_count': isChinese ? '{count} 个剧集' : '{count} shows',
-      'watching_status': isChinese ? '观看中' : 'Watching',
-      'completed_status': isChinese ? '已完成' : 'Completed',
-      'plan_to_watch_status': isChinese ? '想看' : 'Plan to Watch',
-      'unknown_status': isChinese ? '未知' : 'Unknown',
-      'wordbook': isChinese ? '单词本' : 'Wordbook',
-      'unknown_genre': isChinese ? '未知类型' : 'Unknown Genre',
-      'words_count': isChinese ? '{count} 个单词' : '{count} words',
-      'last_watched': isChinese ? '最后观看' : 'Last watched',
-      'edit': isChinese ? '编辑' : 'Edit',
-      'mark_completed': isChinese ? '已看完' : 'Mark Completed',
-      'delete': isChinese ? '删除' : 'Delete',
-      'delete_show': isChinese ? '删除剧集' : 'Delete Show',
-      'delete_confirm': isChinese ? '确定要删除"{name}"吗？' : 'Are you sure you want to delete "{name}"?',
-      'cancel': isChinese ? '取消' : 'Cancel',
-      'search_failed': isChinese ? '搜索剧集失败，请稍后重试' : 'Search failed, please try again later',
-      'error': isChinese ? '错误' : 'Error',
-      'add': isChinese ? '添加' : 'Add',
-      'add_to_showlist': isChinese ? '加入剧单' : 'Add to Showlist',
-      'already_added': isChinese ? '已添加' : 'Already Added',
-      'ongoing': isChinese ? '连载中' : 'Ongoing',
-      'finished': isChinese ? '已完结' : 'Finished',
-      'no_overview': isChinese ? '暂无剧情简介' : 'No overview available',
-      'overview': isChinese ? '剧情简介' : 'Overview',
-      'loading_overview': isChinese ? '加载剧情简介中...' : 'Loading overview...',
-      'collected_words': isChinese ? '收藏的单词' : 'Collected Words',
-      'no_collected_words': isChinese ? '暂无收藏单词' : 'No collected words',
-      'word_details': isChinese ? '单词详情' : 'Word Details',
-      'no_wordbooks': isChinese ? '暂无单词本，请创建' : 'No wordbooks yet, create one',
-      'create_wordbook': isChinese ? '创建单词本' : 'Create Wordbook',
-      'no_wordbook_results': isChinese ? '没有找到相关单词本' : 'No wordbooks found',
-      'try_other_wordbook_keywords': isChinese ? '尝试其他关键词' : 'Try other keywords',
-      'recommendations_tab': isChinese ? '推荐' : 'Recommendations',
-      'shows_tab': isChinese ? '剧单' : 'Shows',
-      'wordbooks_tab': isChinese ? '单词本' : 'Wordbooks',
-      'not_completed': isChinese ? '未看' : 'Not Watched',
-      'add_to_list': isChinese ? '添加到列表' : 'Add to List',
-    };
-    
-    let text = translations[key as keyof typeof translations] || key;
-    if (params) {
-      Object.entries(params).forEach(([param, value]) => {
-        text = text.replace(`{${param}}`, String(value));
-      });
-    }
-    return text;
-  };
+  // 使用统一的翻译函数
   const { vocabulary, removeWord } = useVocabulary();
   const [filteredShows, setFilteredShows] = useState<Show[]>([]);
   const [searchText, setSearchText] = useState('');
@@ -549,7 +488,7 @@ const ShowsScreen: React.FC = () => {
         }
       } catch (error) {
         console.error('Failed to search:', error);
-        Alert.alert(t('error'), t('search_failed'));
+        Alert.alert(t('error', appLanguage), t('search_failed', appLanguage));
       } finally {
         setSearchLoading(false);
       }
@@ -664,7 +603,7 @@ const ShowsScreen: React.FC = () => {
       }
     } catch (error) {
       console.error('Failed to search:', error);
-      Alert.alert(t('error'), t('search_failed'));
+      Alert.alert(t('error', appLanguage), t('search_failed', appLanguage));
     } finally {
       setSearchLoading(false);
     }
@@ -744,10 +683,10 @@ const ShowsScreen: React.FC = () => {
 
   const getStatusText = (status: string) => {
     switch (status) {
-      case 'watching': return t('watching_status');
-      case 'completed': return t('completed_status');
-      case 'plan_to_watch': return t('plan_to_watch_status');
-      default: return t('unknown_status');
+      case 'watching': return t('watching_status', appLanguage);
+      case 'completed': return t('completed_status', appLanguage);
+      case 'plan_to_watch': return t('plan_to_watch_status', appLanguage);
+      default: return t('unknown_status', appLanguage);
     }
   };
 
@@ -841,7 +780,7 @@ const ShowsScreen: React.FC = () => {
             onPress={() => openWordbookEdit(item)}
           >
             <Ionicons name="create" size={28} color={colors.primary[500]} />
-            <Text style={{ color: colors.primary[500], fontWeight: 'bold', marginTop: 4 }}>{t('edit')}</Text>
+            <Text style={{ color: colors.primary[500], fontWeight: 'bold', marginTop: 4 }}>{t('edit', appLanguage)}</Text>
           </TouchableOpacity>
         )}
         {!isWordbook && (
@@ -856,7 +795,7 @@ const ShowsScreen: React.FC = () => {
             onPress={() => changeShowStatus(item.id, 'completed')}
           >
             <Ionicons name="checkmark-done" size={28} color={colors.success[500]} />
-            <Text style={{ color: colors.success[500], fontWeight: 'bold', marginTop: 4 }}>{t('mark_completed')}</Text>
+            <Text style={{ color: colors.success[500], fontWeight: 'bold', marginTop: 4 }}>{t('mark_completed', appLanguage)}</Text>
           </TouchableOpacity>
         )}
         <TouchableOpacity
@@ -868,14 +807,14 @@ const ShowsScreen: React.FC = () => {
             height: '100%',
           }}
           onPress={() => {
-            Alert.alert(t('delete_show'), `确定要删除"${item.name}"吗？`, [
-              { text: t('cancel'), style: 'cancel' },
-              { text: t('delete'), style: 'destructive', onPress: () => removeShow(item.id) },
+            Alert.alert(t('delete_show', appLanguage), `确定要删除"${item.name}"吗？`, [
+              { text: t('cancel', appLanguage), style: 'cancel' },
+              { text: t('delete', appLanguage), style: 'destructive', onPress: () => removeShow(item.id) },
             ]);
           }}
         >
           <Ionicons name="trash" size={28} color={colors.error[500]} />
-          <Text style={{ color: colors.error[500], fontWeight: 'bold', marginTop: 4 }}>{t('delete')}</Text>
+          <Text style={{ color: colors.error[500], fontWeight: 'bold', marginTop: 4 }}>{t('delete', appLanguage)}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -929,9 +868,9 @@ const ShowsScreen: React.FC = () => {
             </View>
             <Text style={styles.originalTitle}>{item.original_name}</Text>
             <Text style={styles.genreText}>
-              {isWordbook ? t('wordbook') : (
+              {isWordbook ? t('wordbook', appLanguage) : (
                 item.genres?.map(genre => genre.name).join(', ') ||
-                (item.genre_ids ? TMDBService.getGenreNames(item.genre_ids, appLanguage === 'zh-CN' ? 'zh-CN' : 'en-US').join(', ') : t('unknown_genre'))
+                (item.genre_ids ? TMDBService.getGenreNames(item.genre_ids, appLanguage === 'zh-CN' ? 'zh-CN' : 'en-US').join(', ') : t('unknown_genre', appLanguage))
               )}
             </Text>
             <View style={styles.showMeta}>
@@ -941,10 +880,10 @@ const ShowsScreen: React.FC = () => {
                   <Text style={styles.ratingText}>{item.vote_average.toFixed(1)}</Text>
                 </View>
               )}
-              <Text style={styles.wordCountText}>{t('words_count', { count: wordCount })}</Text>
+              <Text style={styles.wordCountText}>{t('words_count', appLanguage, { count: wordCount })}</Text>
             </View>
             {item.lastWatched && (
-              <Text style={styles.lastWatchedText}>{t('last_watched')}: {item.lastWatched}</Text>
+              <Text style={styles.lastWatchedText}>{t('last_watched', appLanguage)}: {item.lastWatched}</Text>
             )}
           </View>
         </TouchableOpacity>
@@ -1003,7 +942,7 @@ const ShowsScreen: React.FC = () => {
               styles.segmentedControlText,
               isShowsActive && styles.segmentedControlTextActive
             ]}>
-              {t('shows_tab')}
+              {t('shows_tab', appLanguage)}
             </Text>
           </TouchableOpacity>
           
@@ -1022,7 +961,7 @@ const ShowsScreen: React.FC = () => {
               styles.segmentedControlText,
               isWordbooksActive && styles.segmentedControlTextActive
             ]}>
-              {t('wordbooks_tab')}
+              {t('wordbooks_tab', appLanguage)}
             </Text>
           </TouchableOpacity>
           
@@ -1040,7 +979,7 @@ const ShowsScreen: React.FC = () => {
               styles.segmentedControlText,
               isRecommendationsActive && styles.segmentedControlTextActive
             ]}>
-              {t('recommendations_tab')}
+              {t('recommendations_tab', appLanguage)}
             </Text>
           </TouchableOpacity>
         </View>
@@ -1095,7 +1034,7 @@ const ShowsScreen: React.FC = () => {
               styles.secondarySegmentedControlText,
               isAllActive && styles.secondarySegmentedControlTextActive
             ]}>
-              {t('all')}
+              {t('all', appLanguage)}
             </Text>
           </TouchableOpacity>
           
@@ -1111,7 +1050,7 @@ const ShowsScreen: React.FC = () => {
               styles.secondarySegmentedControlText,
               isNotCompletedActive && styles.secondarySegmentedControlTextActive
             ]}>
-              {t('not_completed')}
+              {t('not_completed', appLanguage)}
             </Text>
           </TouchableOpacity>
 
@@ -1127,7 +1066,7 @@ const ShowsScreen: React.FC = () => {
               styles.secondarySegmentedControlText,
               isCompletedActive && styles.secondarySegmentedControlTextActive
             ]}>
-              {t('completed')}
+              {t('completed', appLanguage)}
             </Text>
           </TouchableOpacity>
         </View>
@@ -1246,7 +1185,7 @@ const ShowsScreen: React.FC = () => {
             <Text style={styles.showTitle}>{item.name}</Text>
             {alreadyAdded ? (
               <View style={[styles.statusBadge, { backgroundColor: colors.accent[500] }]}> 
-                <Text style={styles.statusText}>{t('already_added')}</Text>
+                <Text style={styles.statusText}>{t('already_added', appLanguage)}</Text>
         </View>
             ) : (
               <TouchableOpacity
@@ -1257,21 +1196,21 @@ const ShowsScreen: React.FC = () => {
                   addShowToWatching(item);
                 }}
               >
-                <Text style={styles.statusText}>{t('add')}</Text>
+                <Text style={styles.statusText}>{t('add', appLanguage)}</Text>
               </TouchableOpacity>
             )}
           </View>
           <Text style={styles.originalTitle}>{item.original_name}</Text>
           <Text style={styles.genreText}>
             {item.genres?.map(genre => genre.name).join(', ') || 
-             (item.genre_ids ? TMDBService.getGenreNames(item.genre_ids, appLanguage === 'zh-CN' ? 'zh-CN' : 'en-US').join(', ') : t('unknown_genre'))}
+             (item.genre_ids ? TMDBService.getGenreNames(item.genre_ids, appLanguage === 'zh-CN' ? 'zh-CN' : 'en-US').join(', ') : t('unknown_genre', appLanguage))}
           </Text>
           <View style={styles.showMeta}>
             <View style={styles.ratingContainer}>
               <Ionicons name="star" size={16} color={colors.accent[500]} />
               <Text style={styles.ratingText}>{item.vote_average.toFixed(1)}</Text>
             </View>
-            <Text style={styles.wordCountText}>{t('words_count', { count: wordCount })}</Text>
+            <Text style={styles.wordCountText}>{t('words_count', appLanguage, { count: wordCount })}</Text>
           </View>
         </View>
       </TouchableOpacity>
@@ -1308,8 +1247,8 @@ const ShowsScreen: React.FC = () => {
               ref={searchInputRef}
               style={styles.searchInput}
               placeholder={
-                filter === 'wordbooks' ? t('search_wordbooks') : 
-                t('search_shows')
+                filter === 'wordbooks' ? t('search_wordbooks', appLanguage) : 
+                t('search_shows', appLanguage)
               }
               placeholderTextColor={colors.neutral[500]}
               value={searchText}
@@ -1342,7 +1281,7 @@ const ShowsScreen: React.FC = () => {
       {searchLoading && searchText.length >= 1 && (
         <View style={styles.searchLoadingContainer}>
           <ActivityIndicator size="large" color={colors.primary[500]} />
-          <Text style={styles.searchLoadingText}>{t('searching')}</Text>
+          <Text style={styles.searchLoadingText}>{t('searching', appLanguage)}</Text>
         </View>
       )}
 
@@ -1351,13 +1290,13 @@ const ShowsScreen: React.FC = () => {
         <View style={styles.searchEmptyContainer}>
           <Ionicons name="search-outline" size={64} color={colors.neutral[300]} />
           <Text style={styles.searchEmptyText}>
-            {filter === 'wordbooks' ? t('no_wordbook_results') : 
-             t('no_results')}
+            {filter === 'wordbooks' ? t('no_wordbook_results', appLanguage) : 
+             t('no_results', appLanguage)}
           </Text>
           <TouchableOpacity style={styles.searchEmptyButton}>
             <Text style={styles.searchEmptyButtonText}>
-              {filter === 'wordbooks' ? t('try_other_wordbook_keywords') : 
-               t('try_other_keywords')}
+              {filter === 'wordbooks' ? t('try_other_wordbook_keywords', appLanguage) : 
+               t('try_other_keywords', appLanguage)}
             </Text>
           </TouchableOpacity>
         </View>
@@ -1391,7 +1330,7 @@ const ShowsScreen: React.FC = () => {
           ) : (
             <View style={styles.emptyContainer}>
               <Ionicons name="heart-outline" size={64} color={colors.neutral[300]} />
-              <Text style={styles.emptyText}>{t('no_recommendations')}</Text>
+              <Text style={styles.emptyText}>{t('no_recommendations', appLanguage)}</Text>
             </View>
           )}
         </ScrollView>
@@ -1413,7 +1352,7 @@ const ShowsScreen: React.FC = () => {
               activeOpacity={0.8}
             >
               <Ionicons name="add" size={20} color={colors.primary[500]} />
-              <Text style={styles.flatAddWordbookButtonText}>{t('create_wordbook')}</Text>
+              <Text style={styles.flatAddWordbookButtonText}>{t('create_wordbook', appLanguage)}</Text>
             </TouchableOpacity>
           ) : null
         }
@@ -1424,13 +1363,13 @@ const ShowsScreen: React.FC = () => {
                 // 单词本空状态
                 <>
                   <Ionicons name="book-outline" size={64} color={colors.neutral[300]} />
-                  <Text style={styles.emptyText}>{t('no_wordbooks')}</Text>
+                  <Text style={styles.emptyText}>{t('no_wordbooks', appLanguage)}</Text>
                 </>
               ) : (
                 // 剧单空状态
                 <>
                   <Ionicons name="tv-outline" size={64} color={colors.neutral[300]} />
-                  <Text style={styles.emptyText}>{t('no_shows')}</Text>
+                  <Text style={styles.emptyText}>{t('no_shows', appLanguage)}</Text>
                 </>
               )}
             </View>
@@ -1480,13 +1419,13 @@ const ShowsScreen: React.FC = () => {
               {/* 剧情简介 */}
               <View style={styles.recommendationOverviewSection}>
                 <Text style={styles.recommendationOverviewTitle}>
-                  {t('overview')}
+                  {t('overview', appLanguage)}
                 </Text>
                 {recommendationLoading ? (
                   <View style={styles.recommendationOverviewLoading}>
                     <ActivityIndicator size="small" color="#7C3AED" />
                     <Text style={styles.recommendationOverviewLoadingText}>
-                      {t('loading_overview')}
+                      {t('loading_overview', appLanguage)}
                     </Text>
                   </View>
                 ) : recommendationOverview ? (
@@ -1495,7 +1434,7 @@ const ShowsScreen: React.FC = () => {
                   </Text>
                 ) : (
                   <Text style={styles.recommendationOverviewEmpty}>
-                    {t('no_overview')}
+                    {t('no_overview', appLanguage)}
                   </Text>
                 )}
               </View>
@@ -1576,7 +1515,7 @@ const ShowsScreen: React.FC = () => {
                   styles.recommendationDetailAddButtonText,
                   shows.some(s => s.id === selectedRecommendation.tmdbShowId) && styles.recommendationDetailAddButtonTextAdded
                 ]}>
-                  {shows.some(s => s.id === selectedRecommendation.tmdbShowId) ? t('already_added') : t('add_to_showlist')}
+                  {shows.some(s => s.id === selectedRecommendation.tmdbShowId) ? t('already_added', appLanguage) : t('add_to_showlist', appLanguage)}
                 </Text>
               </TouchableOpacity>
             </ScrollView>
@@ -1717,7 +1656,7 @@ const ShowsScreen: React.FC = () => {
                         <View style={{ position: 'absolute', left: 0, right: 0, bottom: 0, padding: 20 }}>
                           <Text style={{ color: '#fff', fontSize: 22, fontWeight: 'bold', marginBottom: 6 }}>{selectedShow.name}</Text>
                           <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
-                            <Text style={{ color: '#7fffa7', fontWeight: 'bold', marginRight: 12 }}>{selectedShow.status === 'completed' ? t('finished') : t('ongoing')}</Text>
+                            <Text style={{ color: '#7fffa7', fontWeight: 'bold', marginRight: 12 }}>{selectedShow.status === 'completed' ? t('finished', appLanguage) : t('ongoing', appLanguage)}</Text>
                             <Text style={{ color: '#fff', opacity: 0.8, marginRight: 12 }}>{selectedShow.first_air_date?.slice(0, 4) ?? ''}</Text>
                             {selectedShow.genres?.map(genre => (
                               <View key={genre.id} style={{ backgroundColor: 'rgba(255,255,255,0.18)', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 2, marginRight: 8 }}>
@@ -1729,7 +1668,7 @@ const ShowsScreen: React.FC = () => {
                       </View>
                       {/* 简介 */}
                       <View style={{ backgroundColor: '#181818', borderRadius: 18, marginHorizontal: 16, marginTop: -24, padding: 18, shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 8, elevation: 2 }}>
-                        <Text style={{ color: '#fff', fontSize: 16, lineHeight: 24 }}>{selectedShow.overview || t('no_overview')}</Text>
+                        <Text style={{ color: '#fff', fontSize: 16, lineHeight: 24 }}>{selectedShow.overview || t('no_overview', appLanguage)}</Text>
                       </View>
                       {/* 操作按钮 - 只对剧集显示，单词本不显示 */}
                       {selectedShow.type !== 'wordbook' && (
@@ -1755,7 +1694,7 @@ const ShowsScreen: React.FC = () => {
                               }}
                             >
                               <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 16, flexDirection: 'row', alignItems: 'center' }}>
-                                {t('add_to_list')}
+                                {t('add_to_list', appLanguage)}
                               </Text>
                             </TouchableOpacity>
                           )}
@@ -1763,7 +1702,7 @@ const ShowsScreen: React.FC = () => {
                             style={{ flex: 1, marginHorizontal: 16, backgroundColor: selectedShow.status === 'completed' ? colors.success[500] : '#222', borderRadius: 10, paddingVertical: 14, alignItems: 'center' }}
                             onPress={() => { changeShowStatus(selectedShow.id, 'completed'); setShowDetailModal(false); }}
                           >
-                            <Text style={{ color: selectedShow.status === 'completed' ? '#fff' : '#aaa', fontWeight: 'bold', fontSize: 16 }}>{t('completed')}</Text>
+                            <Text style={{ color: selectedShow.status === 'completed' ? '#fff' : '#aaa', fontWeight: 'bold', fontSize: 16 }}>{t('completed', appLanguage)}</Text>
                           </TouchableOpacity>
                         </View>
                       )}
@@ -1780,7 +1719,7 @@ const ShowsScreen: React.FC = () => {
                       fontSize: selectedShow?.type === 'wordbook' ? 20 : 18, 
                       fontWeight: 'bold'
                     }}>
-                      {t('collected_words')} ({getShowWords(selectedShow.id).length})
+                      {t('collected_words', appLanguage)} ({getShowWords(selectedShow.id).length})
                     </Text>
                   </View>
                 </>
@@ -1791,7 +1730,7 @@ const ShowsScreen: React.FC = () => {
                   textAlign: 'center', 
                   marginTop: 32 
                 }}>
-                  {t('no_collected_words')}
+                  {t('no_collected_words', appLanguage)}
                 </Text>
               }
               style={{ flex: 1 }}
@@ -1817,7 +1756,7 @@ const ShowsScreen: React.FC = () => {
               >
                 <Ionicons name="close" size={24} color={colors.text.primary} />
               </TouchableOpacity>
-              <Text style={styles.modalTitle}>{t('word_details')}</Text>
+              <Text style={styles.modalTitle}>{t('word_details', appLanguage)}</Text>
             </View>
             <View style={styles.wordCardContainer}>
               <WordCard

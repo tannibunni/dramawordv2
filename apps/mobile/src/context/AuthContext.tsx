@@ -18,7 +18,6 @@ interface UserInfo {
   updatedAt?: string;
   learningStats?: {
     level?: number;
-    experience?: number;
     totalWords?: number;
     masteredWords?: number;
     learningDays?: number;

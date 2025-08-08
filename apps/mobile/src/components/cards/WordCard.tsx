@@ -21,6 +21,9 @@ import WordCardContent from './WordCardContent';
 // 导入统一的类型定义
 import type { WordData, WordDefinition } from '../../types/word';
 
+// 重新导出类型，供其他组件使用
+export type { WordData, WordDefinition };
+
 interface WordCardProps {
   wordData: WordData;
   onCollect?: (word: string) => void;

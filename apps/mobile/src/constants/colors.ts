@@ -157,6 +157,22 @@ export const colors = {
     share: '#2196F3',       // 分享色（蓝色）
     comment: '#6BCF7A',     // 评论色（绿色）
   },
+
+  // 添加缺失的颜色属性
+  gray: '#94A3B8',           // 灰色
+  lightPurple: '#E3F2FD',    // 浅紫色
+  warning: {
+    50: '#FFFBF0',
+    100: '#FFF7E1',
+    200: '#FFEFC3',
+    300: '#FFE7A5',
+    400: '#FFDF87',
+    500: '#F4B942',
+    600: '#E8A62E',
+    700: '#DC931A',
+    800: '#D08006',
+    900: '#C46D00',
+  },
 } as const;
 
 export type ColorToken = typeof colors; 

@@ -14,6 +14,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../constants/colors';
 import { Show } from '../../context/ShowListContext';
 import { useAppLanguage } from '../../context/AppLanguageContext';
+import { t } from '../../constants/translations';
 
 const { width } = Dimensions.get('window');
 
@@ -57,24 +58,7 @@ const WordbookEditModal: React.FC<WordbookEditModalProps> = ({
   const [icon, setIcon] = useState('book');
   const { appLanguage } = useAppLanguage();
 
-  // 翻译函数
-  const t = (key: string): string => {
-    const isChinese = appLanguage === 'zh-CN';
-    const translations = {
-      'edit_wordbook': isChinese ? '编辑单词本' : 'Edit Wordbook',
-      'create_wordbook': isChinese ? '创建单词本' : 'Create Wordbook',
-      'name': isChinese ? '名称' : 'Name',
-      'description': isChinese ? '描述' : 'Description',
-      'icon': isChinese ? '图标' : 'Icon',
-      'save': isChinese ? '保存' : 'Save',
-      'create': isChinese ? '创建' : 'Create',
-      'cancel': isChinese ? '取消' : 'Cancel',
-      'name_required': isChinese ? '请输入单词本名称' : 'Please enter wordbook name',
-      'save_success': isChinese ? '保存成功' : 'Save successful',
-      'save_failed': isChinese ? '保存失败' : 'Save failed',
-    };
-    return translations[key as keyof typeof translations] || key;
-  };
+  // 使用统一的翻译函数
 
   // 当模态框打开时，初始化数据
   React.useEffect(() => {
@@ -95,7 +79,7 @@ const WordbookEditModal: React.FC<WordbookEditModalProps> = ({
 
   const handleSave = () => {
     if (!name.trim()) {
-      Alert.alert(t('name_required'));
+      Alert.alert(t('name_required', appLanguage));
       return;
     }
 
@@ -157,14 +141,14 @@ const WordbookEditModal: React.FC<WordbookEditModalProps> = ({
           <View style={styles.header}>
             <TouchableOpacity onPress={handleCancel} style={styles.backButton}>
               <Ionicons name="chevron-back" size={24} color={colors.text.secondary} />
-              <Text style={styles.backButtonText}>{t('cancel')}</Text>
+                              <Text style={styles.backButtonText}>{t('cancel', appLanguage)}</Text>
             </TouchableOpacity>
             <Text style={styles.headerTitle}>
-              {isCreating ? t('create_wordbook') : t('edit_wordbook')}
+                              {isCreating ? t('create_wordbook', appLanguage) : t('edit_wordbook', appLanguage)}
             </Text>
             <TouchableOpacity onPress={handleSave} style={styles.confirmButton}>
               <Text style={styles.confirmButtonText}>
-                {isCreating ? t('create') : t('save')}
+                {isCreating ? t('create', appLanguage) : t('save', appLanguage)}
               </Text>
             </TouchableOpacity>
           </View>
@@ -175,17 +159,17 @@ const WordbookEditModal: React.FC<WordbookEditModalProps> = ({
               <View style={styles.iconContainer}>
                 <Ionicons name={icon as any} size={48} color={colors.primary[500]} />
               </View>
-              <Text style={styles.iconPreviewText}>{t('icon')}</Text>
+                              <Text style={styles.iconPreviewText}>{t('icon', appLanguage)}</Text>
             </View>
 
             {/* 标题输入 */}
             <View style={styles.inputSection}>
-              <Text style={styles.inputLabel}>{t('name')}</Text>
+                              <Text style={styles.inputLabel}>{t('name', appLanguage)}</Text>
               <TextInput
                 style={styles.textInput}
                 value={name}
                 onChangeText={setName}
-                placeholder={t('name_required')}
+                                  placeholder={t('name_required', appLanguage)}
                 placeholderTextColor={colors.text.tertiary}
                 maxLength={50}
               />
@@ -193,12 +177,12 @@ const WordbookEditModal: React.FC<WordbookEditModalProps> = ({
 
             {/* 描述输入 */}
             <View style={styles.inputSection}>
-              <Text style={styles.inputLabel}>{t('description')}</Text>
+                              <Text style={styles.inputLabel}>{t('description', appLanguage)}</Text>
               <TextInput
                 style={[styles.textInput, styles.textArea]}
                 value={description}
                 onChangeText={setDescription}
-                placeholder={t('description')}
+                                  placeholder={t('description', appLanguage)}
                 placeholderTextColor={colors.text.tertiary}
                 multiline
                 numberOfLines={3}
@@ -208,7 +192,7 @@ const WordbookEditModal: React.FC<WordbookEditModalProps> = ({
 
             {/* ICON选择 */}
             <View style={styles.inputSection}>
-              <Text style={styles.inputLabel}>{t('icon')}</Text>
+                              <Text style={styles.inputLabel}>{t('icon', appLanguage)}</Text>
               <View style={styles.iconGrid}>
                 {ICON_OPTIONS.map((iconOption) => (
                   <TouchableOpacity

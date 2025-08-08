@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useVocabulary } from '../../../context/VocabularyContext';
-import { wrongWordsManager } from '../../../services/wrongWordsManager';
+import { wrongWordsManager } from '../services/wrongWordsManager';
 import { wordService } from '../../../services/wordService';
 import dayjs from 'dayjs';
 
@@ -77,7 +77,7 @@ export const useReviewLogic = ({ type, id, reviewMode }: ReviewLogicProps) => {
           if (wrongWordsWithDetails.length < MIN_REVIEW_BATCH) {
             const remainingWords = vocabulary.filter(w => 
               !wrongWordsList.includes(w.word) && 
-              (w.incorrectCount > 0 || w.consecutiveIncorrect > 0)
+              ((w.incorrectCount || 0) > 0 || (w.consecutiveIncorrect || 0) > 0)
             );
             const additionalWords = remainingWords.slice(0, MIN_REVIEW_BATCH - wrongWordsWithDetails.length);
             wrongWordsWithDetails.push(...additionalWords);

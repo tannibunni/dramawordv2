@@ -27,9 +27,9 @@ import { Audio } from 'expo-av';
 import LanguagePicker from '../../components/common/LanguagePicker';
 import { useLanguage } from '../../context/LanguageContext';
 import { useAppLanguage } from '../../context/AppLanguageContext';
-import { t } from '../../constants/translations';
 import { SUPPORTED_LANGUAGES, SupportedLanguageCode } from '../../constants/config';
 import { shouldShowLanguageReminder, generateLanguageReminderMessage } from '../../utils/languageDetector';
+import { t } from '../../constants/translations';
 // import { LanguageDebugInfo } from '../../components/common/LanguageDebugInfo';
 
 interface HomeScreenProps {
@@ -65,6 +65,11 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   const [chToEnQuery, setChToEnQuery] = useState<string>('');
   const { selectedLanguage, getCurrentLanguageConfig, setSelectedLanguage } = useLanguage();
   const { appLanguage } = useAppLanguage();
+  
+  // 设置翻译服务语言
+  useEffect(() => {
+    // 翻译函数会自动使用当前语言，无需手动设置
+  }, [appLanguage]);
   
   // 语言提醒缓存，避免频繁弹窗
   const [languageReminderCache, setLanguageReminderCache] = useState<{
@@ -269,7 +274,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         const currentLanguageConfig = getCurrentLanguageConfig();
         if (!currentLanguageConfig) {
           console.error('❌ 无法获取当前语言配置');
-          Alert.alert('错误', '无法获取语言配置，请重试');
+          Alert.alert(t('error', appLanguage), t('language_config_error', appLanguage));
           setIsLoading(false);
           return;
         }
@@ -348,7 +353,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         }
         await wordService.saveSearchHistory(
           (result.data?.correctedWord || result.data?.word)?.trim().toLowerCase(),
-          result.data?.definitions && result.data.definitions[0]?.definition ? result.data.definitions[0].definition : '暂无释义'
+          result.data?.definitions && result.data.definitions[0]?.definition ? result.data.definitions[0].definition : t('no_definition', appLanguage)
         );
         setRecentWords(prev => {
           const filtered = prev.filter(w => (w.word.trim().toLowerCase() !== ((result.data?.correctedWord || result.data?.word) ? (result.data?.correctedWord || result.data?.word).trim().toLowerCase() : '')));
@@ -356,7 +361,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
             {
               id: Date.now().toString(),
               word: ((result.data?.correctedWord || result.data?.word) ? (result.data?.correctedWord || result.data?.word).trim().toLowerCase() : ''),
-              translation: result.data?.definitions && result.data.definitions[0]?.definition ? result.data.definitions[0].definition : '暂无释义',
+              translation: result.data?.definitions && result.data.definitions[0]?.definition ? result.data.definitions[0].definition : t('no_definition', appLanguage),
               timestamp: Date.now(),
             },
             ...filtered.slice(0, 4)
@@ -365,11 +370,11 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         setSearchResult(result.data);
         setSearchText('');
       } else {
-        Alert.alert('查询失败', result.error || '无法找到该单词');
+        Alert.alert(t('query_failed', appLanguage), result.error || t('word_not_found', appLanguage));
       }
     } catch (error) {
       console.error('搜索失败:', error);
-      Alert.alert('搜索失败', '网络连接异常，请稍后重试');
+      Alert.alert(t('search_failed', appLanguage), t('network_error', appLanguage));
     } finally {
       setIsLoading(false);
     }
@@ -426,11 +431,11 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         setSearchResult(result.data);
       } else {
         console.error('❌ 查询失败:', result.error);
-        Alert.alert('查询失败', '无法获取单词详情');
+        Alert.alert(t('query_failed', appLanguage), t('get_word_detail_failed', appLanguage));
       }
     } catch (error) {
       console.error('❌ 获取单词详情失败:', error);
-      Alert.alert('查询失败', '网络连接异常，请稍后重试');
+      Alert.alert(t('query_failed', appLanguage), t('network_error', appLanguage));
     } finally {
       setIsLoading(false);
     }
@@ -611,31 +616,31 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   }, [searchResult]);
 
   const handleClearSearchHistory = async () => {
-          Alert.alert(
-        t('clear_history', appLanguage),
-        t('confirm_clear_history', appLanguage),
-      [
-        { text: t('cancel', appLanguage), style: 'cancel' },
-        { 
-          text: t('confirm', appLanguage), 
-          style: 'destructive', 
-          onPress: async () => {
-            try {
-              const success = await wordService.clearSearchHistory();
-              if (success) {
-                setRecentWords([]);
-                Alert.alert(t('clear_history_success', appLanguage));
-              } else {
-                Alert.alert(t('clear_history_failed', appLanguage));
-              }
-            } catch (error) {
-              console.error('清除搜索历史失败:', error);
+              Alert.alert(
+      t('clear_history', appLanguage),
+      t('confirm_clear_history', appLanguage),
+    [
+      { text: t('cancel', appLanguage), style: 'cancel' },
+      { 
+        text: t('confirm', appLanguage), 
+        style: 'destructive', 
+        onPress: async () => {
+          try {
+            const success = await wordService.clearSearchHistory();
+            if (success) {
+              setRecentWords([]);
+              Alert.alert(t('clear_history_success', appLanguage));
+            } else {
               Alert.alert(t('clear_history_failed', appLanguage));
             }
+          } catch (error) {
+            console.error('清除搜索历史失败:', error);
+            Alert.alert(t('clear_history_failed', appLanguage));
           }
-        },
-      ]
-    );
+        }
+      },
+    ]
+  );
   };
 
   const getSearchPlaceholder = () => {
@@ -677,7 +682,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         <View style={[styles.celebrateOverlay, { pointerEvents: 'none' }]}>
           <View style={styles.celebrateBox}>
             <Text style={styles.celebrateEmoji}>🎉</Text>
-            <Text style={styles.celebrateText}>恭喜解锁 {celebrateBadge} 个单词徽章！</Text>
+            <Text style={styles.celebrateText}>{t('badge_unlocked', appLanguage, { count: celebrateBadge })}</Text>
           </View>
         </View>
       )}
@@ -739,7 +744,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                 <Ionicons name="close" size={26} color={colors.text.secondary} />
               </TouchableOpacity>
               <Text style={{ fontSize: 20, fontWeight: 'bold', color: colors.text.primary, marginBottom: 16, marginTop: 8 }}>
-                "{chToEnQuery}"中文转{getCurrentLanguageConfig()?.name || '目标语言'}
+                "{chToEnQuery}"{t('chinese_to_target', appLanguage, { target: getCurrentLanguageConfig()?.name || t('target_language', appLanguage) })}
               </Text>
               {chToEnCandidates.map((en, idx) => (
                 <TouchableOpacity key={en} onPress={async () => {
@@ -752,7 +757,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                   // 添加安全检查
                   if (!currentLanguageConfig) {
                     console.error('❌ 无法获取当前语言配置');
-                    Alert.alert('错误', '无法获取语言配置，请重试');
+                    Alert.alert(t('error', appLanguage), t('language_config_error', appLanguage));
                     setIsLoading(false);
                     return;
                   }
@@ -764,7 +769,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                     setSearchResult(result.data);
                     setSearchText('');
                     // 新增：将英文查词也加入最近查词历史
-                    const definition = result.data.definitions && result.data.definitions[0]?.definition ? result.data.definitions[0].definition : '暂无释义';
+                    const definition = result.data.definitions && result.data.definitions[0]?.definition ? result.data.definitions[0].definition : t('no_definition', appLanguage);
                     await wordService.saveSearchHistory(en, definition);
                     setRecentWords(prev => {
                       const filtered = prev.filter(w => w.word !== en);
@@ -800,7 +805,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         ) : searchSuggestions.length > 0 ? (
           <View style={styles.wordCardWrapper}>
             <View style={[styles.wordCardCustom, { alignItems: 'center', justifyContent: 'center', padding: 32, borderRadius: 20, backgroundColor: colors.background.secondary, shadowColor: colors.neutral[900], shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.15, shadowRadius: 16, elevation: 8, maxWidth: 350, minHeight: 220 }] }>
-              <Text style={{ fontSize: 20, fontWeight: 'bold', color: colors.text.primary, marginBottom: 16 }}>{t('search_suggestions', appLanguage)}</Text>
+                                <Text style={{ fontSize: 20, fontWeight: 'bold', color: colors.text.primary, marginBottom: 16 }}>{t('search_suggestions', appLanguage)}</Text>
               {searchSuggestions.map(sug => (
                 <TouchableOpacity key={sug} onPress={() => { setSearchText(sug); setSearchSuggestions([]); setTimeout(() => handleSearch(), 0); }} style={{ paddingVertical: 10, paddingHorizontal: 24, borderRadius: 16, backgroundColor: colors.primary[50], marginBottom: 10 }}>
                   <Text style={{ fontSize: 18, color: colors.primary[700], fontWeight: '500' }}>{sug}</Text>

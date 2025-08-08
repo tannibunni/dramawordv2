@@ -4,7 +4,10 @@ import { WordData } from '../types/word';
 import { Show } from './ShowListContext';
 import { wordService } from '../services/wordService';
 import { API_BASE_URL } from '../constants/config';
-import { vocabularyLogger, apiLogger } from '../utils/logger';
+import Logger from '../utils/logger';
+
+const vocabularyLogger = Logger.forPage('VocabularyContext');
+const apiLogger = Logger.forPage('API');
 import { unifiedSyncService } from '../services/unifiedSyncService';
 
 export interface WordWithSource extends WordData {
@@ -128,7 +131,7 @@ export const VocabularyProvider = ({ children }: { children: ReactNode }) => {
         vocabularyLogger.info('本地存储中没有词汇数据，初始化为空数组');
       }
     } catch (error) {
-      vocabularyLogger.error('加载本地词汇数据失败', error);
+      vocabularyLogger.error('加载本地词汇数据失败', String(error));
       setVocabulary([]);
     } finally {
       setIsLoaded(true);
@@ -140,7 +143,7 @@ export const VocabularyProvider = ({ children }: { children: ReactNode }) => {
       await AsyncStorage.setItem(VOCABULARY_STORAGE_KEY, JSON.stringify(vocabulary));
       vocabularyLogger.info(`保存词汇数据到本地存储: ${vocabulary.length} 个单词`);
     } catch (error) {
-      vocabularyLogger.error('保存词汇数据失败', error);
+      vocabularyLogger.error('保存词汇数据失败', String(error));
     }
   };
 
@@ -180,12 +183,7 @@ export const VocabularyProvider = ({ children }: { children: ReactNode }) => {
                   notes: backendWord.notes || '',
                   tags: backendWord.tags || []
                 };
-                vocabularyLogger.info(`更新单词 ${localWord.word} 的学习进度`, {
-                  incorrectCount: updatedWord.incorrectCount,
-                  consecutiveIncorrect: updatedWord.consecutiveIncorrect,
-                  correctCount: updatedWord.correctCount,
-                  consecutiveCorrect: updatedWord.consecutiveCorrect
-                });
+                vocabularyLogger.info(`更新单词 ${localWord.word} 的学习进度: incorrectCount=${updatedWord.incorrectCount}, consecutiveIncorrect=${updatedWord.consecutiveIncorrect}, correctCount=${updatedWord.correctCount}, consecutiveCorrect=${updatedWord.consecutiveCorrect}`);
                 return updatedWord;
               }
               return localWord;
@@ -196,7 +194,7 @@ export const VocabularyProvider = ({ children }: { children: ReactNode }) => {
         }
       }
     } catch (error) {
-      vocabularyLogger.error('同步学习进度失败', error);
+      vocabularyLogger.error('同步学习进度失败', String(error));
     }
   };
 
@@ -241,7 +239,7 @@ export const VocabularyProvider = ({ children }: { children: ReactNode }) => {
             });
             apiLogger.info('词汇表已加入同步队列');
           } catch (e) {
-            apiLogger.error('词汇表同步失败', e);
+            apiLogger.error('词汇表同步失败', String(e));
           }
         }
       })();
@@ -278,7 +276,7 @@ export const VocabularyProvider = ({ children }: { children: ReactNode }) => {
             });
             apiLogger.info('云端词汇本删除同步');
           } catch (e) {
-            apiLogger.error('云端词汇本删除同步失败', e);
+            apiLogger.error('云端词汇本删除同步失败', String(e));
           }
         }
       })();
@@ -306,7 +304,7 @@ export const VocabularyProvider = ({ children }: { children: ReactNode }) => {
       await AsyncStorage.removeItem(VOCABULARY_STORAGE_KEY);
       vocabularyLogger.info('清空所有词汇数据（内存+本地存储）');
     } catch (error) {
-      vocabularyLogger.error('清空词汇数据失败', error);
+      vocabularyLogger.error('清空词汇数据失败', String(error));
     }
   };
 

@@ -6,6 +6,7 @@ import { WordData } from './WordCard';
 import WordCardContent from './WordCardContent';
 import { Audio } from 'expo-av';
 import { useAppLanguage } from '../../context/AppLanguageContext';
+import { t } from '../../constants/translations';
 
 interface SwipeableWordCardProps {
   wordData: WordData;
@@ -23,18 +24,7 @@ const SwipeableWordCard: React.FC<SwipeableWordCardProps> = ({
   const [localExpanded, setLocalExpanded] = useState(false);
   const { appLanguage } = useAppLanguage();
   
-  // 翻译函数
-  const t = (key: string): string => {
-    const isChinese = appLanguage === 'zh-CN';
-    const translations = {
-      'show_answer': isChinese ? '显示答案' : 'Show Answer',
-      'examples': isChinese ? '例句：' : 'Examples:',
-      'learning_record': isChinese ? '学习记录' : 'Learning Record',
-      'search_count': isChinese ? '搜索次数:' : 'Search Count:',
-      'last_learned': isChinese ? '最后学习:' : 'Last Learned:'
-    };
-    return translations[key as keyof typeof translations] || key;
-  };
+
 
   const handleExpand = () => {
     setLocalExpanded((prev) => !prev);
@@ -83,9 +73,9 @@ const SwipeableWordCard: React.FC<SwipeableWordCardProps> = ({
               {/* 单词来源信息 */}
               {wordData.lastSearched && (
                 <View style={styles.originSection}>
-                  <Text style={styles.originTitle}>{t('learning_record')}</Text>
-                  <Text style={styles.originText}>{t('search_count')} {wordData.searchCount || 0}</Text>
-                  <Text style={styles.originText}>{t('last_learned')} {wordData.lastSearched}</Text>
+                  <Text style={styles.originTitle}>{t('learning_record', appLanguage)}</Text>
+                  <Text style={styles.originText}>{t('search_count', appLanguage)} {wordData.searchCount || 0}</Text>
+                  <Text style={styles.originText}>{t('last_learned', appLanguage)} {wordData.lastSearched}</Text>
                 </View>
               )}
             </ScrollView>
@@ -105,7 +95,7 @@ const SwipeableWordCard: React.FC<SwipeableWordCardProps> = ({
                 style={styles.showAnswerButton}
                 onPress={handleExpand}
               >
-                <Text style={styles.showAnswerText}>{t('show_answer')}</Text>
+                <Text style={styles.showAnswerText}>{t('show_answer', appLanguage)}</Text>
               </TouchableOpacity>
             </View>
           )}

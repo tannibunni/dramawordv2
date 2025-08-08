@@ -109,9 +109,9 @@ export class WechatService {
       } catch (error) {
         console.error(`🔧 微信SDK注册失败 (尝试 ${attempt}/${maxRetries}):`, error);
         console.error('🔧 错误详情:', {
-          name: error.name,
-          message: error.message,
-          stack: error.stack
+          name: (error as any).name || 'Unknown',
+          message: (error as any).message || 'Unknown error',
+          stack: (error as any).stack || 'No stack trace'
         });
         lastError = error;
         
@@ -219,7 +219,7 @@ export class WechatService {
       console.log('🔧 解析到状态:', state);
       
       // 调用后端登录API
-      return await this.login(code, state);
+      return await this.login(code, state || undefined);
     } catch (error) {
       console.error('🔧 处理微信登录回调失败:', error);
       throw error;
@@ -371,7 +371,7 @@ export class WechatService {
    * 验证状态参数
    */
   static validateState(state: string): boolean {
-    return state && state.startsWith('dramaword_wechat_');
+    return Boolean(state && state.startsWith('dramaword_wechat_'));
   }
 
   /**

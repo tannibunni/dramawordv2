@@ -29,6 +29,9 @@ export class AnimationManager {
   private isAnimating: boolean = false;
   private animationQueue: Array<() => void> = [];
   
+  // 记录当前进度条的数值（0-100），用于避免动画期间回退
+  private currentProgressBarValue: number = 0;
+  
   // 动画值
   public readonly experienceAnimation = new Animated.Value(0);
   public readonly scaleAnimation = new Animated.Value(1);
@@ -81,21 +84,29 @@ export class AnimationManager {
 
   // 重置所有动画值
   public resetAnimationValues(): void {
-    this.experienceAnimation.setValue(0);
-    this.scaleAnimation.setValue(1);
-    this.opacityAnimation.setValue(0);
-    this.progressAnimation.setValue(0);
-    this.numberAnimation.setValue(0);
-    this.levelAnimation.setValue(1);
-    this.collectedWordsAnimation.setValue(0);
-    this.contributedWordsAnimation.setValue(0);
-    this.progressBarAnimation.setValue(0);
+    // 只在非动画状态下重置，避免中断正在进行的动画
+    if (!this.isAnimating) {
+      this.experienceAnimation.setValue(0);
+      this.scaleAnimation.setValue(1);
+      this.opacityAnimation.setValue(0);
+      this.progressAnimation.setValue(0);
+      this.numberAnimation.setValue(0);
+      this.levelAnimation.setValue(1);
+      this.collectedWordsAnimation.setValue(0);
+      this.contributedWordsAnimation.setValue(0);
+      this.progressBarAnimation.setValue(0);
+      this.currentProgressBarValue = 0;
+    }
   }
 
   // 清理动画监听器
   public cleanupListeners(): void {
     this.numberAnimation.removeAllListeners();
     this.progressBarAnimation.removeAllListeners();
+    this.experienceAnimation.removeAllListeners();
+    this.scaleAnimation.removeAllListeners();
+    this.opacityAnimation.removeAllListeners();
+    this.levelAnimation.removeAllListeners();
   }
 
   // 防止重复动画
@@ -110,6 +121,18 @@ export class AnimationManager {
   // 设置动画状态
   public setAnimatingState(isAnimating: boolean): void {
     this.isAnimating = isAnimating;
+    logger.info(`设置动画状态: ${isAnimating}`, 'setAnimatingState');
+  }
+
+  // 查询当前动画状态（对外）
+  public isAnimatingNow(): boolean {
+    return this.isAnimating;
+  }
+
+  // 强制重置动画状态
+  public resetAnimatingState(): void {
+    this.isAnimating = false;
+    logger.info('强制重置动画状态', 'resetAnimatingState');
   }
 
   // 统一的经验值动画
@@ -118,12 +141,16 @@ export class AnimationManager {
     onProgress?: (currentExp: number, currentProgress: number) => void;
     onComplete?: (finalExp: number, finalProgress: number) => void;
   } = {}): void {
+    logger.info('尝试启动经验值动画', 'startExperienceAnimation');
+    
     if (!this.canStartAnimation()) {
+      logger.info('动画被阻止：正在进行中', 'startExperienceAnimation');
       return;
     }
 
-    this.setAnimatingState(true);
+    // 先清理之前的监听器，然后设置动画状态
     this.cleanupListeners();
+    this.setAnimatingState(true);
     
     const {
       oldExperience,
@@ -136,30 +163,56 @@ export class AnimationManager {
       newProgress
     } = params;
     
-    // 设置初始值，而不是重置
+    // 设置初始值，确保进度条从正确位置开始，且不倒退
     this.numberAnimation.setValue(0);
-    this.progressBarAnimation.setValue(oldProgress * 100);
     this.opacityAnimation.setValue(0);
     this.scaleAnimation.setValue(1);
     this.levelAnimation.setValue(1);
 
+    // 初始化进度条值（0-100），在动画期间不允许比当前显示值更低
+    const initialProgress = Math.max(0, Math.min(100, oldProgress * 100));
+    // 初始进度设置为当前记录值与起始进度的最大值，避免被外部初始化覆盖
+    this.setProgressBarValue(Math.max(initialProgress, this.currentProgressBarValue));
+
     logger.info('开始统一经验值动画', 'startExperienceAnimation');
+    console.log('[AnimationManager] 动画参数:', {
+      oldExperience,
+      newExperience,
+      gainedExp,
+      oldLevel,
+      newLevel,
+      isLevelUp,
+      oldProgress,
+      newProgress
+    });
 
     // 数字动画监听器
     this.numberAnimation.addListener(({ value }) => {
       // 数字动画：从当前经验值增长到新经验值
       const currentExp = Math.round(oldExperience + (value * gainedExp));
       let currentProgress;
-      
+
       if (isLevelUp) {
-        currentProgress = value * newProgress;
+        // 等级提升视觉优化：
+        // 动画过程中只让进度条从 oldProgress 增长到 100%，不展示回到 0 的阶段，
+        // 动画完成后再一次性设置为新等级的 newProgress，避免“退回又增长”的观感。
+        currentProgress = Math.min(1, oldProgress + value * (1 - oldProgress));
       } else {
+        // 同等级内，进度条从旧进度平滑增长到新进度
         currentProgress = oldProgress + (value * (newProgress - oldProgress));
       }
       
-      // 更新进度条动画值（使用百分比数值）
-      const progressPercentage = currentProgress * 100;
-      this.progressBarAnimation.setValue(progressPercentage);
+      // 确保进度值在有效范围内
+      currentProgress = Math.max(0, Math.min(1, currentProgress));
+      
+      // 更新进度条动画值（转换为 0-100 范围）
+      const progressBarValue = currentProgress * 100;
+      // 数字动画推进时，同步推进进度条（保留单调不减）
+      this.setProgressBarValue(progressBarValue);
+      
+      // 添加调试日志
+      console.log(`[AnimationManager] 进度条更新: value=${value.toFixed(3)}, currentExp=${currentExp}, currentProgress=${currentProgress.toFixed(3)}, progressBarValue=${progressBarValue.toFixed(1)}`);
+      
       callbacks.onProgress?.(currentExp, currentProgress);
     });
 
@@ -230,8 +283,12 @@ export class AnimationManager {
       // 等待粒子动画完成
       Animated.delay(500), // 给粒子动画足够的时间完成
     ]).start(() => {
+      logger.info('动画序列完成，重置状态', 'startExperienceAnimation');
       this.setAnimatingState(false);
       this.cleanupListeners();
+      // 动画完成时，确保最终数值对齐
+      // 动画完成时对齐最终进度，但仍遵循单调不减
+      this.setProgressBarValue(Math.max(this.currentProgressBarValue, Math.max(0, Math.min(100, newProgress * 100))));
       callbacks.onComplete?.(newExperience, newProgress);
       
       logger.info('统一经验值动画完成', 'startExperienceAnimation');
@@ -268,14 +325,16 @@ export class AnimationManager {
     
     this.cleanupListeners();
     
-    // 设置初始值
-    this.progressBarAnimation.setValue(fromProgress);
+    // 设置初始值，保证不回退
+    this.setProgressBarValue(fromProgress);
     
     Animated.timing(this.progressBarAnimation, {
-      toValue: toProgress,
+      toValue: Math.max(toProgress, this.currentProgressBarValue),
       duration,
       useNativeDriver,
     }).start(() => {
+      // 动画完成后对齐记录值
+      this.currentProgressBarValue = Math.max(this.currentProgressBarValue, toProgress);
       logger.info('进度条动画完成', 'startProgressBarAnimation');
     });
   }
@@ -308,6 +367,20 @@ export class AnimationManager {
       contributedWordsAnimation: this.contributedWordsAnimation,
       progressBarAnimation: this.progressBarAnimation,
     };
+  }
+
+  // 统一设置进度条的助手，避免回退
+  private setProgressBarValue(nextValue: number): void {
+    const clamped = Math.max(0, Math.min(100, nextValue));
+    // 保证单调不减
+    const finalValue = Math.max(clamped, this.currentProgressBarValue);
+    this.currentProgressBarValue = finalValue;
+    this.progressBarAnimation.setValue(finalValue);
+  }
+
+  // 对外暴露：立即设置进度条，同时同步内部记录，避免后续动画回退
+  public setProgressBarImmediate(percent: number): void {
+    this.setProgressBarValue(percent);
   }
 }
 
