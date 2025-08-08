@@ -17,6 +17,7 @@ import { SyncStatusIndicator } from '../../components/common/SyncStatusIndicator
 import { wrongWordsManager } from '../../services/wrongWordsManager';
 import { animationManager } from '../../services/animationManager';
 import { unifiedSyncService } from '../../services/unifiedSyncService';
+import { ExperienceParticles } from '../../components/common/ExperienceParticles';
 import { ExperienceLogic } from '../../utils/conditionalLogic';
 
 const ReviewIntroScreen = () => {
