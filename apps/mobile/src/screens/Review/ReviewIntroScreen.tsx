@@ -1601,41 +1601,55 @@ const ReviewIntroScreen = () => {
       
       {/* 经验值增加动画 */}
       {showExperienceAnimation && (
-        <Animated.View 
-          style={[
-            styles.experienceAnimationContainer,
-            {
-              opacity: opacityAnimation,
-              transform: [{ scale: scaleAnimation }]
-            }
-          ]}
-        >
-          <LinearGradient
-            colors={['#7C3AED', '#8B5CF6']}
-            style={styles.experienceAnimationGradient}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
+        <>
+          <Animated.View 
+            style={[
+              styles.experienceAnimationContainer,
+              {
+                opacity: opacityAnimation,
+                transform: [{ scale: scaleAnimation }]
+              }
+            ]}
           >
-            <View style={styles.experienceAnimationContent}>
-              <Ionicons name="star" size={32} color="#FFF" />
-              <Text style={styles.experienceAnimationText}>
-                +{experienceGained} {t('exp_gained')}
-              </Text>
-              <Text style={styles.experienceAnimationSubtext}>
-                {t('congratulations_exp')}
-              </Text>
-              {/* 升级时显示额外的恭喜信息 */}
-              {userStats.level < Math.floor((userStats.experience + experienceGained) / 100) + 1 && (
-                <View style={styles.levelUpContainer}>
-                  <Ionicons name="trophy" size={24} color="#FFD700" />
-                  <Text style={styles.levelUpText}>
-                    {t('level_up_congratulations')}
-                  </Text>
-                </View>
-              )}
-            </View>
-          </LinearGradient>
-        </Animated.View>
+            <LinearGradient
+              colors={['#7C3AED', '#8B5CF6']}
+              style={styles.experienceAnimationGradient}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+            >
+              <View style={styles.experienceAnimationContent}>
+                <Ionicons name="star" size={32} color="#FFF" />
+                <Text style={styles.experienceAnimationText}>
+                  +{experienceGained} {t('exp_gained')}
+                </Text>
+                <Text style={styles.experienceAnimationSubtext}>
+                  {t('congratulations_exp')}
+                </Text>
+                {/* 升级时显示额外的恭喜信息 */}
+                {userStats.level < Math.floor((userStats.experience + experienceGained) / 100) + 1 && (
+                  <View style={styles.levelUpContainer}>
+                    <Ionicons name="trophy" size={24} color="#FFD700" />
+                    <Text style={styles.levelUpText}>
+                      {t('level_up_congratulations')}
+                    </Text>
+                  </View>
+                )}
+              </View>
+            </LinearGradient>
+          </Animated.View>
+          <ExperienceParticles
+            startPosition={{ x: 140, y: 300 }}  // 经验值动画的中心位置
+            endPosition={{ x: 20, y: 100 }}     // 经验条的位置
+            onComplete={() => {
+              // 粒子动画完成后，开始进度条动画
+              const oldProgress = getExperienceProgress() / 100;
+              const newExperience = userStats.experience + experienceGained;
+              const newProgress = ((newExperience % getCurrentLevelRequiredExp()) / getCurrentLevelRequiredExp());
+              animateProgressBar(oldProgress, newProgress);
+            }}
+            color={colors.primary[500]}
+          />
+        </>
       )}
       
       {/* 学习统计板块 - 包含问候语 */}
