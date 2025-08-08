@@ -171,28 +171,28 @@ export class AnimationManager {
       // 淡入弹窗
       Animated.timing(this.opacityAnimation, {
         toValue: 1,
-        duration: 300,
+        duration: 200,
         useNativeDriver: true,
       }),
       // 弹窗缩放动画
       Animated.sequence([
         Animated.timing(this.scaleAnimation, {
           toValue: 1.2,
-          duration: 200,
+          duration: 150,
           useNativeDriver: true,
         }),
         Animated.timing(this.scaleAnimation, {
           toValue: 1,
-          duration: 200,
+          duration: 150,
           useNativeDriver: true,
         }),
       ]),
       // 等待一段时间
-      Animated.delay(800),
+      Animated.delay(400),
       // 经验值数字动画
       Animated.timing(this.numberAnimation, {
         toValue: 1,
-        duration: 1500,
+        duration: 800,
         useNativeDriver: false,
       }),
       // 等级提升动画（如果有）
@@ -200,22 +200,22 @@ export class AnimationManager {
         Animated.sequence([
           Animated.timing(this.levelAnimation, {
             toValue: 1.3,
-            duration: 200,
+            duration: 150,
             useNativeDriver: true,
           }),
           Animated.timing(this.levelAnimation, {
             toValue: 1,
-            duration: 200,
+            duration: 150,
             useNativeDriver: true,
           }),
         ])
       ] : []),
       // 等待动画完成
-      Animated.delay(500),
+      Animated.delay(300),
       // 淡出弹窗
       Animated.timing(this.opacityAnimation, {
         toValue: 0,
-        duration: 300,
+        duration: 200,
         useNativeDriver: true,
       }),
     ]).start(() => {
