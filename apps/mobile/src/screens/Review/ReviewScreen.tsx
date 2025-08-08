@@ -111,6 +111,14 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
     calculateFinalStats
   } = useReviewStats();
   
+  // 初始化统计数据 - 只在复习开始时初始化一次
+  useEffect(() => {
+    if (words && words.length > 0) {
+      console.log('📊 ReviewScreen: 初始化统计数据，单词数量:', words.length);
+      initializeStats(words.length);
+    }
+  }, [words, initializeStats]);
+  
   const {
     swiperIndex,
     setSwiperIndex,
@@ -358,26 +366,13 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
       return;
     }
     
-    // 使用 reviewStats 中的经验值，而不是从 actions 数组计算
-    // 因为 actions 数组的更新是异步的，可能还没有更新
-    const totalExperience = reviewStats.experience;
-    const rememberedWords = reviewStats.rememberedWords;
-    const forgottenWords = reviewStats.forgottenWords;
+    // 使用 calculateFinalStats 获取正确的统计数据
+    const finalStats = calculateFinalStats();
+    console.log('ReviewScreen: Final stats from calculateFinalStats:', finalStats);
+    console.log('🎯 本次复习新获得经验值:', finalStats.experience, '(记住:', finalStats.rememberedWords, '个，忘记:', finalStats.forgottenWords, '个)');
     
-    console.log('ReviewScreen: Data validation - total experience:', totalExperience, 'remembered:', rememberedWords, 'forgotten:', forgottenWords);
-    
-    // 使用当前的 reviewStats，确保 totalWords 正确
-    const currentStats = reviewStats;
-    const accuracy = currentStats.totalWords > 0 ? Math.round((rememberedWords / currentStats.totalWords) * 100) : 0;
-    const finalStats = {
-      totalWords: currentStats.totalWords,
-      rememberedWords,
-      forgottenWords,
-      experience: totalExperience, // 使用 reviewStats 中的经验值
-      accuracy,
-    };
-    console.log('ReviewScreen: Final stats:', finalStats);
-    console.log('🎯 本次复习新获得经验值:', totalExperience, '(从reviewStats计算，记住:', rememberedWords, '个，忘记:', forgottenWords, '个)');
+    // 确保 finalStats 被正确设置
+    console.log('ReviewScreen: Setting final stats for completion screen');
     
     // 延迟显示完成页面，确保进度条动画完成
     setTimeout(() => {

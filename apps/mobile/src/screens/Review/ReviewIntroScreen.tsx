@@ -17,7 +17,6 @@ import { SyncStatusIndicator } from '../../components/common/SyncStatusIndicator
 import { wrongWordsManager } from '../../services/wrongWordsManager';
 import { animationManager } from '../../services/animationManager';
 import { unifiedSyncService } from '../../services/unifiedSyncService';
-import { ExperienceParticles } from '../../components/common/ExperienceParticles';
 import { ExperienceLogic } from '../../utils/conditionalLogic';
 
 const ReviewIntroScreen = () => {
@@ -130,12 +129,12 @@ const ReviewIntroScreen = () => {
         // 标记为已应用
         await storageUtils.experience.setGainApplied(Date.now().toString());
         
-        logger.info('应用经验值增益', {
+        logger.info(`应用经验值增益: ${JSON.stringify({
           currentExperience,
           gainedExp,
           finalExperience,
           timestamp: new Date().toISOString()
-        });
+        })}`);
         
         return finalExperience;
       } catch (error) {
@@ -313,7 +312,7 @@ const ReviewIntroScreen = () => {
     currentStreak: 0
   });
   
-  // 经验值动画状态
+  // 经验值动画已取消显示，仅保留经验逻辑
   const [showExperienceAnimation, setShowExperienceAnimation] = useState(false);
   const [experienceGained, setExperienceGained] = useState(0);
 
@@ -331,17 +330,7 @@ const ReviewIntroScreen = () => {
   const [animatedContributedWords, setAnimatedContributedWords] = useState(0);
   
   // 使用统一动画管理器的动画值
-  const {
-    experienceAnimation,
-    scaleAnimation,
-    opacityAnimation,
-    progressAnimation,
-    numberAnimation,
-    levelAnimation,
-    collectedWordsAnimation,
-    contributedWordsAnimation,
-    progressBarAnimation
-  } = animationManager.getAnimationValues();
+  const { progressBarAnimation } = animationManager.getAnimationValues();
   
   // 组件初始化时重置经验值检查状态
   useEffect(() => {
@@ -482,16 +471,16 @@ const ReviewIntroScreen = () => {
         const timeDiff = Date.now() - completedTime;
         // 如果动画完成时间在10秒内，保护经验值
         if (timeDiff < 10 * 1000) {
-          logger.info('经验值动画刚刚完成，保护经验值不被覆盖', { timeDiff });
+          logger.info(`经验值动画刚刚完成，保护经验值不被覆盖: ${JSON.stringify({ timeDiff })}`);
           
           // 获取最新的用户统计数据，确保经验值是最新的
           const currentStatsData = await AsyncStorage.getItem('userStats');
           if (currentStatsData) {
             try {
               const currentStats = JSON.parse(currentStatsData);
-              logger.info('使用保护的最新经验值', {
+              logger.info(`使用保护的最新经验值: ${JSON.stringify({
                 protectedExperience: currentStats.experience
-              });
+              })}`);
               
               // 直接使用保护的经验值，跳过后续加载
               setUserStats(currentStats);
@@ -539,11 +528,11 @@ const ReviewIntroScreen = () => {
           try {
             const gainedExp = JSON.parse(gainData) as number;
             const totalExperience = safeExperience + gainedExp;
-            logger.info('应用新的经验值增益', {
+            logger.info(`应用新的经验值增益: ${JSON.stringify({
               currentExperience: safeExperience,
               gainedExp,
               totalExperience
-            });
+            })}`);
             
             const updatedStats = {
               ...localStats,
@@ -598,7 +587,7 @@ const ReviewIntroScreen = () => {
           totalReviews: 0,
           currentStreak: 0
         };
-        logger.info('初始化默认统计数据', defaultStats);
+        logger.info(`初始化默认统计数据: ${JSON.stringify(defaultStats)}`);
         setUserStats(defaultStats);
         setAnimatedExperience(0);
         setAnimatedCollectedWords(vocabulary?.length || 0);
@@ -627,7 +616,7 @@ const ReviewIntroScreen = () => {
         totalReviews: 0,
         currentStreak: 0
       };
-      logger.info('初始化默认统计数据（用户已登录）', defaultStats);
+      logger.info(`初始化默认统计数据（用户已登录）: ${JSON.stringify(defaultStats)}`);
       setUserStats(defaultStats);
       setAnimatedExperience(0);
       setAnimatedCollectedWords(vocabulary?.length || 0);
@@ -685,7 +674,7 @@ const ReviewIntroScreen = () => {
         logger.info('无待同步变更，以本地数据为准');
       }
     } catch (error) {
-      logger.warn('增量同步失败，继续使用本地数据', error);
+      logger.warn(`增量同步失败，继续使用本地数据: ${error?.toString()}`);
     }
   };
 
@@ -737,7 +726,7 @@ const ReviewIntroScreen = () => {
         logger.info('本地无数据，跳过启动时同步');
       }
     } catch (error) {
-      logger.warn('启动时同步本地数据到后端失败', error);
+      logger.warn(`启动时同步本地数据到后端失败: ${error?.toString()}`);
     }
   };
 
@@ -885,7 +874,7 @@ const ReviewIntroScreen = () => {
       
       logger.info('智能定时同步本地数据到后端成功（通过多邻国数据同步方案）');
     } catch (error) {
-      logger.warn('智能定时同步本地数据到后端失败', error);
+      logger.warn(`智能定时同步本地数据到后端失败: ${error?.toString()}`);
     }
   };
 
@@ -1041,60 +1030,60 @@ const ReviewIntroScreen = () => {
       
       // 检查是否有经验值增加的参数
       const navigationParams = await AsyncStorage.getItem('navigationParams');
-      logger.info('检查navigationParams:', navigationParams);
+              logger.info(`检查navigationParams: ${navigationParams}`);
       
       if (navigationParams) {
         const params = JSON.parse(navigationParams);
         logger.info('解析的params:', params);
         
         if (params.showExperienceAnimation) {
-          logger.info('满足经验值动画条件，开始处理', {
-            experienceGained: params.experienceGained
-          });
-          
-          // 同步锁已在前面设置，这里不需要重复设置
-          
-          // 清除参数
-          await AsyncStorage.removeItem('navigationParams');
-          
-          // 优先使用本地数据，避免网络延迟
-          const localUserData = await getLocalUserData();
-          
-          // 设置经验值增益（params.experienceGained 是本次复习的增益值）
-          await localExperienceDuplicationPreventer.setExperienceGain(params.experienceGained);
-          if (localUserData) {
-            const { currentExperience, userStats: updatedStats } = localUserData;
+                      logger.info(`满足经验值动画条件，开始处理: ${JSON.stringify({
+              experienceGained: params.experienceGained
+            })}`);
+
+            // 同步锁已在前面设置，这里不需要重复设置
             
-            logger.info('使用本地数据开始经验值动画', {
-              currentExperience: currentExperience,
-              gainedExperience: params.experienceGained,
-              targetExperience: currentExperience + params.experienceGained
-            });
+            // 清除参数
+            await AsyncStorage.removeItem('navigationParams');
             
-            // 直接更新用户状态
-            setUserStats(updatedStats);
-            setAnimatedExperience(currentExperience);
+            // 优先使用本地数据，避免网络延迟
+            const localUserData = await getLocalUserData();
             
-            // 显示经验值动画
-            setExperienceGained(params.experienceGained);
-            setShowExperienceAnimation(true);
-            startExperienceAnimationWithCurrentExp(params.experienceGained, currentExperience);
-            
-            // 动画完成后清理
-            setTimeout(async () => {
-              await localExperienceDuplicationPreventer.clearExperienceGainStatus();
+            // 设置经验值增益（params.experienceGained 是本次复习的增益值）
+            await localExperienceDuplicationPreventer.setExperienceGain(params.experienceGained);
+            if (localUserData) {
+              const { currentExperience, userStats: updatedStats } = localUserData;
+              
+              logger.info(`使用本地数据开始经验值动画: ${JSON.stringify({
+                currentExperience: currentExperience,
+                gainedExperience: params.experienceGained,
+                targetExperience: currentExperience + params.experienceGained
+              })}`);
+              
+              // 直接更新用户状态
+              setUserStats(updatedStats);
+              setAnimatedExperience(currentExperience);
+              
+              // 显示经验值动画
+              setExperienceGained(params.experienceGained);
+              setShowExperienceAnimation(true);
+              startExperienceAnimationWithCurrentExp(params.experienceGained, currentExperience);
+              
+              // 动画完成后清理
+              setTimeout(async () => {
+                await localExperienceDuplicationPreventer.clearExperienceGainStatus();
+                setIsSyncingExperience(false);
+              }, 3000);
+            } else {
+              logger.warn('无法获取本地用户数据，跳过经验值动画');
               setIsSyncingExperience(false);
-            }, 3000);
+            }
+            
           } else {
-            logger.warn('无法获取本地用户数据，跳过经验值动画');
-            setIsSyncingExperience(false);
-          }
-          
-        } else {
-          logger.info('不满足经验值动画条件', {
-            showExperienceAnimation: params.showExperienceAnimation,
-            experienceGained: params.experienceGained
-          });
+            logger.info(`不满足经验值动画条件: ${JSON.stringify({
+              showExperienceAnimation: params.showExperienceAnimation,
+              experienceGained: params.experienceGained
+            })}`);
         }
       } else {
         logger.info('没有找到navigationParams');
@@ -1127,11 +1116,11 @@ const ReviewIntroScreen = () => {
             const gainedExp = JSON.parse(gainData);
             // 动画起点应该是当前经验值（不包括即将获得的经验值）
             finalExperience = Math.max(0, finalExperience - gainedExp);
-            logger.info('使用本地数据计算动画起点', {
+            logger.info(`使用本地数据计算动画起点: ${JSON.stringify({
               localExp: stats.experience,
               gainedExp,
               animationStartExp: finalExperience
-            });
+            })}`);
           }
         
         return {
@@ -1159,10 +1148,10 @@ const ReviewIntroScreen = () => {
         // 使用本地经验值重复计算防止器，防止重复计算
         const finalExperience = await localExperienceDuplicationPreventer.checkAndApplyExperienceGain(stats.experience || 0);
         
-        logger.info('使用本地数据获取用户信息', {
+        logger.info(`使用本地数据获取用户信息: ${JSON.stringify({
           localExperience: stats.experience,
           finalExperience
-        });
+        })}`);
         
         return {
           currentExperience: finalExperience,
@@ -1189,7 +1178,6 @@ const ReviewIntroScreen = () => {
     
     // 更新状态值
     setProgressBarValue(toProgress);
-    logger.info('统一进度条动画完成', { fromProgress, toProgress });
   };
 
 
@@ -1229,16 +1217,7 @@ const ReviewIntroScreen = () => {
       level: newLevel
     });
     
-    logger.info('开始统一经验值动画', {
-      oldExperience,
-      newExperience,
-      gainedExp,
-      oldProgress,
-      newProgress,
-      oldLevel,
-      newLevel,
-      isLevelUp
-    });
+
     
     animationManager.startExperienceAnimation({
       oldExperience,
@@ -1251,16 +1230,15 @@ const ReviewIntroScreen = () => {
       newProgress
     }, {
       onStart: () => {
-        setShowExperienceAnimation(true);
+        // 不显示弹窗，仅更新进度条动画状态
         setIsProgressBarAnimating(true);
-        setAnimatedExperience(oldExperience); // 从当前累计经验值开始动画
+        setAnimatedExperience(oldExperience);
       },
       onProgress: (currentExp, currentProgress) => {
         setAnimatedExperience(currentExp);
         setProgressBarValue(currentProgress);
       },
       onComplete: (finalExp, finalProgress) => {
-        setShowExperienceAnimation(false);
         setIsProgressBarAnimating(false);
         setAnimatedExperience(newExperience);
         setProgressBarValue(finalProgress);
@@ -1281,11 +1259,7 @@ const ReviewIntroScreen = () => {
         // 设置一个标记，防止后续的数据加载覆盖刚刚更新的经验值
         AsyncStorage.setItem('experienceAnimationCompleted', Date.now().toString());
         
-        logger.info('统一经验值动画完成', {
-          newExperience: newExperience,
-          newLevel: newLevel,
-          finalProgress
-        });
+
       }
     });
   };
@@ -1308,16 +1282,7 @@ const ReviewIntroScreen = () => {
       level: newLevel
     });
     
-    logger.info('开始统一经验值动画（指定当前经验值）', {
-      oldExperience,
-      newExperience,
-      gainedExp,
-      oldProgress,
-      newProgress,
-      oldLevel,
-      newLevel,
-      isLevelUp
-    });
+
     
     animationManager.startExperienceAnimation({
       oldExperience,
@@ -1330,16 +1295,15 @@ const ReviewIntroScreen = () => {
       newProgress
     }, {
       onStart: () => {
-        setShowExperienceAnimation(true);
+        // 不显示弹窗，仅更新进度条动画状态
         setIsProgressBarAnimating(true);
-        setAnimatedExperience(oldExperience); // 从当前累计经验值开始动画
+        setAnimatedExperience(oldExperience);
       },
       onProgress: (currentExp, currentProgress) => {
         setAnimatedExperience(currentExp);
         setProgressBarValue(currentProgress);
       },
       onComplete: (finalExp, finalProgress) => {
-        setShowExperienceAnimation(false);
         setExperienceGained(0);
         setIsProgressBarAnimating(false);
         setHasCheckedExperience(true);
@@ -1353,11 +1317,7 @@ const ReviewIntroScreen = () => {
             experience: newExperience
           };
           
-          logger.info('更新用户统计状态（动画完成）', {
-            oldExperience: prevStats.experience,
-            newExperience,
-            gainedExp
-          });
+
           
           return updatedStats;
         });
@@ -1371,10 +1331,7 @@ const ReviewIntroScreen = () => {
         // 设置一个标记，防止后续的数据加载覆盖刚刚更新的经验值
         AsyncStorage.setItem('experienceAnimationCompleted', Date.now().toString());
         
-        logger.info('统一经验值动画完成（指定当前经验值）', {
-          newExperience: newExperience,
-          finalProgress
-        });
+
       }
     });
   };
@@ -1600,58 +1557,7 @@ const ReviewIntroScreen = () => {
     <View style={styles.container}>
       <SyncStatusIndicator visible={true} />
       
-      {/* 经验值增加动画 */}
-      {showExperienceAnimation && (
-        <>
-          <Animated.View 
-            style={[
-              styles.experienceAnimationContainer,
-              {
-                opacity: opacityAnimation,
-                transform: [{ scale: scaleAnimation }]
-              }
-            ]}
-          >
-            <LinearGradient
-              colors={['#7C3AED', '#8B5CF6']}
-              style={styles.experienceAnimationGradient}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-            >
-              <View style={styles.experienceAnimationContent}>
-                <Ionicons name="star" size={32} color="#FFF" />
-                <Text style={styles.experienceAnimationText}>
-                  +{experienceGained} {t('exp_gained')}
-                </Text>
-                <Text style={styles.experienceAnimationSubtext}>
-                  {t('congratulations_exp')}
-                </Text>
-                {/* 升级时显示额外的恭喜信息 */}
-                {userStats.level < Math.floor((userStats.experience + experienceGained) / 100) + 1 && (
-                  <View style={styles.levelUpContainer}>
-                    <Ionicons name="trophy" size={24} color="#FFD700" />
-                    <Text style={styles.levelUpText}>
-                      {t('level_up_congratulations')}
-                    </Text>
-                  </View>
-                )}
-              </View>
-            </LinearGradient>
-          </Animated.View>
-          <ExperienceParticles
-            startPosition={{ x: 140, y: 300 }}  // 经验值动画的中心位置
-            endPosition={{ x: 20, y: 100 }}     // 经验条的位置
-            onComplete={() => {
-              // 粒子动画完成后，开始进度条动画
-              const oldProgress = getExperienceProgress() / 100;
-              const newExperience = userStats.experience + experienceGained;
-              const newProgress = ((newExperience % getCurrentLevelRequiredExp()) / getCurrentLevelRequiredExp());
-              animateProgressBar(oldProgress, newProgress);
-            }}
-            color={colors.primary[500]}
-          />
-        </>
-      )}
+      {/* 经验值动画已取消显示 */}
       
       {/* 学习统计板块 - 包含问候语 */}
       <View style={styles.learningStatsContainer}>
@@ -2110,13 +2016,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: 'rgba(0,0,0,0.5)',
   },
-  experienceAnimationGradient: {
+  experienceAnimationWrapper: {
     width: 280,
     height: 160,
     borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 20,
+    overflow: 'hidden',
     ...Platform.select({
       web: {
         boxShadow: '0 8px 16px rgba(124, 58, 237, 0.3)',
@@ -2130,8 +2034,16 @@ const styles = StyleSheet.create({
       },
     }),
   },
+  experienceAnimationGradient: {
+    width: '100%',
+    height: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 20,
+  },
   experienceAnimationContent: {
     alignItems: 'center',
+    width: '100%',
   },
   experienceAnimationText: {
     fontSize: 28,

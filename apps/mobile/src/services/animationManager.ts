@@ -212,14 +212,23 @@ export class AnimationManager {
       ] : []),
       // 等待动画完成
       Animated.delay(100),
-      // 淡出弹窗（现在由粒子动画替代）
-      Animated.timing(this.opacityAnimation, {
-        toValue: 0,
-        duration: 100, // 快速隐藏原始弹窗，让粒子动画接管
-        useNativeDriver: true,
-      }),
+      // 收缩动画
+      Animated.sequence([
+        // 缩放动画
+        Animated.timing(this.scaleAnimation, {
+          toValue: 0.1,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+        // 透明度渐变（在缩放完成后）
+        Animated.timing(this.opacityAnimation, {
+          toValue: 0,
+          duration: 100,
+          useNativeDriver: true,
+        })
+      ]),
       // 等待粒子动画完成
-      Animated.delay(700), // 给粒子动画足够的时间完成
+      Animated.delay(500), // 给粒子动画足够的时间完成
     ]).start(() => {
       this.setAnimatingState(false);
       this.cleanupListeners();

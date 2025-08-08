@@ -167,30 +167,34 @@ export const useReviewStats = () => {
 
   // 初始化统计数据
   const initializeStats = useCallback((totalWords: number) => {
-    const initialStats = {
-      totalWords,
-      rememberedWords: 0,
-      forgottenWords: 0,
-      experience: reviewStats.experience || 0,
-      accuracy: 0,
-    };
-    console.log('📊 初始化统计数据:', initialStats);
-    setReviewStats(initialStats);
-    
-    // 重置计数器
-    console.log('🔄 重置计数器前 - rememberedRef:', rememberedRef.current, 'forgottenRef:', forgottenRef.current);
-    rememberedRef.current = 0;
-    forgottenRef.current = 0;
-    console.log('🔄 计数器已重置 - rememberedRef: 0, forgottenRef: 0');
-  }, [reviewStats.experience]);
+    // 只在第一次初始化时设置，不重置已有数据
+    if (reviewStats.totalWords === 0) {
+      const initialStats = {
+        totalWords,
+        rememberedWords: 0,
+        forgottenWords: 0,
+        experience: 0,
+        accuracy: 0,
+      };
+      console.log('📊 初始化统计数据:', initialStats);
+      setReviewStats(initialStats);
+      
+      // 重置计数器
+      console.log('🔄 重置计数器 - rememberedRef: 0, forgottenRef: 0');
+      rememberedRef.current = 0;
+      forgottenRef.current = 0;
+    } else {
+      console.log('📊 已有统计数据，跳过初始化 - totalWords:', reviewStats.totalWords);
+    }
+  }, [reviewStats.totalWords]);
 
   // 计算最终统计数据
   const calculateFinalStats = useCallback(() => {
-    const rememberedWords = rememberedRef.current;
-    const forgottenWords = forgottenRef.current;
     const currentStats = reviewStats;
     
-    // 使用 reviewStats 中的经验值，而不是从 actions 数组计算
+    // 直接使用 reviewStats 中的数据，这是累积的统计数据
+    const rememberedWords = currentStats.rememberedWords;
+    const forgottenWords = currentStats.forgottenWords;
     const totalExperience = currentStats.experience;
     
     const accuracy = currentStats.totalWords > 0 ? Math.round((rememberedWords / currentStats.totalWords) * 100) : 0;
@@ -204,7 +208,7 @@ export const useReviewStats = () => {
     };
     
     console.log('📊 最终统计数据:', finalStats);
-    setReviewStats(finalStats);
+    console.log('📊 数据来源 - reviewStats:', currentStats);
     setFinalStats(finalStats);
     
     return finalStats;

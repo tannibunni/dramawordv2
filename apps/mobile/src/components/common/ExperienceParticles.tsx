@@ -6,6 +6,7 @@ interface ParticleProps {
   endPosition: { x: number; y: number };
   onComplete: () => void;
   color?: string;
+  initialScale?: number; // 初始大小
 }
 
 const NUM_PARTICLES = 8; // 粒子数量
