@@ -3,9 +3,6 @@
 
 import { Animated } from 'react-native';
 import Logger from '../utils/logger';
-import { eventManager, EVENT_TYPES } from './eventManager';
-import { ExperienceGainAnimation } from '../components/common/ExperienceGainAnimation';
-import React from 'react';
 
 // 创建页面专用日志器
 const logger = Logger.forPage('AnimationManager');
@@ -120,61 +117,113 @@ export class AnimationManager {
     onStart?: () => void;
     onProgress?: (currentExp: number, currentProgress: number) => void;
     onComplete?: (finalExp: number, finalProgress: number) => void;
-  } = {}): Promise<void> {
-    return new Promise((resolve) => {
-      if (!this.canStartAnimation()) {
-        resolve();
-        return;
-      }
+  } = {}): void {
+    if (!this.canStartAnimation()) {
+      return;
+    }
 
-      this.setAnimatingState(true);
-      this.cleanupListeners();
+    this.setAnimatingState(true);
+    this.cleanupListeners();
+    
+    const {
+      oldExperience,
+      newExperience,
+      gainedExp,
+      oldLevel,
+      newLevel,
+      isLevelUp,
+      oldProgress,
+      newProgress
+    } = params;
+    
+    // 设置初始值，而不是重置
+    this.numberAnimation.setValue(0);
+    this.progressBarAnimation.setValue(oldProgress * 100);
+    this.opacityAnimation.setValue(0);
+    this.scaleAnimation.setValue(1);
+    this.levelAnimation.setValue(1);
+
+    logger.info('开始统一经验值动画', 'startExperienceAnimation');
+
+    // 数字动画监听器
+    this.numberAnimation.addListener(({ value }) => {
+      // 数字动画：从当前经验值增长到新经验值
+      const currentExp = Math.round(oldExperience + (value * gainedExp));
+      let currentProgress;
       
-      const {
-        oldExperience,
-        newExperience,
-        gainedExp,
-        oldLevel,
-        newLevel,
-        isLevelUp,
-        oldProgress,
-        newProgress
-      } = params;
+      if (isLevelUp) {
+        currentProgress = value * newProgress;
+      } else {
+        currentProgress = oldProgress + (value * (newProgress - oldProgress));
+      }
+      
+      // 更新进度条动画值（使用百分比数值）
+      const progressPercentage = currentProgress * 100;
+      this.progressBarAnimation.setValue(progressPercentage);
+      callbacks.onProgress?.(currentExp, currentProgress);
+    });
 
-      logger.info('开始统一经验值动画', 'startExperienceAnimation');
+    // 调用开始回调（在监听器设置之后）
+    callbacks.onStart?.();
 
-      // 调用开始回调
-      callbacks.onStart?.();
-
-      const handleComplete = () => {
-        this.setAnimatingState(false);
-        this.cleanupListeners();
-        callbacks.onComplete?.(newExperience, newProgress);
-        logger.info('统一经验值动画完成', 'startExperienceAnimation');
-        eventManager.emit(EVENT_TYPES.HIDE_EXPERIENCE_ANIMATION);
-        resolve();
-      };
-
-      // 渲染新的动画组件
-      const renderExperienceAnimation = () => {
-        return (
-          <ExperienceGainAnimation
-            gainedExp={gainedExp}
-            currentExp={oldExperience}
-            targetExp={newExperience}
-            level={newLevel}
-            isLevelUp={isLevelUp}
-            onComplete={handleComplete}
-            duration={2000}
-            canSkip={true}
-          />
-        );
-      };
-
-      // 通过事件发送动画组件
-      eventManager.emit(EVENT_TYPES.SHOW_EXPERIENCE_ANIMATION, {
-        component: renderExperienceAnimation,
-      });
+    // 动画序列
+    Animated.sequence([
+      // 淡入弹窗
+      Animated.timing(this.opacityAnimation, {
+        toValue: 1,
+        duration: 300,
+        useNativeDriver: true,
+      }),
+      // 弹窗缩放动画
+      Animated.sequence([
+        Animated.timing(this.scaleAnimation, {
+          toValue: 1.2,
+          duration: 200,
+          useNativeDriver: true,
+        }),
+        Animated.timing(this.scaleAnimation, {
+          toValue: 1,
+          duration: 200,
+          useNativeDriver: true,
+        }),
+      ]),
+      // 等待一段时间
+      Animated.delay(800),
+      // 经验值数字动画
+      Animated.timing(this.numberAnimation, {
+        toValue: 1,
+        duration: 1500,
+        useNativeDriver: false,
+      }),
+      // 等级提升动画（如果有）
+      ...(isLevelUp ? [
+        Animated.sequence([
+          Animated.timing(this.levelAnimation, {
+            toValue: 1.3,
+            duration: 200,
+            useNativeDriver: true,
+          }),
+          Animated.timing(this.levelAnimation, {
+            toValue: 1,
+            duration: 200,
+            useNativeDriver: true,
+          }),
+        ])
+      ] : []),
+      // 等待动画完成
+      Animated.delay(500),
+      // 淡出弹窗
+      Animated.timing(this.opacityAnimation, {
+        toValue: 0,
+        duration: 300,
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      this.setAnimatingState(false);
+      this.cleanupListeners();
+      callbacks.onComplete?.(newExperience, newProgress);
+      
+      logger.info('统一经验值动画完成', 'startExperienceAnimation');
     });
   }
 
