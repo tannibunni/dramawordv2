@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { TMDBShow } from '../services/tmdbService';
+import { TMDBShow, TMDBService } from '../services/tmdbService';
 import { unifiedSyncService } from '../services/unifiedSyncService';
 import { useAuth } from './AuthContext';
 import { API_BASE_URL } from '../constants/config';
@@ -25,6 +25,7 @@ interface ShowListContextType {
   syncShowsToCloud: () => Promise<void>;
   downloadShowsFromCloud: () => Promise<void>;
   isSyncing: boolean;
+  ensureShowLanguage: (showId: number, language: string) => Promise<void>;
 }
 
 const ShowListContext = createContext<ShowListContextType | undefined>(undefined);
@@ -36,6 +37,7 @@ export const useShowList = () => {
 };
 
 const SHOWS_STORAGE_KEY = 'user_shows';
+const SHOW_LANG_CACHE_KEY = (id: number, lang: string) => `tmdb_show_${id}_${lang}`;
 
 export const ShowListProvider = ({ children }: { children: ReactNode }) => {
   const [shows, setShows] = useState<Show[]>([]);
@@ -253,8 +255,39 @@ export const ShowListProvider = ({ children }: { children: ReactNode }) => {
     });
   };
 
+  // 懒加载确保剧集为目标语言：有缓存则用缓存，否则调用 TMDB 获取并缓存
+  const ensureShowLanguage = async (showId: number, language: string) => {
+    try {
+      const cacheKey = SHOW_LANG_CACHE_KEY(showId, language);
+      const cached = await AsyncStorage.getItem(cacheKey);
+      if (cached) {
+        const data = JSON.parse(cached) as Partial<Show>;
+        updateShow(showId, {
+          name: data.name,
+          overview: data.overview,
+          genres: data.genres,
+          genre_ids: data.genre_ids,
+        });
+        return;
+      }
+
+      // 未命中缓存，调用 TMDB 获取目标语言详情
+      const details = await TMDBService.getShowDetails(showId, language);
+      const updates: Partial<Show> = {
+        name: details.name,
+        overview: details.overview,
+        genres: details.genres,
+        genre_ids: details.genre_ids,
+      };
+      updateShow(showId, updates);
+      await AsyncStorage.setItem(cacheKey, JSON.stringify(updates));
+    } catch (error) {
+      console.warn('⚠️ ensureShowLanguage 失败:', { showId, language, error: String(error) });
+    }
+  };
+
   return (
-    <ShowListContext.Provider value={{ shows, addShow, changeShowStatus, removeShow, clearShows, updateShow, syncShowsToCloud, downloadShowsFromCloud, isSyncing }}>
+    <ShowListContext.Provider value={{ shows, addShow, changeShowStatus, removeShow, clearShows, updateShow, syncShowsToCloud, downloadShowsFromCloud, isSyncing, ensureShowLanguage }}>
       {children}
     </ShowListContext.Provider>
   );

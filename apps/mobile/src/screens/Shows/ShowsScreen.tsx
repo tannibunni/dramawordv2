@@ -57,7 +57,7 @@ const generateShadow = (elevation: number) => ({
 });
 
 const ShowsScreen: React.FC = () => {
-  const { shows, addShow, changeShowStatus, removeShow, updateShow } = useShowList();
+  const { shows, addShow, changeShowStatus, removeShow, updateShow, ensureShowLanguage } = useShowList();
   const { appLanguage } = useAppLanguage();
   
   // 使用统一的翻译函数
@@ -825,6 +825,9 @@ const ShowsScreen: React.FC = () => {
     const wordCount = getShowWords(item.id).length;
     const isWordbook = item.type === 'wordbook';
     
+    // 懒加载：确保该剧展示为当前语言
+    ensureShowLanguage(item.id, appLanguage === 'zh-CN' ? 'zh-CN' : 'en-US');
+
     return (
       <Swipeable
         renderRightActions={() => renderRightActions(item)}
