@@ -747,7 +747,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
               <Ionicons name="close" size={24} color={colors.text.primary} />
             </TouchableOpacity>
           </View>
-          <ScrollView contentContainerStyle={{ paddingBottom: 24 }}>
+          <ScrollView contentContainerStyle={{ paddingBottom: 24, paddingHorizontal: 20 }}>
             <Text style={styles.legalParagraph}>
               {userAgreementText[appLanguage === 'zh-CN' ? 'zh-CN' : 'en-US']}
             </Text>
@@ -769,7 +769,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
               <Ionicons name="close" size={24} color={colors.text.primary} />
             </TouchableOpacity>
           </View>
-          <ScrollView contentContainerStyle={{ paddingBottom: 24 }}>
+          <ScrollView contentContainerStyle={{ paddingBottom: 24, paddingHorizontal: 20 }}>
             <Text style={styles.legalParagraph}>
               {privacyPolicyText[appLanguage === 'zh-CN' ? 'zh-CN' : 'en-US']}
             </Text>
