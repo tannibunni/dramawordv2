@@ -24,6 +24,8 @@ import { t } from '../../constants/translations';
 import { useAppLanguage } from '../../context/AppLanguageContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { unifiedSyncService } from '../../services/unifiedSyncService';
+import { userAgreementText } from '../../constants/legal/userAgreement';
+import { privacyPolicyText } from '../../constants/legal/privacyPolicy';
 import { API_BASE_URL } from '../../constants/config';
 
 interface LoginScreenProps {
@@ -747,9 +749,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
           </View>
           <ScrollView contentContainerStyle={{ paddingBottom: 24 }}>
             <Text style={styles.legalParagraph}>
-              {appLanguage === 'zh-CN' ?
-                '欢迎使用本应用。使用本应用即表示你同意遵守本《用户协议》。请你在使用前仔细阅读：\n\n1. 使用范围：本应用仅用于个人学习与交流，不得用于商业目的。\n2. 账户与安全：请妥善保管你的账户信息，对账户下的所有活动负责。\n3. 内容与版权：本应用中的推荐内容与元数据来自 TMDB 等第三方来源，版权归其原作者所有。\n4. 数据与隐私：我们遵循《隐私政策》处理你的数据，请同时阅读并同意。\n5. 禁止行为：不得进行任何违法、侵权或破坏系统安全的行为。\n6. 变更与终止：我们可能根据需要更新本协议或终止服务，请留意应用内通知。' :
-                'Welcome to our app. By using this app, you agree to this User Agreement. Please read carefully before use:\n\n1. Scope: The app is for personal learning and communication only, not for commercial use.\n2. Account & Security: Keep your account credentials safe and be responsible for activities under your account.\n3. Content & Copyright: Recommendations and metadata come from TMDB and other third parties; copyrights belong to their owners.\n4. Data & Privacy: We process your data under the Privacy Policy; please read and agree to it as well.\n5. Prohibited Conduct: Do not engage in illegal, infringing, or security-threatening activities.\n6. Changes & Termination: We may update this agreement or terminate the service; watch for in-app notices.'}
+              {userAgreementText[appLanguage === 'zh-CN' ? 'zh-CN' : 'en-US']}
             </Text>
           </ScrollView>
         </SafeAreaView>
@@ -771,9 +771,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
           </View>
           <ScrollView contentContainerStyle={{ paddingBottom: 24 }}>
             <Text style={styles.legalParagraph}>
-              {appLanguage === 'zh-CN' ?
-                '我们重视你的隐私。本《隐私政策》说明我们如何收集、使用与保护你的信息：\n\n1. 收集范围：账号信息、学习记录、搜索历史等为提供服务所需的数据。\n2. 使用目的：用于提供与改进服务、个性化推荐与同步功能。\n3. 存储与安全：数据采用加密传输与存储，采取必要的安全措施。\n4. 第三方：可能使用第三方服务（如 TMDB、云服务）以完成内容获取与数据同步。\n5. 权利：你有权访问、更正或删除你的数据。\n6. 变更：我们可能更新本政策，重大变更会在应用内提示。' :
-                'We value your privacy. This Privacy Policy explains how we collect, use and protect your data:\n\n1. Data Collected: Account info, learning records, search history required to provide services.\n2. Purpose: To provide/improve services, personalize recommendations, and enable sync.\n3. Storage & Security: Data is transmitted and stored securely with necessary safeguards.\n4. Third Parties: We may use third-party services (e.g., TMDB, cloud) for content and sync.\n5. Your Rights: You can access, correct, or delete your data.\n6. Changes: We may update this policy and will notify you in-app for material changes.'}
+              {privacyPolicyText[appLanguage === 'zh-CN' ? 'zh-CN' : 'en-US']}
             </Text>
           </ScrollView>
         </SafeAreaView>
@@ -884,6 +882,5 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 22,
     color: colors.text.primary,
-    whiteSpace: 'pre-wrap',
   },
 }); 
