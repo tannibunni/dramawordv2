@@ -175,9 +175,9 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
     const enNoun = ['Dolphin', 'Whale', 'Deer', 'Cloud', 'Star', 'Breeze', 'Harbor'];
     const tail = idSeed.slice(-3);
     if (isZh) {
-      return `${zhAdj[rand(zhAdj.length)]}${zhNoun[rand(zhNoun.length)]}${tail}`;
+      return `游客用户·${zhAdj[rand(zhAdj.length)]}${zhNoun[rand(zhNoun.length)]}${tail}`;
     }
-    return `${enAdj[rand(enAdj.length)]} ${enNoun[rand(enNoun.length)]} ${tail}`;
+    return `Guest · ${enAdj[rand(enAdj.length)]} ${enNoun[rand(enNoun.length)]} ${tail}`;
   };
 
   const testLogin = async (loginType: 'wechat' | 'apple' | 'phone' | 'guest', forcedGuestId?: string) => {
