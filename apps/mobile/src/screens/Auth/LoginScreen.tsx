@@ -671,22 +671,26 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
         {/* 登录按钮 */}
         <View style={styles.loginButtons}>
           {/* 恢复所有登录方式 */}
-          <LoginButton
-            type="phone"
-            onPress={handlePhoneLogin}
-            loading={loading}
-          />
+          {false && (
+            <LoginButton
+              type="phone"
+              onPress={handlePhoneLogin}
+              loading={loading}
+            />
+          )}
           
-          <LoginButton
-            type="wechat"
-            onPress={() => {
-              console.log('💬 微信登录按钮被点击');
-              console.log('💬 当前loading状态:', loading);
-              console.log('💬 点击时间:', new Date().toISOString());
-              handleWechatLogin();
-            }}
-            loading={loading}
-          />
+          {false && (
+            <LoginButton
+              type="wechat"
+              onPress={() => {
+                console.log('💬 微信登录按钮被点击');
+                console.log('💬 当前loading状态:', loading);
+                console.log('💬 点击时间:', new Date().toISOString());
+                handleWechatLogin();
+              }}
+              loading={loading}
+            />
+          )}
           
           {Platform.OS === 'ios' && (
             <LoginButton
