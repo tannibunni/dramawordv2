@@ -722,6 +722,10 @@ const ShowsScreen: React.FC = () => {
   };
 
   const openShowDetail = (show: Show) => {
+    // 点击时也触发一次懒加载，确保该剧切换到当前语言
+    if (show.type !== 'wordbook') {
+      ensureShowLanguage(show.id, targetLang);
+    }
     console.log('打开剧集详情:', show);
     setSelectedShow(show);
     setShowDetailModal(true);

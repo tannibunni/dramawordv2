@@ -250,11 +250,13 @@ export const ShowListProvider = ({ children }: { children: ReactNode }) => {
 
   const updateShow = (showId: number, updates: Partial<Show>) => {
     setShows(prev => {
-      const updated = prev.map(s => s.id === showId ? { ...s, ...updates } : s);
+      const updated = prev.map(s => s.id === showId ? { ...s, ...updates, id: Number(s.id) } : s);
       const changedShow = updated.find(s => s.id === showId);
       if (changedShow) {
         console.log('🔄 更新剧集信息:', changedShow.name, '更新内容:', updates);
       }
+      // 同步持久化，避免刷新链路只应用到一部剧
+      AsyncStorage.setItem(SHOWS_STORAGE_KEY, JSON.stringify(updated)).catch(() => {});
       return updated;
     });
   };
