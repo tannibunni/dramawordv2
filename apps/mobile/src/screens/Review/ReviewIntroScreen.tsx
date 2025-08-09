@@ -192,7 +192,6 @@ const ReviewIntroScreen = () => {
 
     
     <View style={styles.container}>
-      <DataSyncIndicator visible={true} />
       
 
       
@@ -200,9 +199,14 @@ const ReviewIntroScreen = () => {
       <View style={styles.learningStatsContainer}>
         {/* 问候语区域 */}
         <View style={styles.greetingSection}>
-          <Text style={styles.greetingText}>
-            {t('hello_greeting', appLanguage)}{user?.nickname || t('guest_user', appLanguage)}
-          </Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <Text style={styles.greetingText}>
+              {t('hello_greeting', appLanguage)}{user?.nickname || t('guest_user', appLanguage)}
+            </Text>
+            <View style={{ marginLeft: 8 }}>
+              <DataSyncIndicator visible={true} showDetails={false} />
+            </View>
+          </View>
         </View>
         
         {/* 经验值和等级区域 */}
