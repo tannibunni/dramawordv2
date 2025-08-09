@@ -282,16 +282,16 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
             style={styles.avatar}
           />
           <View style={styles.userDetails}>
-            <Text style={styles.userName}>{getUserNickname()}</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <Text style={styles.userName}>{getUserNickname()}</Text>
+              <View style={{ marginLeft: 8 }}>
+                <DataSyncIndicator visible={true} showDetails={false} />
+              </View>
+            </View>
             <Text style={styles.userLevel}>{levelInfo.displayText}</Text>
             <Text style={styles.userEmail}>{user?.email || 'user@example.com'}</Text>
             
-            {/* 低调的数据同步状态指示器 */}
-            {isAuthenticated && (
-              <View style={styles.syncIndicatorContainer}>
-                <DataSyncIndicator visible={true} showDetails={false} />
-              </View>
-            )}
+            {/* 原位置的指示器移除，已移动到用户名后 */}
             
             {/* 登录/退出登录按钮 - 已恢复 */}
             {isGuest ? (
