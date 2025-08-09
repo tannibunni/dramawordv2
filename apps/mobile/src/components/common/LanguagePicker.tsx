@@ -40,6 +40,13 @@ const LanguagePicker: React.FC<LanguagePickerProps> = ({ onLanguageChange, onNav
     loadLearningLanguages();
   }, []); // 只在组件挂载时加载一次
 
+  // 当弹窗打开时，重新加载一次学习语言，确保刚完成的初始选择立刻生效
+  useEffect(() => {
+    if (isModalVisible) {
+      loadLearningLanguages();
+    }
+  }, [isModalVisible]);
+
   // 监听学习语言变化，重新加载
   useEffect(() => {
     const checkLearningLanguages = async () => {
