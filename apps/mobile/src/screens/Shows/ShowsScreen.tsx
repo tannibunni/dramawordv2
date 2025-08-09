@@ -14,6 +14,7 @@ import {
   ActivityIndicator,
   Dimensions,
   Platform,
+  ViewToken,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { TMDBService, TMDBShow } from '../../services/tmdbService';
@@ -59,6 +60,7 @@ const generateShadow = (elevation: number) => ({
 const ShowsScreen: React.FC = () => {
   const { shows, addShow, changeShowStatus, removeShow, updateShow, ensureShowLanguage } = useShowList();
   const { appLanguage } = useAppLanguage();
+  const targetLang = appLanguage === 'zh-CN' ? 'zh-CN' : 'en-US';
   
   // 使用统一的翻译函数
   const { vocabulary, removeWord } = useVocabulary();
@@ -824,12 +826,6 @@ const ShowsScreen: React.FC = () => {
   const renderShowItem = ({ item }: { item: Show }) => {
     const wordCount = getShowWords(item.id).length;
     const isWordbook = item.type === 'wordbook';
-    
-    // 懒加载：确保该剧展示为当前语言（避免每次渲染都触发；仅在必要时触发）
-    useEffect(() => {
-      ensureShowLanguage(item.id, appLanguage === 'zh-CN' ? 'zh-CN' : 'en-US');
-      // 仅在语言或该item.id变化时尝试确保
-    }, [item.id, appLanguage]);
 
     return (
       <Swipeable
@@ -896,6 +892,18 @@ const ShowsScreen: React.FC = () => {
       </Swipeable>
     );
   };
+
+  // 使用 FlatList 可见项回调来触发语言懒加载，避免在 renderItem 内使用 Hook
+  const onViewableItemsChanged = React.useRef(({ viewableItems }: { viewableItems: Array<ViewToken> }) => {
+    viewableItems.forEach((vi) => {
+      const data = vi.item as Show;
+      if (data && data.type !== 'wordbook') {
+        ensureShowLanguage(data.id, targetLang);
+      }
+    });
+  }).current;
+
+  const viewabilityConfig = React.useRef({ itemVisiblePercentThreshold: 25 }).current;
 
   const renderFilterButton = (filterType: 'shows' | 'wordbooks', label: string) => {
     const isActive = filter === filterType;
@@ -1350,6 +1358,8 @@ const ShowsScreen: React.FC = () => {
           keyExtractor={item => item.id.toString()}
         style={styles.list}
         contentContainerStyle={styles.listContent}
+        onViewableItemsChanged={onViewableItemsChanged}
+        viewabilityConfig={viewabilityConfig}
         ListHeaderComponent={
           filter === 'wordbooks' ? (
             <TouchableOpacity
