@@ -166,6 +166,20 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
     return `${now.slice(-6)}${random}${deviceHash}`;
   };
 
+  const generatePrettyGuestNickname = (idSeed: string) => {
+    const isZh = appLanguage === 'zh-CN';
+    const rand = (max: number) => Math.floor(Math.random() * max);
+    const zhAdj = ['星空', '清晨', '蓝色', '暖阳', '微风', '明亮', '浅海', '远山'];
+    const zhNoun = ['海豚', '鲸鱼', '麋鹿', '云朵', '星河', '桔梗', '远航', '花雨'];
+    const enAdj = ['Blue', 'Sunny', 'Gentle', 'Bright', 'Mellow', 'Silver', 'Quiet'];
+    const enNoun = ['Dolphin', 'Whale', 'Deer', 'Cloud', 'Star', 'Breeze', 'Harbor'];
+    const tail = idSeed.slice(-3);
+    if (isZh) {
+      return `${zhAdj[rand(zhAdj.length)]}${zhNoun[rand(zhNoun.length)]}${tail}`;
+    }
+    return `${enAdj[rand(enAdj.length)]} ${enNoun[rand(enNoun.length)]} ${tail}`;
+  };
+
   const testLogin = async (loginType: 'wechat' | 'apple' | 'phone' | 'guest', forcedGuestId?: string) => {
     try {
       setLoading(true);
@@ -173,7 +187,9 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
       // 生成唯一的测试ID - 增强唯一性
       const shortId = forcedGuestId || generateGuestId();
       const username = `t_${loginType}_${shortId}`.slice(0, 20);
-      const nickname = loginType === 'guest' ? shortId : `${loginType === 'wechat' ? '微信' : loginType === 'apple' ? 'Apple' : loginType === 'phone' ? '手机' : '游客'}用户`;
+      const nickname = loginType === 'guest'
+        ? generatePrettyGuestNickname(shortId)
+        : `${loginType === 'wechat' ? '微信' : loginType === 'apple' ? 'Apple' : loginType === 'phone' ? '手机' : '游客'}用户`;
       
       // 准备注册数据
       const registerData: any = {
