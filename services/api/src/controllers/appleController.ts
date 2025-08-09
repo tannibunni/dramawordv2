@@ -42,18 +42,22 @@ export class AppleController {
         logger.info(`🍎 使用邮箱前缀作为昵称: ${nickname}`);
       }
 
-      // 查找或创建用户
-      let user = await User.findOne({ 'auth.appleId': appleId });
+      // 查找或创建用户：优先按 appleId，其次按 email 合并，避免 email 唯一索引冲突
+      const normalizedEmail = appleEmail ? String(appleEmail).toLowerCase().trim() : undefined;
+      const orConds: any[] = [{ 'auth.appleId': appleId }];
+      if (normalizedEmail) orConds.push({ email: normalizedEmail });
+
+      let user = await User.findOne({ $or: orConds });
       if (!user) {
         // 创建新用户 - 使用Apple ID的真实信息
         const userData = {
           username: `apple_${appleId.slice(0, 8)}`,
           nickname,
-          email: appleEmail, // 使用Apple提供的邮箱
+          email: normalizedEmail, // 使用Apple提供的邮箱（规范化）
           auth: {
             loginType: 'apple',
             appleId,
-            appleEmail: appleEmail,
+            appleEmail: normalizedEmail,
             appleFullName: appleFullName,
             lastLoginAt: new Date(),
             isActive: true,
@@ -71,10 +75,10 @@ export class AppleController {
         await user.save();
         logger.info(`🍎 创建新Apple用户: appleId=${appleId}, nickname=${nickname}, email=${appleEmail}`);
       } else {
-        // 更新现有用户信息 - 优先使用Apple ID的真实信息
+        // 更新现有用户信息 - 合并 appleId / email / 姓名
         const updateData: any = {
           'auth.lastLoginAt': new Date(),
-          'auth.appleEmail': appleEmail,
+          'auth.appleEmail': normalizedEmail,
           'auth.appleFullName': appleFullName
         };
         
@@ -84,10 +88,15 @@ export class AppleController {
           logger.info(`🍎 更新用户昵称为Apple真实姓名: ${nickname}`);
         }
         
-        // 如果Apple提供了邮箱，更新邮箱
-        if (appleEmail && appleEmail !== user.email) {
-          updateData.email = appleEmail;
-          logger.info(`🍎 更新用户邮箱为Apple邮箱: ${appleEmail}`);
+        // 绑定 appleId（若历史账号无 appleId）
+        if (!user.auth.appleId) {
+          updateData['auth.appleId'] = appleId;
+        }
+
+        // 如果Apple提供了邮箱，且当前用户无邮箱，则补全；若已有不同邮箱则保持现状，避免触发唯一索引异常
+        if (normalizedEmail && !user.email) {
+          updateData.email = normalizedEmail;
+          logger.info(`🍎 绑定邮箱为Apple邮箱: ${normalizedEmail}`);
         }
         
         user = await User.findByIdAndUpdate(
