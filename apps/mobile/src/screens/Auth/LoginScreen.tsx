@@ -10,6 +10,7 @@ import {
   Linking,
   Modal,
   ScrollView,
+  Image,
 } from 'react-native';
 import * as Device from 'expo-device';
 import { Ionicons } from '@expo/vector-icons';
@@ -664,7 +665,11 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
         <View style={styles.header}>
           <View style={styles.logoContainer}>
             <View style={styles.logo}>
-              <Ionicons name="book-outline" size={48} color={colors.primary[500]} />
+              <Image
+                source={require('../../assets/images/icon.png')}
+                style={{ width: 64, height: 64, borderRadius: 14 }}
+                resizeMode="contain"
+              />
             </View>
             <Text style={styles.appName}>{t('app_name', appLanguage)}</Text>
           </View>
