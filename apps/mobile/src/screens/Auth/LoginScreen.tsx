@@ -169,15 +169,11 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
   const generatePrettyGuestNickname = (idSeed: string) => {
     const isZh = appLanguage === 'zh-CN';
     const rand = (max: number) => Math.floor(Math.random() * max);
-    const zhAdj = ['星空', '清晨', '蓝色', '暖阳', '微风', '明亮', '浅海', '远山'];
-    const zhNoun = ['海豚', '鲸鱼', '麋鹿', '云朵', '星河', '桔梗', '远航', '花雨'];
     const enAdj = ['Blue', 'Sunny', 'Gentle', 'Bright', 'Mellow', 'Silver', 'Quiet'];
     const enNoun = ['Dolphin', 'Whale', 'Deer', 'Cloud', 'Star', 'Breeze', 'Harbor'];
     const tail = idSeed.slice(-3);
-    if (isZh) {
-      return `游客用户·${zhAdj[rand(zhAdj.length)]}${zhNoun[rand(zhNoun.length)]}${tail}`;
-    }
-    return `Guest · ${enAdj[rand(enAdj.length)]} ${enNoun[rand(enNoun.length)]} ${tail}`;
+    const combo = `${enAdj[rand(enAdj.length)]} ${enNoun[rand(enNoun.length)]} ${tail}`;
+    return isZh ? `游客用户·${combo}` : `Guest · ${combo}`;
   };
 
   const testLogin = async (loginType: 'wechat' | 'apple' | 'phone' | 'guest', forcedGuestId?: string) => {
