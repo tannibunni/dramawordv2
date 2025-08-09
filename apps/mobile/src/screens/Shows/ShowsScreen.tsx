@@ -825,8 +825,11 @@ const ShowsScreen: React.FC = () => {
     const wordCount = getShowWords(item.id).length;
     const isWordbook = item.type === 'wordbook';
     
-    // 懒加载：确保该剧展示为当前语言
-    ensureShowLanguage(item.id, appLanguage === 'zh-CN' ? 'zh-CN' : 'en-US');
+    // 懒加载：确保该剧展示为当前语言（避免每次渲染都触发；仅在必要时触发）
+    useEffect(() => {
+      ensureShowLanguage(item.id, appLanguage === 'zh-CN' ? 'zh-CN' : 'en-US');
+      // 仅在语言或该item.id变化时尝试确保
+    }, [item.id, appLanguage]);
 
     return (
       <Swipeable

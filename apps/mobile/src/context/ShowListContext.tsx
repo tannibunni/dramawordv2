@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
+import React, { createContext, useContext, useState, ReactNode, useEffect, useRef } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { TMDBShow, TMDBService } from '../services/tmdbService';
 import { unifiedSyncService } from '../services/unifiedSyncService';
@@ -44,6 +44,10 @@ export const ShowListProvider = ({ children }: { children: ReactNode }) => {
   const [isLoaded, setIsLoaded] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const { user } = useAuth();
+  // 记录已确保语言的数据，避免重复刷新
+  const ensuredLangMapRef = useRef<Map<string, boolean>>(new Map());
+  // 记录进行中的请求，避免并发重复
+  const inflightRef = useRef<Set<string>>(new Set());
 
   // 加载本地存储的剧集数据
   useEffect(() => {
@@ -259,17 +263,46 @@ export const ShowListProvider = ({ children }: { children: ReactNode }) => {
   const ensureShowLanguage = async (showId: number, language: string) => {
     try {
       const cacheKey = SHOW_LANG_CACHE_KEY(showId, language);
+      const ensureKey = `${showId}_${language}`;
+
+      // 已保证过该语言，直接返回
+      if (ensuredLangMapRef.current.get(ensureKey)) {
+        return;
+      }
+      // 正在请求中，避免并发重复
+      if (inflightRef.current.has(ensureKey)) {
+        return;
+      }
+
+      // 尝试读取缓存
       const cached = await AsyncStorage.getItem(cacheKey);
+      const current = shows.find(s => s.id === showId);
       if (cached) {
         const data = JSON.parse(cached) as Partial<Show>;
+        // 如果当前数据已与缓存一致，则标记为已保证并返回
+        if (
+          current &&
+          current.name === data.name &&
+          current.overview === data.overview &&
+          ((current.genre_ids && data.genre_ids && current.genre_ids.join(',') === data.genre_ids.join(',')) ||
+           (!current.genre_ids && !data.genre_ids))
+        ) {
+          ensuredLangMapRef.current.set(ensureKey, true);
+          return;
+        }
+        // 否则仅在确有变化时更新
         updateShow(showId, {
           name: data.name,
           overview: data.overview,
           genres: data.genres,
           genre_ids: data.genre_ids,
         });
+        ensuredLangMapRef.current.set(ensureKey, true);
         return;
       }
+
+      // 未命中缓存，发起请求
+      inflightRef.current.add(ensureKey);
 
       // 未命中缓存，调用 TMDB 获取目标语言详情
       const details = await TMDBService.getShowDetails(showId, language);
@@ -279,10 +312,22 @@ export const ShowListProvider = ({ children }: { children: ReactNode }) => {
         genres: details.genres,
         genre_ids: details.genre_ids,
       };
-      updateShow(showId, updates);
+      // 仅在发生变化时才更新，避免无效setState引起的循环
+      const after = shows.find(s => s.id === showId);
+      const changed = !after ||
+        after.name !== updates.name ||
+        after.overview !== updates.overview ||
+        ((after.genre_ids || []).join(',') !== (updates.genre_ids || []).join(','));
+      if (changed) {
+        updateShow(showId, updates);
+      }
       await AsyncStorage.setItem(cacheKey, JSON.stringify(updates));
+      ensuredLangMapRef.current.set(ensureKey, true);
     } catch (error) {
       console.warn('⚠️ ensureShowLanguage 失败:', { showId, language, error: String(error) });
+    } finally {
+      const ensureKey = `${showId}_${language}`;
+      inflightRef.current.delete(ensureKey);
     }
   };
 
