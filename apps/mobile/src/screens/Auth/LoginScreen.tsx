@@ -667,8 +667,8 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
             <View style={styles.logo}>
               <Image
                 source={require('../../../assets/images/icon.png')}
-                style={{ width: 64, height: 64, borderRadius: 14 }}
-                resizeMode="contain"
+                style={{ width: '100%', height: '100%' }}
+                resizeMode="cover"
               />
             </View>
             <Text style={styles.appName}>{t('app_name', appLanguage)}</Text>
@@ -809,6 +809,7 @@ const styles = StyleSheet.create({
     height: 80,
     borderRadius: 20,
     backgroundColor: colors.background.secondary,
+    overflow: 'hidden',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 16,
