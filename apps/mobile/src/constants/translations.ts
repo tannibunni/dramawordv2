@@ -947,7 +947,7 @@ export const translations: Record<AppLanguage, Record<TranslationKey, string>> =
     no_wordbooks: 'No wordbooks yet, create one',
     no_wordbook_results: 'No wordbooks found',
     try_other_wordbook_keywords: 'Try other keywords',
-    recommendations_tab: 'Recommendations',
+    recommendations_tab: 'Picks',
     shows_tab: 'Shows',
     wordbooks_tab: 'Wordbooks',
     not_completed: 'Not Watched',

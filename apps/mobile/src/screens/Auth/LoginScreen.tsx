@@ -666,7 +666,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
           <View style={styles.logoContainer}>
             <View style={styles.logo}>
               <Image
-                source={require('../../assets/images/icon.png')}
+                source={require('../../../assets/images/icon.png')}
                 style={{ width: 64, height: 64, borderRadius: 14 }}
                 resizeMode="contain"
               />
@@ -674,7 +674,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
             <Text style={styles.appName}>{t('app_name', appLanguage)}</Text>
           </View>
           <Text style={styles.slogan}>{t('app_slogan', appLanguage)}</Text>
-          <Text style={styles.versionInfo}>当前版本：免费体验版</Text>
+          <Text style={styles.versionInfo}>当前版本： 1.0.0 免费体验版</Text>
         </View>
 
         {/* 登录按钮 */}
