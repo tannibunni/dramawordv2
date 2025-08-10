@@ -27,3 +27,31 @@ export const userAgreementText: Record<SupportedLegalLang, string> = {
 9. Changes & Termination: We may update this agreement at any time; updates will be published in-app and take effect immediately. If you do not agree with the updates, you should stop using the app.
 10. Governing Law & Dispute Resolution: This agreement is governed by the laws of the People’s Republic of China. Any disputes arising hereunder shall be resolved amicably; failing that, they shall be submitted to the competent People’s Court where our company is located.`,
 };
+
+export const privacyPolicyText: Record<SupportedLegalLang, string> = {
+  'zh-CN': `隐私政策（生效日期：2025年8月8日）
+
+我们非常重视您的隐私和个人信息保护。本隐私政策说明我们如何收集、使用和保护您的信息。
+
+1. 信息收集：我们仅收集为提供服务所必需的个人信息。
+2. 信息使用：收集的信息仅用于改善服务体验，不会用于未经授权的用途。
+3. 信息保护：我们采取合理的技术和管理措施保障您的信息安全。
+4. 第三方服务：部分功能可能调用第三方接口，相关数据处理遵循其隐私政策。
+5. 用户权利：您有权访问、更正或删除您的个人信息。
+6. 联系方式：如有隐私相关问题，请通过邮箱 dt14gs@gmail.com 与我们联系。
+
+感谢您对我们的信任与支持。`,
+
+  'en-US': `Privacy Policy (Effective Date: August 8, 2025)
+
+We highly value your privacy and the protection of your personal information. This Privacy Policy explains how we collect, use, and protect your information.
+
+1. Information Collection: We only collect personal information necessary to provide our services.
+2. Information Use: Collected information is used solely to improve service experience and not for unauthorized purposes.
+3. Information Protection: We implement reasonable technical and administrative measures to safeguard your information.
+4. Third-Party Services: Some features may use third-party APIs; data handling is subject to their privacy policies.
+5. User Rights: You have the right to access, correct, or delete your personal information.
+6. Contact: For any privacy-related inquiries, please contact us at dt14gs@gmail.com.
+
+Thank you for your trust and support.`,
+};

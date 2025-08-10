@@ -123,7 +123,8 @@ export class TMDBService {
    */
   static async searchShows(query: string, page: number = 1, language: string = 'zh-CN'): Promise<TMDBSearchResponse> {
     try {
-      const response = await fetch(`${this.baseUrl}/search?query=${encodeURIComponent(query)}&page=${page}&language=${language}`);
+      // 使用统一搜索API，先查TMDB，查不到再查OMDb
+      const response = await fetch(`${this.baseUrl.replace('/tmdb', '/search')}/unified?query=${encodeURIComponent(query)}&page=${page}&language=${language}`);
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -135,7 +136,18 @@ export class TMDBService {
         throw new Error(data.error || 'Search failed');
       }
       
-      return data.data;
+      // 转换统一搜索结果格式为TMDB格式
+      const unifiedData = data.data;
+      const tmdbResponse: TMDBSearchResponse = {
+        page: unifiedData.page,
+        results: unifiedData.results,
+        total_pages: unifiedData.total_pages,
+        total_results: unifiedData.total_results
+      };
+      
+      console.log(`[TMDBService] Unified search completed: ${unifiedData.total_results} results (TMDB: ${unifiedData.sources.tmdb}, OMDb: ${unifiedData.sources.omdb})`);
+      
+      return tmdbResponse;
     } catch (error) {
       console.error('TMDB search shows error:', error);
       throw error;

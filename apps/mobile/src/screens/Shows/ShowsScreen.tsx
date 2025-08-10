@@ -1223,6 +1223,16 @@ const ShowsScreen: React.FC = () => {
             {item.genres?.map(genre => genre.name).join(', ') || 
              (item.genre_ids ? TMDBService.getGenreNames(item.genre_ids, appLanguage === 'zh-CN' ? 'zh-CN' : 'en-US').join(', ') : t('unknown_genre', appLanguage))}
           </Text>
+          {/* 显示数据来源 */}
+          {item.source && (
+            <View style={[styles.sourceBadge, { 
+              backgroundColor: item.source === 'tmdb' ? '#01b4e4' : '#f3ce13' 
+            }]}>
+              <Text style={styles.sourceText}>
+                {item.source === 'tmdb' ? 'TMDB' : 'OMDb'}
+              </Text>
+            </View>
+          )}
           <View style={styles.showMeta}>
             <View style={styles.ratingContainer}>
               <Ionicons name="star" size={16} color={colors.accent[500]} />
@@ -2004,6 +2014,18 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: colors.text.inverse,
     fontWeight: '500',
+  },
+  sourceBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 8,
+    alignSelf: 'flex-start',
+    marginTop: 4,
+  },
+  sourceText: {
+    fontSize: 10,
+    color: colors.text.inverse,
+    fontWeight: '600',
   },
   originalTitle: {
     fontSize: 14,

@@ -201,27 +201,11 @@ const LanguagePicker: React.FC<LanguagePickerProps> = ({ onLanguageChange, onNav
                 
                 const filteredLanguages = Object.entries(SUPPORTED_LANGUAGES)
                   .filter(([key, language]) => {
-                    // 首先检查是否在学习语言列表中
+                    // 只检查是否在学习语言列表中，不再根据界面语言过滤
                     const isIncluded = learningLanguages.includes(language.code);
                     
-                    // 然后检查界面语言过滤规则
-                    let shouldShow = isIncluded;
-                    
-                    // 当界面语言是英文时，隐藏English选项
-                    if (appLanguage === 'en-US' && language.code === 'en') {
-                      shouldShow = false;
-                      // console.log(`🔍 过滤语言 ${language.code}: ❌ 隐藏 (界面语言为英文)`);
-                    }
-                    // 当界面语言是中文时，隐藏Chinese选项
-                    else if (appLanguage === 'zh-CN' && language.code === 'zh') {
-                      shouldShow = false;
-                      // console.log(`🔍 过滤语言 ${language.code}: ❌ 隐藏 (界面语言为中文)`);
-                    }
-                    // else {
-                    //   console.log(`🔍 过滤语言 ${language.code}: ${isIncluded ? '✅ 包含' : '❌ 不包含'} (学习语言: ${learningLanguages.join(', ')})`);
-                    // }
-                    
-                    return shouldShow;
+                    // 移除界面语言过滤规则，显示所有学习语言
+                    return isIncluded;
                   });
                 
                 // console.log('🎯 LanguagePicker渲染 - 过滤后语言数量:', filteredLanguages.length);

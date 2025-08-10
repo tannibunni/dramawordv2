@@ -254,16 +254,7 @@ const AppLanguageSelector: React.FC<AppLanguageSelectorProps> = ({
                     const filteredLanguages = Object.values(SUPPORTED_LANGUAGES)
                       .filter(language => {
                         console.log('🔍 检查语言:', language.code, language.name);
-                        // 当UI语言是英语时，隐藏英语选项
-                        if (appLanguage === 'en-US' && language.code === 'en') {
-                          console.log('❌ 隐藏英语选项');
-                          return false;
-                        }
-                        // 当UI语言是中文时，隐藏中文选项
-                        if (appLanguage === 'zh-CN' && language.code === 'zh') {
-                          console.log('❌ 隐藏中文选项');
-                          return false;
-                        }
+                        // 移除界面语言过滤规则，显示所有语言选项
                         console.log('✅ 保留语言选项:', language.code);
                         return true;
                       });
