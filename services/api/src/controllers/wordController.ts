@@ -283,7 +283,13 @@ export const searchWord = async (req: Request, res: Response): Promise<void> => 
       logger.warn(`⚠️ AI generation failed for ${searchTerm}, using fallback data:`, aiError);
       
       // 改进错误日志记录，提供更详细的错误信息
-      let errorDetails = {
+      let errorDetails: {
+        message: string;
+        type: string;
+        status: string;
+        word: any;
+        stack?: string;
+      } = {
         message: 'Unknown error',
         type: 'Unknown',
         status: 'Unknown',
