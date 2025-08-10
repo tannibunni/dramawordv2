@@ -45,6 +45,27 @@ export interface OMDBSearchResponse {
   Response: string;
 }
 
+// Type guard functions
+function isOMDBSearchResponse(data: unknown): data is OMDBSearchResponse {
+  return (
+    typeof data === 'object' &&
+    data !== null &&
+    'Response' in data &&
+    'Search' in data &&
+    Array.isArray((data as any).Search)
+  );
+}
+
+function isOMDBShow(data: unknown): data is OMDBShow {
+  return (
+    typeof data === 'object' &&
+    data !== null &&
+    'Response' in data &&
+    'Title' in data &&
+    'imdbID' in data
+  );
+}
+
 export class OMDBService {
   /**
    * 搜索电影和剧集
@@ -60,17 +81,37 @@ export class OMDBService {
       const response = await axios.get(`${OMDB_BASE_URL}/?${params.toString()}`);
       const data = response.data;
 
-      if (data.Response === 'False') {
-        logger.warn(`OMDb search failed for "${query}": ${data.Error}`);
-        return {
-          Search: [],
-          totalResults: '0',
-          Response: 'False'
-        };
+      // Type-safe property access
+      if (typeof data === 'object' && data !== null && 'Response' in data) {
+        const responseData = data as { Response: string; Error?: string; Search?: OMDBSearchResult[] };
+        
+        if (responseData.Response === 'False') {
+          const errorMessage = responseData.Error || 'Unknown error';
+          logger.warn(`OMDb search failed for "${query}": ${errorMessage}`);
+          return {
+            Search: [],
+            totalResults: '0',
+            Response: 'False'
+          };
+        }
+
+        if (responseData.Search && Array.isArray(responseData.Search)) {
+          logger.info(`OMDb search successful: "${query}" - ${responseData.Search.length} results`);
+          return {
+            Search: responseData.Search,
+            totalResults: responseData.Search.length.toString(),
+            Response: 'True'
+          };
+        }
       }
 
-      logger.info(`OMDb search successful: "${query}" - ${data.Search?.length || 0} results`);
-      return data as OMDBSearchResponse;
+      // Fallback for unexpected response format
+      logger.warn(`OMDb search returned unexpected format for "${query}"`);
+      return {
+        Search: [],
+        totalResults: '0',
+        Response: 'False'
+      };
     } catch (error) {
       logger.error('OMDb search failed:', error);
       throw new Error(`Failed to search OMDb: ${error}`);
@@ -90,12 +131,22 @@ export class OMDBService {
       const response = await axios.get(`${OMDB_BASE_URL}/?${params.toString()}`);
       const data = response.data;
 
-      if (data.Response === 'False') {
-        throw new Error(data.Error || 'Show not found');
+      // Type-safe property access
+      if (typeof data === 'object' && data !== null && 'Response' in data) {
+        const responseData = data as { Response: string; Error?: string } & OMDBShow;
+        
+        if (responseData.Response === 'False') {
+          const errorMessage = responseData.Error || 'Show not found';
+          throw new Error(errorMessage);
+        }
+
+        if (isOMDBShow(data)) {
+          logger.info(`OMDb show details retrieved: ${imdbId}`);
+          return data;
+        }
       }
 
-      logger.info(`OMDb show details retrieved: ${imdbId}`);
-      return data as OMDBShow;
+      throw new Error('Invalid response format from OMDb API');
     } catch (error) {
       logger.error(`OMDb get show details failed for ID ${imdbId}:`, error);
       throw new Error(`Failed to get OMDb show details: ${error}`);
@@ -115,7 +166,7 @@ export class OMDBService {
       last_air_date: omdbShow.Year,
       status: 'unknown',
       type: omdbShow.Type === 'series' ? 'tv' : omdbShow.Type,
-      genres: omdbShow.Genre ? omdbShow.Genre.split(', ').map((genre, index) => ({ id: 1000 + index, name: genre })) : [],
+      genres: [],
       genre_ids: [],
       networks: [],
       production_companies: [],
@@ -144,7 +195,22 @@ export class OMDBService {
   static async checkStatus(): Promise<{ configured: boolean; message: string }> {
     try {
       const response = await axios.get(`${OMDB_BASE_URL}/?apikey=${OMDB_API_KEY}&s=test`);
-      const isConfigured = response.data.Response !== 'False' || response.data.Error !== 'Invalid API key!';
+      const data = response.data;
+      
+      // Type-safe property access
+      let responseValue: string | undefined;
+      let errorValue: string | undefined;
+      
+      if (typeof data === 'object' && data !== null) {
+        if ('Response' in data) {
+          responseValue = (data as any).Response;
+        }
+        if ('Error' in data) {
+          errorValue = (data as any).Error;
+        }
+      }
+      
+      const isConfigured = responseValue !== 'False' || errorValue !== 'Invalid API key!';
       
       logger.info(`OMDb Configuration: Configured=${isConfigured}`);
       
