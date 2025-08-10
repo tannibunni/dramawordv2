@@ -88,13 +88,16 @@ const LanguageSelector: React.FC<LanguageSelectorProps> = ({
         {Object.keys(SUPPORTED_LANGUAGES)
           .filter(languageCode => {
             // 根据UI语言过滤学习语言选项
+            // 只过滤掉与当前UI语言完全匹配的学习语言
             if (appLanguage === 'zh-CN' && languageCode === 'CHINESE') {
               return false; // 中文UI界面，过滤掉中文学习选项
             }
             
-            if (appLanguage === 'en-US' && languageCode === 'ENGLISH') {
-              return false; // 英文UI界面，过滤掉英文学习选项
-            }
+            // 英文UI用户应该可以选择学习英语，所以不过滤
+            // 移除这个过滤条件
+            // if (appLanguage === 'en-US' && languageCode === 'ENGLISH') {
+            //   return false; // 英文UI界面，过滤掉英文学习选项
+            // }
             
             return true;
           })
