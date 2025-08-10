@@ -66,8 +66,16 @@ function getPromptTemplate(uiLanguage: string, language: string, type: string) {
   const mappedUI = mapUILanguage(uiLanguage);
   const mappedLang = mapTargetLanguage(language);
   logger.info(`🔍 getPromptTemplate 映射: mappedUI=${mappedUI}, mappedLang=${mappedLang}`);
-  // 优先查 /prompts/{uiLanguage}/{language}.json
-  const promptDir = path.join(__dirname, '../../prompts', mappedUI);
+  
+  // 特殊逻辑：英文UI用户学习英文时，使用中文UI的prompt以返回中文释义
+  let effectiveUI = mappedUI;
+  if (mappedUI === 'en' && mappedLang === 'en') {
+    effectiveUI = 'zh-CN';
+    logger.info(`🔄 英文UI用户学习英文，切换到中文UI prompt以返回中文释义`);
+  }
+  
+  // 优先查 /prompts/{effectiveUI}/{language}.json
+  const promptDir = path.join(__dirname, '../../prompts', effectiveUI);
   const promptPath = path.join(promptDir, `${mappedLang}.json`);
   logger.info(`🔍 Prompt 路径调试: __dirname=${__dirname}, promptDir=${promptDir}, promptPath=${promptPath}`);
   if (fs.existsSync(promptPath)) {
@@ -77,23 +85,23 @@ function getPromptTemplate(uiLanguage: string, language: string, type: string) {
     // 新增：返回时带上路径和内容，便于后续log
     return { template: templates[type], promptPath, promptContent: templates[type] };
   }
-  // fallback: /prompts/{uiLanguage}-{language}.json
-  const altPromptPath = path.join(__dirname, '../../prompts', `${mappedUI}-${mappedLang}.json`);
+  // fallback: /prompts/{effectiveUI}-{language}.json
+  const altPromptPath = path.join(__dirname, '../../prompts', `${effectiveUI}-${mappedLang}.json`);
   if (fs.existsSync(altPromptPath)) {
     const templates = JSON.parse(fs.readFileSync(altPromptPath, 'utf-8'));
     logger.info(`✅ 找到 fallback prompt 文件: ${altPromptPath}`);
     logger.info(`📄 Prompt 内容: ${JSON.stringify(templates[type], null, 2)}`);
     return { template: templates[type], promptPath: altPromptPath, promptContent: templates[type] };
   }
-  // fallback: prompts/{uiLanguage}/default.json
+  // fallback: prompts/{effectiveUI}/default.json
   const fallbackPath = path.join(promptDir, 'default.json');
   if (fs.existsSync(fallbackPath)) {
     logger.info(`🔄 使用 fallback: ${fallbackPath}`);
     const templates = JSON.parse(fs.readFileSync(fallbackPath, 'utf-8'));
     return { template: templates[type], promptPath: fallbackPath, promptContent: templates[type] };
   }
-  // fallback: prompts/{uiLanguage}.json（兼容老结构）
-  const legacyPath = path.join(__dirname, '../../prompts', `${mappedUI}.json`);
+  // fallback: prompts/{effectiveUI}.json（兼容老结构）
+  const legacyPath = path.join(__dirname, '../../prompts', `${effectiveUI}.json`);
   if (fs.existsSync(legacyPath)) {
     logger.info(`🔄 使用 legacy fallback: ${legacyPath}`);
     const templates = JSON.parse(fs.readFileSync(legacyPath, 'utf-8'));
@@ -127,10 +135,11 @@ function getLanguagePrompt(word: string, language: string, uiLanguage: string) {
     targetLang,
     exampleField
   });
-  // 兜底：英文界面强制英文释义
-  if (isEnglishUI) {
-    prompt += '\n\nImportant: All definitions, explanations, and example translations must be in English, suitable for English speakers learning this language.';
-  }
+  
+  // 移除强制英文释义的逻辑，让prompt文件本身决定输出语言
+  // 这样英文UI用户学习英文时，会使用en/en.json中的中文释义prompt
+  // 中文UI用户学习英文时，会使用zh-CN/en.json中的中文释义prompt
+  
   return { template: prompt, promptPath: template.promptPath, promptContent: template.promptContent };
 }
 
