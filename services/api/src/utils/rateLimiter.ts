@@ -77,10 +77,24 @@ class OpenAIRateLimiter {
           this.activeRequests--;
           logger.error(`❌ OpenAI请求失败: ${error.message}`);
           
+          // 改进错误日志记录
+          if (error && typeof error === 'object') {
+            const errorObj = error as any;
+            logger.error(`❌ OpenAI请求详细错误:`, {
+              message: errorObj.message,
+              type: errorObj.constructor?.name || 'Unknown',
+              status: errorObj.status,
+              code: errorObj.code,
+              response: errorObj.response?.data,
+              requestId: errorObj.requestId
+            });
+          }
+          
           if (retryCount < this.config.maxRetries) {
             logger.info(`🔄 重试请求 (${retryCount + 1}/${this.config.maxRetries})`);
             setTimeout(() => execute(retryCount + 1), this.config.retryDelay);
           } else {
+            logger.error(`❌ 请求重试次数已达上限，最终失败`);
             reject(error);
           }
         }

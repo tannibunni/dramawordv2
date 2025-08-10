@@ -281,11 +281,36 @@ export const searchWord = async (req: Request, res: Response): Promise<void> => 
       });
     } catch (aiError) {
       logger.warn(`⚠️ AI generation failed for ${searchTerm}, using fallback data:`, aiError);
-      logger.error(`❌ OpenAI API Error details:`, {
-        message: aiError instanceof Error ? aiError.message : 'Unknown error',
-        stack: aiError instanceof Error ? aiError.stack : undefined,
+      
+      // 改进错误日志记录，提供更详细的错误信息
+      let errorDetails = {
+        message: 'Unknown error',
+        type: 'Unknown',
+        status: 'Unknown',
         word: searchTerm
-      });
+      };
+      
+      if (aiError instanceof Error) {
+        errorDetails.message = aiError.message;
+        errorDetails.type = aiError.constructor.name;
+        errorDetails.stack = aiError.stack;
+      }
+      
+      // 检查是否是OpenAI API错误
+      if (aiError && typeof aiError === 'object' && 'status' in aiError) {
+        errorDetails.status = (aiError as any).status;
+        if ('error' in aiError && aiError.error && typeof aiError.error === 'object') {
+          const openaiError = aiError.error as any;
+          if ('message' in openaiError) {
+            errorDetails.message = openaiError.message;
+          }
+          if ('type' in openaiError) {
+            errorDetails.type = openaiError.type;
+          }
+        }
+      }
+      
+      logger.error(`❌ OpenAI API Error details:`, errorDetails);
       
       // 记录AI错误，但不立即返回，继续使用fallback
       logger.error(`❌ AI generation failed, will use fallback for: ${searchTerm}`);
@@ -1269,14 +1294,34 @@ export const checkEnvironment = async (req: Request, res: Response): Promise<voi
 // 测试 Open AI 连接
 export const testOpenAI = async (req: Request, res: Response): Promise<void> => {
   try {
+    // 检查环境变量
+    const hasOpenAIKey = !!process.env.OPENAI_API_KEY;
+    const openAIKeyLength = process.env.OPENAI_API_KEY ? process.env.OPENAI_API_KEY.length : 0;
+    const openAIKeyPrefix = process.env.OPENAI_API_KEY ? process.env.OPENAI_API_KEY.substring(0, 7) + '...' : 'Not set';
+    
+    logger.info(`🔍 OpenAI配置检查:`, {
+      hasKey: hasOpenAIKey,
+      keyLength: openAIKeyLength,
+      keyPrefix: openAIKeyPrefix
+    });
+    
     if (!process.env.OPENAI_API_KEY) {
       res.json({
         success: false,
-        error: 'OPENAI_API_KEY not found'
+        error: 'OPENAI_API_KEY not found',
+        details: {
+          hasKey: false,
+          keyLength: 0,
+          environment: process.env.NODE_ENV || 'unknown'
+        }
       });
       return;
     }
 
+    // 测试API连接
+    logger.info(`🧪 开始测试OpenAI API连接...`);
+    const startTime = Date.now();
+    
     const completion = await openai.chat.completions.create({
       model: "gpt-3.5-turbo",
       messages: [
@@ -1288,22 +1333,68 @@ export const testOpenAI = async (req: Request, res: Response): Promise<void> => 
       max_tokens: 50
     });
 
+    const responseTime = Date.now() - startTime;
     const response = completion.choices[0]?.message?.content;
+    
+    logger.info(`✅ OpenAI API测试成功:`, {
+      responseTime: `${responseTime}ms`,
+      model: completion.model,
+      usage: completion.usage
+    });
     
     res.json({
       success: true,
       data: {
         response,
         model: completion.model,
-        usage: completion.usage
+        usage: completion.usage,
+        responseTime: `${responseTime}ms`
+      },
+      config: {
+        hasKey: true,
+        keyLength: openAIKeyLength,
+        keyPrefix: openAIKeyPrefix,
+        environment: process.env.NODE_ENV || 'unknown'
       }
     });
   } catch (error) {
     logger.error('❌ OpenAI test error:', error);
+    
+    // 提供详细的错误信息
+    let errorDetails = {
+      message: 'Unknown error',
+      type: 'Unknown',
+      status: 'Unknown'
+    };
+    
+    if (error instanceof Error) {
+      errorDetails.message = error.message;
+      errorDetails.type = error.constructor.name;
+    }
+    
+    if (error && typeof error === 'object' && 'status' in error) {
+      errorDetails.status = (error as any).status;
+      if ('error' in error && error.error && typeof error.error === 'object') {
+        const openaiError = error.error as any;
+        if ('message' in openaiError) {
+          errorDetails.message = openaiError.message;
+        }
+        if ('type' in openaiError) {
+          errorDetails.type = openaiError.type;
+        }
+      }
+    }
+    
     res.status(500).json({
       success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
-      details: error instanceof Error ? error.stack : undefined
+      error: 'OpenAI connection test failed',
+      details: errorDetails,
+      config: {
+        hasKey: !!process.env.OPENAI_API_KEY,
+        keyLength: process.env.OPENAI_API_KEY ? process.env.OPENAI_API_KEY.length : 0,
+        keyPrefix: process.env.OPENAI_API_KEY ? process.env.OPENAI_API_KEY.substring(0, 7) + '...' : 'Not set',
+        environment: process.env.NODE_ENV || 'unknown'
+      }
     });
   }
 };

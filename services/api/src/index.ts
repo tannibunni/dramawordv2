@@ -30,6 +30,7 @@ import feedbackRoutes from './routes/feedback';
 import paymentRoutes from './routes/payment';
 import recommendationRoutes from './routes/recommendations';
 import { logger } from './utils/logger';
+import { OpenAI } from 'openai';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -65,9 +66,71 @@ app.use('/api/feedback', feedbackRoutes);
 app.use('/api/payment', paymentRoutes);
 app.use('/api/recommendations', recommendationRoutes);
 
-// 健康检查
+// 健康检查端点
 app.get('/health', (req, res) => {
-  res.json({ status: 'OK', timestamp: new Date().toISOString() });
+  res.json({ 
+    status: 'ok', 
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV || 'unknown'
+  });
+});
+
+// OpenAI健康检查端点
+app.get('/health/openai', async (req, res) => {
+  try {
+    const hasOpenAIKey = !!process.env.OPENAI_API_KEY;
+    const openAIKeyLength = process.env.OPENAI_API_KEY ? process.env.OPENAI_API_KEY.length : 0;
+    
+    if (!hasOpenAIKey) {
+      res.json({
+        status: 'error',
+        service: 'openai',
+        error: 'OPENAI_API_KEY not configured',
+        timestamp: new Date().toISOString(),
+        environment: process.env.NODE_ENV || 'unknown'
+      });
+      return;
+    }
+    
+    // 简单测试OpenAI连接
+    const openai = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY,
+    });
+    
+    const startTime = Date.now();
+    const completion = await openai.chat.completions.create({
+      model: "gpt-3.5-turbo",
+      messages: [{ role: "user", content: "test" }],
+      max_tokens: 5
+    });
+    const responseTime = Date.now() - startTime;
+    
+    res.json({
+      status: 'ok',
+      service: 'openai',
+      responseTime: `${responseTime}ms`,
+      model: completion.model,
+      timestamp: new Date().toISOString(),
+      environment: process.env.NODE_ENV || 'unknown',
+      config: {
+        hasKey: true,
+        keyLength: openAIKeyLength,
+        keyPrefix: process.env.OPENAI_API_KEY?.substring(0, 7) + '...'
+      }
+    });
+  } catch (error) {
+    res.status(500).json({
+      status: 'error',
+      service: 'openai',
+      error: error instanceof Error ? error.message : 'Unknown error',
+      timestamp: new Date().toISOString(),
+      environment: process.env.NODE_ENV || 'unknown',
+      config: {
+        hasKey: !!process.env.OPENAI_API_KEY,
+        keyLength: process.env.OPENAI_API_KEY ? process.env.OPENAI_API_KEY.length : 0
+      }
+    });
+  }
 });
 
 // 错误处理中间件
