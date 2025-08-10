@@ -61,10 +61,21 @@ function mapTargetLanguage(language: string) {
   if (language === 'es') return 'es';
   return language;
 }
+
+function mapPromptFileName(language: string) {
+  // 映射到prompt文件名
+  if (language === 'zh' || language === 'zh-CN') return 'zh-CN';
+  if (language === 'en') return 'en';
+  if (language === 'ja') return 'ja';
+  if (language === 'ko') return 'ko';
+  if (language === 'fr') return 'fr';
+  if (language === 'es') return 'es';
+  return language;
+}
 function getPromptTemplate(uiLanguage: string, language: string, type: string) {
   logger.info(`🔍 getPromptTemplate 参数: uiLanguage=${uiLanguage}, language=${language}, type=${type}`);
   const mappedUI = mapUILanguage(uiLanguage);
-  const mappedLang = mapTargetLanguage(language);
+  const mappedLang = mapPromptFileName(language); // 使用新的文件名映射函数
   logger.info(`🔍 getPromptTemplate 映射: mappedUI=${mappedUI}, mappedLang=${mappedLang}`);
   
   // 特殊逻辑：英文UI用户学习英文时，使用中文UI的prompt以返回中文释义
