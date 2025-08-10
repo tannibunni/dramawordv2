@@ -678,7 +678,9 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
             <Text style={styles.appName}>{t('app_name', appLanguage)}</Text>
           </View>
           <Text style={styles.slogan}>{t('app_slogan', appLanguage)}</Text>
-          <Text style={styles.versionInfo}>当前版本： 1.0.0 免费体验版</Text>
+          <Text style={styles.versionInfo}>
+            {t('current_version', appLanguage)}
+          </Text>
         </View>
 
         {/* 登录按钮 */}

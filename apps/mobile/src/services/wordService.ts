@@ -280,8 +280,13 @@ export class WordService {
   // 保存查词记录（支持本地/云端）
   async saveSearchHistory(word: string, definition: string, candidates?: string[]): Promise<boolean> {
     const token = await getUserToken();
-    if (!token) {
-      // 游客：本地保存
+    
+    // 检查是否为游客模式（有token但没有userInfo）
+    const userInfo = await AsyncStorage.getItem('userInfo');
+    const isGuestMode = token && !userInfo;
+    
+    if (!token || isGuestMode) {
+      // 游客或无token：本地保存
       try {
         const local = await AsyncStorage.getItem(SEARCH_HISTORY_KEY);
         let history: RecentWord[] = local ? JSON.parse(local) : [];
@@ -294,6 +299,7 @@ export class WordService {
           ...(candidates ? { candidates } : {})
         }, ...history.filter(w => w.word !== word)].slice(0, 5);
         await AsyncStorage.setItem(SEARCH_HISTORY_KEY, JSON.stringify(history));
+        console.log('✅ 游客模式：搜索历史已保存到本地');
         return true;
       } catch (e) {
         console.error('保存本地搜索历史失败:', e);
@@ -306,8 +312,6 @@ export class WordService {
       // 导入unifiedSyncService
       const { unifiedSyncService } = await import('./unifiedSyncService');
       
-      // 获取用户ID
-      const userInfo = await AsyncStorage.getItem('userInfo');
       let userId = '';
       if (userInfo) {
         try {

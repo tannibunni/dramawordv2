@@ -598,6 +598,7 @@ export const getUserVocabulary = async (req: Request, res: Response) => {
     const formattedVocabulary = userVocabulary.map(record => ({
       _id: record._id,
       word: record.word, // 直接使用UserVocabulary中的word字段
+      language: record.language, // 添加语言字段
       mastery: record.mastery,
       reviewCount: record.reviewCount,
       correctCount: record.correctCount,

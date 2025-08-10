@@ -37,6 +37,13 @@ const AppLanguageSelector: React.FC<AppLanguageSelectorProps> = ({
     }
   }, [visible]);
 
+  // 当切换到学习语言标签页时，确保加载学习语言
+  useEffect(() => {
+    if (visible && activeTab === 'learning') {
+      loadLearningLanguages();
+    }
+  }, [visible, activeTab]);
+
   const loadLearningLanguages = async () => {
     try {
       const saved = await AsyncStorage.getItem('learningLanguages');
@@ -57,7 +64,7 @@ const AppLanguageSelector: React.FC<AppLanguageSelectorProps> = ({
     onClose();
   };
 
-  const toggleLearningLanguage = async (languageCode: string) => {
+  const toggleLearningLanguage = (languageCode: string) => {
     console.log('🔄 切换学习语言:', languageCode);
     const newSelection = selectedLanguages.includes(languageCode) 
       ? selectedLanguages.filter(lang => lang !== languageCode)
@@ -75,11 +82,15 @@ const AppLanguageSelector: React.FC<AppLanguageSelectorProps> = ({
       return;
     }
     
-    // 直接保存
+    // 只更新本地状态，不保存到AsyncStorage
+    setSelectedLanguages(newSelection);
+  };
+
+  const handleSaveLearningLanguages = async () => {
     try {
-      await AsyncStorage.setItem('learningLanguages', JSON.stringify(newSelection));
-      console.log('✅ 已保存学习语言:', newSelection);
-      setSelectedLanguages(newSelection);
+      await AsyncStorage.setItem('learningLanguages', JSON.stringify(selectedLanguages));
+      console.log('✅ 已保存学习语言:', selectedLanguages);
+      onClose(); // 保存成功后关闭窗口
     } catch (error) {
       console.error('保存学习语言失败:', error);
       Alert.alert(
@@ -245,7 +256,7 @@ const AppLanguageSelector: React.FC<AppLanguageSelectorProps> = ({
                   }
                 </Text>
 
-                <ScrollView style={{ maxHeight: 400, minHeight: 120 }} showsVerticalScrollIndicator={true}>
+                <ScrollView style={{ maxHeight: 300, minHeight: 120 }} showsVerticalScrollIndicator={true}>
                   {(() => {
                     console.log('🔍 开始渲染学习语言选项');
                     console.log('📋 SUPPORTED_LANGUAGES:', Object.values(SUPPORTED_LANGUAGES));
@@ -296,6 +307,19 @@ const AppLanguageSelector: React.FC<AppLanguageSelectorProps> = ({
                     : `${selectedLanguages.length} languages selected`
                   }
                 </Text>
+
+                {/* 确定按钮 */}
+                <View style={styles.confirmButtonContainer}>
+                  <TouchableOpacity
+                    style={styles.confirmButton}
+                    onPress={handleSaveLearningLanguages}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={styles.confirmButtonText}>
+                      {appLanguage === 'zh-CN' ? '确定' : 'Confirm'}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
               </View>
 
 
@@ -316,7 +340,7 @@ const styles = StyleSheet.create({
   },
   modalContent: {
     width: '90%',
-    maxHeight: '80%',
+    maxHeight: '85%',
     backgroundColor: colors.background.secondary,
     borderRadius: 20,
     overflow: 'hidden',
@@ -442,6 +466,26 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 20,
     marginBottom: 8,
+  },
+  confirmButtonContainer: {
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderTopWidth: 1,
+    borderTopColor: colors.border.light,
+    backgroundColor: colors.background.secondary,
+    marginTop: 10,
+  },
+  confirmButton: {
+    backgroundColor: colors.primary[500],
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  confirmButtonText: {
+    color: colors.background.secondary,
+    fontSize: 16,
+    fontWeight: '600',
   },
 
 });

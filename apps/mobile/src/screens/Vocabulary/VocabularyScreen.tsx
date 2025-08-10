@@ -55,8 +55,8 @@ const VocabularyScreen: React.FC = () => {
   // 新增：搜索框展开状态
   const [isSearchExpanded, setIsSearchExpanded] = useState(false);
   // 新增：语言筛选状态
-  // 统一用 string 类型，避免 code 类型不一致导致的比较问题
-  const [selectedFilterLanguage, setSelectedFilterLanguage] = useState<string>('ALL');
+  const [selectedFilterLanguage, setSelectedFilterLanguage] = useState<string>('');
+
 
 
   // 徽章配置 - 使用 state 来保持状态
@@ -165,35 +165,33 @@ const VocabularyScreen: React.FC = () => {
 
     let filtered = uniqueWords;
     
-    // 语言筛选
-    if (selectedFilterLanguage !== 'ALL') {
+    // 语言筛选：根据用户选择的筛选语言
+    if (selectedFilterLanguage) {
       const languageCode = selectedFilterLanguage.toLowerCase();
       filtered = filtered.filter(word => {
-        // CHINESE 特殊处理
-        if (selectedFilterLanguage === 'CHINESE') {
-          // 包含中文字符
-          return /[\u4e00-\u9fa5]/.test(word.word || '');
-        }
-        // 检查单词的语言属性，如果没有明确的语言属性，则根据单词特征判断
+        // 优先检查单词的语言属性（来自cloudwords或用户词汇表）
         if (word.language) {
+          console.log(`[VocabularyScreen:filterWords] 单词 ${word.word} 的语言属性: ${word.language}, 筛选语言: ${languageCode}`);
           return word.language.toLowerCase() === languageCode;
         }
         
-        // 根据单词特征判断语言
+        // 如果没有明确的语言属性，则根据单词特征判断语言
         const wordText = word.word || '';
-        switch (languageCode) {
-          case 'en':
-            // 英语：只包含英文字母、空格、连字符
-            return /^[a-zA-Z\s\-']+$/.test(wordText);
-          case 'ja':
-            // 日语：包含平假名、片假名、汉字
-            return /[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]/.test(wordText);
-          case 'ko':
-            // 韩语：包含韩文字母
-            return /[\uAC00-\uD7AF]/.test(wordText);
-          default:
-            return true;
+        let detectedLanguage = 'en'; // 默认英语
+        
+        // 检测单词语言特征
+        if (/[\u4e00-\u9fa5]/.test(wordText)) {
+          detectedLanguage = 'zh'; // 中文字符
+        } else if (/[\u3040-\u309F\u30A0-\u30FF]/.test(wordText)) {
+          detectedLanguage = 'ja'; // 日语假名
+        } else if (/[\uAC00-\uD7AF]/.test(wordText)) {
+          detectedLanguage = 'ko'; // 韩文字母
+        } else if (/^[a-zA-Z\s\-']+$/.test(wordText)) {
+          detectedLanguage = 'en'; // 英语
         }
+        
+        console.log(`[VocabularyScreen:filterWords] 单词 ${word.word} 检测到的语言: ${detectedLanguage}, 筛选语言: ${languageCode}`);
+        return detectedLanguage === languageCode;
       });
     }
 
@@ -453,18 +451,45 @@ const VocabularyScreen: React.FC = () => {
     ko: 'korean_language',
   };
 
-  // 语言筛选选项：EN界面下将英文选项替换为Chinese
-  let filterLanguageOptions: { code: string, flag: string, name: string, nativeName: string }[] = [];
-  if (appLanguage === 'en-US') {
-    filterLanguageOptions = [
-      { code: 'CHINESE', flag: '🇨🇳', name: '中文', nativeName: 'Chinese' },
-      ...Object.entries(SUPPORTED_LANGUAGES)
-        .filter(([key]) => key !== 'ENGLISH')
-        .map(([key, lang]) => ({ code: lang.code, flag: lang.flag, name: lang.name, nativeName: lang.nativeName }))
-    ];
-  } else {
-    filterLanguageOptions = Object.entries(SUPPORTED_LANGUAGES).map(([key, lang]) => ({ code: lang.code, flag: lang.flag, name: lang.name, nativeName: lang.nativeName }));
-  }
+  // 语言筛选选项：显示用户选择的所有学习语言
+  const [filterLanguageOptions, setFilterLanguageOptions] = useState<{ code: string, flag: string, name: string, nativeName: string }[]>([]);
+  
+  // 加载用户选择的学习语言
+  useEffect(() => {
+    const loadLearningLanguages = async () => {
+      try {
+        const saved = await AsyncStorage.getItem('learningLanguages');
+        if (saved) {
+          const languages = JSON.parse(saved);
+          const options = languages.map((langCode: string) => {
+            const languageEntry = Object.entries(SUPPORTED_LANGUAGES).find(([key, lang]) => lang.code === langCode);
+            if (languageEntry) {
+              const [key, lang] = languageEntry;
+              return {
+                code: lang.code,
+                flag: lang.flag,
+                name: lang.name,
+                nativeName: lang.nativeName
+              };
+            }
+            return null;
+          }).filter(Boolean);
+          
+          setFilterLanguageOptions(options);
+          console.log('[VocabularyScreen] 加载的学习语言选项:', options);
+          
+          // 自动选择第一个语言作为默认筛选语言
+          if (options.length > 0 && !selectedFilterLanguage) {
+            setSelectedFilterLanguage(options[0].code);
+          }
+        }
+      } catch (error) {
+        console.error('[VocabularyScreen] 加载学习语言失败:', error);
+      }
+    };
+    
+    loadLearningLanguages();
+  }, [selectedFilterLanguage]);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -578,7 +603,10 @@ const VocabularyScreen: React.FC = () => {
                   onPress={() => {
                     setIsSearchExpanded(false);
                     setSearchText('');
-                    setSelectedFilterLanguage('ALL'); // 重置为全部
+                    // 重置为第一个语言选项
+                    if (filterLanguageOptions.length > 0) {
+                      setSelectedFilterLanguage(filterLanguageOptions[0].code);
+                    }
                   }}
                   style={styles.searchCloseBtn}
                 >
@@ -599,8 +627,33 @@ const VocabularyScreen: React.FC = () => {
               </View>
             )}
           </View>
-          {/* 语言筛选器 - 滑块形式 */}
-          {/* 已彻底移除语言筛选器相关JSX块 */}
+          {/* 语言筛选器 - 显示用户选择的所有学习语言 */}
+          <View style={styles.languageFilterSliderWrapper}>
+            <ScrollView 
+              horizontal 
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.languageFilterScrollContent}
+            >
+              {filterLanguageOptions.map((lang, index) => (
+                <TouchableOpacity
+                  key={`${lang.code}-${index}`}
+                  style={[
+                    styles.languageFilterSliderButton,
+                    selectedFilterLanguage === lang.code && styles.languageFilterSliderButtonActive
+                  ]}
+                  onPress={() => setSelectedFilterLanguage(lang.code)}
+                >
+                  <Text style={styles.languageFilterSliderFlag}>{lang.flag}</Text>
+                  <Text style={[
+                    styles.languageFilterSliderText,
+                    selectedFilterLanguage === lang.code && styles.languageFilterSliderTextActive
+                  ]}>
+                    {appLanguage === 'zh-CN' ? lang.name : lang.nativeName}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
           <WordList
             words={filteredWords}
             onWordPress={(word) => { 
@@ -1196,6 +1249,25 @@ const styles = StyleSheet.create({
   },
   languageFilterSliderTextActive: {
     color: colors.primary[500],
+    fontWeight: '500',
+  },
+  languageFilterCurrentLanguage: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.primary[50],
+    borderRadius: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderWidth: 1,
+    borderColor: colors.primary[200],
+  },
+  languageFilterCurrentLanguageFlag: {
+    fontSize: 20,
+    marginRight: 8,
+  },
+  languageFilterCurrentLanguageText: {
+    fontSize: 14,
+    color: colors.primary[700],
     fontWeight: '500',
   },
 });

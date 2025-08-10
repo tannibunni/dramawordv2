@@ -181,6 +181,7 @@ export type TranslationKey =
   // 登录页面
   | 'app_name'
   | 'app_slogan'
+  | 'current_version'
   | 'phone_login'
   | 'wechat_login'
   | 'apple_login'
@@ -512,6 +513,7 @@ export const translations: Record<AppLanguage, Record<TranslationKey, string>> =
     // 登录页面
     app_name: '剧词记',
     app_slogan: '看剧，记住真·有用的单词',
+    current_version: '当前版本： 1.0.0 免费体验版',
     phone_login: '使用手机号登录',
     wechat_login: '使用微信登录',
     apple_login: '使用 Apple 登录',
@@ -842,11 +844,12 @@ export const translations: Record<AppLanguage, Record<TranslationKey, string>> =
     // 登录页面
     app_name: 'DramaWord',
     app_slogan: 'Watch dramas, remember truly useful words',
+    current_version: 'Current Version: 1.0.0 Free Trial',
     phone_login: 'Login with phone number',
     wechat_login: 'Login with WeChat',
     apple_login: 'Login with Apple',
-    guest_login: 'Experience guest mode immediately',
-    guest_mode_experience: 'Experience guest mode immediately',
+    guest_login: 'Guest Mode',
+    guest_mode_experience: 'Guest Mode',
     login_agreement: 'By logging in, you agree to',
     user_agreement: 'User Agreement',
     privacy_policy: 'Privacy Policy',
