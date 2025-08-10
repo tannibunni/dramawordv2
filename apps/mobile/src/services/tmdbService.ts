@@ -25,6 +25,7 @@ export interface TMDBShow {
   original_language: string;
   origin_country: string[];
   created_by?: Array<{ id: number; name: string; profile_path: string }>;
+  source?: 'tmdb' | 'omdb'; // 数据来源标识
 }
 
 export interface TMDBSearchResponse {

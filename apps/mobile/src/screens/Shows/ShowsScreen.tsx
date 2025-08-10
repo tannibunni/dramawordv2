@@ -1338,6 +1338,27 @@ const ShowsScreen: React.FC = () => {
           keyExtractor={item => item.id.toString()}
           style={styles.list}
           contentContainerStyle={styles.listContent}
+          ListHeaderComponent={
+            <TouchableOpacity
+              style={styles.manualAddContainer}
+              onPress={() => {
+                // 切换到单词本标签页
+                setFilter('wordbooks');
+                // 清空搜索
+                setSearchText('');
+                setSearchResults([]);
+                // 聚焦到搜索框
+                searchInputRef.current?.focus();
+              }}
+              activeOpacity={0.8}
+            >
+              <View style={styles.manualAddContent}>
+                <Ionicons name="add-circle-outline" size={20} color={colors.primary[500]} />
+                <Text style={styles.manualAddText}>{t('cant_find_show_manual_add', appLanguage)}</Text>
+                <Ionicons name="chevron-forward" size={16} color={colors.neutral[500]} />
+              </View>
+            </TouchableOpacity>
+          }
         />
       )}
 
@@ -2659,6 +2680,32 @@ const styles = StyleSheet.create({
   },
   headerContainer: {
     backgroundColor: colors.background.primary,
+  },
+
+  manualAddContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.primary[500],
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    marginHorizontal: 24,
+    marginTop: 0,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: colors.primary[300],
+  },
+  manualAddContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  manualAddText: {
+    color: colors.text.inverse,
+    fontSize: 16,
+    fontWeight: '500',
+    marginHorizontal: 8,
   },
 
 });
