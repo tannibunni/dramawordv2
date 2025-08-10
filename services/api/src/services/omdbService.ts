@@ -2,8 +2,8 @@ import axios from 'axios';
 import { logger } from '../utils/logger';
 
 // OMDb API 配置
-const OMDB_BASE_URL = 'http://www.omdbapi.com';
-const OMDB_API_KEY = '47668551'; // 使用提供的API key
+const OMDB_BASE_URL = process.env.OMDB_BASE_URL || 'http://www.omdbapi.com';
+const OMDB_API_KEY = process.env.OMDB_API_KEY || '47668551'; // 使用提供的API key作为默认值
 
 // OMDb API 响应接口
 export interface OMDBShow {
