@@ -254,6 +254,18 @@ const AppLanguageSelector: React.FC<AppLanguageSelectorProps> = ({
                     const filteredLanguages = Object.values(SUPPORTED_LANGUAGES)
                       .filter(language => {
                         console.log('🔍 检查语言:', language.code, language.name);
+                        
+                        // 根据UI语言过滤学习语言选项
+                        if (appLanguage === 'zh-CN' && language.code === 'zh') {
+                          console.log('❌ 中文UI界面，过滤掉中文学习选项');
+                          return false;
+                        }
+                        
+                        if (appLanguage === 'en-US' && language.code === 'en') {
+                          console.log('❌ 英文UI界面，过滤掉英文学习选项');
+                          return false;
+                        }
+                        
                         // 移除界面语言过滤规则，显示所有语言选项
                         console.log('✅ 保留语言选项:', language.code);
                         return true;

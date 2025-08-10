@@ -204,6 +204,17 @@ const LanguagePicker: React.FC<LanguagePickerProps> = ({ onLanguageChange, onNav
                     // 只检查是否在学习语言列表中，不再根据界面语言过滤
                     const isIncluded = learningLanguages.includes(language.code);
                     
+                    // 根据UI语言过滤学习语言选项
+                    if (appLanguage === 'zh-CN' && language.code === 'zh') {
+                      console.log('❌ 中文UI界面，过滤掉中文学习选项');
+                      return false;
+                    }
+                    
+                    if (appLanguage === 'en-US' && language.code === 'en') {
+                      console.log('❌ 英文UI界面，过滤掉英文学习选项');
+                      return false;
+                    }
+                    
                     // 移除界面语言过滤规则，显示所有学习语言
                     return isIncluded;
                   });

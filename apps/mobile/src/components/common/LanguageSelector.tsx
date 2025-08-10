@@ -15,14 +15,18 @@ interface LanguageSelectorProps {
   onLanguageChange?: (language: SupportedLanguageCode) => void;
   showProgress?: boolean;
   compact?: boolean;
+  selectedLanguage: SupportedLanguageCode;
+  appLanguage: string;
 }
 
 const LanguageSelector: React.FC<LanguageSelectorProps> = ({
+  selectedLanguage,
   onLanguageChange,
   showProgress = false,
   compact = false,
+  appLanguage,
 }) => {
-  const { selectedLanguage, setSelectedLanguage, languageProgress } = useLanguage();
+  const { setSelectedLanguage, languageProgress } = useLanguage();
 
   const handleLanguageSelect = (language: SupportedLanguageCode) => {
     setSelectedLanguage(language);
@@ -81,9 +85,22 @@ const LanguageSelector: React.FC<LanguageSelectorProps> = ({
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
-        {Object.keys(SUPPORTED_LANGUAGES).map((languageCode) =>
-          renderLanguageButton(languageCode as SupportedLanguageCode)
-        )}
+        {Object.keys(SUPPORTED_LANGUAGES)
+          .filter(languageCode => {
+            // 根据UI语言过滤学习语言选项
+            if (appLanguage === 'zh-CN' && languageCode === 'CHINESE') {
+              return false; // 中文UI界面，过滤掉中文学习选项
+            }
+            
+            if (appLanguage === 'en-US' && languageCode === 'ENGLISH') {
+              return false; // 英文UI界面，过滤掉英文学习选项
+            }
+            
+            return true;
+          })
+          .map((languageCode) =>
+            renderLanguageButton(languageCode as SupportedLanguageCode)
+          )}
       </ScrollView>
     </View>
   );

@@ -178,6 +178,17 @@ export const InitialLanguageModal: React.FC<InitialLanguageModalProps> = ({
             <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false}>
               {Object.values(SUPPORTED_LANGUAGES)
                 .filter(language => {
+                  // 根据UI语言过滤学习语言选项
+                  if (appLanguage === 'zh-CN' && language.code === 'zh') {
+                    console.log('❌ 中文UI界面，过滤掉中文学习选项');
+                    return false;
+                  }
+                  
+                  if (appLanguage === 'en-US' && language.code === 'en') {
+                    console.log('❌ 英文UI界面，过滤掉英文学习选项');
+                    return false;
+                  }
+                  
                   // 移除界面语言过滤规则，显示所有语言选项
                   return true;
                 })
