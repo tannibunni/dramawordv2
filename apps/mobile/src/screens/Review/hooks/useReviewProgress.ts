@@ -84,14 +84,14 @@ export const useReviewProgress = (totalWords: number) => {
       console.log('📱 移动到下一个单词 - new index:', newIndex);
       setSwiperIndex(newIndex);
       
-      // 如果是最后一张卡，延迟显示完成页面
+      // 如果是最后一张卡，先显示最后一张卡，然后延迟显示完成页面
       if (newIndex === totalWords) {
-        console.log('🎯 最后一张卡完成，准备显示完成页面');
-        // 减少延迟时间，确保快速划卡时能及时显示完成页面
+        console.log('🎯 最后一张卡，显示 11/11，延迟后显示完成页面');
+        // 增加延迟时间，让用户能看到最后一张卡的进度数字
         setTimeout(() => {
           console.log('🏁 复习完成，计算最终统计数据');
           setComplete();
-        }, 300);
+        }, 800); // 从300ms增加到800ms，让用户有足够时间看到11/11
       } else {
         console.log('📱 继续下一张卡');
       }
