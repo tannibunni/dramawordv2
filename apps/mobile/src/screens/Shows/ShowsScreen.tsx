@@ -1321,10 +1321,22 @@ const ShowsScreen: React.FC = () => {
             {filter === 'wordbooks' ? t('no_wordbook_results', appLanguage) : 
              t('no_results', appLanguage)}
           </Text>
-          <TouchableOpacity style={styles.searchEmptyButton}>
+          <TouchableOpacity 
+            style={styles.searchEmptyButton}
+            onPress={() => {
+              // 切换到单词本标签页
+              setFilter('wordbooks');
+              // 清空搜索
+              setSearchText('');
+              setSearchResults([]);
+              // 聚焦到搜索框
+              searchInputRef.current?.focus();
+            }}
+            activeOpacity={0.8}
+          >
             <Text style={styles.searchEmptyButtonText}>
               {filter === 'wordbooks' ? t('try_other_wordbook_keywords', appLanguage) : 
-               t('try_other_keywords', appLanguage)}
+               t('add_manually', appLanguage)}
             </Text>
           </TouchableOpacity>
         </View>
@@ -1353,9 +1365,9 @@ const ShowsScreen: React.FC = () => {
               activeOpacity={0.8}
             >
               <View style={styles.manualAddContent}>
-                <Ionicons name="add-circle-outline" size={20} color={colors.primary[500]} />
+                <Ionicons name="add-circle-outline" size={18} color={colors.primary[500]} />
                 <Text style={styles.manualAddText}>{t('cant_find_show_manual_add', appLanguage)}</Text>
-                <Ionicons name="chevron-forward" size={16} color={colors.neutral[500]} />
+                <Ionicons name="chevron-forward" size={14} color={colors.primary[500]} />
               </View>
             </TouchableOpacity>
           }
@@ -1918,17 +1930,17 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   searchEmptyButton: {
-    marginTop: 24,
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    backgroundColor: colors.primary[500],
-    borderRadius: 8,
-    ...generateShadow(2),
+    marginTop: 16,
+    paddingVertical: 6,
+    paddingHorizontal: 16,
+    backgroundColor: 'transparent',
+    borderRadius: 0,
   },
   searchEmptyButtonText: {
-    fontSize: 16,
-    color: colors.text.inverse,
-    fontWeight: '500',
+    fontSize: 14,
+    color: colors.primary[500],
+    fontWeight: '400',
+    textAlign: 'center',
   },
   filterContainer: {
     flexDirection: 'row',
@@ -2686,15 +2698,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.primary[500],
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 12,
+    backgroundColor: 'transparent',
+    paddingVertical: 1,
+    paddingHorizontal: 16,
     marginHorizontal: 24,
     marginTop: 0,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: colors.primary[300],
+    marginBottom: 8,
   },
   manualAddContent: {
     flexDirection: 'row',
@@ -2702,10 +2711,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   manualAddText: {
-    color: colors.text.inverse,
-    fontSize: 16,
-    fontWeight: '500',
-    marginHorizontal: 8,
+    color: colors.primary[500],
+    fontSize: 14,
+    fontWeight: '400',
+    marginHorizontal: 4,
   },
 
 });

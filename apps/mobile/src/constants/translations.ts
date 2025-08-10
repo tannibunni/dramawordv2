@@ -292,6 +292,7 @@ export type TranslationKey =
   | 'no_wordbook_results'
   | 'try_other_wordbook_keywords'
   | 'cant_find_show_manual_add'
+  | 'add_manually'
   | 'recommendations_tab'
   | 'shows_tab'
   | 'wordbooks_tab'
@@ -620,7 +621,8 @@ export const translations: Record<AppLanguage, Record<TranslationKey, string>> =
     no_wordbooks: '暂无单词本，请创建',
     no_wordbook_results: '没有找到相关单词本',
     try_other_wordbook_keywords: '尝试其他关键词',
-    cant_find_show_manual_add: '找不到剧集？手动添加 >>',
+    cant_find_show_manual_add: '找不到剧集？手动添加',
+    add_manually: '手动添加',
     recommendations_tab: '推荐',
     shows_tab: '剧单',
     wordbooks_tab: '单词本',
@@ -949,7 +951,8 @@ export const translations: Record<AppLanguage, Record<TranslationKey, string>> =
     no_wordbooks: 'No wordbooks yet, create one',
     no_wordbook_results: 'No wordbooks found',
     try_other_wordbook_keywords: 'Try other keywords',
-    cant_find_show_manual_add: 'Can\'t find the show? Add manually >>',
+    cant_find_show_manual_add: 'Can\'t find the show? Add manually',
+    add_manually: 'Add Manually',
     recommendations_tab: 'Picks',
     shows_tab: 'Shows',
     wordbooks_tab: 'Wordbooks',
