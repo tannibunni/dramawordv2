@@ -6,6 +6,10 @@ export const useReviewProgress = (totalWords: number) => {
   const [currentProgress, setCurrentProgress] = useState(0);
   const [isReviewComplete, setIsReviewComplete] = useState(false);
   
+  // 五连击相关状态
+  const [fiveStreakCount, setFiveStreakCount] = useState(0);
+  const [showStreakAnimation, setShowStreakAnimation] = useState(false);
+  
   // 进度条动画相关
   const progressAnimation = useRef(new Animated.Value(0)).current;
   
@@ -58,6 +62,35 @@ export const useReviewProgress = (totalWords: number) => {
     setCurrentProgress(newProgress);
   }, [swiperIndex, currentProgress, totalWords]);
   
+  // 处理正确答案，检查五连击
+  const handleCorrectAnswer = () => {
+    const newStreakCount = fiveStreakCount + 1;
+    setFiveStreakCount(newStreakCount);
+    
+    console.log(`✅ 正确答案！当前连击: ${newStreakCount}`);
+    
+    // 检查是否达到五连击
+    if (newStreakCount >= 5) {
+      console.log('🎉 五连击达成！显示鼓励动画');
+      setShowStreakAnimation(true);
+      setFiveStreakCount(0); // 重置计数器
+    }
+  };
+  
+  // 处理错误答案，重置连击
+  const handleWrongAnswer = () => {
+    if (fiveStreakCount > 0) {
+      console.log(`❌ 答错了，连击中断！之前连击: ${fiveStreakCount}`);
+      setFiveStreakCount(0);
+    }
+  };
+  
+  // 从五连击动画继续
+  const continueFromStreak = () => {
+    console.log('🚀 继续学习');
+    setShowStreakAnimation(false);
+  };
+  
   // 重置进度
   const resetProgress = () => {
     console.log('🔄 重置进度条到0%');
@@ -65,6 +98,9 @@ export const useReviewProgress = (totalWords: number) => {
     setCurrentProgress(0);
     setSwiperIndex(0);
     setIsReviewComplete(false);
+    // 重置五连击相关状态
+    setFiveStreakCount(0);
+    setShowStreakAnimation(false);
   };
   
   // 设置完成状态
@@ -91,7 +127,7 @@ export const useReviewProgress = (totalWords: number) => {
         setTimeout(() => {
           console.log('🏁 复习完成，计算最终统计数据');
           setComplete();
-        }, 800); // 从300ms增加到800ms，让用户有足够时间看到11/11
+        }, 500); // 从300ms增加到500ms，让用户有足够时间看到11/11
       } else {
         console.log('📱 继续下一张卡');
       }
@@ -108,6 +144,12 @@ export const useReviewProgress = (totalWords: number) => {
     isReviewComplete,
     resetProgress,
     setComplete,
-    moveToNextWord
+    moveToNextWord,
+    // 五连击相关
+    fiveStreakCount,
+    showStreakAnimation,
+    handleCorrectAnswer,
+    handleWrongAnswer,
+    continueFromStreak
   };
 }; 

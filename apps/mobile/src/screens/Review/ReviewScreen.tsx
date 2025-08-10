@@ -133,7 +133,13 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
     isReviewComplete,
     resetProgress,
     setComplete,
-    moveToNextWord
+    moveToNextWord,
+    // 五连击相关
+    fiveStreakCount,
+    showStreakAnimation,
+    handleCorrectAnswer,
+    handleWrongAnswer,
+    continueFromStreak
   } = useReviewProgress(words.length);
   
   const {
@@ -554,6 +560,23 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
         />
       )}
       
+      {/* 五连击鼓励动画 */}
+      {showStreakAnimation && (
+        <View style={styles.streakAnimationOverlay}>
+          <View style={styles.streakAnimationContent}>
+            <Text style={styles.streakTitle}>🎉 五连击！</Text>
+            <Text style={styles.streakSubtitle}>太棒了！继续加油！</Text>
+            <TouchableOpacity
+              style={styles.streakContinueButton}
+              onPress={continueFromStreak}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.streakContinueButtonText}>继续学习</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+      
       {/* 复习模式指示器 */}
       <ReviewModeSelector 
         mode={reviewMode}
@@ -636,6 +659,8 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
               setPendingOperations(prev => prev + 1);
               try {
                 await handleSwipeLeft(word);
+                // 错误答案，重置连击
+                handleWrongAnswer();
               } finally {
                 setPendingOperations(prev => Math.max(0, prev - 1));
               }
@@ -647,6 +672,8 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
               setPendingOperations(prev => prev + 1);
               try {
                 await handleSwipeRight(word);
+                // 正确答案，检查五连击
+                handleCorrectAnswer();
               } finally {
                 setPendingOperations(prev => Math.max(0, prev - 1));
               }
@@ -1023,6 +1050,60 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 16,
     marginBottom: 24,
+  },
+  // 五连击动画样式
+  streakAnimationOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1000,
+  },
+  streakAnimationContent: {
+    backgroundColor: colors.background.primary,
+    borderRadius: 20,
+    padding: 32,
+    alignItems: 'center',
+    shadowColor: colors.primary[200],
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    elevation: 8,
+    maxWidth: 300,
+  },
+  streakTitle: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: colors.primary[500],
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  streakSubtitle: {
+    fontSize: 16,
+    color: colors.text.secondary,
+    marginBottom: 24,
+    textAlign: 'center',
+    lineHeight: 22,
+  },
+  streakContinueButton: {
+    backgroundColor: colors.primary[500],
+    paddingHorizontal: 32,
+    paddingVertical: 16,
+    borderRadius: 25,
+    shadowColor: colors.primary[200],
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  streakContinueButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });
 
