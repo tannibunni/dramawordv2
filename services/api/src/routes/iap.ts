@@ -1,6 +1,6 @@
 import express from 'express';
 import { Request, Response } from 'express';
-import { auth } from '../middleware/auth';
+import { authenticateToken } from '../middleware/auth';
 import { logger } from '../utils/logger';
 import axios from 'axios';
 
@@ -8,7 +8,7 @@ const router = express.Router();
 
 // 苹果收据验证接口
 interface AppleReceiptValidationRequest {
-  receipt: string;
+  'receipt-data': string;
   password: string; // 共享密钥
   'exclude-old-transactions'?: boolean;
 }
@@ -37,10 +37,10 @@ interface AppleReceiptValidationResponse {
 /**
  * 验证苹果IAP收据
  */
-router.post('/validate-receipt', auth, async (req: Request, res: Response) => {
+router.post('/validate-receipt', authenticateToken, async (req: Request, res: Response) => {
   try {
     const { receipt, bundleId } = req.body;
-    const userId = req.user?.userId;
+    const userId = req.user?.id;
 
     if (!receipt) {
       return res.status(400).json({
@@ -65,20 +65,20 @@ router.post('/validate-receipt', auth, async (req: Request, res: Response) => {
       throw new Error('Apple共享密钥未配置');
     }
 
-    // 先尝试生产环境验证
-    let appleResponse = await validateWithApple(receipt, sharedSecret, false);
-    
-    // 如果生产环境返回沙盒收据错误，尝试沙盒环境
-    if (appleResponse.status === 21007) {
-      logger.info('[IAP] 检测到沙盒收据，使用沙盒环境验证');
-      appleResponse = await validateWithApple(receipt, sharedSecret, true);
-    }
+            // 先尝试生产环境验证
+        let appleResponse = await validateWithApple(receipt, sharedSecret, false);
+        
+        // 如果生产环境返回沙盒收据错误，尝试沙盒环境
+        if (appleResponse && appleResponse.status === 21007) {
+          logger.info('[IAP] 检测到沙盒收据，使用沙盒环境验证');
+          appleResponse = await validateWithApple(receipt, sharedSecret, true);
+        }
 
-    if (appleResponse.status !== 0) {
-      logger.error('[IAP] 苹果验证失败', { status: appleResponse.status });
+    if (!appleResponse || appleResponse.status !== 0) {
+      logger.error('[IAP] 苹果验证失败', { status: appleResponse?.status });
       return res.status(400).json({
         success: false,
-        error: `收据验证失败: ${getAppleErrorMessage(appleResponse.status)}`
+        error: `收据验证失败: ${getAppleErrorMessage(appleResponse?.status || -1)}`
       });
     }
 
@@ -181,9 +181,9 @@ function getAppleErrorMessage(status: number): string {
 /**
  * 获取用户当前订阅状态
  */
-router.get('/subscription-status', auth, async (req: Request, res: Response) => {
+router.get('/subscription-status', authenticateToken, async (req: Request, res: Response) => {
   try {
-    const userId = req.user?.userId;
+    const userId = req.user?.id;
 
     // TODO: 从数据库查询用户订阅状态
     // const subscription = await getUserSubscription(userId);
