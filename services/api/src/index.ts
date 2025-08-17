@@ -29,6 +29,7 @@ import experienceRoutes from './routes/experience';
 import feedbackRoutes from './routes/feedback';
 import paymentRoutes from './routes/payment';
 import recommendationRoutes from './routes/recommendations';
+import iapRoutes from './routes/iap';
 import { logger } from './utils/logger';
 import { OpenAI } from 'openai';
 
@@ -65,6 +66,7 @@ app.use('/api/experience', experienceRoutes);
 app.use('/api/feedback', feedbackRoutes);
 app.use('/api/payment', paymentRoutes);
 app.use('/api/recommendations', recommendationRoutes);
+app.use('/api/iap', iapRoutes);
 
 // 健康检查端点
 app.get('/health', (req, res) => {
