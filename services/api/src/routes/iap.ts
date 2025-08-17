@@ -131,7 +131,7 @@ async function validateWithApple(
     'exclude-old-transactions': true
   };
 
-  const response = await axios.post(url, requestData, {
+  const response = await axios.post<AppleReceiptValidationResponse>(url, requestData, {
     timeout: 30000,
     headers: {
       'Content-Type': 'application/json'
