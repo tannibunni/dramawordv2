@@ -184,17 +184,21 @@ const SubscriptionScreen = () => {
       
       if (isGuest) {
         Alert.alert(
-          appLanguage === 'zh-CN' ? '提示' : 'Notice',
+          appLanguage === 'zh-CN' ? '账户提示' : 'Account Notice',
           appLanguage === 'zh-CN' 
-            ? '您当前是游客模式。购买后订阅将绑定到您的Apple ID，可以在其他设备上恢复购买。是否继续？'
-            : 'You are in guest mode. After purchase, the subscription will be linked to your Apple ID and can be restored on other devices. Continue?',
+            ? '为了更好地管理您的订阅和数据，建议您选择：\n\n1. 创建账户（推荐）- 使用邮箱注册，数据云端同步\n2. 游客购买 - 绑定Apple ID，功能受限\n\n您希望如何继续？'
+            : 'For better subscription and data management, we recommend:\n\n1. Create Account (Recommended) - Register with email, cloud sync\n2. Guest Purchase - Linked to Apple ID, limited features\n\nHow would you like to proceed?',
           [
             { 
               text: appLanguage === 'zh-CN' ? '取消' : 'Cancel', 
               style: 'cancel' 
             },
             { 
-              text: appLanguage === 'zh-CN' ? '继续购买' : 'Continue Purchase', 
+              text: appLanguage === 'zh-CN' ? '创建账户' : 'Create Account', 
+              onPress: () => handleCreateAccount()
+            },
+            { 
+              text: appLanguage === 'zh-CN' ? '游客购买' : 'Guest Purchase', 
               onPress: () => proceedWithPurchase()
             }
           ]
@@ -207,6 +211,26 @@ const SubscriptionScreen = () => {
 
     // 非游客用户直接购买
     proceedWithPurchase();
+  };
+
+  // 处理创建账户
+  const handleCreateAccount = () => {
+    Alert.alert(
+      appLanguage === 'zh-CN' ? '功能开发中' : 'Coming Soon',
+      appLanguage === 'zh-CN' 
+        ? '邮箱注册功能正在开发中，敬请期待！\n\n您可以选择游客购买，或稍后再来体验完整功能。'
+        : 'Email registration is under development!\n\nYou can choose guest purchase for now, or come back later for the full experience.',
+      [
+        { 
+          text: appLanguage === 'zh-CN' ? '稍后再说' : 'Later', 
+          style: 'cancel' 
+        },
+        { 
+          text: appLanguage === 'zh-CN' ? '游客购买' : 'Guest Purchase', 
+          onPress: () => proceedWithPurchase()
+        }
+      ]
+    );
   };
 
   // 执行购买流程
