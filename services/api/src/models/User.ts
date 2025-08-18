@@ -42,7 +42,7 @@ export interface IUserSettings {
 
 // 用户认证信息接口
 export interface IUserAuth {
-  loginType: 'phone' | 'wechat' | 'apple' | 'guest';
+  loginType: 'phone' | 'wechat' | 'apple' | 'guest' | 'email';
   phoneNumber?: string;
   wechatId?: string;
   wechatOpenId?: string;
@@ -59,6 +59,13 @@ export interface IUserAuth {
     familyName?: string;
   };
   guestId?: string;
+  // 邮箱认证字段
+  emailVerified?: boolean;
+  emailVerificationToken?: string;
+  emailVerificationExpiresAt?: Date;
+  passwordHash?: string;
+  passwordResetToken?: string;
+  passwordResetExpiresAt?: Date;
   lastLoginAt: Date;
   isActive: boolean;
 }
@@ -129,7 +136,7 @@ const UserSchema = new Schema<IUser>({
   auth: {
     loginType: {
       type: String,
-      enum: ['phone', 'wechat', 'apple', 'guest'],
+      enum: ['phone', 'wechat', 'apple', 'guest', 'email'],
       required: true
     },
     phoneNumber: {
@@ -201,6 +208,31 @@ const UserSchema = new Schema<IUser>({
       required: false,
       unique: true,
       sparse: true
+    },
+    // 邮箱认证字段
+    emailVerified: {
+      type: Boolean,
+      default: false
+    },
+    emailVerificationToken: {
+      type: String,
+      required: false
+    },
+    emailVerificationExpiresAt: {
+      type: Date,
+      required: false
+    },
+    passwordHash: {
+      type: String,
+      required: false
+    },
+    passwordResetToken: {
+      type: String,
+      required: false
+    },
+    passwordResetExpiresAt: {
+      type: Date,
+      required: false
     },
     lastLoginAt: {
       type: Date,
