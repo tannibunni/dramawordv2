@@ -16,6 +16,7 @@ import * as Device from 'expo-device';
 import { Ionicons } from '@expo/vector-icons';
 import { LoginButton } from '../../components/auth/LoginButton';
 import { PhoneLoginModal } from '../../components/auth/PhoneLoginModal';
+import { EmailAuthModal } from '../../components/auth/EmailAuthModal';
 
 import { WechatService } from '../../services/wechatService';
 import { AppleService } from '../../services/appleService';
@@ -40,6 +41,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
 }) => {
   const { appLanguage } = useAppLanguage();
   const [phoneModalVisible, setPhoneModalVisible] = useState(false);
+  const [emailModalVisible, setEmailModalVisible] = useState(false);
   const [loading, setLoading] = useState(false);
   const [privacyVisible, setPrivacyVisible] = useState(false);
   const [termsVisible, setTermsVisible] = useState(false);
@@ -272,6 +274,10 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
 
   const handlePhoneLogin = () => {
     setPhoneModalVisible(true);
+  };
+
+  const handleEmailLogin = () => {
+    setEmailModalVisible(true);
   };
 
   const handleWechatLogin = async () => {
@@ -551,6 +557,24 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
     testLogin('phone');
   };
 
+  const handleEmailLoginSuccess = async (userData: any) => {
+    try {
+      console.log('[LoginScreen] 邮箱登录成功:', userData);
+      
+      // 清除旧缓存，确保新用户看到正确的数据
+      await unifiedSyncService.clearSyncQueue();
+      await clearAllSharedData();
+      
+      // 下载用户云端数据
+      await downloadUserData(userData.id, 'email');
+      
+      // 调用登录成功回调
+      onLoginSuccess(userData);
+    } catch (error) {
+      console.error('[LoginScreen] 邮箱登录后处理失败:', error);
+    }
+  };
+
   const handlePrivacyPolicy = () => {
     setPrivacyVisible(true);
   };
@@ -678,7 +702,14 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
 
         {/* 登录按钮 */}
         <View style={styles.loginButtons}>
-          {/* 恢复所有登录方式 */}
+          {/* 邮箱登录 - 主要推荐方式 */}
+          <LoginButton
+            type="email"
+            onPress={handleEmailLogin}
+            loading={loading}
+          />
+          
+          {/* 其他登录方式 */}
           {false && (
             <LoginButton
               type="phone"
@@ -735,6 +766,14 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
         visible={phoneModalVisible}
         onClose={() => setPhoneModalVisible(false)}
         onLoginSuccess={handlePhoneLoginSuccess}
+      />
+
+      {/* 邮箱登录模态框 */}
+      <EmailAuthModal
+        visible={emailModalVisible}
+        onClose={() => setEmailModalVisible(false)}
+        onLoginSuccess={handleEmailLoginSuccess}
+        initialMode="login"
       />
 
       {/* 用户协议 Modal */}

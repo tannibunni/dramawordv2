@@ -12,7 +12,7 @@ import { colors } from '../../constants/colors';
 import { t } from '../../constants/translations';
 import { useAppLanguage } from '../../context/AppLanguageContext';
 
-export type LoginButtonType = 'phone' | 'wechat' | 'apple' | 'guest';
+export type LoginButtonType = 'phone' | 'wechat' | 'apple' | 'guest' | 'email';
 
 interface LoginButtonProps {
   type: LoginButtonType;
@@ -75,6 +75,13 @@ export const LoginButton: React.FC<LoginButtonProps> = ({
           textColor: colors.text.inverse,
           icon: 'eye-outline' as const,
           text: t('guest_mode_experience', appLanguage),
+        };
+      case 'email':
+        return {
+          backgroundColor: colors.primary[600],
+          textColor: colors.text.inverse,
+          icon: 'mail-outline' as const,
+          text: t('email_login', appLanguage),
         };
       default:
         return {

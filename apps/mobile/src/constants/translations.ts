@@ -185,6 +185,40 @@ export type TranslationKey =
   | 'phone_login'
   | 'wechat_login'
   | 'apple_login'
+  | 'email_login'
+  | 'email_register'
+  | 'create_account'
+  | 'login_to_account'
+  | 'email'
+  | 'password'
+  | 'confirm_password'
+  | 'nickname'
+  | 'register_now'
+  | 'already_have_account'
+  | 'dont_have_account'
+  | 'forgot_password'
+  | 'reset_password'
+  | 'send_verification_email'
+  | 'email_sent'
+  | 'check_email'
+  | 'invalid_email'
+  | 'password_too_short'
+  | 'passwords_not_match'
+  | 'nickname_required'
+  | 'registration_success'
+  | 'login_success'
+  | 'login_failed'
+  | 'email_already_exists'
+  | 'invalid_credentials'
+  | 'email_required'
+  | 'password_required'
+  | 'confirm_password_required'
+  | 'registration_failed'
+  | 'network_error'
+  | 'send_failed'
+  | 'back_to_login'
+  | 'ok'
+  | 'processing'
   | 'guest_login'
   | 'guest_mode_experience'
   | 'login_agreement'
@@ -630,6 +664,37 @@ export const translations: Record<AppLanguage, Record<TranslationKey, string>> =
     phone_login: '使用手机号登录',
     wechat_login: '使用微信登录',
     apple_login: '使用 Apple 登录',
+    email_login: '邮箱登录',
+    email_register: '邮箱注册',
+    create_account: '创建账户',
+    login_to_account: '登录账户',
+    email: '邮箱',
+    password: '密码',
+    confirm_password: '确认密码',
+    nickname: '昵称',
+    register_now: '立即注册',
+    already_have_account: '已有账户？立即登录',
+    dont_have_account: '没有账户？立即注册',
+    forgot_password: '忘记密码？',
+    reset_password: '重置密码',
+    send_verification_email: '发送验证邮件',
+    email_sent: '邮件已发送',
+    check_email: '请查看邮箱验证邮件',
+    invalid_email: '邮箱格式不正确',
+    password_too_short: '密码至少6位',
+    passwords_not_match: '密码不匹配',
+    nickname_required: '请输入昵称',
+    registration_success: '注册成功！',
+    login_success: '登录成功！',
+    login_failed: '登录失败',
+    email_already_exists: '该邮箱已被注册',
+    invalid_credentials: '邮箱或密码错误',
+    email_required: '请输入邮箱',
+    password_required: '请输入密码',
+    confirm_password_required: '请确认密码',
+    registration_failed: '注册失败',
+    send_failed: '发送失败',
+    back_to_login: '返回登录',
     guest_login: '游客模式立即体验',
     guest_mode_experience: '游客模式立即体验',
     login_agreement: '登录即代表你同意',
@@ -1074,6 +1139,37 @@ export const translations: Record<AppLanguage, Record<TranslationKey, string>> =
     phone_login: 'Login with phone number',
     wechat_login: 'Login with WeChat',
     apple_login: 'Login with Apple',
+    email_login: 'Email Login',
+    email_register: 'Email Register',
+    create_account: 'Create Account',
+    login_to_account: 'Login to Account',
+    email: 'Email',
+    password: 'Password',
+    confirm_password: 'Confirm Password',
+    nickname: 'Nickname',
+    register_now: 'Register Now',
+    already_have_account: 'Already have an account? Login',
+    dont_have_account: "Don't have an account? Register",
+    forgot_password: 'Forgot Password?',
+    reset_password: 'Reset Password',
+    send_verification_email: 'Send Verification Email',
+    email_sent: 'Email Sent',
+    check_email: 'Please check your email for verification',
+    invalid_email: 'Invalid email format',
+    password_too_short: 'Password must be at least 6 characters',
+    passwords_not_match: 'Passwords do not match',
+    nickname_required: 'Please enter a nickname',
+    registration_success: 'Registration successful!',
+    login_success: 'Login successful!',
+    login_failed: 'Login failed',
+    email_already_exists: 'This email is already registered',
+    invalid_credentials: 'Invalid email or password',
+    email_required: 'Please enter email',
+    password_required: 'Please enter password',
+    confirm_password_required: 'Please confirm password',
+    registration_failed: 'Registration failed',
+    send_failed: 'Send failed',
+    back_to_login: 'Back to login',
     guest_login: 'Guest Mode',
     guest_mode_experience: 'Guest Mode',
     login_agreement: 'By logging in, you agree to',

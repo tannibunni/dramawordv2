@@ -216,18 +216,31 @@ const SubscriptionScreen = () => {
   // 处理创建账户
   const handleCreateAccount = () => {
     Alert.alert(
-      appLanguage === 'zh-CN' ? '功能开发中' : 'Coming Soon',
+      appLanguage === 'zh-CN' ? '创建账户' : 'Create Account',
       appLanguage === 'zh-CN' 
-        ? '邮箱注册功能正在开发中，敬请期待！\n\n您可以选择游客购买，或稍后再来体验完整功能。'
-        : 'Email registration is under development!\n\nYou can choose guest purchase for now, or come back later for the full experience.',
+        ? '创建邮箱账户以获得更好的体验：\n\n• 数据云端同步\n• 跨设备访问\n• 完整功能支持\n\n是否前往创建账户？'
+        : 'Create an email account for a better experience:\n\n• Cloud data sync\n• Cross-device access\n• Full feature support\n\nWould you like to create an account?',
       [
         { 
-          text: appLanguage === 'zh-CN' ? '稍后再说' : 'Later', 
+          text: appLanguage === 'zh-CN' ? '取消' : 'Cancel', 
           style: 'cancel' 
         },
         { 
           text: appLanguage === 'zh-CN' ? '游客购买' : 'Guest Purchase', 
           onPress: () => proceedWithPurchase()
+        },
+        { 
+          text: appLanguage === 'zh-CN' ? '创建账户' : 'Create Account', 
+          onPress: () => {
+            // 导航回主页面，让用户通过邮箱登录按钮注册
+            navigate('main', { tab: 'profile' });
+            Alert.alert(
+              appLanguage === 'zh-CN' ? '提示' : 'Notice',
+              appLanguage === 'zh-CN' 
+                ? '请点击"邮箱登录"按钮创建账户'
+                : 'Please click "Email Login" button to create account'
+            );
+          }
         }
       ]
     );
