@@ -177,6 +177,40 @@ const SubscriptionScreen = () => {
       return;
     }
 
+    // 检查是否为游客模式，给出友好提示
+    try {
+      const userData = await AsyncStorage.getItem('userData');
+      const isGuest = userData ? JSON.parse(userData).loginType === 'guest' : true;
+      
+      if (isGuest) {
+        Alert.alert(
+          appLanguage === 'zh-CN' ? '提示' : 'Notice',
+          appLanguage === 'zh-CN' 
+            ? '您当前是游客模式。购买后订阅将绑定到您的Apple ID，可以在其他设备上恢复购买。是否继续？'
+            : 'You are in guest mode. After purchase, the subscription will be linked to your Apple ID and can be restored on other devices. Continue?',
+          [
+            { 
+              text: appLanguage === 'zh-CN' ? '取消' : 'Cancel', 
+              style: 'cancel' 
+            },
+            { 
+              text: appLanguage === 'zh-CN' ? '继续购买' : 'Continue Purchase', 
+              onPress: () => proceedWithPurchase()
+            }
+          ]
+        );
+        return;
+      }
+    } catch (error) {
+      console.error('检查用户状态失败:', error);
+    }
+
+    // 非游客用户直接购买
+    proceedWithPurchase();
+  };
+
+  // 执行购买流程
+  const proceedWithPurchase = async () => {
     setIsLoading(true);
     try {
       const result = await subscriptionService.subscribeToPlan(selectedPlanFromTabs.id);
