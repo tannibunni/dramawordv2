@@ -156,7 +156,7 @@ export const GuestModeIndicator: React.FC<GuestModeIndicatorProps> = ({
       </View>
       
       <View style={styles.arrowContainer}>
-        <Ionicons name="chevron-forward" size={16} color={colors.gray} />
+        <Ionicons name="chevron-forward" size={16} color={colors.gray[400]} />
       </View>
     </TouchableOpacity>
   );
@@ -195,12 +195,12 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: 12,
-    color: colors.gray,
+    color: colors.gray[400],
     marginBottom: 2,
   },
   stats: {
     fontSize: 11,
-    color: colors.gray,
+    color: colors.gray[400],
     fontStyle: 'italic',
   },
   arrowContainer: {

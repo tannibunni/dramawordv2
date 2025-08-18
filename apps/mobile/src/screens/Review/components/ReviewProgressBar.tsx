@@ -17,12 +17,23 @@ export const ReviewProgressBar: React.FC<ReviewProgressBarProps> = ({
   current,
   progressAnimation
 }) => {
-  const { navigate } = useNavigation();
+  const navigation = useNavigation();
   
   // 修复进度文本显示逻辑：
-  // 开始显示 0/3，滑完第一张卡显示 1/3，滑完第二张卡显示 2/3，滑完最后一张卡显示 3/3
-  // 显示当前正在查看的卡片索引（从0开始）
-  const progressText = total > 0 ? `${Math.min(current, total)} / ${total}` : '';
+  // 第一张卡出现时显示 0/total
+  // 划完第一张卡显示 1/total
+  // 划完最后一张卡显示 total/total
+  // current 表示已完成的卡片数量
+  const progressText = total > 0 ? `${current} / ${total}` : '';
+  
+  const handleBackPress = () => {
+    if (navigation.isReady) {
+      navigation.navigate('main', { tab: 'review' });
+    }
+  };
+  
+  // 计算进度条宽度，避免在渲染过程中调用interpolate
+  const progressBarWidth = `${Math.min(100, Math.max(0, progress))}%` as const;
   
   return (
     <View style={{ 
@@ -43,7 +54,7 @@ export const ReviewProgressBar: React.FC<ReviewProgressBarProps> = ({
             borderRadius: 8,
             backgroundColor: colors.background.secondary
           }}
-          onPress={() => navigate('main', { tab: 'review' })}
+          onPress={handleBackPress}
         >
           <Ionicons name="arrow-back" size={20} color={colors.text.primary} />
         </TouchableOpacity>
@@ -56,22 +67,38 @@ export const ReviewProgressBar: React.FC<ReviewProgressBarProps> = ({
         }}>
           <Animated.View style={{
             height: 6,
-            backgroundColor: colors.primary[500],
+            backgroundColor: progress >= 100 ? colors.primary[600] : colors.primary[500], // 100%时使用更深的颜色
             borderRadius: 3,
-            width: progressAnimation.interpolate({
-              inputRange: [0, 100],
-              outputRange: ['0%', '100%'],
-            }),
+            width: progressBarWidth, // 使用计算好的宽度，而不是直接调用interpolate
+            // 100%时添加一些特殊效果
+            shadowColor: progress >= 100 ? colors.primary[500] : 'transparent',
+            shadowOffset: { width: 0, height: 0 },
+            shadowOpacity: progress >= 100 ? 0.3 : 0,
+            shadowRadius: progress >= 100 ? 4 : 0,
+            elevation: progress >= 100 ? 4 : 0,
           }} />
         </View>
         <Text style={{ 
           fontSize: 14, 
           fontWeight: '600', 
-          color: colors.text.primary,
+          color: progress >= 100 ? colors.primary[600] : colors.text.primary, // 100%时使用主题色
           minWidth: 40,
-          textAlign: 'center'
+          textAlign: 'center',
+          // 100%时添加一些特殊效果
+          transform: progress >= 100 ? [{ scale: 1.1 }] : [{ scale: 1 }],
         }}>
           {progressText}
+        </Text>
+        
+        {/* 调试信息：显示当前进度值 */}
+        <Text style={{ 
+          fontSize: 10, 
+          color: colors.text.secondary,
+          marginLeft: 8,
+          minWidth: 30,
+          textAlign: 'center'
+        }}>
+          {Math.round(progress)}%
         </Text>
       </View>
     </View>

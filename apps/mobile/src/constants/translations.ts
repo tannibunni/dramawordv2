@@ -330,7 +330,120 @@ export type TranslationKey =
   | 'learning_reminder'
   | 'vocabulary_growth'
   | 'practice_makes_perfect'
-  | 'knowledge_power';
+  | 'knowledge_power'
+  
+  // 订阅页面
+  | 'subscription_management'
+  | 'premium_user'
+  | 'trial_user'
+  | 'free_user'
+  | 'trial_countdown'
+  | 'trial_expired'
+  | 'subscription_active'
+  | 'monthly_plan'
+  | 'yearly_plan' 
+  | 'lifetime_plan'
+  | 'subscribe_button'
+  | 'subscribed'
+  | 'processing'
+  | 'feature_comparison'
+  | 'free_version'
+  | 'premium_version'
+  | 'chinese_english_search'
+  | 'multilingual_search'
+  | 'wordbook_function'
+  | 'review_function'
+  | 'learning_statistics'
+  | 'show_management'
+  | 'ai_smart_interpretation'
+  | 'offline_learning'
+  | 'multi_device_sync'
+  | 'premium_privileges'
+  | 'trial_description'
+  | 'free_description'
+  | 'premium_feature_list'
+  | 'trial_feature_list'
+  | 'free_feature_list'
+  | 'subscription_thank_you'
+  | 'trial_ending_warning'
+  | 'upgrade_to_unlock'
+  | 'subscription_success'
+  | 'subscription_failed'
+  | 'restore_purchases'
+  | 'restore_success'
+  | 'restore_failed'
+  | 'no_purchases_found'
+  | 'days_remaining'
+  | 'enjoy_all_features'
+  | 'trial_ended_limitations'
+  | 'manage_subscription'
+  | 'subscribe_now'
+  | 'start_trial'
+  
+  // 每日奖励
+  | 'daily_rewards'
+  | 'daily_rewards_title'
+  | 'collect_new_words'
+  | 'study_time'
+  | 'perfect_review'
+  | 'reward_available'
+  | 'reward_claimed'
+  | 'reward_locked'
+  | 'claim_reward'
+  | 'claim_all'
+  | 'one_click_claim'
+  | 'view_daily_rewards'
+  | 'available_rewards_count'
+  | 'collect_words_description'
+  | 'collect_words_condition'
+  | 'daily_review_description'
+  | 'daily_review_condition'
+  | 'study_time_description'
+  | 'study_time_condition'
+  | 'continuous_learning_description'
+  | 'continuous_learning_condition'
+  | 'perfect_review_description'
+  | 'perfect_review_condition'
+  | 'reward_claim_failed'
+  | 'reward_claim_retry'
+  | 'no_rewards_available'
+  | 'confirm_claim_all'
+  | 'no_rewards_title'
+  | 'no_rewards_subtitle'
+  | 'study_time_progress'
+  | 'continuous_learning_progress'
+  | 'perfect_review_progress'
+  | 'today_collected_words'
+  | 'today_completed_reviews'
+  | 'today_study_minutes'
+  | 'continuous_days'
+  | 'need_more_study_time'
+  | 'need_more_continuous_days'
+  | 'per_word_xp'
+  | 'start_challenge'
+  | 'no_words_to_challenge'
+  | 'start_review_now'
+  | 'you_have_mastered'
+  | 'flashcards'
+  | 'no_errors_continue_learning'
+  | 'monthly_subscription'
+  | 'quarterly_subscription'
+  | 'yearly_subscription'
+  | 'most_flexible_choice'
+  | 'cancel_anytime'
+  | 'save_amount'
+  | 'most_cost_effective'
+  | 'one_time_payment'
+  | 'use_forever'
+  | 'long_term_best_value'
+  | 'equivalent_to_months'
+  | 'best_value'
+  | 'one_time_payment_badge'
+  | 'per_month'
+  | 'per_quarter'
+  | 'per_year'
+  | 'balanced_choice'
+  | 'save_8_percent';
 
 // 翻译内容
 export const translations: Record<AppLanguage, Record<TranslationKey, string>> = {
@@ -357,7 +470,7 @@ export const translations: Record<AppLanguage, Record<TranslationKey, string>> =
     
     // Review页面
     ready_to_challenge: '准备好挑战今天的词卡了吗？',
-    mastered_cards: '你已掌握 {count} 张词卡',
+    mastered_cards: '等待复习 {count} 张词卡',
     challenge: '挑战',
     series_review: '剧集复习',
     wordbook_review: '单词本复习',
@@ -401,8 +514,8 @@ export const translations: Record<AppLanguage, Record<TranslationKey, string>> =
     home: '首页',
     search: '搜索',
     review: '复习',
-    vocabulary: '词汇',
-    profile: '个人',
+    vocabulary: '单词本',
+    profile: '我的',
     shows: '剧单',
     
     // 语言选择
@@ -562,8 +675,8 @@ export const translations: Record<AppLanguage, Record<TranslationKey, string>> =
     add_shows: '请添加剧集吧！',
     add_wordbook: '去添加自己的单词本吧！',
     challenge_cards: '挑战词卡',
-    smart_challenge: '智能挑战',
-    wrong_words_challenge: '错词挑战',
+    smart_challenge: '智能复习',
+    wrong_words_challenge: '错词复习',
     wrong_words_count: '有 {count} 个错词待复习',
     ebbinghaus_activated: '☑️ 已切入艾宾浩斯记忆法',
     wrong_words_challenge_title: '⚠️ 错词挑战 - 专注记忆不熟悉的单词',
@@ -662,6 +775,119 @@ export const translations: Record<AppLanguage, Record<TranslationKey, string>> =
     vocabulary_growth: '词汇增长',
     practice_makes_perfect: '熟能生巧',
     knowledge_power: '知识就是力量',
+    
+    // 订阅页面
+    subscription_management: '订阅管理',
+    premium_user: '高级版用户',
+    trial_user: '试用期用户',
+    free_user: '免费版用户',
+    trial_countdown: '试用期还有 {days} 天',
+    trial_expired: '试用期已结束',
+    subscription_active: '您已订阅 {plan} 计划',
+    monthly_plan: '月度订阅',
+    yearly_plan: '年度订阅',
+    lifetime_plan: '终身订阅',
+    subscribe_button: '订阅 {price}',
+    subscribed: '已订阅',
+    processing: '处理中...',
+    feature_comparison: '功能',
+    free_version: '免费版',
+    premium_version: '高级版',
+    chinese_english_search: '中英文查词',
+    multilingual_search: '多语言查询',
+    wordbook_function: '单词本功能',
+    review_function: '复习功能',
+    learning_statistics: '学习统计',
+    show_management: '剧单管理',
+    ai_smart_interpretation: 'AI智能释义',
+    offline_learning: '离线学习',
+    multi_device_sync: '多设备同步',
+    premium_privileges: '🎉 高级版特权',
+    trial_description: '试用期内您可以享受所有高级功能，包括：',
+    free_description: '免费版支持基础的中英文查词功能，您可以：',
+    premium_feature_list: '您已解锁所有高级功能，享受完整的语言学习体验：',
+    trial_feature_list: '完整的中英文查词功能\n多语言支持（日语、韩语、西班牙语等）\n无限单词储存\n完整智能复习系统\nAI智能释义\n离线学习功能\n多设备数据同步',
+    free_feature_list: '搜索中英文单词\n查看基础释义\n单词本功能（不支持）\n剧单管理（不支持）\n复习功能（不支持）\n学习统计（不支持）',
+    subscription_thank_you: '感谢您的订阅！如有问题请联系客服。',
+    trial_ending_warning: '试用期结束后功能将被锁定，立即订阅保持完整功能！',
+    upgrade_to_unlock: '升级到高级版可解锁多语言支持、AI智能释义、无限储存等更多功能！',
+    subscription_success: '恭喜您成为高级版用户，现在可以享受所有功能了！',
+    subscription_failed: '订阅过程中出现错误，请稍后重试',
+    restore_purchases: '恢复购买',
+    restore_success: '您的购买记录已恢复，功能已解锁！',
+    restore_failed: '恢复购买过程中出现错误',
+    no_purchases_found: '没有找到可恢复的购买记录',
+    days_remaining: '天',
+    enjoy_all_features: '享受所有高级功能',
+    trial_ended_limitations: '升级解锁所有功能',
+    manage_subscription: '管理订阅',
+    subscribe_now: '立即订阅',
+    start_trial: '开始试用',
+    
+    // 每日奖励
+    daily_rewards: '每日奖励',
+    daily_rewards_title: '每日奖励',
+    collect_new_words: '收藏新单词',
+    study_time: '学习时长',
+    perfect_review: '完美复习',
+    reward_available: '可领取',
+    reward_claimed: '已领取',
+    reward_locked: '未达成',
+    claim_reward: '领取',
+    claim_all: '一键领取',
+    one_click_claim: '一键领取',
+    view_daily_rewards: '查看今日奖励项目',
+    available_rewards_count: '可领取 {count} 个奖励',
+    collect_words_description: '今日收集了新单词',
+    collect_words_condition: '今日无新单词，去添加一些！',
+    daily_review_description: '今日完成复习任务',
+    daily_review_condition: '今日未复习，开始复习！',
+    study_time_description: '今日学习时间达标',
+    study_time_condition: '再学习30分钟即可获得奖励！',
+    continuous_learning_description: '连续学习天数达标',
+    continuous_learning_condition: '再坚持3天即可获得奖励！',
+    perfect_review_description: '今日复习全对',
+    perfect_review_condition: '今日还没有完美复习，加油！',
+    reward_claim_failed: '领取失败',
+    reward_claim_retry: '请稍后重试',
+    no_rewards_available: '没有可领取的奖励',
+    confirm_claim_all: '确定要领取所有 {count} 个奖励吗？共可获得 {xp} XP',
+    no_rewards_title: '暂无奖励',
+    no_rewards_subtitle: '完成学习任务即可获得奖励',
+    study_time_progress: '已学习 {current} 分钟，还需 {needed} 分钟！',
+    continuous_learning_progress: '连续学习 {current} 天，还需 {needed} 天！',
+    perfect_review_progress: '复习有错误，继续努力争取全对！',
+    today_collected_words: '今日收集了 {count} 个新单词',
+    today_completed_reviews: '今日完成 {count} 次复习',
+    today_study_minutes: '今日学习 {minutes} 分钟',
+    continuous_days: '连续学习 {days} 天',
+    need_more_study_time: '再学习 {needed} 分钟即可获得奖励！',
+    need_more_continuous_days: '再坚持 {needed} 天即可获得奖励！',
+    per_word_xp: '每词 +2XP',
+    start_challenge: '开始挑战',
+    no_words_to_challenge: '暂无可挑战词',
+    start_review_now: '立即复习',
+    you_have_mastered: 'You have mastered',
+    flashcards: 'flashcards',
+    no_errors_continue_learning: '暂无错词，继续学习',
+    monthly_subscription: '月度订阅',
+    quarterly_subscription: '季度订阅',
+    yearly_subscription: '年度订阅',
+    most_flexible_choice: '最灵活的选择',
+    cancel_anytime: '随时可取消',
+    save_amount: '节省{amount}',
+    most_cost_effective: '最划算的选择',
+    one_time_payment: '一次付费',
+    use_forever: '永久使用',
+    long_term_best_value: '长期最划算',
+    equivalent_to_months: '等价于 {count} 个月年度订阅',
+    best_value: '最划算',
+    one_time_payment_badge: '一次付费',
+    per_month: '/月',
+    per_quarter: '/季度',
+    per_year: '/年',
+    balanced_choice: '平衡选择',
+    save_8_percent: '节省8%',
   },
   
   'en-US': {
@@ -993,6 +1219,119 @@ export const translations: Record<AppLanguage, Record<TranslationKey, string>> =
     vocabulary_growth: 'Vocabulary Growth',
     practice_makes_perfect: 'Practice Makes Perfect',
     knowledge_power: 'Knowledge is Power',
+    
+    // 订阅页面
+    subscription_management: 'Subscription Management',
+    premium_user: 'Premium User',
+    trial_user: 'Trial User',
+    free_user: 'Free User',
+    trial_countdown: '{days} days remaining in trial',
+    trial_expired: 'Trial period ended',
+    subscription_active: 'You are subscribed to {plan} plan',
+    monthly_plan: 'Monthly',
+    yearly_plan: 'Yearly',
+    lifetime_plan: 'Lifetime',
+    subscribe_button: 'Subscribe {price}',
+    subscribed: 'Subscribed',
+    processing: 'Processing...',
+    feature_comparison: 'Features',
+    free_version: 'Free',
+    premium_version: 'Premium',
+    chinese_english_search: 'Chinese-English Search',
+    multilingual_search: 'Multilingual Search',
+    wordbook_function: 'Wordbook Function',
+    review_function: 'Review Function',
+    learning_statistics: 'Learning Statistics',
+    show_management: 'Show Management',
+    ai_smart_interpretation: 'AI Smart Interpretation',
+    offline_learning: 'Offline Learning',
+    multi_device_sync: 'Multi-device Sync',
+    premium_privileges: '🎉 Premium Privileges',
+    trial_description: 'During the trial period, you can enjoy all premium features, including:',
+    free_description: 'Free version supports basic Chinese-English word search, you can:',
+    premium_feature_list: 'You have unlocked all premium features, enjoy the complete language learning experience:',
+    trial_feature_list: 'Complete Chinese-English word search\nMultilingual support (Japanese, Korean, Spanish, etc.)\nUnlimited word storage\nComplete smart review system\nAI smart interpretation\nOffline learning function\nMulti-device data sync',
+    free_feature_list: 'Search Chinese-English words\nView basic definitions\nWordbook function (not supported)\nShow management (not supported)\nReview function (not supported)\nLearning statistics (not supported)',
+    subscription_thank_you: 'Thank you for your subscription! Contact customer service if you have any questions.',
+    trial_ending_warning: 'Functions will be locked after trial ends, subscribe now to maintain full functionality!',
+    upgrade_to_unlock: 'Upgrade to Premium to unlock multilingual support, AI smart interpretation, unlimited storage and more features!',
+    subscription_success: 'Congratulations! You are now a Premium user and can enjoy all features!',
+    subscription_failed: 'An error occurred during subscription, please try again later',
+    restore_purchases: 'Restore Purchases',
+    restore_success: 'Your purchases have been restored, features unlocked!',
+    restore_failed: 'An error occurred while restoring purchases',
+    no_purchases_found: 'No restorable purchases found',
+    days_remaining: ' days',
+    enjoy_all_features: 'Enjoy all premium features',
+    trial_ended_limitations: 'Upgrade to unlock all features',
+    manage_subscription: 'Manage Subscription',
+    subscribe_now: 'Subscribe Now',
+    start_trial: 'Start Trial',
+    
+    // 每日奖励
+    daily_rewards: 'Daily Rewards',
+    daily_rewards_title: 'Daily Rewards',
+    collect_new_words: 'Collect New Words',
+    study_time: 'Study Time',
+    perfect_review: 'Perfect Review',
+    reward_available: 'Available',
+    reward_claimed: 'Claimed',
+    reward_locked: 'Locked',
+    claim_reward: 'Claim',
+    claim_all: 'Claim All',
+    one_click_claim: 'Claim All',
+    view_daily_rewards: 'View today\'s reward items',
+    available_rewards_count: '{count} rewards available',
+    collect_words_description: 'Collected new words today',
+    collect_words_condition: 'No new words today, add some!',
+    daily_review_description: 'Completed review tasks today',
+    daily_review_condition: 'No review today, start now!',
+    study_time_description: 'Study time goal achieved today',
+    study_time_condition: 'Study 30 more minutes to get reward!',
+    continuous_learning_description: 'Continuous learning days achieved',
+    continuous_learning_condition: 'Keep going 3 more days to get reward!',
+    perfect_review_description: 'Perfect review score today',
+    perfect_review_condition: 'No perfect review today, keep it up!',
+    reward_claim_failed: 'Claim Failed',
+    reward_claim_retry: 'Please try again later',
+    no_rewards_available: 'No rewards available to claim',
+    confirm_claim_all: 'Claim all {count} rewards? Total {xp} XP available',
+    no_rewards_title: 'No Rewards',
+    no_rewards_subtitle: 'Complete learning tasks to get rewards',
+    study_time_progress: 'Studied {current} minutes, {needed} more to go!',
+    continuous_learning_progress: 'Learning streak: {current} days, {needed} more to go!',
+    perfect_review_progress: 'Made some mistakes, keep trying for perfect score!',
+    today_collected_words: 'Collected {count} new words today',
+    today_completed_reviews: 'Completed {count} reviews today',
+    today_study_minutes: 'Studied {minutes} minutes today',
+    continuous_days: 'Learning streak: {days} days',
+    need_more_study_time: 'Study {needed} more minutes to get reward!',
+    need_more_continuous_days: 'Keep going {needed} more days to get reward!',
+    per_word_xp: '+2XP each',
+    start_challenge: 'Start Challenge',
+    no_words_to_challenge: 'No words available',
+    start_review_now: 'Start Review',
+    you_have_mastered: 'You have mastered',
+    flashcards: 'flashcards',
+    no_errors_continue_learning: 'No errors, continue learning',
+    monthly_subscription: 'Monthly Subscription',
+    quarterly_subscription: 'Quarterly Subscription',
+    yearly_subscription: 'Yearly Subscription',
+    most_flexible_choice: 'Most flexible choice',
+    cancel_anytime: 'cancel anytime',
+    save_amount: 'Save {amount}',
+    most_cost_effective: 'most cost-effective choice',
+    one_time_payment: 'One-time payment',
+    use_forever: 'use forever',
+    long_term_best_value: 'long-term best value',
+    equivalent_to_months: 'equivalent to {count} months yearly subscription',
+    best_value: 'Best Value',
+    one_time_payment_badge: 'One-time',
+    per_month: '/month',
+    per_quarter: '/quarter',
+    per_year: '/year',
+    balanced_choice: 'Balanced choice',
+    save_8_percent: 'Save 8%',
   },
 };
 

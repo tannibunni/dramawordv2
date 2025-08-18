@@ -16,6 +16,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { UserService } from '../../services/userService';
 import { colors } from '../../constants/colors';
 import { useAuth } from '../../context/AuthContext';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 interface EditProfileModalProps {
   visible: boolean;
@@ -163,7 +164,30 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
     try {
       let avatarUrl = avatar;
 
-      // 如果头像有变化且是本地文件，先上传头像
+      // 检查是否为游客模式
+      const isGuestMode = authUser?.loginType === 'guest';
+      
+      if (isGuestMode) {
+        // 游客模式：直接更新本地存储
+        console.log('👤 游客模式：直接更新本地用户信息');
+        
+        const updatedUserData = {
+          ...user,
+          nickname: nickname.trim(),
+          avatar: avatarUrl
+        };
+        
+        // 更新本地存储
+        await AsyncStorage.setItem('userData', JSON.stringify(updatedUserData));
+        
+        console.log('✅ 游客模式用户资料更新成功:', updatedUserData);
+        onUpdate(updatedUserData);
+        onClose();
+        Alert.alert('成功', '个人信息更新成功');
+        return;
+      }
+
+      // 注册用户模式：需要认证token
       if (avatar && avatar !== user.avatar && (avatar.startsWith('file://') || avatar.startsWith('content://'))) {
         console.log('📤 检测到新头像，开始上传...');
         const uploadedAvatarUrl = await uploadAvatarToServer(avatar);

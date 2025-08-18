@@ -63,6 +63,8 @@ const SwipeableWordCard: React.FC<SwipeableWordCardProps> = ({
               style={styles.expandedContent} 
               showsVerticalScrollIndicator={true}
               contentContainerStyle={styles.expandedContentContainer}
+              bounces={false}
+              alwaysBounceVertical={false}
             >
               <WordCardContent 
                 wordData={wordData} 
@@ -117,14 +119,14 @@ const styles = StyleSheet.create({
   container: {
     width: '100%',
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'flex-start', // 从 center 改为 flex-start，减少底部空白
     paddingVertical: 16,
   },
   card: {
     width: '100%',
     maxWidth: 350,
-    minHeight: 550,
-    // 移除 maxHeight: 700, // 允许动态高度
+    minHeight: 550, 
+    maxHeight: 700, // 添加最大高度限制，防止卡片无限扩展
     backgroundColor: colors.background.secondary,
     borderRadius: 20,
     padding: 32, // 减少padding从60到32
@@ -161,12 +163,14 @@ const styles = StyleSheet.create({
   },
   contentSection: {
     flex: 1,
-    marginBottom: 20,
+    marginBottom: 12, // 从 20 减少到 12，减少底部空白
+    minHeight: 400, // 添加最小高度，让内容区域有足够空间
   },
   collapsedContent: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    minHeight: 400, // 添加最小高度，确保折叠状态下也有足够空间
   },
   questionText: {
     fontSize: 18,
@@ -187,9 +191,11 @@ const styles = StyleSheet.create({
   },
   expandedContent: {
     flex: 1,
+    minHeight: 400, // 添加最小高度，确保内容区域有足够空间
+    maxHeight: 500, // 从 400 增加到 500，让内容区域有更多空间，但不超过卡片总高度
   },
   expandedContentContainer: {
-    paddingBottom: 20, // 底部留出空间给提示文字
+    paddingBottom: 28, // 从 20 增加到 28，底部留出更多空间给提示文字
   },
   originSection: {
     marginTop: 16,
@@ -213,7 +219,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     width: '100%',
     paddingHorizontal: 20,
-    marginTop: 20,
+    marginTop: 20, // 从 32 减少到 20，减少底部空白
   },
   swipeHintLeft: {
     fontSize: 13,

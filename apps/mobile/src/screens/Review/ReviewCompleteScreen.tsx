@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -9,19 +9,19 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../constants/colors';
 import { experienceManager } from './services/experienceManager';
-import { animationManager } from '../../services/animationManager';
+import { dailyRewardsManager } from './services/dailyRewardsManager';
 
 // 复习完成统计接口
-export interface ReviewStats {
+interface ReviewStats {
   totalWords: number;
   rememberedWords: number;
   forgottenWords: number;
-
   accuracy: number;
+  experience: number;
 }
 
 // 复习动作接口
-export interface ReviewAction {
+interface ReviewAction {
   word: string;
   remembered: boolean;
   translation?: string;
@@ -30,8 +30,8 @@ export interface ReviewAction {
 interface ReviewCompleteScreenProps {
   stats: ReviewStats;
   actions: ReviewAction[];
-  onBack: () => void;
   type?: string; // 添加复习类型参数
+  onBack: (experienceGained?: number) => void;
 }
 
 const ReviewCompleteScreen: React.FC<ReviewCompleteScreenProps> = ({ 
@@ -40,22 +40,50 @@ const ReviewCompleteScreen: React.FC<ReviewCompleteScreenProps> = ({
   onBack,
   type 
 }) => {
-  // 计算总经验值
+  // 计算经验值增益
   const experienceGained = experienceManager.calculateReviewTotalExperience(actions);
-  
-  // 处理经验值增益和动画
+
+  // 记录每日奖励数据
   useEffect(() => {
-    const handleExperienceGain = async () => {
-      if (experienceGained > 0) {
-        console.log('[ReviewCompleteScreen] 开始处理经验值增益:', experienceGained);
+    const recordDailyRewardsData = async () => {
+      try {
+        // 记录复习完成
+        await dailyRewardsManager.recordReview();
         
-        // 强制重置动画状态，确保可以启动新动画
-        animationManager.resetAnimatingState();
+        // 记录学习时长
+        const studyMinutes = 2; // 每次复习默认2分钟
+        await dailyRewardsManager.recordStudyTime(studyMinutes);
         
+        // 检查是否为完美复习（所有单词都记住）
+        const allRemembered = actions.every(action => action.remembered);
+        if (allRemembered) {
+          await dailyRewardsManager.recordPerfectReview();
+        }
+        
+        console.log('[ReviewCompleteScreen] 每日奖励数据记录完成');
+      } catch (error) {
+        console.error('[ReviewCompleteScreen] 记录每日奖励数据失败:', error);
+      }
+    };
+    
+    recordDailyRewardsData();
+  }, [actions]);
+  
+  console.log('[ReviewCompleteScreen] 复习完成，统计数据:', stats);
+  console.log('[ReviewCompleteScreen] 复习动作:', actions);
+  console.log('[ReviewCompleteScreen] 计算得到的经验值:', experienceGained);
+  
+  // 处理完成按钮点击
+  const handleComplete = async () => {
+    if (experienceGained > 0) {
+      console.log('[ReviewCompleteScreen] 用户点击完成，准备添加经验值:', experienceGained);
+      
+      try {
         // 先获取添加前的经验值信息
         const oldInfo = await experienceManager.getCurrentExperienceInfo();
         if (!oldInfo) {
           console.log('[ReviewCompleteScreen] 无法获取当前经验值信息');
+          onBack();
           return;
         }
         
@@ -66,36 +94,22 @@ const ReviewCompleteScreen: React.FC<ReviewCompleteScreenProps> = ({
         
         if (result && result.success) {
           console.log('[ReviewCompleteScreen] 经验值增益成功:', result);
-          
-          // 获取添加后的经验值信息
-          const newInfo = await experienceManager.getCurrentExperienceInfo();
-          if (newInfo) {
-            console.log('[ReviewCompleteScreen] 添加后经验值:', newInfo.experience);
-            
-            // 触发经验值动画（使用 experienceManager 的方法来更新状态）
-            console.log('[ReviewCompleteScreen] 准备触发经验值动画:', {
-              gainedExp: experienceGained,
-              oldExperience: oldInfo.experience,
-              newExperience: newInfo.experience
-            });
-            
-            // 使用 experienceManager 的动画方法，这样会更新 animatedExperience 状态
-            await experienceManager.startExperienceAnimationWithState(
-              experienceGained,
-              (currentExp: number, progress: number) => {
-                console.log('[ReviewCompleteScreen] 经验值动画进度:', { currentExp, progress });
-              },
-              (finalExp: number, finalLevel: number) => {
-                console.log('[ReviewCompleteScreen] 经验值动画完成:', { finalExp, finalLevel });
-              }
-            );
-          }
+          // 传递经验值信息给onBack回调，让ReviewIntroScreen处理动画
+          console.log('[ReviewCompleteScreen] 调用onBack回调，传递经验值:', experienceGained);
+          onBack(experienceGained);
+        } else {
+          console.log('[ReviewCompleteScreen] 经验值增益失败，直接返回');
+          onBack();
         }
+      } catch (error) {
+        console.error('[ReviewCompleteScreen] 处理经验值增益时出错:', error);
+        onBack();
       }
-    };
-    
-    handleExperienceGain();
-  }, [experienceGained, actions]);
+    } else {
+      console.log('[ReviewCompleteScreen] 无经验值增益，直接返回');
+      onBack();
+    }
+  };
 
   return (
     <View style={styles.container}>
@@ -159,7 +173,7 @@ const ReviewCompleteScreen: React.FC<ReviewCompleteScreenProps> = ({
       
       {/* 完成按钮 */}
       <View style={styles.buttonContainer}>
-        <TouchableOpacity style={styles.completeButton} onPress={onBack}>
+        <TouchableOpacity style={styles.completeButton} onPress={handleComplete}>
           <Text style={styles.completeButtonText}>完成</Text>
         </TouchableOpacity>
       </View>

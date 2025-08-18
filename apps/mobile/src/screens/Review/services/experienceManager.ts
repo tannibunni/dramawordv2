@@ -10,6 +10,7 @@ import {
   LevelInfo,
   ExperienceConfig
 } from '../../../types/experience';
+import { guestModeService } from '../../../services/guestModeService';
 
 // ==================== 类型定义 ====================
 
@@ -25,6 +26,15 @@ export interface ExperienceState {
   isSyncingExperience: boolean;
   animatedCollectedWords: number;
   animatedContributedWords: number;
+  // 升级弹窗状态
+  showLevelUpModal: boolean;
+  levelUpInfo: {
+    oldLevel: number;
+    newLevel: number;
+    levelsGained: number;
+    oldExperience: number;
+    newExperience: number;
+  } | null;
 }
 
 // 经验值状态更新回调
@@ -67,7 +77,12 @@ class ExperienceManager implements IExperienceManager {
   
   // 防重复触发机制
   private lastProcessedEvents: Map<string, number> = new Map();
-  private readonly EVENT_COOLDOWN = 1000; // 1秒冷却时间
+  private readonly EVENT_COOLDOWN = 500; // 减少冷却时间从1秒到500毫秒
+
+  // 动画状态锁 - 防止多个动画同时运行
+  private isAnimationRunning: boolean = false;
+  private animationLockTimeout: ReturnType<typeof setTimeout> | null = null;
+  private readonly ANIMATION_LOCK_TIMEOUT = 10000; // 10秒后自动释放锁
 
   // 经验值状态管理
   private experienceState: ExperienceState = {
@@ -80,7 +95,9 @@ class ExperienceManager implements IExperienceManager {
     hasInitializedProgressBar: false,
     isSyncingExperience: false,
     animatedCollectedWords: 0,
-    animatedContributedWords: 0
+    animatedContributedWords: 0,
+    showLevelUpModal: false,
+    levelUpInfo: null
   };
 
   private stateCallbacks: ExperienceStateCallback[] = [];
@@ -98,28 +115,50 @@ class ExperienceManager implements IExperienceManager {
 
   // 计算等级
   private calculateLevel(experience: number): number {
-    return Math.floor(experience / this.config.baseXP) + 1;
+    if (experience < 50) return 1;
+    if (experience < 75) return 2;   // 50 × 1.5 = 75
+    if (experience < 112) return 3;  // 75 × 1.5 = 112.5 ≈ 112
+    if (experience < 168) return 4;  // 112 × 1.5 = 168
+    if (experience < 252) return 5;  // 168 × 1.5 = 252
+    return Math.floor((experience - 252) / 200) + 6;
   }
 
-  // 计算当前等级所需经验值
+  // 计算当前等级所需经验值（累积值）
   private calculateLevelRequiredExp(level: number): number {
-    return this.config.baseXP * Math.pow(this.config.levelMultiplier, level - 1);
+    if (level === 1) return 50;
+    if (level === 2) return 75;   // 50 × 1.5
+    if (level === 3) return 112;  // 75 × 1.5
+    if (level === 4) return 168;  // 112 × 1.5
+    if (level === 5) return 252;  // 168 × 1.5
+    // 后续等级：252 + (level - 6) * 200
+    return 252 + (level - 6) * 200;
   }
 
   // 计算升级所需经验值
   private calculateExpToNextLevel(experience: number): number {
     const currentLevel = this.calculateLevel(experience);
-    const requiredExp = this.calculateLevelRequiredExp(currentLevel);
-    const currentLevelExp = experience % requiredExp;
-    return requiredExp - currentLevelExp;
+    const currentLevelExp = this.calculateLevelRequiredExp(currentLevel);
+    const nextLevelExp = this.calculateLevelRequiredExp(currentLevel + 1);
+    return nextLevelExp - experience;
+  }
+
+  // 获取当前等级内的经验值
+  private getExperienceInCurrentLevel(experience: number): number {
+    const currentLevel = this.calculateLevel(experience);
+    if (currentLevel === 1) return experience;
+    
+    const previousLevelExp = this.calculateLevelRequiredExp(currentLevel - 1);
+    return experience - previousLevelExp;
   }
 
   // 计算进度百分比
   public calculateProgressPercentage(experience: number): number {
     const currentLevel = this.calculateLevel(experience);
-    const requiredExp = this.calculateLevelRequiredExp(currentLevel);
-    const currentLevelExp = experience % requiredExp;
-    return currentLevelExp / requiredExp;
+    const currentLevelExp = this.getExperienceInCurrentLevel(experience);
+    const previousLevelExp = currentLevel === 1 ? 0 : this.calculateLevelRequiredExp(currentLevel - 1);
+    const expNeededForCurrentLevel = this.calculateLevelRequiredExp(currentLevel) - previousLevelExp;
+    
+    return currentLevelExp / expNeededForCurrentLevel;
   }
 
   // 检查是否升级
@@ -147,7 +186,9 @@ class ExperienceManager implements IExperienceManager {
     const level = this.calculateLevel(experience);
     const experienceToNextLevel = this.calculateExpToNextLevel(experience);
     const progressPercentage = this.calculateProgressPercentage(experience);
-    const requiredExp = this.calculateLevelRequiredExp(level);
+    const currentLevelExp = this.getExperienceInCurrentLevel(experience);
+    const previousLevelExp = level === 1 ? 0 : this.calculateLevelRequiredExp(level - 1);
+    const expNeededForCurrentLevel = this.calculateLevelRequiredExp(level) - previousLevelExp;
 
     return {
       level,
@@ -174,53 +215,39 @@ class ExperienceManager implements IExperienceManager {
   // 获取当前经验值信息
   public async getCurrentExperienceInfo(): Promise<UserExperienceInfo | null> {
     try {
-      // 1. 首先尝试从本地存储获取
-      const userStatsData = await AsyncStorage.getItem('userStats');
-      let userStats = null;
-      let hasLocalData = false;
-
-      if (userStatsData) {
-        try {
-          userStats = JSON.parse(userStatsData);
-          hasLocalData = true;
-          console.log('[experienceManager] 从本地存储获取到用户数据:', userStats);
-        } catch (parseError) {
-          console.error('[experienceManager] 解析本地存储数据失败:', parseError);
-        }
-      }
-
-      // 2. 如果本地存储为空或经验值为0，尝试从云端同步
-      if (!hasLocalData || !userStats || userStats.experience === 0) {
-        console.log('[experienceManager] 本地存储为空或经验值为0，尝试从云端同步');
+      // 检查是否为游客模式
+      const isGuestMode = await guestModeService.isGuestMode();
+      
+      if (isGuestMode) {
+        // 游客模式：从本地存储读取数据
+        console.log('[experienceManager] 游客模式：从本地存储读取经验值数据');
+        const userStats = await AsyncStorage.getItem('userExperienceInfo');
         
-        try {
-          // 强制同步云端数据
-          const syncResult = await unifiedSyncService.forceSync();
-          if (syncResult.success) {
-            console.log('[experienceManager] 云端同步成功');
-            
-            // 重新从本地存储获取（同步后可能已更新）
-            const updatedUserStatsData = await AsyncStorage.getItem('userStats');
-            if (updatedUserStatsData) {
-              userStats = JSON.parse(updatedUserStatsData);
-              hasLocalData = true;
-              console.log('[experienceManager] 同步后获取到用户数据:', userStats);
+        if (userStats) {
+          const parsedStats = JSON.parse(userStats);
+          if (parsedStats.experience > 0) {
+            // 检查等级一致性
+            const calculatedLevel = this.calculateLevel(parsedStats.experience);
+            if (calculatedLevel !== parsedStats.level) {
+              // 等级不一致，更新本地存储
+              const updatedStats = {
+                ...parsedStats,
+                level: calculatedLevel
+              };
+              await AsyncStorage.setItem('userExperienceInfo', JSON.stringify(updatedStats));
+              return updatedStats;
             }
-          } else {
-            console.log('[experienceManager] 云端同步失败:', syncResult.message);
+            
+            return parsedStats;
           }
-        } catch (syncError) {
-          console.error('[experienceManager] 云端同步出错:', syncError);
         }
-      }
-
-      // 3. 如果仍然没有数据，返回默认经验值信息（新用户）
-      if (!hasLocalData || !userStats) {
-        console.log('[experienceManager] 没有找到用户经验值数据，返回默认经验值信息');
-        return {
-          level: 1,
+        
+        // 游客模式：本地存储为空或经验值为0，返回默认值
+        console.log('[experienceManager] 游客模式：创建默认经验值数据');
+        const defaultExperienceInfo: UserExperienceInfo = {
           experience: 0,
-          experienceToNextLevel: 100,
+          level: 1,
+          experienceToNextLevel: 50,
           progressPercentage: 0,
           totalExperience: 0,
           dailyReviewXP: 0,
@@ -229,29 +256,58 @@ class ExperienceManager implements IExperienceManager {
           currentStreak: 0,
           contributedWords: 0
         };
+        
+        // 保存默认值到本地存储
+        await AsyncStorage.setItem('userExperienceInfo', JSON.stringify(defaultExperienceInfo));
+        
+        return defaultExperienceInfo;
+      } else {
+        // 注册用户：使用多邻国方案，从云端同步数据
+        console.log('[experienceManager] 注册用户：从云端同步经验值数据');
+        
+        // 优先从本地存储获取，避免云端同步延迟
+        const userStats = await AsyncStorage.getItem('userExperienceInfo');
+        
+        if (userStats) {
+          const parsedStats = JSON.parse(userStats);
+          if (parsedStats.experience > 0) {
+            // 检查等级一致性
+            const calculatedLevel = this.calculateLevel(parsedStats.experience);
+            if (calculatedLevel !== parsedStats.level) {
+              // 等级不一致，更新本地存储
+              const updatedStats = {
+                ...parsedStats,
+                level: calculatedLevel
+              };
+              await AsyncStorage.setItem('userExperienceInfo', JSON.stringify(updatedStats));
+              return updatedStats;
+            }
+            
+            return parsedStats;
+          }
+        }
+        
+        // 注册用户：本地存储为空或经验值为0，返回默认值
+        // 使用多邻国方案：不依赖云端同步，避免延迟问题
+        console.log('[experienceManager] 注册用户：创建默认经验值数据');
+        const defaultExperienceInfo: UserExperienceInfo = {
+          experience: 0,
+          level: 1,
+          experienceToNextLevel: 50,
+          progressPercentage: 0,
+          totalExperience: 0,
+          dailyReviewXP: 0,
+          dailyStudyTimeXP: 0,
+          completedDailyCards: false,
+          currentStreak: 0,
+          contributedWords: 0
+        };
+        
+        // 保存默认值到本地存储
+        await AsyncStorage.setItem('userExperienceInfo', JSON.stringify(defaultExperienceInfo));
+        
+        return defaultExperienceInfo;
       }
-
-      // 4. 构建用户经验值信息
-      const experience = userStats.experience || 0;
-      const level = this.calculateLevel(experience);
-      const experienceToNextLevel = this.calculateExpToNextLevel(experience);
-      const progressPercentage = this.calculateProgressPercentage(experience);
-      
-      const experienceInfo = {
-        level,
-        experience,
-        experienceToNextLevel,
-        progressPercentage,
-        totalExperience: experience,
-        dailyReviewXP: userStats.dailyReviewXP || 0,
-        dailyStudyTimeXP: userStats.dailyStudyTimeXP || 0,
-        completedDailyCards: userStats.completedDailyCards || false,
-        currentStreak: userStats.currentStreak || 0,
-        contributedWords: userStats.contributedWords || 0
-      };
-
-      console.log('[experienceManager] 构建的用户经验值信息:', experienceInfo);
-      return experienceInfo;
     } catch (error) {
       console.error('[experienceManager] 获取经验值信息失败:', error);
       return null;
@@ -260,148 +316,135 @@ class ExperienceManager implements IExperienceManager {
 
   // ==================== 经验值增益处理 ====================
 
-  // 添加经验值
-  private async addExperience(
+  // 添加经验值（基础方法）
+  private async addExperienceInternal(
     xpToGain: number, 
-    eventType: ExperienceEventType,
-    metadata?: Record<string, any>
-  ): Promise<ExperienceGainResult | null> {
-    // 防重复触发检查
-    const eventKey = `${eventType}_${JSON.stringify(metadata)}`;
-    const now = Date.now();
-    const lastProcessed = this.lastProcessedEvents.get(eventKey);
-    
-    if (lastProcessed && (now - lastProcessed) < this.EVENT_COOLDOWN) {
-      console.log('[experienceManager] 事件冷却中，跳过重复触发:', eventKey);
-      return null;
-    }
-
-    if (this.isProcessing) {
-      console.log('[experienceManager] 经验值处理中，跳过重复请求');
-      return null;
-    }
-
+    eventType: ExperienceEventType, 
+    metadata?: any
+  ): Promise<ExperienceGainResult> {
     try {
+      // 检查是否正在处理中
+      if (this.isProcessing) {
+        console.log('[experienceManager] 正在处理经验值，跳过重复请求');
+        return {
+          success: false,
+          message: '正在处理经验值，请稍后重试',
+          xpGained: 0,
+          oldExperience: 0,
+          newExperience: 0,
+          oldLevel: 1,
+          newLevel: 1,
+          leveledUp: false,
+          progressChange: 0
+        };
+      }
+
       this.isProcessing = true;
-      console.log('[experienceManager] 开始处理经验值增益:', { xpToGain, eventType, metadata });
+      console.log(`[experienceManager] 开始添加经验值: ${xpToGain} XP, 类型: ${eventType}`);
 
-      // 清理过期事件记录
-      this.cleanupExpiredEvents();
-
-      // 记录事件处理时间
-      this.lastProcessedEvents.set(eventKey, now);
-
-      // 获取当前经验值信息（确保获取最新数据）
+      // 获取当前经验值信息
       const currentInfo = await this.getCurrentExperienceInfo();
-      const currentExperience = currentInfo?.experience || 0;
-      
-      console.log('[experienceManager] 当前经验值:', currentExperience, '即将增加:', xpToGain);
+      if (!currentInfo) {
+        console.log('[experienceManager] 无法获取当前经验值信息');
+        this.isProcessing = false;
+        return {
+          success: false,
+          message: '无法获取当前经验值信息',
+          xpGained: 0,
+          oldExperience: 0,
+          newExperience: 0,
+          oldLevel: 1,
+          newLevel: 1,
+          leveledUp: false,
+          progressChange: 0
+        };
+      }
 
-      // 处理经验值增益
-      const result = await this.processExperienceGain(
-        currentExperience, 
-        xpToGain, 
-        eventType, 
-        metadata
-      );
+      const oldExperience = currentInfo.experience;
+      const newExperience = oldExperience + xpToGain;
+      const oldLevel = currentInfo.level;
 
-      console.log('[experienceManager] 经验值增益处理完成:', result);
+      // 计算新等级
+      const newLevel = this.calculateLevel(newExperience);
+      const leveledUp = newLevel > oldLevel;
+
+      console.log(`[experienceManager] 经验值变化: ${oldExperience} → ${newExperience}, 等级: ${oldLevel} → ${newLevel}`);
+
+      // 更新用户经验值信息
+      const updatedInfo: UserExperienceInfo = {
+        ...currentInfo,
+        experience: newExperience,
+        level: newLevel,
+        experienceToNextLevel: this.calculateExpToNextLevel(newExperience),
+        progressPercentage: this.calculateProgressPercentage(newExperience),
+        totalExperience: currentInfo.totalExperience + xpToGain
+      };
+
+      // 更新本地状态
+      this.updateState({
+        userExperienceInfo: updatedInfo,
+        animatedExperience: newExperience
+      });
+
+      // 保存到本地存储
+      this.updateUserExperienceInfo(newExperience, newLevel);
+
+      // 检查升级
+      if (leveledUp) {
+        console.log(`[experienceManager] 恭喜升级！等级 ${oldLevel} → ${newLevel}`);
+        this.updateState({
+          showLevelUpModal: true,
+          levelUpInfo: {
+            oldLevel,
+            newLevel,
+            levelsGained: newLevel - oldLevel,
+            oldExperience,
+            newExperience
+          }
+        });
+      }
+
+      this.isProcessing = false;
+
+      const result: ExperienceGainResult = {
+        success: true,
+        xpGained: xpToGain,
+        message: `获得 ${xpToGain} 经验值`,
+        oldExperience,
+        newExperience,
+        oldLevel,
+        newLevel,
+        leveledUp,
+        progressChange: xpToGain
+      };
+
+      console.log('[experienceManager] 经验值添加成功:', result);
       return result;
+
     } catch (error) {
       console.error('[experienceManager] 添加经验值失败:', error);
-      return null;
-    } finally {
       this.isProcessing = false;
+      return {
+        success: false,
+        message: '添加经验值失败',
+        xpGained: 0,
+        oldExperience: 0,
+        newExperience: 0,
+        oldLevel: 1,
+        newLevel: 1,
+        leveledUp: false,
+        progressChange: 0
+      };
     }
   }
 
-  // 处理经验值增益
-  private async processExperienceGain(
-    currentExperience: number,
-    xpToGain: number,
-    eventType: ExperienceEventType,
-    metadata?: Record<string, any>
+  // 添加经验值（公共接口）
+  public async addExperience(
+    xpToGain: number, 
+    eventType: ExperienceEventType, 
+    metadata?: any
   ): Promise<ExperienceGainResult> {
-    console.log('[experienceManager] 处理经验值增益:', {
-      currentExperience,
-      xpToGain,
-      eventType,
-      metadata
-    });
-
-    const newExperience = currentExperience + xpToGain;
-    const levelUpInfo = this.checkLevelUp(currentExperience, newExperience);
-    const newLevelInfo = this.calculateLevelInfo(newExperience);
-
-    console.log('[experienceManager] 经验值计算结果:', {
-      newExperience,
-      levelUpInfo,
-      newLevelInfo
-    });
-
-    // 创建经验值事件
-    const event: ExperienceEvent = {
-      type: eventType,
-      xpGained: xpToGain,
-      leveledUp: levelUpInfo.leveledUp,
-      message: `获得 ${xpToGain} 经验值`,
-      timestamp: Date.now(),
-      metadata: {
-        ...metadata,
-        config: this.config
-      }
-    };
-
-    // 更新本地存储
-    const userStatsData = await AsyncStorage.getItem('userStats');
-    const userStats = userStatsData ? JSON.parse(userStatsData) : {};
-    
-    const updatedStats = {
-      ...userStats,
-      experience: newExperience,
-      level: newLevelInfo.level,
-      lastUpdated: Date.now()
-    };
-
-    console.log('[experienceManager] 更新本地存储:', {
-      oldExperience: userStats.experience,
-      newExperience,
-      oldLevel: userStats.level,
-      newLevel: newLevelInfo.level
-    });
-
-    await AsyncStorage.setItem('userStats', JSON.stringify(updatedStats));
-
-    // 添加到同步队列
-    await unifiedSyncService.addToSyncQueue({
-      type: 'experience',
-      data: {
-        experience: newExperience,
-        level: newLevelInfo.level,
-      event
-      },
-      userId: userStats.userId || 'guest',
-      operation: 'update',
-      priority: 'high',
-      xpGained: xpToGain,
-      leveledUp: levelUpInfo.leveledUp,
-      level: newLevelInfo.level
-    });
-
-    const result = {
-      success: true,
-      xpGained: xpToGain,
-      newLevel: newLevelInfo.level,
-      leveledUp: levelUpInfo.leveledUp,
-      message: levelUpInfo.leveledUp ? '恭喜升级！' : '获得经验值！',
-      oldLevel: levelUpInfo.oldLevel,
-      oldExperience: currentExperience,
-      newExperience,
-      progressChange: newLevelInfo.progressPercentage - this.calculateProgressPercentage(currentExperience)
-    };
-
-    console.log('[experienceManager] 经验值增益处理完成:', result);
-    return result;
+    return this.addExperienceInternal(xpToGain, eventType, metadata);
   }
 
   // ==================== 经验值增益接口实现 ====================
@@ -414,7 +457,9 @@ class ExperienceManager implements IExperienceManager {
   // 添加复习总经验值
   public async addReviewTotalExperience(totalExperience: number): Promise<ExperienceGainResult | null> {
     console.log('[experienceManager] 添加复习总经验值:', totalExperience);
-    return this.addExperience(totalExperience, 'review', { totalExperience });
+    const result = await this.addExperience(totalExperience, 'review');
+    console.log('[experienceManager] 添加复习总经验值结果:', result);
+    return result;
   }
 
   public async addSmartChallengeExperience(): Promise<ExperienceGainResult | null> {
@@ -422,7 +467,6 @@ class ExperienceManager implements IExperienceManager {
   }
 
   public async addWrongWordChallengeExperience(): Promise<ExperienceGainResult | null> {
-    console.log('[experienceManager] 添加错词卡经验值');
     return this.addExperience(this.config.xpRewards.wrongWordChallenge, 'wrongWordChallenge');
   }
 
@@ -430,20 +474,21 @@ class ExperienceManager implements IExperienceManager {
   public calculateReviewTotalExperience(actions: Array<{ remembered: boolean }>): number {
     let totalExperience = 0;
     
-    actions.forEach(action => {
+    console.log('[experienceManager] 计算复习总经验值，actions数量:', actions.length);
+    
+    for (const action of actions) {
       if (action.remembered) {
-        totalExperience += this.config.xpRewards.review.correct;
+        const xp = this.config.xpRewards.review.correct;
+        totalExperience += xp;
+        console.log(`[experienceManager] 记住单词: +${xp} XP`);
       } else {
-        totalExperience += this.config.xpRewards.review.incorrect;
+        const xp = this.config.xpRewards.review.incorrect;
+        totalExperience += xp;
+        console.log(`[experienceManager] 忘记单词: +${xp} XP`);
       }
-    });
+    }
     
-    console.log('[experienceManager] 计算复习总经验值:', {
-      totalActions: actions.length,
-      totalExperience,
-      actions: actions.map(a => ({ remembered: a.remembered }))
-    });
-    
+    console.log(`[experienceManager] 复习总经验值: ${totalExperience} XP`);
     return totalExperience;
   }
 
@@ -507,19 +552,13 @@ class ExperienceManager implements IExperienceManager {
     const now = Date.now();
     const expiredEvents: string[] = [];
     
-    this.lastProcessedEvents.forEach((timestamp, eventKey) => {
-      if ((now - timestamp) > this.EVENT_COOLDOWN) {
-        expiredEvents.push(eventKey);
+    for (const [key, timestamp] of this.lastProcessedEvents.entries()) {
+      if (now - timestamp > this.EVENT_COOLDOWN * 10) { // 10倍冷却时间后清理
+        expiredEvents.push(key);
       }
-    });
-    
-    expiredEvents.forEach(eventKey => {
-      this.lastProcessedEvents.delete(eventKey);
-    });
-    
-    if (expiredEvents.length > 0) {
-      console.log('[experienceManager] 清理过期事件记录:', expiredEvents.length);
     }
+    
+    expiredEvents.forEach(key => this.lastProcessedEvents.delete(key));
   }
 
   // ==================== 状态管理 ====================
@@ -555,71 +594,109 @@ class ExperienceManager implements IExperienceManager {
     onProgressUpdate?: (currentExp: number, progress: number) => void,
     onComplete?: (finalExp: number, finalLevel: number) => void
   ): Promise<void> {
-    const newExp = currentExp + gainedExp;
-    const oldLevel = this.calculateLevel(currentExp);
-    const newLevel = this.calculateLevel(newExp);
-    const isLevelUp = newLevel > oldLevel;
-    const oldProgress = this.calculateProgressPercentage(currentExp);
-    const newProgress = this.calculateProgressPercentage(newExp);
+    try {
+      // 检查当前经验值是否已经包含了gainedExp
+      // 如果currentExp已经是最新值，则不需要再添加
+      const expectedCurrentExp = currentExp - gainedExp;
+      const actualCurrentExp = this.getExperienceState().userExperienceInfo?.experience || 0;
+      
+      // 如果当前状态中的经验值已经是最新值，直接使用
+      const animationStartExp = actualCurrentExp >= currentExp ? actualCurrentExp - gainedExp : expectedCurrentExp;
+      const animationEndExp = actualCurrentExp >= currentExp ? actualCurrentExp : currentExp;
+      
+      const oldLevel = this.calculateLevel(animationStartExp);
+      const newLevel = this.calculateLevel(animationEndExp);
+      const isLevelUp = newLevel > oldLevel;
+      const oldProgress = this.calculateProgressPercentage(animationStartExp);
+      const newProgress = this.calculateProgressPercentage(animationEndExp);
+      
+      const params = {
+        oldExperience: animationStartExp,
+        newExperience: animationEndExp,
+        gainedExp,
+        oldLevel,
+        newLevel,
+        isLevelUp,
+        oldProgress,
+        newProgress
+      };
+      
+      const callbacks = {
+        onProgress: onProgressUpdate,
+        onComplete: onComplete ? (finalExp: number, finalProgress: number) => {
+          // 更新 userExperienceInfo 中的经验值
+          this.updateUserExperienceInfo(finalExp, newLevel);
+          onComplete(finalExp, Math.floor(finalProgress));
+        } : undefined
+      };
+      
+      // 委托给 animationManager 处理动画
+      animationManager.startExperienceAnimation(params, callbacks);
+    } catch (error) {
+      console.error('[experienceManager] 经验值动画启动失败:', error);
+    }
+  }
 
-    // 使用animationManager处理动画
-    animationManager.startExperienceAnimation({
-      oldExperience: currentExp,
-      newExperience: newExp,
-      gainedExp,
-      oldLevel,
-      newLevel,
-      isLevelUp,
-      oldProgress,
-      newProgress
-    }, {
-      onStart: () => {
-        console.log('[experienceManager] 开始经验值动画');
-      },
-      onProgress: (currentExpValue, currentProgress) => {
-        // 更新状态
-        this.updateState({
-          animatedExperience: currentExpValue,
-          progressBarValue: currentProgress
-        });
-        
-        if (onProgressUpdate) {
-          onProgressUpdate(currentExpValue, currentProgress);
-        }
-      },
-      onComplete: (finalExp, finalProgress) => {
-        // 更新本地存储
-        this.updateLocalExperience(finalExp, this.calculateLevel(finalExp));
-        
-        // 更新状态
-        this.updateState({
-          isProgressBarAnimating: false,
-          hasCheckedExperience: true,
-          animatedExperience: finalExp,
-          progressBarValue: finalProgress
-        });
-
-        if (onComplete) {
-          onComplete(finalExp, this.calculateLevel(finalExp));
-        }
-      }
-    });
+  // 更新用户经验值信息
+  private updateUserExperienceInfo(experience: number, level: number): void {
+    const currentState = this.getExperienceState();
+    if (currentState.userExperienceInfo) {
+      const updatedInfo = {
+        ...currentState.userExperienceInfo,
+        experience,
+        level,
+        experienceToNextLevel: this.calculateExpToNextLevel(experience),
+        progressPercentage: this.calculateProgressPercentage(experience)
+      };
+      
+      this.updateState({
+        userExperienceInfo: updatedInfo
+      });
+      
+      // 同时更新本地存储
+      this.updateLocalExperience(experience, level);
+    }
   }
 
   // 更新本地经验值数据
   private async updateLocalExperience(experience: number, level: number): Promise<void> {
     try {
-      const userStatsData = await AsyncStorage.getItem('userStats');
-      const userStats = userStatsData ? JSON.parse(userStatsData) : {};
+      // 读取当前的 userExperienceInfo
+      const currentExperienceInfo = await this.getCurrentExperienceInfo();
       
-      const updatedStats = {
-        ...userStats,
-        experience,
-        level,
-        lastUpdated: Date.now()
-      };
-      
-      await AsyncStorage.setItem('userStats', JSON.stringify(updatedStats));
+      if (currentExperienceInfo) {
+        // 更新经验值信息
+        const updatedExperienceInfo = {
+          ...currentExperienceInfo,
+          experience,
+          level,
+          experienceToNextLevel: this.calculateExpToNextLevel(experience),
+          progressPercentage: this.calculateProgressPercentage(experience)
+        };
+        
+        // 保存到 userExperienceInfo
+        await AsyncStorage.setItem('userExperienceInfo', JSON.stringify(updatedExperienceInfo));
+        
+        console.log('[experienceManager] 本地经验值数据已更新:', experience, level);
+      } else {
+        // 如果不存在，创建新的经验值信息
+        const newExperienceInfo = {
+          experience,
+          level,
+          experienceToNextLevel: this.calculateExpToNextLevel(experience),
+          progressPercentage: this.calculateProgressPercentage(experience),
+          totalExperience: experience,
+          dailyReviewXP: 0,
+          dailyStudyTimeXP: 0,
+          completedDailyCards: false,
+          currentStreak: 0,
+          contributedWords: 0
+        };
+        
+        await AsyncStorage.setItem('userExperienceInfo', JSON.stringify(newExperienceInfo));
+        
+        console.log('[experienceManager] 创建新的本地经验值数据:', experience, level);
+      }
     } catch (error) {
       console.error('更新本地经验值数据失败:', error);
     }
@@ -659,45 +736,42 @@ class ExperienceManager implements IExperienceManager {
   // 加载用户经验值信息
   public async loadUserExperienceInfo(vocabularyLength: number = 0): Promise<void> {
     try {
-      console.log('[experienceManager] 开始加载用户经验值信息');
-      this.updateState({ isLoadingExperience: true });
-      
-      // 使用经验值管理器获取信息（包含云端同步逻辑）
       const experienceInfo = await this.getCurrentExperienceInfo();
       
       if (experienceInfo) {
-        console.log('[experienceManager] 成功加载用户经验值信息:', JSON.stringify(experienceInfo));
-        // 若动画管理器正在动画或内部有更高的进度，保持当前 animated 值，避免瞬跳
-        const preserveAnimated = this.experienceState.isProgressBarAnimating || animationManager.isAnimatingNow();
         this.updateState({
           userExperienceInfo: experienceInfo,
-          animatedExperience: preserveAnimated ? this.experienceState.animatedExperience : experienceInfo.experience,
-          animatedCollectedWords: vocabularyLength,
-          animatedContributedWords: experienceInfo.contributedWords || 0
+          isLoadingExperience: false,
+          hasCheckedExperience: true
         });
-      } else {
-        // 如果经验值管理器没有数据，说明用户还没有任何学习记录
-        console.log('[experienceManager] 用户还没有学习记录，经验值为0');
         
-        // 不创建默认数据，让用户通过实际学习获得经验值
+        // 更新统计信息
+        this.updateStatistics(vocabularyLength);
+      } else {
+        // 用户还没有学习记录，经验值为0
         this.updateState({
-          userExperienceInfo: null,
-          animatedExperience: 0,
-          animatedCollectedWords: vocabularyLength,
-          animatedContributedWords: 0
+          userExperienceInfo: {
+            experience: 0,
+            level: 1,
+            experienceToNextLevel: 50,
+            progressPercentage: 0,
+            totalExperience: 0,
+            dailyReviewXP: 0,
+            dailyStudyTimeXP: 0,
+            completedDailyCards: false,
+            currentStreak: 0,
+            contributedWords: 0
+          },
+          isLoadingExperience: false,
+          hasCheckedExperience: true
         });
       }
     } catch (error) {
       console.error('[experienceManager] 加载用户经验值信息失败:', error);
-      // 发生错误时，设置为空状态
       this.updateState({
-        userExperienceInfo: null,
-        animatedExperience: 0,
-        animatedCollectedWords: vocabularyLength,
-        animatedContributedWords: 0
+        isLoadingExperience: false,
+        hasCheckedExperience: true
       });
-    } finally {
-      this.updateState({ isLoadingExperience: false });
     }
   }
 
@@ -705,18 +779,72 @@ class ExperienceManager implements IExperienceManager {
   public initializeExperienceState(): void {
     this.updateState({
       hasCheckedExperience: false,
-      isProgressBarAnimating: false
+      isProgressBarAnimating: false,
+      showLevelUpModal: false,
+      levelUpInfo: null
+    });
+  }
+
+  // 关闭升级弹窗
+  public closeLevelUpModal(): void {
+    this.updateState({
+      showLevelUpModal: false,
+      levelUpInfo: null
     });
   }
 
   // ==================== 经验值进度条管理 ====================
   
-  // 更新进度条
+  // 更新进度条（同步到animationManager）
   public updateProgressBar(progress: number): void {
-    this.updateState({ progressBarValue: progress });
+    // 只更新本地状态，不重复更新动画管理器
+    this.updateState({
+      progressBarValue: progress
+    });
   }
 
-  // ==================== 经验值动画状态管理 ====================
+  // ==================== 动画状态锁管理 ====================
+  
+  // 获取动画锁
+  private acquireAnimationLock(): boolean {
+    if (this.isAnimationRunning) {
+      console.log('[experienceManager] 动画锁已被占用，无法启动新动画');
+      return false;
+    }
+    
+    this.isAnimationRunning = true;
+    console.log('[experienceManager] 获取动画锁成功');
+    
+    // 设置自动释放锁的超时
+    this.animationLockTimeout = setTimeout(() => {
+      console.log('[experienceManager] 动画锁超时，自动释放');
+      this.releaseAnimationLock();
+    }, this.ANIMATION_LOCK_TIMEOUT);
+    
+    return true;
+  }
+  
+  // 释放动画锁
+  private releaseAnimationLock(): void {
+    if (this.animationLockTimeout) {
+      clearTimeout(this.animationLockTimeout);
+      this.animationLockTimeout = null;
+    }
+    
+    this.isAnimationRunning = false;
+    console.log('[experienceManager] 动画锁已释放');
+  }
+  
+  // 强制释放动画锁（用于异常情况）
+  public forceReleaseAnimationLock(): void {
+    console.log('[experienceManager] 强制释放动画锁');
+    this.releaseAnimationLock();
+  }
+  
+  // 检查动画锁状态
+  public isAnimationLocked(): boolean {
+    return this.isAnimationRunning;
+  }
   
   // 开始经验值动画（带状态管理）
   public async startExperienceAnimationWithState(
@@ -724,83 +852,103 @@ class ExperienceManager implements IExperienceManager {
     onProgressUpdate?: (currentExp: number, progress: number) => void,
     onComplete?: (finalExp: number, finalLevel: number) => void
   ): Promise<void> {
-    const { userExperienceInfo } = this.experienceState;
-    if (!userExperienceInfo) return;
-
-    // 使用当前经验值作为起始值，避免进度条倒退
-    const startExperience = userExperienceInfo.experience;
+    // 检查动画锁
+    if (!this.acquireAnimationLock()) {
+      console.log('[experienceManager] 无法获取动画锁，跳过动画启动');
+      return;
+    }
     
-    console.log('[experienceManager] 开始经验值动画状态:', {
-      currentExperience: userExperienceInfo.experience,
-      gainedExp,
-      startExperience,
-      finalExperience: userExperienceInfo.experience + gainedExp
-    });
-
-    this.updateState({
-      isProgressBarAnimating: true,
-      // 仅当当前 animatedExperience 小于起始经验时才对齐，避免回退
-      animatedExperience: Math.max(this.experienceState.animatedExperience, startExperience)
-    });
-
-    await this.startExperienceAnimation(
-      gainedExp,
-      startExperience,  // 使用当前值作为起始值
-      onProgressUpdate,
-      onComplete
-    );
+    try {
+      let currentState = this.getExperienceState();
+      
+      // 如果用户经验值信息不存在，尝试初始化
+      if (!currentState.userExperienceInfo) {
+        console.log('[experienceManager] 用户经验值信息不存在，尝试初始化...');
+        await this.loadUserExperienceInfo();
+        currentState = this.getExperienceState();
+      }
+      
+      if (currentState.userExperienceInfo) {
+        // 重新从本地存储读取最新经验值，确保数据同步
+        const latestExperienceInfo = await this.getCurrentExperienceInfo();
+        const currentExp = latestExperienceInfo?.experience || currentState.userExperienceInfo.experience;
+        
+        console.log('[experienceManager] 启动经验值动画，当前经验值:', currentExp, '获得经验值:', gainedExp);
+        
+        // 直接启动动画，不重复检查动画管理器状态
+        await this.startExperienceAnimation(
+          gainedExp,
+          currentExp,
+          onProgressUpdate,
+          (finalExp: number, finalLevel: number) => {
+            // 动画完成回调
+            if (onComplete) {
+              onComplete(finalExp, finalLevel);
+            }
+            // 释放动画锁
+            this.releaseAnimationLock();
+          }
+        );
+      } else {
+        console.log('[experienceManager] 用户经验值信息初始化失败，无法启动动画');
+        this.releaseAnimationLock();
+      }
+    } catch (error) {
+      console.error('[experienceManager] 经验值动画启动失败:', error);
+      this.releaseAnimationLock();
+    }
   }
 
   // ==================== 统计数字管理 ====================
   
   // 更新统计数字（基础版本）
   public updateStatistics(vocabularyLength: number = 0): void {
-    console.log('[experienceManager] 更新统计数字...');
-    const { userExperienceInfo } = this.experienceState;
-    const collectedCount = vocabularyLength;
-    const contributedCount = userExperienceInfo?.contributedWords || 0;
+    const userExperienceInfo = this.getExperienceState().userExperienceInfo;
     
-    console.log('[experienceManager] 当前贡献词数:', contributedCount);
-    console.log('[experienceManager] 当前userExperienceInfo:', userExperienceInfo);
-    console.log('[experienceManager] 设置动画贡献词数:', contributedCount);
-    
-    this.updateState({
-      animatedCollectedWords: collectedCount,
-      animatedContributedWords: contributedCount
-    });
+    if (userExperienceInfo) {
+      const collectedCount = vocabularyLength;
+      const contributedCount = userExperienceInfo.contributedWords || 0;
+      
+      this.updateState({
+        animatedCollectedWords: collectedCount,
+        animatedContributedWords: contributedCount
+      });
+    }
   }
 
   // 检查经验值增益（带状态管理）
   public async checkForExperienceGainWithState(): Promise<boolean> {
-    const { hasCheckedExperience, isSyncingExperience, isProgressBarAnimating } = this.experienceState;
+    const currentState = this.getExperienceState();
     
-    if (hasCheckedExperience || isSyncingExperience || isProgressBarAnimating) {
-      console.log('[experienceManager] 已检查过经验值增益或正在同步/动画，跳过重复检查');
+    // 正在同步中，跳过经验值增益检查
+    if (currentState.isSyncingExperience) {
       return false;
     }
     
-    this.updateState({ isSyncingExperience: true });
-    
-    try {
-      // 使用 experienceManager 检查导航参数
-      const { hasExperienceGain, experienceGained } = await this.checkForExperienceGainFromNavigation();
-      
-      if (hasExperienceGain && experienceGained) {
-        console.log('[experienceManager] 满足经验值动画条件，开始处理:', { experienceGained });
-        
-        // 开始经验值动画
-        await this.startExperienceAnimationWithState(experienceGained);
-      }
-      
-      this.updateState({ hasCheckedExperience: true });
-      return hasExperienceGain;
-    } catch (error) {
-      console.error('[experienceManager] 检查经验值增益失败:', error);
-      this.updateState({ hasCheckedExperience: true });
-      return false;
-    } finally {
-      this.updateState({ isSyncingExperience: false });
+    // 已检查过经验值增益，但动画管理器空闲，允许重新检查
+    if (currentState.hasCheckedExperience && !animationManager.isAnimatingNow()) {
+      // 重置检查状态，允许重新检查
+      this.updateState({ hasCheckedExperience: false });
     }
+    
+    // 进度条动画进行中，跳过重复检查
+    if (currentState.isProgressBarAnimating) {
+      return false;
+    }
+    
+    // 检查是否有经验值增益
+    const experienceGainResult = await this.checkForExperienceGainFromNavigation();
+    
+    if (experienceGainResult.hasExperienceGain && experienceGainResult.experienceGained) {
+      const experienceGained = experienceGainResult.experienceGained;
+      
+      // 满足经验值动画条件，开始处理
+      await this.startExperienceAnimationWithState(experienceGained);
+      
+      return true;
+    }
+    
+    return false;
   }
 
   // ==================== 经验值进度条和增益检查管理 ====================
@@ -809,34 +957,16 @@ class ExperienceManager implements IExperienceManager {
   public initializeProgressBarWithCallback(
     onProgressUpdate?: (progressPercentage: number) => void
   ): void {
-    const { userExperienceInfo } = this.experienceState;
-    if (userExperienceInfo) {
-      // 如果正在动画，使用 animatedExperience 计算当前进度，避免初始化时跳到“最终进度”
-      const isAnimating = this.experienceState.isProgressBarAnimating || animationManager.isAnimatingNow();
-      const progressSourceExp = isAnimating
-        ? this.experienceState.animatedExperience
-        : userExperienceInfo.experience;
-      const currentProgress = this.calculateProgressPercentage(progressSourceExp);
-      const progressPercentage = currentProgress * 100;
+    const currentState = this.getExperienceState();
+    
+    if (currentState.userExperienceInfo) {
+      const progressPercentage = this.calculateProgressPercentage(currentState.userExperienceInfo.experience);
       
-      console.log('[experienceManager] 初始化进度条:', {
-        experience: userExperienceInfo.experience,
-        level: userExperienceInfo.level,
-        progress: currentProgress,
-        percentage: progressPercentage
+      this.updateState({
+        progressBarValue: progressPercentage,
+        hasInitializedProgressBar: true
       });
       
-      // 如果动画尚在进行，不要回写 state 的 progressBarValue，以免覆盖动画进度
-      if (!this.experienceState.isProgressBarAnimating && !animationManager.isAnimatingNow()) {
-        this.updateState({
-          progressBarValue: currentProgress,
-          hasInitializedProgressBar: true
-        });
-      } else {
-        this.updateState({ hasInitializedProgressBar: true });
-      }
-
-      // 回调更新进度条
       if (onProgressUpdate) {
         onProgressUpdate(progressPercentage);
       }
@@ -849,27 +979,81 @@ class ExperienceManager implements IExperienceManager {
     onCheckStart?: () => void,
     onCheckComplete?: (hasGain: boolean) => void
   ): Promise<void> {
-    const { hasCheckedExperience, isSyncingExperience } = this.experienceState;
-    
-    if (hasCheckedExperience || isSyncingExperience) {
-      console.log('[experienceManager] 已检查过经验值增益或正在同步，跳过重复检查');
+    // 已检查过经验值增益或正在同步，跳过重复检查
+    if (this.getExperienceState().hasCheckedExperience || this.getExperienceState().isSyncingExperience) {
+      if (onCheckComplete) {
+        onCheckComplete(false);
+      }
       return;
     }
-
+    
+    if (onCheckStart) {
+      onCheckStart();
+    }
+    
     // 延迟检查
     setTimeout(async () => {
-      if (!this.experienceState.hasCheckedExperience && !this.experienceState.isSyncingExperience) {
-        if (onCheckStart) {
-          onCheckStart();
-        }
-        
+      try {
         const hasGain = await this.checkForExperienceGainWithState();
         
         if (onCheckComplete) {
           onCheckComplete(hasGain);
         }
+      } catch (error) {
+        console.error('[experienceManager] 延迟检查经验值增益失败:', error);
+        if (onCheckComplete) {
+          onCheckComplete(false);
+        }
       }
     }, delay);
+  }
+
+  // 检查经验值增益（带重试机制）
+  public async checkForExperienceGainWithRetry(
+    maxRetries: number = 3,
+    retryDelay: number = 1000,
+    onCheckStart?: () => void,
+    onCheckComplete?: (hasGain: boolean) => void
+  ): Promise<void> {
+    const attemptCheck = async (): Promise<void> => {
+      try {
+        const hasGain = await this.checkForExperienceGainWithState();
+        
+        if (hasGain) {
+          if (onCheckComplete) {
+            onCheckComplete(true);
+          }
+          return;
+        }
+        
+        // 没有经验值增益，尝试重试
+        if (maxRetries > 0) {
+          maxRetries--;
+          setTimeout(attemptCheck, retryDelay);
+        } else {
+          if (onCheckComplete) {
+            onCheckComplete(false);
+          }
+        }
+      } catch (error) {
+        console.error('[experienceManager] 重试检查经验值增益失败:', error);
+        
+        if (maxRetries > 0) {
+          maxRetries--;
+          setTimeout(attemptCheck, retryDelay);
+        } else {
+          if (onCheckComplete) {
+            onCheckComplete(false);
+          }
+        }
+      }
+    };
+    
+    if (onCheckStart) {
+      onCheckStart();
+    }
+    
+    await attemptCheck();
   }
 
   // 自动管理经验值状态（整合初始化、加载、检查等功能）
@@ -878,17 +1062,10 @@ class ExperienceManager implements IExperienceManager {
     onProgressUpdate?: (progressPercentage: number) => void,
     onCheckComplete?: (hasGain: boolean) => void
   ): Promise<void> {
-    // 1. 初始化状态
-    this.initializeExperienceState();
-    
-    // 2. 加载用户经验值信息
-    await this.loadUserExperienceInfo(vocabularyLength);
-    
-    // 3. 初始化进度条
-    this.initializeProgressBarWithCallback(onProgressUpdate);
-    
-    // 4. 检查经验值增益
-    await this.checkForExperienceGainWithDelay(500, undefined, onCheckComplete);
+    // 跳过自动经验值增益检查，等待手动触发
+    if (onCheckComplete) {
+      onCheckComplete(false);
+    }
   }
 
   // ==================== 统计数字和动画管理 ====================
@@ -899,37 +1076,29 @@ class ExperienceManager implements IExperienceManager {
     onAnimationStart?: () => void,
     onAnimationComplete?: () => void
   ): void {
-    console.log('[experienceManager] 更新统计数字（带动画）...');
-    const { userExperienceInfo } = this.experienceState;
-    const collectedCount = vocabularyLength;
-    const contributedCount = userExperienceInfo?.contributedWords || 0;
+    const userExperienceInfo = this.getExperienceState().userExperienceInfo;
     
-    console.log('[experienceManager] 当前贡献词数:', contributedCount);
-    console.log('[experienceManager] 当前userExperienceInfo:', userExperienceInfo);
-    console.log('[experienceManager] 设置动画贡献词数:', contributedCount);
-    
-    // 更新状态
-    this.updateState({
-      animatedCollectedWords: collectedCount,
-      animatedContributedWords: contributedCount
-    });
-
-    // 使用animationManager处理统计数字动画
-    animationManager.startStatisticsAnimation(collectedCount, contributedCount, {
-      duration: 1500
-    });
-
-    // 触发动画开始回调
-    if (onAnimationStart) {
-      onAnimationStart();
-    }
-
-    // 模拟动画完成
-    setTimeout(() => {
-      if (onAnimationComplete) {
-        onAnimationComplete();
+    if (userExperienceInfo) {
+      const collectedCount = vocabularyLength;
+      const contributedCount = userExperienceInfo.contributedWords || 0;
+      
+      // 设置动画贡献词数
+      this.updateState({
+        animatedCollectedWords: collectedCount,
+        animatedContributedWords: contributedCount
+      });
+      
+      if (onAnimationStart) {
+        onAnimationStart();
       }
-    }, 1500);
+      
+      // 模拟动画完成
+      setTimeout(() => {
+        if (onAnimationComplete) {
+          onAnimationComplete();
+        }
+      }, 100);
+    }
   }
 
   // 获取统计数字
@@ -956,9 +1125,21 @@ class ExperienceManager implements IExperienceManager {
     return this.calculateProgressPercentage(experience);
   }
 
-  // 获取当前等级所需经验值（兼容旧版本）
+  // 获取当前等级内所需经验值（当前等级的经验值范围）
   public getCurrentLevelRequiredExp(level: number): number {
-    return this.calculateLevelRequiredExp(level);
+    if (level === 1) return 50;
+    const previousLevelExp = this.calculateLevelRequiredExp(level - 1);
+    return this.calculateLevelRequiredExp(level) - previousLevelExp;
+  }
+
+  // 获取等级文本
+  public getLevelText(level: number): string {
+    if (level === 1) return '新手';
+    if (level === 2) return '学徒';
+    if (level === 3) return '熟练';
+    if (level === 4) return '精通';
+    if (level === 5) return '大师';
+    return `Level ${level}`;
   }
 
   // ==================== 页面统一管理 ====================
@@ -974,55 +1155,43 @@ class ExperienceManager implements IExperienceManager {
     progressBarAnimation: any;
     unsubscribe: () => void;
   }> {
-    console.log('[experienceManager] 开始统一管理页面经验值状态');
+    // 开始统一管理页面经验值状态
+    this.initializeProgressBarWithCallback(onProgressUpdate);
     
-    // 1. 初始化状态
-    this.initializeExperienceState();
+    // 确保经验值信息已加载
+    const currentState = this.getExperienceState();
+    if (!currentState.userExperienceInfo) {
+      console.log('[experienceManager] 页面初始化：加载用户经验值信息');
+      await this.loadUserExperienceInfo(vocabularyLength);
+    }
     
-    // 2. 加载用户经验值信息
-    await this.loadUserExperienceInfo(vocabularyLength);
+    // 更新统计信息
+    this.updateStatistics(vocabularyLength);
     
-    // 3. 初始化进度条
-    this.initializeProgressBarWithCallback((progressPercentage) => {
-      // 只在非动画状态下更新进度条，避免干扰正在进行的动画
-      if (!this.experienceState.isProgressBarAnimating) {
-        // 同步 AnimationManager 内部记录，避免后续动画出现先回退再增长
-        animationManager.setProgressBarImmediate(progressPercentage);
-        
-        // 回调进度更新
-        if (onProgressUpdate) {
-          onProgressUpdate(progressPercentage);
-        }
+    // 设置状态更新回调
+    const unsubscribe = this.registerStateCallback((updates) => {
+      if (updates.progressBarValue !== undefined && onProgressUpdate) {
+        onProgressUpdate(updates.progressBarValue);
       }
     });
     
-    // 4. 检查经验值增益
-    await this.checkForExperienceGainWithDelay(500, undefined, (hasGain) => {
-      if (hasGain) {
-        console.log('[experienceManager] 检测到经验值增益');
-      }
-      
-      // 回调检查完成
-      if (onCheckComplete) {
-        onCheckComplete(hasGain);
-      }
-    });
+    // 检查经验值增益
+    const hasGain = await this.checkForExperienceGainWithState();
     
-    // 5. 返回当前状态和取消订阅函数
+    if (onCheckComplete) {
+      onCheckComplete(hasGain);
+    }
+    
     return {
       experienceState: this.getExperienceState(),
       progressBarAnimation,
-      unsubscribe: () => {
-        // 清理回调
-        this.stateCallbacks = [];
-      }
+      unsubscribe
     };
   }
 
   // 更新页面统计信息（使用动画版本）
   public updatePageStatistics(vocabularyLength: number = 0): void {
-    console.log('[experienceManager] 更新页面统计信息');
-    this.updateStatisticsWithAnimation(vocabularyLength);
+    this.updateStatistics(vocabularyLength);
   }
 
   // 页面组件经验值Hook（简化版）
@@ -1035,16 +1204,13 @@ class ExperienceManager implements IExperienceManager {
     return {
       experienceState: this.getExperienceState(),
       progressBarAnimation,
-      initialize: () => this.managePageExperience(
+      manageExperience: () => this.managePageExperience(
         vocabularyLength,
         progressBarAnimation,
         onProgressUpdate,
         onCheckComplete
       ),
-      updateStatistics: () => this.updatePageStatistics(vocabularyLength),
-      unsubscribe: () => {
-        this.stateCallbacks = [];
-      }
+      updateStatistics: () => this.updatePageStatistics(vocabularyLength)
     };
   }
 
@@ -1067,13 +1233,14 @@ class ExperienceManager implements IExperienceManager {
       currentStreak: number;
     };
   } {
-    const { userExperienceInfo, animatedExperience, animatedCollectedWords } = this.experienceState;
+    const currentState = this.getExperienceState();
+    const userExperienceInfo = currentState.userExperienceInfo;
     
     if (!userExperienceInfo) {
       return {
-        level: 0,
-        levelText: '开始学习获得经验值',
-        experienceText: '0/100 XP',
+        level: 1,
+        levelText: '新手',
+        experienceText: '0 XP',
         progressPercentage: 0,
         levelBadge: {
           hasPremium: false,
@@ -1081,7 +1248,7 @@ class ExperienceManager implements IExperienceManager {
           hasEvent: false
         },
         statistics: {
-          collectedWords: animatedCollectedWords,
+          collectedWords: 0,
           totalExperience: 0,
           currentStreak: 0
         }
@@ -1089,25 +1256,22 @@ class ExperienceManager implements IExperienceManager {
     }
     
     const level = userExperienceInfo.level;
-    const levelText = `Level ${level}`;
-    const experienceText = `${animatedExperience}/${this.getCurrentLevelRequiredExp(level)} XP`;
-    const progressPercentage = this.calculateProgressPercentage(animatedExperience);
+    const experience = userExperienceInfo.experience;
+    const progressPercentage = this.calculateProgressPercentage(experience);
+    
+    // 获取等级徽章配置
+    const levelBadge = this.getLevelBadgeConfig(level);
+    
+    // 获取统计信息
+    const statistics = this.getStatisticsDisplayData();
     
     return {
       level,
-      levelText,
-      experienceText,
+      levelText: this.getLevelText(level),
+      experienceText: `${experience} XP`,
       progressPercentage,
-      levelBadge: {
-        hasPremium: level >= 10,
-        hasStar: level >= 5 && level < 10,
-        hasEvent: level >= 1 && level < 5
-      },
-      statistics: {
-        collectedWords: animatedCollectedWords,
-        totalExperience: userExperienceInfo.totalExperience || 0,
-        currentStreak: userExperienceInfo.currentStreak || 0
-      }
+      levelBadge,
+      statistics
     };
   }
 
@@ -1137,6 +1301,105 @@ class ExperienceManager implements IExperienceManager {
       totalExperience: userExperienceInfo?.totalExperience || 0,
       currentStreak: userExperienceInfo?.currentStreak || 0
     };
+  }
+
+  // ==================== 调试和诊断 ====================
+  
+  // 获取经验值动画状态诊断信息
+  public getAnimationDiagnostics(): {
+    experienceState: ExperienceState;
+    animationManagerState: {
+      isAnimating: boolean;
+      animationStartTime: number;
+      currentProgressBarValue: number;
+    };
+    lastProcessedEvents: Array<{ key: string; timestamp: number; age: number }>;
+    recommendations: string[];
+  } {
+    const now = Date.now();
+    const lastProcessedEvents = Array.from(this.lastProcessedEvents.entries()).map(([key, timestamp]) => ({
+      key,
+      timestamp,
+      age: now - timestamp
+    }));
+    
+    const recommendations: string[] = [];
+    
+    // 分析状态并提供建议
+    if (this.experienceState.isProgressBarAnimating && !animationManager.isAnimatingNow()) {
+      recommendations.push('状态不一致：本地状态显示动画进行中，但动画管理器空闲');
+    }
+    
+    if (animationManager.isAnimatingNow() && !this.experienceState.isProgressBarAnimating) {
+      recommendations.push('状态不一致：动画管理器显示动画进行中，但本地状态显示空闲');
+    }
+    
+    if (this.experienceState.hasCheckedExperience && this.experienceState.isProgressBarAnimating) {
+      recommendations.push('状态冲突：已检查过经验值但进度条仍在动画中');
+    }
+    
+    if (this.isProcessing) {
+      recommendations.push('经验值处理中，可能阻塞新的经验值增益');
+    }
+    
+    return {
+      experienceState: this.getExperienceState(),
+      animationManagerState: {
+        isAnimating: animationManager.isAnimatingNow(),
+        animationStartTime: (animationManager as any).animationStartTime || 0,
+        currentProgressBarValue: (animationManager as any).currentProgressBarValue || 0
+      },
+      lastProcessedEvents,
+      recommendations
+    };
+  }
+  
+  // 强制重置所有状态（用于调试）
+  public forceResetAllStates(): void {
+    // 重置所有状态
+    this.experienceState = {
+      userExperienceInfo: null,
+      isLoadingExperience: true,
+      progressBarValue: 0,
+      hasCheckedExperience: false,
+      animatedExperience: 0,
+      isProgressBarAnimating: false,
+      hasInitializedProgressBar: false,
+      isSyncingExperience: false,
+      animatedCollectedWords: 0,
+      animatedContributedWords: 0,
+      showLevelUpModal: false,
+      levelUpInfo: null
+    };
+    
+    // 清理事件记录
+    this.lastProcessedEvents.clear();
+    
+    // 重置动画管理器
+    animationManager.resetAnimationValues();
+    
+    // 通知所有回调
+    this.stateCallbacks.forEach(callback => {
+      callback(this.experienceState);
+    });
+  }
+
+  // 强制清理动画状态 - 解决动画卡住的问题
+  public forceCleanupAnimationState(): void {
+    // 重置所有动画相关状态
+    this.updateState({
+      isProgressBarAnimating: false,
+      hasInitializedProgressBar: false,
+      animatedExperience: 0,
+      animatedCollectedWords: 0,
+      animatedContributedWords: 0
+    });
+    
+    // 强制重置动画管理器
+    animationManager.resetAnimationValues();
+    
+    // 强制释放动画锁
+    this.forceReleaseAnimationLock();
   }
 }
 

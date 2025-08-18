@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet } from 'react-native';
+import { View, StyleSheet, Text } from 'react-native';
 import { BottomTabBar, TabType } from './BottomTabBar';
 import { HomeScreen } from '../../screens/Home/HomeScreen';
 import VocabularyScreen from '../../screens/Vocabulary/VocabularyScreen';
@@ -10,8 +10,10 @@ import { ProfileScreen } from '../../screens/Profile/ProfileScreen';
 import { LoginScreen } from '../../screens/Auth/LoginScreen';
 import SubscriptionScreen from '../../screens/Profile/SubscriptionScreen';
 import { colors } from '../../constants/colors';
-import { NavigationProvider, useNavigation } from './NavigationContext';
+import { useNavigation } from './NavigationContext';
 import { useAuth } from '../../context/AuthContext';
+import { useVocabulary } from '../../context/VocabularyContext';
+import { useShowList } from '../../context/ShowListContext';
 
 interface MainLayoutProps {
   initialTab?: TabType;
@@ -19,8 +21,22 @@ interface MainLayoutProps {
 
 const MainContent: React.FC<MainLayoutProps> = ({ initialTab = 'search' }) => {
   const [activeTab, setActiveTab] = useState<TabType>(initialTab);
-  const { currentScreen, params, navigate } = useNavigation();
+  const [isContextsReady, setIsContextsReady] = useState(false);
+  const { currentScreen, params, navigate, isReady: isNavigationReady } = useNavigation();
   const { login } = useAuth();
+  const vocabularyContext = useVocabulary();
+  const showListContext = useShowList();
+
+  // 检查所有上下文是否准备就绪
+  useEffect(() => {
+    if (isNavigationReady && vocabularyContext && showListContext) {
+      // 延迟一点时间确保其他上下文也完全初始化
+      const timer = setTimeout(() => {
+        setIsContextsReady(true);
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [isNavigationReady, vocabularyContext, showListContext]);
 
   // 监听 params.tab，自动切换 tab
   useEffect(() => {
@@ -55,6 +71,15 @@ const MainContent: React.FC<MainLayoutProps> = ({ initialTab = 'search' }) => {
   };
 
   const renderMainContent = (tab: TabType) => {
+    // 如果上下文还没准备好，显示加载状态
+    if (!isContextsReady) {
+      return (
+        <View style={styles.loadingContainer}>
+          <Text style={styles.loadingText}>加载中...</Text>
+        </View>
+      );
+    }
+
     switch (tab) {
       case 'search':
         return <HomeScreen navigation={{ navigate }} />;
@@ -101,11 +126,7 @@ const MainContent: React.FC<MainLayoutProps> = ({ initialTab = 'search' }) => {
 };
 
 const MainLayout: React.FC<MainLayoutProps> = (props) => {
-  return (
-    <NavigationProvider>
-      <MainContent {...props} />
-    </NavigationProvider>
-  );
+  return <MainContent {...props} />;
 };
 
 const styles = StyleSheet.create({
@@ -115,6 +136,16 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: colors.background.primary,
+  },
+  loadingText: {
+    fontSize: 16,
+    color: colors.text.primary,
   },
 });
 

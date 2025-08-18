@@ -96,7 +96,8 @@ export type ExperienceEventType =
   | 'contribution'
   | 'dailyCheckin'
   | 'dailyCards'
-  | 'studyTime';
+  | 'studyTime'
+  | 'dailyReward';
 
 // 经验值统计接口
 export interface ExperienceStats {

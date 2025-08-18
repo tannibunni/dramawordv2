@@ -1,17 +1,13 @@
-import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
+import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { WordData } from '../types/word';
-import { Show } from './ShowListContext';
-import { wordService } from '../services/wordService';
-import { API_BASE_URL } from '../constants/config';
-import Logger from '../utils/logger';
-
-const vocabularyLogger = Logger.forPage('VocabularyContext');
-const apiLogger = Logger.forPage('API');
 import { unifiedSyncService } from '../services/unifiedSyncService';
+import { dailyRewardsManager } from '../screens/Review/services/dailyRewardsManager';
+import { API_BASE_URL } from '../constants/config';
+import { subscriptionService } from '../services/subscriptionService';
 
 export interface WordWithSource extends WordData {
-  sourceShow?: Show;
+  sourceShow?: any; // 简化类型定义
   collectedAt: string;
   // 学习进度字段
   mastery?: number;
@@ -33,7 +29,7 @@ export interface WordWithSource extends WordData {
 
 interface VocabularyContextType {
   vocabulary: WordWithSource[];
-  addWord: (word: WordData, sourceShow?: Show) => void;
+  addWord: (word: WordData, sourceShow?: any) => void;
   removeWord: (word: string, sourceShowId?: number) => void;
   updateWord: (word: string, data: Partial<WordWithSource>) => void;
   clearVocabulary: () => Promise<void>;
@@ -124,14 +120,14 @@ export const VocabularyProvider = ({ children }: { children: ReactNode }) => {
         // 确保所有单词都有正确的学习进度字段
         const initializedData = parsedData.map((word: WordWithSource) => initializeWordProgress(word));
         setVocabulary(initializedData);
-        vocabularyLogger.info(`从本地存储加载词汇数据: ${initializedData.length} 个单词`);
+        // vocabularyLogger.info(`从本地存储加载词汇数据: ${initializedData.length} 个单词`); // Removed as per new_code
       } else {
         // 如果没有本地数据，初始化为空数组
         setVocabulary([]);
-        vocabularyLogger.info('本地存储中没有词汇数据，初始化为空数组');
+        // vocabularyLogger.info('本地存储中没有词汇数据，初始化为空数组'); // Removed as per new_code
       }
     } catch (error) {
-      vocabularyLogger.error('加载本地词汇数据失败', String(error));
+      // vocabularyLogger.error('加载本地词汇数据失败', String(error)); // Removed as per new_code
       setVocabulary([]);
     } finally {
       setIsLoaded(true);
@@ -141,9 +137,9 @@ export const VocabularyProvider = ({ children }: { children: ReactNode }) => {
   const saveVocabularyToStorage = async () => {
     try {
       await AsyncStorage.setItem(VOCABULARY_STORAGE_KEY, JSON.stringify(vocabulary));
-      vocabularyLogger.info(`保存词汇数据到本地存储: ${vocabulary.length} 个单词`);
+      // vocabularyLogger.info(`保存词汇数据到本地存储: ${vocabulary.length} 个单词`); // Removed as per new_code
     } catch (error) {
-      vocabularyLogger.error('保存词汇数据失败', String(error));
+      // vocabularyLogger.error('保存词汇数据失败', String(error)); // Removed as per new_code
     }
   };
 
@@ -151,7 +147,7 @@ export const VocabularyProvider = ({ children }: { children: ReactNode }) => {
     try {
       const userId = await getUserId();
       if (!userId) {
-        vocabularyLogger.warn('用户未登录，跳过学习进度同步');
+        // vocabularyLogger.warn('用户未登录，跳过学习进度同步'); // Removed as per new_code
         return;
       }
 
@@ -159,7 +155,7 @@ export const VocabularyProvider = ({ children }: { children: ReactNode }) => {
       if (response.ok) {
         const result = await response.json();
         if (result.success && result.data) {
-          apiLogger.info('后端返回的学习进度数据', result.data);
+          // apiLogger.info('后端返回的学习进度数据', result.data); // Removed as per new_code
           // 将后端数据与本地数据合并
           setVocabulary(prev => {
             const updatedVocabulary = prev.map(localWord => {
@@ -183,22 +179,28 @@ export const VocabularyProvider = ({ children }: { children: ReactNode }) => {
                   notes: backendWord.notes || '',
                   tags: backendWord.tags || []
                 };
-                vocabularyLogger.info(`更新单词 ${localWord.word} 的学习进度: incorrectCount=${updatedWord.incorrectCount}, consecutiveIncorrect=${updatedWord.consecutiveIncorrect}, correctCount=${updatedWord.correctCount}, consecutiveCorrect=${updatedWord.consecutiveCorrect}`);
+                // vocabularyLogger.info(`更新单词 ${localWord.word} 的学习进度: incorrectCount=${updatedWord.incorrectCount}, consecutiveIncorrect=${updatedWord.consecutiveIncorrect}, correctCount=${updatedWord.correctCount}, consecutiveCorrect=${updatedWord.consecutiveCorrect}`); // Removed as per new_code
                 return updatedWord;
               }
               return localWord;
             });
-            vocabularyLogger.info(`学习进度同步完成，更新了 ${updatedVocabulary.length} 个单词`);
+            // vocabularyLogger.info(`学习进度同步完成，更新了 ${updatedVocabulary.length} 个单词`); // Removed as per new_code
             return updatedVocabulary;
           });
         }
       }
     } catch (error) {
-      vocabularyLogger.error('同步学习进度失败', String(error));
+      // vocabularyLogger.error('同步学习进度失败', String(error)); // Removed as per new_code
     }
   };
 
   const addWord = (word: any, sourceShow?: any) => {
+    // 检查单词本功能权限
+    if (!subscriptionService.canAccessFeature('word_storage')) {
+      console.warn('[VocabularyContext] 免费版用户无法使用单词本功能');
+      return;
+    }
+
     setVocabulary(prev => {
       // 检查是否已经存在相同的单词和剧集组合
       const existingWord = prev.find(w => 
@@ -207,7 +209,7 @@ export const VocabularyProvider = ({ children }: { children: ReactNode }) => {
       );
       
       if (existingWord) {
-        vocabularyLogger.warn(`单词已存在于该剧集中: ${word.word}, 剧集: ${sourceShow?.name}`);
+        // vocabularyLogger.warn(`单词已存在于该剧集中: ${word.word}, 剧集: ${sourceShow?.name}`); // Removed as per new_code
         return prev;
       }
       // --- 补全 type 字段 ---
@@ -237,15 +239,18 @@ export const VocabularyProvider = ({ children }: { children: ReactNode }) => {
               operation: 'create',
               priority: 'medium'
             });
-            apiLogger.info('词汇表已加入同步队列');
+            // apiLogger.info('词汇表已加入同步队列'); // Removed as per new_code
           } catch (e) {
-            apiLogger.error('词汇表同步失败', String(e));
+            // apiLogger.error('词汇表同步失败', String(e)); // Removed as per new_code
           }
         }
       })();
       
-      vocabularyLogger.info(`添加新单词: ${newWord.word}, 来源剧集: ${sourceShow?.name}, 来源ID: ${sourceShow?.id}`);
-      vocabularyLogger.info('新单词完整数据', newWord);
+      // 记录新单词到每日奖励系统
+      dailyRewardsManager.recordNewWord();
+
+      // vocabularyLogger.info(`添加新单词: ${newWord.word}, 来源剧集: ${sourceShow?.name}, 来源ID: ${sourceShow?.id}`); // Removed as per new_code
+      // vocabularyLogger.info('新单词完整数据', newWord); // Removed as per new_code
       return [...prev, newWord];
     });
   };
@@ -274,13 +279,13 @@ export const VocabularyProvider = ({ children }: { children: ReactNode }) => {
               },
               body: JSON.stringify({ userId, word }),
             });
-            apiLogger.info('云端词汇本删除同步');
+            // apiLogger.info('云端词汇本删除同步'); // Removed as per new_code
           } catch (e) {
-            apiLogger.error('云端词汇本删除同步失败', String(e));
+            // apiLogger.error('云端词汇本删除同步失败', String(e)); // Removed as per new_code
           }
         }
       })();
-      vocabularyLogger.info(`删除单词: ${word}, 来源ID: ${sourceShowId ? sourceShowId : ''}, 剩余单词数: ${filtered.length}`);
+      // vocabularyLogger.info(`删除单词: ${word}, 来源ID: ${sourceShowId ? sourceShowId : ''}, 剩余单词数: ${filtered.length}`); // Removed as per new_code
       return filtered;
     });
   };
@@ -302,9 +307,9 @@ export const VocabularyProvider = ({ children }: { children: ReactNode }) => {
       setVocabulary([]);
       // 清空本地存储
       await AsyncStorage.removeItem(VOCABULARY_STORAGE_KEY);
-      vocabularyLogger.info('清空所有词汇数据（内存+本地存储）');
+      // vocabularyLogger.info('清空所有词汇数据（内存+本地存储）'); // Removed as per new_code
     } catch (error) {
-      vocabularyLogger.error('清空词汇数据失败', String(error));
+      // vocabularyLogger.error('清空词汇数据失败', String(error)); // Removed as per new_code
     }
   };
 
@@ -313,7 +318,7 @@ export const VocabularyProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const refreshLearningProgress = async () => {
-    vocabularyLogger.info('手动刷新学习进度数据');
+    // vocabularyLogger.info('手动刷新学习进度数据'); // Removed as per new_code
     // 使用setTimeout来避免在useInsertionEffect中调用setState
     setTimeout(async () => {
       await syncLearningProgress();

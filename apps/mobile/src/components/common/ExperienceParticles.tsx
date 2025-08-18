@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useCallback } from 'react';
 import { View, Animated, StyleSheet, Dimensions } from 'react-native';
 
 interface ParticleProps {
@@ -23,6 +23,9 @@ export const ExperienceParticles: React.FC<ParticleProps> = ({
     scale: new Animated.Value(1),
     opacity: new Animated.Value(1)
   }))).current;
+
+  // 使用useCallback稳定onComplete函数
+  const stableOnComplete = useCallback(onComplete, []);
 
   useEffect(() => {
     // 为每个粒子创建随机的中间点
@@ -68,8 +71,8 @@ export const ExperienceParticles: React.FC<ParticleProps> = ({
     });
 
     // 同时执行所有粒子动画
-    Animated.parallel(animations).start(onComplete);
-  }, [startPosition, endPosition]);
+    Animated.parallel(animations).start(stableOnComplete);
+  }, [startPosition.x, startPosition.y, endPosition.x, endPosition.y, stableOnComplete]);
 
   return (
     <View style={StyleSheet.absoluteFill}>

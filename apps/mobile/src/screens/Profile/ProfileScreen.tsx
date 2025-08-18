@@ -40,6 +40,9 @@ import { cacheService, CACHE_KEYS } from '../../services/cacheService';
 import { getAboutUsContent } from '../../utils/aboutUsContent';
 import { normalizeImageUrl } from '../../utils/imageUrlHelper';
 import DataSyncIndicator from '../../components/common/DataSyncIndicator';
+import { clearDataService } from '../../services/clearDataService';
+import { subscriptionService } from '../../services/subscriptionService';
+import { guestIdService } from '../../services/guestIdService';
 
 
 interface UserStats {
@@ -71,6 +74,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   const [aboutModalVisible, setAboutModalVisible] = useState(false);
   const [feedbackModalVisible, setFeedbackModalVisible] = useState(false);
   const [deleteAccountModalVisible, setDeleteAccountModalVisible] = useState(false);
+  const [subscriptionStatus, setSubscriptionStatus] = useState<any>(null);
 
   const { vocabulary, clearVocabulary } = useVocabulary();
   const { shows, clearShows } = useShowList();
@@ -85,6 +89,28 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
       setLanguageModalVisible(true);
     }
   }, [openLanguageSettings]);
+
+  // 初始化订阅服务
+  useEffect(() => {
+    const initializeSubscription = async () => {
+      try {
+        await subscriptionService.initialize();
+        const status = await subscriptionService.checkSubscriptionStatus();
+        setSubscriptionStatus(status);
+        
+        // 注册状态变化回调
+        const unsubscribe = subscriptionService.registerStateCallback((newStatus) => {
+          setSubscriptionStatus(newStatus);
+        });
+        
+        return unsubscribe;
+      } catch (error) {
+        console.error('[ProfileScreen] 订阅服务初始化失败:', error);
+      }
+    };
+
+    initializeSubscription();
+  }, []);
 
   // 获取用户头像
   const getUserAvatar = () => {
@@ -129,7 +155,8 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   // 获取用户昵称
   const getUserNickname = () => {
     if (!user || !loginType) {
-      return t('guest_user', appLanguage);
+      // 为游客生成简单的ID
+      return 'Guest';
     }
 
     // 游客用户直接显示用户ID
@@ -150,36 +177,12 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
         return t('phone_user', appLanguage);
       case 'guest':
       default:
-        return t('guest_user', appLanguage);
+        // 游客模式使用统一的服务
+        return 'Guest';
     }
   };
 
-  // 获取用户等级和经验信息
-  const getUserLevelInfo = () => {
-    if (!user) {
-      return {
-        level: 1,
-        displayText: appLanguage === 'zh-CN' ? '等级 1' : 'Level 1'
-      };
-    }
 
-    // 从用户数据中获取学习统计信息
-    const learningStats = user.learningStats || {};
-    const level = learningStats.level || 1;
-
-    // 根据语言返回不同的显示文本
-    if (appLanguage === 'zh-CN') {
-      return {
-        level,
-        displayText: `等级 ${level}`
-      };
-    } else {
-      return {
-        level,
-        displayText: `Level ${level}`
-      };
-    }
-  };
 
   // 模拟用户数据（当真实数据未加载时使用）
   const defaultUserData = {
@@ -271,7 +274,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   const renderUserInfo = () => {
     // 当前版本使用自动生成的游客ID，无需登录按钮
     const isGuest = !isAuthenticated || !user || loginType === 'guest';
-    const levelInfo = getUserLevelInfo();
+
     
     return (
       <View style={styles.userSection}>
@@ -287,22 +290,38 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
               <View style={{ marginLeft: 8 }}>
                 <DataSyncIndicator visible={true} showDetails={false} />
               </View>
+              <TouchableOpacity style={styles.editButtonInline} onPress={handleEditProfile}>
+                <Ionicons name="pencil" size={16} color={colors.primary[500]} />
+              </TouchableOpacity>
             </View>
-            <Text style={styles.userLevel}>{levelInfo.displayText}</Text>
-            <Text style={styles.userEmail}>{user?.email || 'user@example.com'}</Text>
+
+            {/* 游客模式提醒 */}
+            {isGuest && (
+              <Text style={styles.guestReminder}>
+                {appLanguage === 'zh-CN' 
+                  ? '注册账号可保存词汇数据、同步学习进度、获得更多功能' 
+                  : 'Register to save vocabulary data, sync learning progress, and unlock more features'
+                }
+              </Text>
+            )}
+
+            {!isGuest && (
+              <Text style={styles.userEmail}>{user?.email || 'user@example.com'}</Text>
+            )}
             
             {/* 原位置的指示器移除，已移动到用户名后 */}
             
             {/* 登录/退出登录按钮 - 已恢复 */}
-            {isGuest ? (
-              <TouchableOpacity 
-                style={styles.userActionButton} 
-                onPress={handleLoginPress}
-              >
-                <Ionicons name="log-in-outline" size={18} color={colors.text.inverse} />
-                <Text style={styles.userActionButtonText}>{t('login', appLanguage)}</Text>
-              </TouchableOpacity>
-            ) : (
+                          {isGuest ? (
+               <TouchableOpacity 
+                 style={styles.loginButton} 
+                 onPress={handleLoginPress}
+                 activeOpacity={0.8}
+               >
+                 <Ionicons name="log-in-outline" size={16} color={colors.primary[600]} />
+                 <Text style={styles.loginButtonText}>{t('login', appLanguage)}</Text>
+               </TouchableOpacity>
+              ) : (
               <TouchableOpacity 
                 style={[styles.userActionButton, styles.logoutButton]} 
                 onPress={authLogout}
@@ -312,10 +331,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
               </TouchableOpacity>
             )}
           </View>
-                      {/* 恢复编辑按钮 */}
-            <TouchableOpacity style={styles.editButton} onPress={handleEditProfile}>
-              <Ionicons name="pencil" size={20} color={colors.primary[500]} />
-            </TouchableOpacity>
+
         </View>
       </View>
     );
@@ -378,6 +394,28 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
         <View style={styles.settingLeft}>
           <Ionicons name="trash-outline" size={24} color={colors.error[500]} />
           <Text style={[styles.settingText, { color: colors.error[500] }]}>{t('clear_all_data', appLanguage)}</Text>
+        </View>
+        <Ionicons name="chevron-forward" size={20} color={colors.neutral[500]} />
+      </TouchableOpacity>
+
+      {/* 清除本地数据 */}
+      <TouchableOpacity style={styles.settingItem} onPress={handleClearLocalData}>
+        <View style={styles.settingLeft}>
+          <Ionicons name="trash-bin-outline" size={24} color={colors.warning[500]} />
+          <Text style={[styles.settingText, { color: colors.warning[500] }]}>
+            {appLanguage === 'zh-CN' ? '清除本地数据' : 'Clear Local Data'}
+          </Text>
+        </View>
+        <Ionicons name="chevron-forward" size={20} color={colors.neutral[500]} />
+      </TouchableOpacity>
+
+      {/* 完全重新初始化 */}
+      <TouchableOpacity style={styles.settingItem} onPress={() => clearDataService.completeReinstall()}>
+        <View style={styles.settingLeft}>
+          <Ionicons name="refresh-circle-outline" size={24} color={colors.error[500]} />
+          <Text style={[styles.settingText, { color: colors.error[500] }]}>
+            {appLanguage === 'zh-CN' ? '完全重新初始化' : 'Complete Reinstall'}
+          </Text>
         </View>
         <Ionicons name="chevron-forward" size={20} color={colors.neutral[500]} />
       </TouchableOpacity>
@@ -521,6 +559,10 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
     }
   };
 
+  // 清除本地存储的所有数据
+  const handleClearLocalData = async () => {
+    await clearDataService.clearAllData();
+  };
 
 
   const handleClearAllData = async () => {
@@ -788,10 +830,94 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
     Alert.alert('账户已注销', '您的账户已成功删除，感谢您使用剧词记！');
   };
 
-  const renderSubscriptionEntry = () => (
-    // 暂时隐藏订阅入口
-    null
-  );
+  const renderSubscriptionEntry = () => {
+    // 根据订阅状态显示不同内容
+    const getSubscriptionIcon = () => {
+      if (subscriptionStatus?.isActive) {
+        return 'diamond';
+      } else if (subscriptionStatus?.isTrial) {
+        return 'time';
+      } else {
+        return 'phone-portrait';
+      }
+    };
+
+    const getSubscriptionTitle = () => {
+      if (subscriptionStatus?.isActive) {
+        return t('subscription_management', appLanguage);
+      } else if (subscriptionStatus?.isTrial) {
+        return t('trial_user', appLanguage);
+      } else {
+        return t('free_user', appLanguage);
+      }
+    };
+
+    const getSubscriptionDesc = () => {
+      if (subscriptionStatus?.isActive) {
+        const planType = subscriptionStatus.productId?.includes('monthly') ? t('monthly_plan', appLanguage) : 
+                        subscriptionStatus.productId?.includes('yearly') ? t('yearly_plan', appLanguage) : t('lifetime_plan', appLanguage);
+        return t('subscription_active', appLanguage, { plan: planType }) + '，' + t('enjoy_all_features', appLanguage);
+      } else if (subscriptionStatus?.isTrial && subscriptionStatus?.trialEndsAt) {
+        const daysLeft = Math.ceil((new Date(subscriptionStatus.trialEndsAt).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
+        return t('trial_countdown', appLanguage, { days: daysLeft }) + '，' + t('enjoy_all_features', appLanguage);
+      } else {
+        return t('trial_ended_limitations', appLanguage);
+      }
+    };
+
+    const getButtonText = () => {
+      if (subscriptionStatus?.isActive) {
+        return t('manage_subscription', appLanguage);
+      } else if (subscriptionStatus?.isTrial) {
+        return t('subscribe_now', appLanguage);
+      } else {
+        return t('start_trial', appLanguage);
+      }
+    };
+
+    return (
+      <View style={styles.subscriptionSection}>
+        <View style={styles.subscriptionHeader}>
+          <View style={styles.subscriptionTitleContainer}>
+            <Ionicons 
+              name={getSubscriptionIcon()} 
+              size={20} 
+              color={subscriptionStatus?.isActive ? '#4CAF50' : subscriptionStatus?.isTrial ? '#FF9500' : '#666666'} 
+              style={styles.subscriptionTitleIcon}
+            />
+            <Text style={styles.subscriptionTitle}>
+              {getSubscriptionTitle()}
+            </Text>
+          </View>
+          <Text style={styles.subscriptionDesc}>
+            {getSubscriptionDesc()}
+          </Text>
+        </View>
+        
+        <TouchableOpacity 
+          style={styles.subscriptionBtn} 
+          onPress={handleGoToSubscription}
+          activeOpacity={0.8}
+        >
+          <Text style={styles.subscriptionBtnText}>
+            {getButtonText()}
+          </Text>
+          <Ionicons name="chevron-forward" size={20} color="#fff" />
+        </TouchableOpacity>
+        
+        
+        {/* 免费版功能限制提示 */}
+        {subscriptionStatus && !subscriptionStatus.isActive && !subscriptionStatus.isTrial && (
+          <View style={styles.freeVersionTip}>
+            <Ionicons name="lock-closed" size={16} color="#FF6B6B" />
+            <Text style={styles.freeVersionTipText}>
+              免费版仅支持中英文查词，升级解锁全部功能
+            </Text>
+          </View>
+        )}
+      </View>
+    );
+  };
 
   if (loading) {
     return (
@@ -934,12 +1060,7 @@ const styles = StyleSheet.create({
     color: colors.text.primary,
     marginBottom: 4,
   },
-  userLevel: {
-    fontSize: 14,
-    color: colors.primary[500],
-    fontWeight: '600',
-    marginBottom: 4,
-  },
+
   userEmail: {
     fontSize: 14,
     color: colors.text.secondary,
@@ -949,19 +1070,29 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: colors.neutral[500],
   },
-  loginButton: {
-    marginTop: 8,
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    backgroundColor: colors.primary[500],
-    borderRadius: 8,
-    alignSelf: 'flex-start',
-  },
-  loginButtonText: {
-    color: colors.background.primary,
-    fontWeight: '600',
-    fontSize: 14,
-  },
+     loginButton: {
+     marginTop: 12,
+     paddingVertical: 10,
+     paddingHorizontal: 20,
+     backgroundColor: colors.primary[50], // 非常浅的蓝色背景
+     borderRadius: 20, // 更圆润的边角
+     alignSelf: 'flex-start',
+     borderWidth: 1,
+     borderColor: colors.primary[300], // 细边框
+     flexDirection: 'row',
+     alignItems: 'center',
+     shadowColor: colors.primary[200],
+     shadowOffset: { width: 0, height: 1 },
+     shadowOpacity: 0.1,
+     shadowRadius: 2,
+     elevation: 1,
+   },
+   loginButtonText: {
+     color: colors.primary[600], // 蓝色文字，与图标颜色一致
+     fontWeight: '600',
+     fontSize: 14,
+     marginLeft: 6, // 图标和文字之间的间距
+   },
   loggedInText: {
     color: colors.success[500],
     marginTop: 8,
@@ -970,6 +1101,18 @@ const styles = StyleSheet.create({
   },
   editButton: {
     padding: 8,
+  },
+  editButtonInline: {
+    marginLeft: 8,
+    padding: 4,
+  },
+  guestReminder: {
+    fontSize: 12,
+    color: colors.text.secondary,
+    marginTop: 4,
+    marginBottom: 8,
+    lineHeight: 16,
+    fontStyle: 'italic',
   },
   syncIndicatorContainer: {
     marginTop: 8,
@@ -1112,13 +1255,47 @@ const styles = StyleSheet.create({
   section: {
     marginBottom: 20,
   },
-  subscriptionBtn: {
+  subscriptionSection: {
+    backgroundColor: colors.background.secondary,
     marginHorizontal: 20,
+    marginBottom: 20,
+    borderRadius: 16,
+    padding: 20,
+    shadowColor: colors.primary[200],
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  subscriptionHeader: {
     marginBottom: 16,
-    backgroundColor: colors.primary[500],
-    borderRadius: 24,
-    paddingVertical: 12,
+  },
+  subscriptionTitleContainer: {
+    flexDirection: 'row',
     alignItems: 'center',
+    marginBottom: 8,
+  },
+  subscriptionTitleIcon: {
+    marginRight: 8,
+  },
+  subscriptionTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: colors.text.primary,
+  },
+  subscriptionDesc: {
+    fontSize: 14,
+    color: colors.text.secondary,
+    lineHeight: 20,
+  },
+  subscriptionBtn: {
+    backgroundColor: colors.primary[500],
+    borderRadius: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     shadowColor: colors.primary[200],
     shadowOpacity: 0.12,
     shadowRadius: 8,
@@ -1129,6 +1306,54 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     letterSpacing: 1,
+  },
+  guestSubscriptionTip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 12,
+    padding: 12,
+    backgroundColor: colors.primary[50],
+    borderRadius: 8,
+  },
+  guestSubscriptionTipText: {
+    fontSize: 12,
+    color: colors.primary[600],
+    marginLeft: 8,
+    lineHeight: 16,
+  },
+  trialCountdownTip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 12,
+    padding: 12,
+    backgroundColor: '#FFF3E0',
+    borderRadius: 8,
+    borderLeftWidth: 3,
+    borderLeftColor: '#FF9500',
+  },
+  trialCountdownTipText: {
+    fontSize: 12,
+    color: '#F57C00',
+    marginLeft: 8,
+    lineHeight: 16,
+    fontWeight: '600',
+  },
+  freeVersionTip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 12,
+    padding: 12,
+    backgroundColor: '#FFEBEE',
+    borderRadius: 8,
+    borderLeftWidth: 3,
+    borderLeftColor: '#FF6B6B',
+  },
+  freeVersionTipText: {
+    fontSize: 12,
+    color: '#D32F2F',
+    marginLeft: 8,
+    lineHeight: 16,
+    fontWeight: '600',
   },
   loadingContainer: {
     flex: 1,

@@ -28,6 +28,7 @@ export class AnimationManager {
   private static instance: AnimationManager;
   private isAnimating: boolean = false;
   private animationQueue: Array<() => void> = [];
+  private animationStartTime: number = 0; // 添加动画开始时间属性
   
   // 记录当前进度条的数值（0-100），用于避免动画期间回退
   private currentProgressBarValue: number = 0;
@@ -111,7 +112,21 @@ export class AnimationManager {
 
   // 防止重复动画
   public canStartAnimation(): boolean {
+    // 优化动画状态检查 - 允许在特定情况下重新启动动画
     if (this.isAnimating) {
+      // 如果动画正在进行中，检查是否已经运行了足够长的时间
+      // 如果动画运行超过2秒，允许重新启动（可能是卡住了）
+      const animationStartTime = this.animationStartTime || 0;
+      const now = Date.now();
+      const animationDuration = now - animationStartTime;
+      
+      if (animationDuration > 2000) {
+        logger.info(`动画运行时间过长(${animationDuration}ms)，允许重新启动`, 'canStartAnimation');
+        // 强制重置状态
+        this.resetAnimatingState();
+        return true;
+      }
+      
       logger.info('动画正在进行中，跳过重复动画', 'canStartAnimation');
       return false;
     }
@@ -121,6 +136,11 @@ export class AnimationManager {
   // 设置动画状态
   public setAnimatingState(isAnimating: boolean): void {
     this.isAnimating = isAnimating;
+    if (isAnimating) {
+      this.animationStartTime = Date.now();
+    } else {
+      this.animationStartTime = 0;
+    }
     logger.info(`设置动画状态: ${isAnimating}`, 'setAnimatingState');
   }
 
@@ -132,6 +152,7 @@ export class AnimationManager {
   // 强制重置动画状态
   public resetAnimatingState(): void {
     this.isAnimating = false;
+    this.animationStartTime = 0;
     logger.info('强制重置动画状态', 'resetAnimatingState');
   }
 
@@ -164,13 +185,15 @@ export class AnimationManager {
     } = params;
     
     // 设置初始值，确保进度条从正确位置开始，且不倒退
-    this.numberAnimation.setValue(0);
+    this.numberAnimation.setValue(0); // 数字动画从0开始，表示增益的进度
     this.opacityAnimation.setValue(0);
     this.scaleAnimation.setValue(1);
     this.levelAnimation.setValue(1);
 
     // 初始化进度条值（0-100），在动画期间不允许比当前显示值更低
     const initialProgress = Math.max(0, Math.min(100, oldProgress * 100));
+    // 确保 currentProgressBarValue 被正确设置为当前进度值
+    this.currentProgressBarValue = Math.max(this.currentProgressBarValue, initialProgress);
     // 初始进度设置为当前记录值与起始进度的最大值，避免被外部初始化覆盖
     this.setProgressBarValue(Math.max(initialProgress, this.currentProgressBarValue));
 
@@ -211,7 +234,10 @@ export class AnimationManager {
       this.setProgressBarValue(progressBarValue);
       
       // 添加调试日志
-      console.log(`[AnimationManager] 进度条更新: value=${value.toFixed(3)}, currentExp=${currentExp}, currentProgress=${currentProgress.toFixed(3)}, progressBarValue=${progressBarValue.toFixed(1)}`);
+      // 只在进度变化显著时记录日志
+      if (Math.abs(oldProgress - currentProgress) >= 0.1) {
+        console.log(`[AnimationManager] 进度条更新: ${(oldProgress * 100).toFixed(0)}% → ${(currentProgress * 100).toFixed(0)}%`);
+      }
       
       callbacks.onProgress?.(currentExp, currentProgress);
     });
@@ -346,6 +372,10 @@ export class AnimationManager {
     config: AnimationConfig = {}
   ): void {
     const { duration = 1500 } = config;
+    
+    // 设置初始值，确保动画从当前值开始
+    this.collectedWordsAnimation.setValue(0);
+    this.contributedWordsAnimation.setValue(0);
     
     // 收集单词数量动画
     this.startNumberAnimation(this.collectedWordsAnimation, collectedWords, { duration });

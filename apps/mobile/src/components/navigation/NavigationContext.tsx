@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 
 // 页面类型定义
 export type ScreenType = 'main' | 'wordCard' | 'login' | 'Subscription' | 'ReviewScreen';
@@ -14,6 +14,7 @@ interface NavigationContextType {
   params: NavigationParams;
   navigate: (screen: ScreenType, params?: NavigationParams) => void;
   goBack: () => void;
+  isReady: boolean; // 添加就绪状态
 }
 
 // 创建上下文
@@ -27,9 +28,15 @@ interface NavigationProviderProps {
 export const NavigationProvider: React.FC<NavigationProviderProps> = ({ children }) => {
   const [currentScreen, setCurrentScreen] = useState<ScreenType>('main');
   const [params, setParams] = useState<NavigationParams>({});
+  const [isReady, setIsReady] = useState(false);
   const [screenHistory, setScreenHistory] = useState<Array<{ screen: ScreenType; params: NavigationParams }>>([
     { screen: 'main', params: {} }
   ]);
+
+  // 设置导航上下文为就绪状态
+  useEffect(() => {
+    setIsReady(true);
+  }, []);
 
   const navigate = (screen: ScreenType, newParams: NavigationParams = {}) => {
     setScreenHistory(prev => [...prev, { screen, params: newParams }]);
@@ -53,6 +60,7 @@ export const NavigationProvider: React.FC<NavigationProviderProps> = ({ children
       params,
       navigate,
       goBack,
+      isReady,
     }}>
       {children}
     </NavigationContext.Provider>
@@ -63,7 +71,19 @@ export const NavigationProvider: React.FC<NavigationProviderProps> = ({ children
 export const useNavigation = () => {
   const context = useContext(NavigationContext);
   if (context === undefined) {
-    throw new Error('useNavigation must be used within a NavigationProvider');
+    // 返回一个安全的默认值，避免在初始化阶段崩溃
+    console.warn('useNavigation: Navigation context not available, returning safe defaults');
+    return {
+      currentScreen: 'main' as ScreenType,
+      params: {},
+      navigate: (screen: ScreenType, params?: NavigationParams) => {
+        console.warn('useNavigation: Navigation not available, cannot navigate to:', screen);
+      },
+      goBack: () => {
+        console.warn('useNavigation: Navigation not available, cannot go back');
+      },
+      isReady: false
+    };
   }
   return context;
 }; 

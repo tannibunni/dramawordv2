@@ -157,23 +157,16 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
   };
 
   // 测试登录功能 - 从 ProfileScreen 同步过来
-  // 生成稳定的游客ID（必要时）
+  // 生成简洁的游客ID
   const generateGuestId = () => {
-    const now = Date.now().toString();
-    const random = Math.random().toString(36).substr(2, 4);
-    const deviceId = Device.deviceName || Device.modelName || 'unknown';
-    const deviceHash = deviceId.split('').reduce((a, b) => a + b.charCodeAt(0), 0).toString(36).slice(-3);
-    return `${now.slice(-6)}${random}${deviceHash}`;
+    const guestNumber = Math.floor(Math.random() * 999) + 1;
+    return `Guest${guestNumber}`;
   };
 
   const generatePrettyGuestNickname = (idSeed: string) => {
-    const isZh = appLanguage === 'zh-CN';
-    const rand = (max: number) => Math.floor(Math.random() * max);
-    const enAdj = ['Blue', 'Sunny', 'Gentle', 'Bright', 'Mellow', 'Silver', 'Quiet'];
-    const enNoun = ['Dolphin', 'Whale', 'Deer', 'Cloud', 'Star', 'Breeze', 'Harbor'];
-    const tail = idSeed.slice(-3);
-    const combo = `${enAdj[rand(enAdj.length)]} ${enNoun[rand(enNoun.length)]} ${tail}`;
-    return isZh ? `游客用户·${combo}` : `Guest · ${combo}`;
+    // 使用简洁的游客ID格式
+    const guestNumber = Math.floor(Math.random() * 999) + 1;
+    return `Guest${guestNumber}`;
   };
 
   const testLogin = async (loginType: 'wechat' | 'apple' | 'phone' | 'guest', forcedGuestId?: string) => {

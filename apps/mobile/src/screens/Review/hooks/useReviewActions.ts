@@ -128,15 +128,15 @@ export const useReviewActions = ({
     updateSession('incorrect');
     
     // 检查是否是最后一张卡片
+    // 修复：swiperIndex 表示当前正在查看的卡片索引
+    // 当 swiperIndex === words.length - 1 时，表示正在查看最后一张卡片，用户还没有划它
+    // 只有当用户划完这张卡片后，moveToNextWord 才会被调用，此时 swiperIndex 才会变成 words.length
     const isLastCard = swiperIndex === words.length - 1;
     console.log(`🔍 检查是否是最后一张卡片: swiperIndex=${swiperIndex}, words.length=${words.length}, isLastCard=${isLastCard}`);
     
     if (isLastCard && onReviewComplete) {
-      console.log('🎯 最后一张卡片，直接调用完成处理函数');
-      // 延迟一点时间确保统计数据已更新
-      setTimeout(() => {
-        onReviewComplete();
-      }, 100);
+      console.log('🎯 正在查看最后一张卡片，用户还没有划它，不触发完成状态');
+      // 不触发完成状态，让用户继续划最后一张卡片
     } else {
       moveToNextWord(words.length);
     }
@@ -212,17 +212,19 @@ export const useReviewActions = ({
     updateSession('correct');
     
     // 检查是否是最后一张卡片
+    // 修复：swiperIndex 表示当前正在查看的卡片索引
+    // 当 swiperIndex === words.length - 1 时，表示正在查看最后一张卡片，用户还没有划它
+    // 只有当用户划完这张卡片后，moveToNextWord 才会被调用，此时 swiperIndex 才会变成 words.length
     const isLastCard = swiperIndex === words.length - 1;
     console.log(`🔍 检查是否是最后一张卡片: swiperIndex=${swiperIndex}, words.length=${words.length}, isLastCard=${isLastCard}`);
     
+    // 无论是否是最后一张卡片，都需要调用 moveToNextWord 来更新 swiperIndex
+    moveToNextWord(words.length);
+    
+    // 如果是最后一张卡片，额外调用完成回调
     if (isLastCard && onReviewComplete) {
-      console.log('🎯 最后一张卡片，直接调用完成处理函数');
-      // 延迟一点时间确保统计数据已更新
-      setTimeout(() => {
-        onReviewComplete();
-      }, 100);
-    } else {
-      moveToNextWord(words.length);
+      console.log('🎯 最后一张卡片完成，触发完成回调');
+      // 这里可以添加额外的完成逻辑
     }
   }, [words, swiperIndex, convertReviewWordToWord, updateBackendWordProgress, updateStats, updateSession, moveToNextWord, updateWord]);
 

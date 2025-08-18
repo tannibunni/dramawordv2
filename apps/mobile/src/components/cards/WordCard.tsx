@@ -322,7 +322,7 @@ const WordCard: React.FC<WordCardProps> = ({
 
           
       {/* 主体内容区：使用统一的WordCardContent组件 */}
-      <View style={{ maxHeight: CARD_CONTENT_MAX_HEIGHT, marginBottom: 8 }}>
+      <View style={{ maxHeight: CARD_CONTENT_MAX_HEIGHT, marginBottom: 32 }}>
         <WordCardContent 
           wordData={wordData} 
           onPlayAudio={onPlayAudio} 
@@ -761,7 +761,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     width: '100%',
     paddingHorizontal: 24,
-    marginTop: 12,
+    marginTop: 36,
     gap: 8,
   },
   swipeHintLeft: {

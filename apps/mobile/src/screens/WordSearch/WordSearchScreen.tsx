@@ -16,6 +16,8 @@ import { wordService, RecentWord } from '../../services/wordService';
 import WordCard from '../../components/cards/WordCard';
 import { useAppLanguage } from '../../context/AppLanguageContext';
 import { t } from '../../constants/translations';
+import { useSubscription } from '../../hooks/useSubscription';
+import UpgradePrompt from '../../components/common/UpgradePrompt';
 
 const WordSearchScreen: React.FC = () => {
   const [searchText, setSearchText] = useState('');
@@ -25,6 +27,13 @@ const WordSearchScreen: React.FC = () => {
   const [searchResult, setSearchResult] = useState<any>(null);
 
   const { appLanguage } = useAppLanguage();
+  
+  // 订阅权限控制
+  const { canAccessLanguage, showUpgradePrompt } = useSubscription();
+  
+  // 升级提示状态
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [upgradeFeature, setUpgradeFeature] = useState<string>('');
 
   useEffect(() => {
     loadRecentWords();
@@ -50,6 +59,24 @@ const WordSearchScreen: React.FC = () => {
       Alert.alert('提示', '请输入要查询的单词');
       return;
     }
+    
+    // 检测单词语言
+    let detectedLanguage = 'en'; // 默认英语
+    if (/[\u4e00-\u9fa5]/.test(word)) {
+      detectedLanguage = 'zh'; // 中文字符
+    } else if (/[\u3040-\u309F\u30A0-\u30FF]/.test(word)) {
+      detectedLanguage = 'ja'; // 日语假名
+    } else if (/[\uAC00-\uD7AF]/.test(word)) {
+      detectedLanguage = 'ko'; // 韩文字母
+    }
+    
+    // 检查语言权限
+    if (!canAccessLanguage(detectedLanguage)) {
+      setUpgradeFeature('other_languages');
+      setShowUpgradeModal(true);
+      return;
+    }
+    
     setIsLoading(true);
     setSearchResult(null);
     try {
@@ -171,6 +198,18 @@ const WordSearchScreen: React.FC = () => {
           </View>
         )}
       </ScrollView>
+      
+      {/* 升级提示组件 */}
+      <UpgradePrompt
+        visible={showUpgradeModal}
+        onClose={() => setShowUpgradeModal(false)}
+        onUpgrade={() => {
+          setShowUpgradeModal(false);
+          // 导航到订阅页面
+          // 这里需要根据你的导航结构来调整
+        }}
+        feature={upgradeFeature}
+      />
     </SafeAreaView>
   );
 };

@@ -1,81 +1,27 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, FlatList, SafeAreaView, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, FlatList, SafeAreaView, Alert, Dimensions } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '../../components/navigation/NavigationContext';
 import { FontAwesome } from '@expo/vector-icons';
-import { PaymentService } from '../../services/paymentService';
+import { subscriptionService } from '../../services/subscriptionService';
+import { SUBSCRIPTION_PLANS, ProductId, getTranslatedSubscriptionPlans } from '../../types/subscription';
+import { localizationService, LocalizedProduct } from '../../services/localizationService';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useAppLanguage } from '../../context/AppLanguageContext';
+import { t } from '../../constants/translations';
 
-const plans = [
-  {
-    key: 'monthly',
-    name: '月度订阅',
-    price: '¥9.9/月',
-    features: ['无限查词', 'AI造句', '奖章系统'],
-    tag: '推荐',
-    tagColor: '#3A8DFF',
-    highlight: false,
-    recommend: '👉 推荐新手尝鲜',
-    save: '',
-    originalPrice: '',
-    timer: false,
-  },
-  {
-    key: 'yearly',
-    name: '年度订阅',
-    price: '¥88/年',
-    features: ['最受欢迎', '长期学习更划算'],
-    tag: '最受欢迎',
-    tagColor: '#FF9800',
-    highlight: true,
-    recommend: '',
-    save: '节省 26%',
-    originalPrice: '',
-    timer: false,
-  },
-  {
-    key: 'lifetime',
-    name: '终身买断',
-    price: '¥99',
-    features: ['一次买断', '永久使用', '送尊贵徽章'],
-    tag: '限时优惠',
-    tagColor: '#FF3B30',
-    highlight: false,
-    recommend: '',
-    save: '',
-    originalPrice: '¥199',
-    timer: true,
-  },
-];
-
-const paymentMethods = [
-  { key: 'wechat', name: '微信支付', icon: require('../../../assets/images/wechat-pay.png') },
-  { key: 'alipay', name: '支付宝', icon: require('../../../assets/images/alipay.png') },
-];
-
-const benefitList = [
-  '30% Discount at the Bar',
-  '20% Discount on In-Room Dining',
-  '25% Discount on Health Club/SPA',
-];
-
-const featureTable = [
-  { label: '实时查词', free: true, vip: true },
-  { label: '存入词表', free: false, vip: true },
-  { label: '复习卡片', free: false, vip: true },
-  { label: '剧集标注来源', free: false, vip: true },
-  { label: '无广告体验', free: false, vip: true, freeText: '含广告', vipText: '无广告' },
-  { label: '自定义例句/笔记', free: false, vip: true },
-];
-
-const renderFeatureTable = () => (
+const renderFeatureTable = (subscriptionStatus: any, appLanguage: 'zh-CN' | 'en-US') => {
+  const featureTable = getFeatureTable(subscriptionStatus, appLanguage);
+  
+  return (
   <View style={styles.featureTableWrap}>
     <View style={styles.featureTableHeader}>
-      <Text style={[styles.featureTableHeaderCell, styles.featureTableHeaderCellFirst]}>功能</Text>
-      <Text style={styles.featureTableHeaderCell}>免费用户</Text>
-      <Text style={styles.featureTableHeaderCell}>高级会员</Text>
+      <Text style={[styles.featureTableHeaderCell, styles.featureTableHeaderCellFirst]}>{t('feature_comparison', appLanguage)}</Text>
+        <Text style={styles.featureTableHeaderCell}>{t('free_version', appLanguage)}</Text>
+        <Text style={styles.featureTableHeaderCell}>{t('premium_version', appLanguage)}</Text>
     </View>
-    {featureTable.map((row, idx) => (
+      {featureTable.map((row: any, idx: number) => (
       <View key={row.label} style={[styles.featureTableRow, idx === featureTable.length - 1 && { borderBottomWidth: 0 }]}> 
         <Text style={[styles.featureTableCell, styles.featureTableCellFirst]}>{row.label}</Text>
         <View style={styles.featureTableCellMid}>
@@ -84,9 +30,6 @@ const renderFeatureTable = () => (
           ) : (
             <FontAwesome name="close" size={18} color="#FF3B30" />
           )}
-          <Text style={styles.featureTableCellText}>
-            {row.freeText ? row.freeText : row.free ? '支持' : '不支持'}
-          </Text>
         </View>
         <View style={styles.featureTableCellMid}>
           {row.vip ? (
@@ -94,77 +37,206 @@ const renderFeatureTable = () => (
           ) : (
             <FontAwesome name="close" size={18} color="#FF3B30" />
           )}
-          <Text style={styles.featureTableCellText}>
-            {row.vipText ? row.vipText : row.vip ? '支持' : '不支持'}
-          </Text>
         </View>
       </View>
     ))}
   </View>
 );
+};
 
-// mock: 首月优惠是否可见（后续可用 context/props/后端控制）
-const showFirstMonthTab = true;
-
-const tabPlans = [
-  { key: 'first', name: '首月优惠', price: '¥6', desc: '仅限首次订阅，享受全部会员权益', tag: '限时', cta: '立即享首月优惠', onlyShowOnFirst: true },
-  { key: 'monthly', name: '月订阅', price: '¥12/月', desc: '一杯奶茶钱，按月付费，随时可取消', cta: '订阅月度会员' },
-  { key: 'yearly', name: '年订阅', price: '¥88/年', desc: '两杯咖啡钱用一年，最划算，坚持长期学习', tag: '最划算', save: '省下¥56', cta: '订阅年度会员' },
-];
+// 功能对比表格 - 简化版本，只显示打钩打叉
+const getFeatureTable = (subscriptionStatus: any, appLanguage: 'zh-CN' | 'en-US') => {
+  return [
+    { 
+      label: t('chinese_english_search', appLanguage), 
+      free: true, 
+      vip: true
+    },
+    { 
+      label: t('multilingual_search', appLanguage), 
+      free: false, 
+      vip: true
+    },
+    { 
+      label: t('wordbook_function', appLanguage), 
+      free: false, 
+      vip: true
+    },
+    { 
+      label: t('review_function', appLanguage), 
+      free: false, 
+      vip: true
+    },
+    { 
+      label: t('learning_statistics', appLanguage), 
+      free: false, 
+      vip: true
+    },
+    { 
+      label: t('show_management', appLanguage), 
+      free: false, 
+      vip: true
+    },
+    { 
+      label: t('ai_smart_interpretation', appLanguage), 
+      free: false, 
+      vip: true
+    },
+    { 
+      label: t('offline_learning', appLanguage), 
+      free: false, 
+      vip: true
+    },
+    { 
+      label: t('multi_device_sync', appLanguage), 
+      free: false, 
+      vip: true
+    },
+  ];
+};
 
 const SubscriptionScreen = () => {
-  const [selectedPlan, setSelectedPlan] = useState('yearly');
-  const [selectedPay, setSelectedPay] = useState('wechat');
-  const [timer, setTimer] = useState(3600); // 1小时倒计时
-  const [ctaStep, setCtaStep] = useState<'select' | 'pay'>('select');
-  const [paySectionY, setPaySectionY] = useState(0);
+  const [selectedTab, setSelectedTab] = useState('yearly');
+  const [subscriptionStatus, setSubscriptionStatus] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [showBottomCta, setShowBottomCta] = useState(false);
+  const [localizedProducts, setLocalizedProducts] = useState<LocalizedProduct[]>([]);
   const { goBack, navigate } = useNavigation();
+  const { appLanguage } = useAppLanguage();
   const scrollViewRef = useRef<ScrollView>(null);
 
-  // tab 切换状态
-  const [selectedTab, setSelectedTab] = useState(showFirstMonthTab ? 'first' : 'yearly');
+  // 过滤可见 tab - 使用翻译后的订阅计划
+  const visibleTabs = getTranslatedSubscriptionPlans(appLanguage);
+  const selectedPlanFromTabs = visibleTabs.find(tab => tab.id === selectedTab) || visibleTabs[0];
+  
+  // 获取本地化价格
+  const getLocalizedPrice = (productId: string): string => {
+    const localizedProduct = localizedProducts.find(p => p.productId === productId);
+    if (localizedProduct) {
+      return localizedProduct.price;
+    }
+    // 备用：使用默认价格
+    const plan = visibleTabs.find(p => p.id === productId);
+    return plan?.price || '$0.00';
+  };
 
-  // 过滤可见 tab
-  const visibleTabs = tabPlans.filter(tab => !tab.onlyShowOnFirst || showFirstMonthTab);
-  const selectedPlanFromTabs = tabPlans.find(tab => tab.key === selectedTab) || visibleTabs[0];
+  // 获取本地化介绍价格（首月优惠）
+  const getLocalizedIntroPrice = (productId: string): string | null => {
+    const localizedProduct = localizedProducts.find(p => p.productId === productId);
+    return localizedProduct?.introductoryPrice || null;
+  };
 
+  // 初始化订阅服务
   useEffect(() => {
-    let interval: any;
-    if (timer > 0) {
-      interval = setInterval(() => setTimer(t => t - 1), 1000);
-    }
-    return () => clearInterval(interval);
-  }, [timer]);
+    const initializeSubscription = async () => {
+      try {
+        await subscriptionService.initialize();
+        const status = await subscriptionService.checkSubscriptionStatus();
+        setSubscriptionStatus(status);
+        
+        // 加载本地化产品价格
+        console.log(`[SubscriptionScreen] 加载本地化产品，地区: ${localizationService.getCurrentRegion()}`);
+        const products = await localizationService.getLocalizedProducts();
+        setLocalizedProducts(products);
+        console.log(`[SubscriptionScreen] 加载了 ${products.length} 个本地化产品`, products);
+        
+        // 调试信息：显示从App Store获取的价格
+        if (products.length > 0) {
+          console.log('\n=== App Store Connect 价格信息 ===');
+          products.forEach(product => {
+            console.log(`${product.title}: ${product.price} (${product.currency})`);
+            if (product.introductoryPrice) {
+              console.log(`  └─ 首月优惠: ${product.introductoryPrice}`);
+            }
+          });
+          console.log('================================\n');
+        }
+        
+        // 注册状态变化回调
+        const unsubscribe = subscriptionService.registerStateCallback((newStatus) => {
+          setSubscriptionStatus(newStatus);
+        });
+        
+        return unsubscribe;
+      } catch (error) {
+        console.error('[SubscriptionScreen] 初始化失败:', error);
+      }
+    };
 
-  const formatTimer = (t: number) => {
-    const m = String(Math.floor((t % 3600) / 60)).padStart(2, '0');
-    const s = String(t % 60).padStart(2, '0');
-    return `${m}:${s}`;
-  };
+    initializeSubscription();
+  }, []);
 
-  // 滚动到支付方式区
-  const scrollToPaySection = () => {
-    if (scrollViewRef.current) {
-      scrollViewRef.current.scrollTo({ y: paySectionY - 24, animated: true });
-    }
-  };
-
-  // 按钮点击逻辑
-  const handleCtaPress = async () => {
-    if (ctaStep === 'select') {
-      // 暂时隐藏支付功能，显示开发中提示
+  // 订阅按钮点击逻辑
+  const handleSubscribe = async () => {
+    if (subscriptionStatus?.isActive) {
       Alert.alert(
-        '功能开发中',
-        '支付功能正在开发中，敬请期待！\n\n当前版本支持免费使用所有核心功能。',
-        [
-          { text: '知道了', style: 'default' },
-          { 
-            text: '返回', 
-            style: 'cancel',
+        t('subscribed', appLanguage),
+        t('subscription_success', appLanguage),
+        [{ text: t('ok', appLanguage), style: 'default' }]
+      );
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const result = await subscriptionService.subscribeToPlan(selectedPlanFromTabs.id);
+      
+      if (result.success) {
+        Alert.alert(
+          t('subscription_success', appLanguage).split('！')[0] + '！',
+          t('subscription_success', appLanguage),
+          [
+            { 
+              text: t('ok', appLanguage), 
             onPress: () => navigate('main', { tab: 'profile' })
           }
         ]
       );
+      } else {
+        Alert.alert(
+          t('subscription_failed', appLanguage).split('，')[0],
+          result.error || t('subscription_failed', appLanguage),
+          [{ text: t('retry', appLanguage), style: 'default' }]
+        );
+      }
+    } catch (error) {
+      Alert.alert(
+        t('subscription_failed', appLanguage).split('，')[0],
+        t('subscription_failed', appLanguage),
+        [{ text: t('retry', appLanguage), style: 'default' }]
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // 恢复购买
+  const handleRestorePurchases = async () => {
+    setIsLoading(true);
+    try {
+      const results = await subscriptionService.restorePurchases();
+      
+      if (results.some(r => r.success)) {
+        Alert.alert(
+          t('restore_success', appLanguage).split('，')[0],
+          t('restore_success', appLanguage),
+          [{ text: t('ok', appLanguage), style: 'default' }]
+        );
+      } else {
+        Alert.alert(
+          t('restore_failed', appLanguage).split('，')[0],
+          t('no_purchases_found', appLanguage),
+          [{ text: t('ok', appLanguage), style: 'default' }]
+        );
+      }
+    } catch (error) {
+      Alert.alert(
+        t('restore_failed', appLanguage).split('，')[0],
+        t('restore_failed', appLanguage),
+        [{ text: t('retry', appLanguage), style: 'default' }]
+      );
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -174,87 +246,348 @@ const SubscriptionScreen = () => {
       <TouchableOpacity style={styles.backBtnNew} onPress={() => navigate('main', { tab: 'profile' })} activeOpacity={0.7}>
         <Ionicons name="chevron-back" size={26} color="#222" />
       </TouchableOpacity>
+      
+
+
+
+
+      {/* 用户状态提示条 */}
+      {subscriptionStatus && (
+        <View style={styles.statusBanner}>
+          {subscriptionStatus.isActive ? (
+            <>
+              <View style={styles.statusBannerTitleContainer}>
+                <Ionicons name="diamond" size={18} color="#4CAF50" style={styles.statusBannerIcon} />
+                <Text style={styles.statusBannerTitle}>{t('premium_user', appLanguage)}</Text>
+              </View>
+              <Text style={styles.statusBannerSubtitle}>
+                {t('subscription_active', appLanguage, {
+                  plan: subscriptionStatus.productId?.includes('monthly') ? t('monthly_plan', appLanguage) : 
+                        subscriptionStatus.productId?.includes('yearly') ? t('yearly_plan', appLanguage) : 
+                        t('lifetime_plan', appLanguage)
+                })}
+              </Text>
+            </>
+          ) : subscriptionStatus.isTrial ? (
+            <>
+              <View style={styles.statusBannerTitleContainer}>
+                <Ionicons name="time" size={18} color="#FF9500" style={styles.statusBannerIcon} />
+                <Text style={styles.statusBannerTitle}>{t('trial_user', appLanguage)}</Text>
+              </View>
+              <Text style={styles.statusBannerSubtitle}>
+                {t('trial_countdown', appLanguage, {
+                  days: Math.ceil((new Date(subscriptionStatus.trialEndsAt).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
+                })}, {t('enjoy_all_features', appLanguage)}
+              </Text>
+            </>
+          ) : (
+            <>
+              <View style={styles.statusBannerTitleContainer}>
+                <Ionicons name="phone-portrait" size={18} color="#666666" style={styles.statusBannerIcon} />
+                <Text style={styles.statusBannerTitle}>{t('free_user', appLanguage)}</Text>
+              </View>
+              <Text style={styles.statusBannerSubtitle}>
+                {t('trial_ended_limitations', appLanguage)}
+              </Text>
+            </>
+          )}
+        </View>
+      )}
+
       <ScrollView
         ref={scrollViewRef}
         style={styles.container}
-        contentContainerStyle={{ paddingBottom: 180 }}
+        contentContainerStyle={{ paddingBottom: 120 }}
         keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+        onScroll={(event) => {
+          const scrollY = event.nativeEvent.contentOffset.y;
+          const screenHeight = Dimensions.get('window').height;
+          // 当滚动超过一定距离时显示底部CTA按钮
+          setShowBottomCta(scrollY > 300);
+        }}
+        scrollEventThrottle={16}
       >
-        {/* 套餐 tab 区 */}
-        <View style={styles.tabBarWrap}>
+
+        {/* 计划切换器 - 胶囊分段控件 */}
+        <View style={styles.planSwitcherContainer}>
+          <View style={styles.planSwitcher}>
           {visibleTabs.map(tab => (
             <TouchableOpacity
-              key={tab.key}
-              style={[styles.tabBarItem, selectedTab === tab.key && styles.tabBarItemActive]}
-              onPress={() => setSelectedTab(tab.key)}
+                key={tab.id}
+                style={[styles.planSwitcherItem, selectedTab === tab.id && styles.planSwitcherItemActive]}
+                onPress={() => setSelectedTab(tab.id)}
               activeOpacity={0.85}
             >
-              <Text style={[styles.tabBarText, selectedTab === tab.key && styles.tabBarTextActive]}>{tab.name}</Text>
-              {!!tab.tag && <Text style={styles.tabBarTag}>{tab.tag}</Text>}
+                <Text style={[styles.planSwitcherText, selectedTab === tab.id && styles.planSwitcherTextActive]}>
+                  {tab.name}
+                </Text>
+                {tab.isPopular && (
+                  <View style={styles.popularBadge}>
+                    <Text style={styles.popularBadgeText}>{t('best_value', appLanguage)}</Text>
+                  </View>
+                )}
+                {tab.id.includes('lifetime') && (
+                  <View style={styles.lifetimeBadge}>
+                    <Text style={styles.lifetimeBadgeText}>{t('one_time_payment_badge', appLanguage)}</Text>
+                  </View>
+                )}
             </TouchableOpacity>
           ))}
+          </View>
         </View>
-        {/* 选中套餐详情 */}
+
+        {/* 价格卡片区 - 主推计划突出 */}
         <View style={styles.planDetailWrap}>
-          <Text style={styles.planPrice}>{selectedPlanFromTabs.price}</Text>
-          {selectedPlanFromTabs.save && (
-            <Text style={styles.planSave}>{selectedPlanFromTabs.save}</Text>
+          <View style={styles.priceContainer}>
+          <Text style={styles.planPrice}>{getLocalizedPrice(selectedPlanFromTabs.id)}</Text>
+          {/* 首月优惠价格显示 */}
+          {selectedPlanFromTabs.id === 'com.tannibunni.dramawordmobile.premium_monthly' && getLocalizedIntroPrice(selectedPlanFromTabs.id) && (
+            <Text style={styles.introPriceText}>
+              {appLanguage === 'zh-CN' ? 
+                `首月${getLocalizedIntroPrice(selectedPlanFromTabs.id)}` : 
+                `First month ${getLocalizedIntroPrice(selectedPlanFromTabs.id)}`}
+            </Text>
           )}
-          <Text style={styles.planDesc}>{selectedPlanFromTabs.desc}</Text>
-          <TouchableOpacity style={styles.planCtaBtn} activeOpacity={0.9}>
-            <Text style={styles.planCtaText}>{selectedPlanFromTabs.cta}</Text>
+          </View>
+          
+          {selectedPlanFromTabs.originalPrice && (
+            <Text style={styles.planOriginalPrice}>{selectedPlanFromTabs.originalPrice}</Text>
+          )}
+          
+          <Text style={styles.planDesc}>{selectedPlanFromTabs.description}</Text>
+          
+          {/* 主CTA按钮 */}
+          <TouchableOpacity
+            style={styles.mainCtaButton}
+            onPress={handleSubscribe}
+            activeOpacity={0.8}
+            disabled={isLoading}
+          >
+            <LinearGradient
+              colors={['#3A8DFF', '#7C3AED']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.ctaGradient}
+            >
+              <Text style={styles.mainCtaButtonText}>
+                {isLoading ? t('processing', appLanguage) : t('subscribe_button', appLanguage, {
+                  price: getLocalizedPrice(selectedPlanFromTabs.id)
+                })}
+              </Text>
+            </LinearGradient>
           </TouchableOpacity>
         </View>
+
+
+
         {/* 权益对比表格 */}
-        {renderFeatureTable()}
+        {renderFeatureTable(subscriptionStatus, appLanguage)}
         
-        {/* 支付方式选择区域 */}
-        {ctaStep === 'pay' && (
-          <View 
-            style={styles.paySection}
-            onLayout={(event) => setPaySectionY(event.nativeEvent.layout.y)}
-          >
-            <Text style={styles.payTitle}>选择支付方式</Text>
-            <View style={styles.payRow}>
-              {paymentMethods.map(method => (
+
+        
+        {/* 功能说明区域 */}
+        <View style={styles.freeVersionInfo}>
+          <Text style={styles.freeVersionTitle}>
+            {subscriptionStatus?.isActive 
+              ? t('premium_privileges', appLanguage)
+              : subscriptionStatus?.isTrial 
+                ? t('trial_description', appLanguage).split('，')[0]
+                : t('free_description', appLanguage).split('，')[0]
+            }
+          </Text>
+          <Text style={styles.freeVersionDesc}>
+            {subscriptionStatus?.isActive 
+              ? t('premium_feature_list', appLanguage)
+              : subscriptionStatus?.isTrial 
+                ? t('trial_description', appLanguage)
+                : t('free_description', appLanguage)
+            }
+          </Text>
+          <View style={styles.freeVersionFeatures}>
+            {(subscriptionStatus?.isActive 
+              ? t('premium_feature_list', appLanguage) 
+              : subscriptionStatus?.isTrial 
+                ? t('trial_feature_list', appLanguage)
+                : t('free_feature_list', appLanguage)
+            ).split('\n').map((feature, index) => (
+              <Text key={index} style={styles.freeVersionFeature}>• {feature}</Text>
+            ))}
+          </View>
+          <Text style={styles.freeVersionUpgrade}>
+            {subscriptionStatus?.isActive
+              ? t('subscription_thank_you', appLanguage)
+              : subscriptionStatus?.isTrial
+                ? t('trial_ending_warning', appLanguage)
+                : t('upgrade_to_unlock', appLanguage)
+            }
+          </Text>
+        </View>
+
+
+
+
+
+        {/* 开发测试按钮 */}
+        {__DEV__ && (
+          <View style={styles.testSection}>
+            <Text style={styles.testSectionTitle}>🧪 开发测试</Text>
+            
+            {/* 测试订阅状态 */}
+            <TouchableOpacity 
+              style={styles.testButton} 
+                             onPress={async () => {
+                 try {
+                   const status = await subscriptionService.checkSubscriptionStatus();
+                   Alert.alert('订阅状态', JSON.stringify(status, null, 2));
+                 } catch (error) {
+                   Alert.alert('错误', error instanceof Error ? error.message : '未知错误');
+                 }
+               }}
+            >
+              <Text style={styles.testButtonText}>测试订阅状态</Text>
+            </TouchableOpacity>
+            
+            {/* 测试功能权限 */}
+            <TouchableOpacity 
+              style={styles.testButton} 
+                             onPress={() => {
+                 try {
+                   const permissions = subscriptionService.getFeaturePermissions();
+                   Alert.alert('功能权限', JSON.stringify(permissions, null, 2));
+                 } catch (error) {
+                   Alert.alert('错误', error instanceof Error ? error.message : '未知错误');
+                 }
+               }}
+            >
+              <Text style={styles.testButtonText}>测试功能权限</Text>
+            </TouchableOpacity>
+            
+            {/* 测试语言权限 */}
+            <TouchableOpacity 
+              style={styles.testButton} 
+                             onPress={() => {
+                 try {
+                   const languages = ['zh', 'en', 'ja', 'ko', 'es'];
+                   const results = languages.map(lang => ({
+                     language: lang,
+                     canAccess: subscriptionService.canAccessLanguage(lang)
+                   }));
+                   Alert.alert('语言权限', JSON.stringify(results, null, 2));
+                 } catch (error) {
+                   Alert.alert('错误', error instanceof Error ? error.message : '未知错误');
+                 }
+               }}
+            >
+              <Text style={styles.testButtonText}>测试语言权限</Text>
+            </TouchableOpacity>
+            
+            {/* 测试模拟订阅 */}
+            <TouchableOpacity 
+              style={styles.testButton} 
+                             onPress={async () => {
+                 try {
+                   const result = await subscriptionService.subscribeToPlan('com.tannibunni.dramawordmobile.premium_monthly');
+                   Alert.alert('模拟订阅结果', JSON.stringify(result, null, 2));
+                   
+                   // 刷新状态
+                   const newStatus = await subscriptionService.checkSubscriptionStatus();
+                   setSubscriptionStatus(newStatus);
+                 } catch (error) {
+                   Alert.alert('错误', error instanceof Error ? error.message : '未知错误');
+                 }
+               }}
+            >
+              <Text style={styles.testButtonText}>测试模拟订阅</Text>
+            </TouchableOpacity>
+            
+            {/* 开始14天试用期 */}
+            <TouchableOpacity 
+              style={styles.testButton} 
+              onPress={async () => {
+                try {
+                  // 清除现有状态
+                  await AsyncStorage.removeItem('subscription_status');
+                  await AsyncStorage.removeItem('subscription_record');
+                  
+                  // 重新初始化，这会自动启动试用期
+                  await subscriptionService.initialize();
+                  
+                  // 刷新状态
+                  const newStatus = await subscriptionService.checkSubscriptionStatus();
+                  setSubscriptionStatus(newStatus);
+                  
+                  Alert.alert('成功', '14天试用期已启动！');
+                } catch (error) {
+                  Alert.alert('错误', error instanceof Error ? error.message : '未知错误');
+                }
+              }}
+            >
+              <Text style={styles.testButtonText}>开始14天试用期</Text>
+            </TouchableOpacity>
+
+            {/* 清除订阅状态 */}
                 <TouchableOpacity
-                  key={method.key}
-                  style={[
-                    styles.payIconBox,
-                    selectedPay === method.key && styles.payIconBoxSelected
-                  ]}
-                  onPress={() => setSelectedPay(method.key)}
-                  activeOpacity={0.8}
-                >
-                  <Image source={method.icon} style={styles.payIcon} />
-                  <Text style={styles.payName}>{method.name}</Text>
+              style={styles.testButton} 
+                             onPress={async () => {
+                 try {
+                   await AsyncStorage.removeItem('subscription_status');
+                   await AsyncStorage.removeItem('subscription_record');
+                   
+                   // 重新初始化服务以重置状态
+                   await subscriptionService.initialize();
+                   
+                   // 刷新状态
+                   const newStatus = await subscriptionService.checkSubscriptionStatus();
+                   setSubscriptionStatus(newStatus);
+                   
+                   Alert.alert('成功', '订阅状态已清除，页面已刷新');
+                 } catch (error) {
+                   Alert.alert('错误', error instanceof Error ? error.message : '未知错误');
+                 }
+               }}
+            >
+              <Text style={styles.testButtonText}>清除订阅状态</Text>
                 </TouchableOpacity>
-              ))}
-            </View>
-            <Text style={styles.safeTip}>🔒 支付安全由微信/支付宝保障</Text>
           </View>
         )}
       </ScrollView>
       
-      {/* 主按钮吸底 */}
-      <View style={styles.ctaFixedWrapNew}>
-        <View style={styles.ctaWrapNew}>
+              {/* 底部吸底CTA按钮 - 只在主按钮滚动消失时显示 */}
+        {showBottomCta && (
+          <View style={styles.bottomCtaContainer}>
           <TouchableOpacity
-            style={[
-              styles.ctaBtnNew,
-              {
-                backgroundColor: ctaStep === 'select' ? '#3A8DFF' : '#FF9800'
-              }
-            ]}
-            onPress={handleCtaPress}
-            activeOpacity={0.9}
-          >
-            <Text style={styles.ctaTextNew}>
-              功能开发中
+              style={styles.bottomCtaButton}
+              onPress={handleSubscribe}
+              activeOpacity={0.8}
+              disabled={isLoading || subscriptionStatus?.isActive}
+            >
+              <LinearGradient
+                colors={['#3A8DFF', '#7C3AED']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.bottomCtaGradient}
+              >
+                <Text style={styles.bottomCtaButtonText}>
+                  {isLoading ? t('processing', appLanguage) : 
+                   subscriptionStatus?.isActive ? t('subscribed', appLanguage) : 
+                   t('subscribe_button', appLanguage, {
+                     price: getLocalizedPrice(selectedPlanFromTabs.id)
+                   })}
             </Text>
+              </LinearGradient>
+            </TouchableOpacity>
+            
+            {/* 恢复购买链接 */}
+            <TouchableOpacity 
+              style={styles.bottomRestoreLink}
+              onPress={handleRestorePurchases}
+              disabled={isLoading}
+            >
+              <Text style={styles.bottomRestoreLinkText}>{t('restore_purchases', appLanguage)}</Text>
           </TouchableOpacity>
         </View>
-      </View>
+        )}
     </SafeAreaView>
   );
 };
@@ -262,35 +595,115 @@ const SubscriptionScreen = () => {
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: '#F5F6FA' },
   backBtnNew: { position: 'absolute', top: 40, left: 16, zIndex: 10, width: 40, height: 40, borderRadius: 20, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center', shadowColor: '#3A8DFF', shadowOpacity: 0.08, shadowRadius: 6, elevation: 2 },
+  statusBanner: {
+    marginHorizontal: 18,
+    marginTop: 60,
+    marginBottom: 16,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 16,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    elevation: 3,
+    borderLeftWidth: 4,
+    borderLeftColor: '#3A8DFF',
+  },
+  statusBannerTitleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  statusBannerIcon: {
+    marginRight: 8,
+  },
+  statusBannerTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#1976D2',
+  },
+  statusBannerSubtitle: {
+    fontSize: 14,
+    color: '#424242',
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+  headerStatusBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#E3F2FD',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    marginHorizontal: 18,
+    marginTop: 20,
+    borderRadius: 16,
+    shadowColor: '#2196F3',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  statusIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#FFFFFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  statusTextContainer: {
+    flex: 1,
+  },
+  statusMainText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#1976D2',
+    marginBottom: 4,
+  },
+  statusSubText: {
+    fontSize: 14,
+    color: '#424242',
+    lineHeight: 20,
+  },
   container: { flex: 1, backgroundColor: 'transparent' },
-  verticalPlanList: { marginTop: 60, marginHorizontal: 18 },
-  verticalPlanCard: { backgroundColor: '#fff', borderRadius: 22, padding: 22, paddingBottom: 48, marginBottom: 22, shadowColor: '#23223A', shadowOpacity: 0.10, shadowRadius: 10, elevation: 3, position: 'relative', borderWidth: 2, borderColor: 'transparent' },
-  verticalPlanCardSelected: { borderColor: '#3A8DFF', shadowOpacity: 0.18 },
-  verticalPlanCheck: { position: 'absolute', top: 16, right: 16, zIndex: 2 },
-  verticalPlanName: { color: '#23223A', fontSize: 18, fontWeight: '700' },
-  inlinePlanTag: { marginLeft: 8, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 2 },
-  inlinePlanTagText: { color: '#fff', fontWeight: '700', fontSize: 12 },
-  verticalPlanPriceBox: { position: 'absolute', right: 22, bottom: 22, flexDirection: 'row', alignItems: 'flex-end' },
-  verticalPlanPrice: { color: '#3A8DFF', fontSize: 26, fontWeight: '900', marginLeft: 6 },
-  verticalPlanOriginalPrice: { color: '#B0BEC5', fontSize: 16, textDecorationLine: 'line-through', marginRight: 4 },
-  verticalPlanSave: { color: '#FF9800', fontSize: 13, fontWeight: '700', marginBottom: 2 },
-  verticalPlanTimer: { color: '#FF3B30', fontSize: 13, fontWeight: '700', marginBottom: 2 },
-  verticalPlanFeatures: { marginTop: 8 },
-  verticalPlanFeatureItem: { flexDirection: 'row', alignItems: 'center', marginTop: 4 },
-  verticalPlanFeatureText: { color: '#23223A', fontSize: 15 },
-  verticalPlanRecommend: { color: '#FFD600', fontSize: 15, fontWeight: '700', marginTop: 10 },
-  paySection: { marginTop: 36, marginHorizontal: 24, backgroundColor: '#fff', borderRadius: 18, padding: 18, alignItems: 'flex-start', shadowColor: '#3A8DFF', shadowOpacity: 0.08, shadowRadius: 6, elevation: 2 },
-  payTitle: { fontSize: 15, fontWeight: '700', color: '#222', marginBottom: 10 },
-  payRow: { flexDirection: 'row', justifyContent: 'flex-start' },
-  payIconBox: { alignItems: 'center', flexDirection: 'row', marginRight: 28, padding: 10, borderRadius: 16, backgroundColor: '#fff', shadowColor: '#3A8DFF', shadowOpacity: 0.06, shadowRadius: 6, elevation: 1 },
-  payIconBoxSelected: { borderWidth: 2, borderColor: '#3A8DFF', shadowOpacity: 0.18 },
-  payIcon: { width: 32, height: 32, marginRight: 6 },
-  payName: { fontSize: 15, color: '#222', fontWeight: '500' },
-  safeTip: { color: '#1976D2', fontSize: 13, fontWeight: '700', marginTop: 14 },
-  ctaFixedWrapNew: { position: 'absolute', left: 0, right: 0, bottom: 0, backgroundColor: 'transparent', paddingBottom: 24, alignItems: 'center' },
-  ctaWrapNew: { width: '90%' },
-  ctaBtnNew: { borderRadius: 30, paddingVertical: 18, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', shadowColor: '#FF9800', shadowOpacity: 0.18, shadowRadius: 12, elevation: 3 },
-  ctaTextNew: { fontSize: 20, fontWeight: '700', color: '#fff', fontFamily: 'System' },
+  statusSection: {
+    marginHorizontal: 18,
+    marginTop: 60,
+    marginBottom: 20,
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 20,
+    alignItems: 'center',
+    shadowColor: '#23223A',
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  statusTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#23223A',
+    marginBottom: 8,
+  },
+  statusDesc: {
+    fontSize: 15,
+    color: '#666',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  statusExpiry: {
+    fontSize: 14,
+    color: '#3A8DFF',
+    fontWeight: '600',
+  },
   featureTableWrap: {
     marginHorizontal: 12,
     marginBottom: 24,
@@ -330,7 +743,6 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    // 第一列左对齐
   },
   featureTableCellFirst: {
     justifyContent: 'flex-start',
@@ -349,8 +761,6 @@ const styles = StyleSheet.create({
   },
   tabBarWrap: {
     flexDirection: 'row',
-    marginTop: 60,
-    marginHorizontal: 18,
     marginBottom: 0,
     backgroundColor: '#fff',
     borderRadius: 16,
@@ -387,11 +797,91 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
     overflow: 'hidden',
   },
-  planDetailWrap: {
+  planSwitcherContainer: {
     marginHorizontal: 18,
     marginTop: 24,
+    marginBottom: 32,
+  },
+  planSwitcher: {
+    flexDirection: 'row',
+    backgroundColor: '#F5F5F5',
+    borderRadius: 12,
+    padding: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  planSwitcherItem: {
+    flex: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+  },
+  planSwitcherItemActive: {
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#3A8DFF',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    elevation: 4,
+  },
+  planSwitcherText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#666',
+  },
+  planSwitcherTextActive: {
+    color: '#3A8DFF',
+    fontWeight: '700',
+  },
+  popularBadge: {
+    position: 'absolute',
+    top: -8,
+    right: -8,
+    backgroundColor: '#FFD700',
+    borderRadius: 10,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    shadowColor: '#FF9800',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.3,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  popularBadgeText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#B8860B',
+  },
+  lifetimeBadge: {
+    position: 'absolute',
+    top: -8,
+    right: -8,
+    backgroundColor: '#3A8DFF',
+    borderRadius: 10,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    shadowColor: '#3A8DFF',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.3,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  lifetimeBadgeText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  planDetailWrap: {
+    marginHorizontal: 18,
+    marginTop: 0,
     marginBottom: 18,
-    backgroundColor: '#fff',
+    backgroundColor: '#FFFFFF',
     borderRadius: 16,
     padding: 24,
     alignItems: 'center',
@@ -399,12 +889,243 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.08,
     shadowRadius: 8,
     elevation: 2,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+  },
+  priceGradientContainer: {
+    paddingHorizontal: 20,
+    paddingVertical: 8,
+    borderRadius: 12,
+    marginBottom: 8,
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#3A8DFF',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  priceContainer: {
+    paddingHorizontal: 20,
+    paddingVertical: 8,
+    marginBottom: 8,
+  },
+  coreBenefits: {
+    width: '100%',
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    marginTop: 20,
+    marginBottom: 20,
+  },
+  benefitItem: {
+    width: '48%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    backgroundColor: '#F8F9FA',
+    borderRadius: 8,
+  },
+  benefitText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#424242',
+    marginLeft: 8,
+  },
+  anchorPrice: {
+    marginTop: 16,
+    marginBottom: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    backgroundColor: '#F5F5F5',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+  },
+  anchorPriceText: {
+    fontSize: 14,
+    fontWeight: '400',
+    color: '#666666',
+    textAlign: 'center',
+  },
+  mainCtaButton: {
+    width: '100%',
+    borderRadius: 16,
+    overflow: 'hidden',
+    shadowColor: '#3A8DFF',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  ctaGradient: {
+    paddingVertical: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  mainCtaButtonText: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    textAlign: 'center',
+  },
+  valueProofSection: {
+    marginHorizontal: 18,
+    marginTop: 24,
+    marginBottom: 20,
+  },
+  valueProofTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#23223A',
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  valueProofGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
+  valueProofCard: {
+    width: '48%',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 16,
+    alignItems: 'center',
+    marginBottom: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  valueProofIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#F1F8E9',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  valueProofText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#424242',
+    textAlign: 'center',
+    lineHeight: 18,
+  },
+  guaranteeSection: {
+    marginHorizontal: 18,
+    marginTop: 24,
+    marginBottom: 20,
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+  },
+  guaranteeItem: {
+    alignItems: 'center',
+    flex: 1,
+  },
+  guaranteeText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#666',
+    textAlign: 'center',
+    marginTop: 8,
+    lineHeight: 16,
+  },
+  bottomCtaContainer: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 18,
+    paddingTop: 16,
+    paddingBottom: 24,
+    borderTopWidth: 1,
+    borderTopColor: '#E0E0E0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  bottomCtaButton: {
+    borderRadius: 16,
+    overflow: 'hidden',
+    shadowColor: '#3A8DFF',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 8,
+    marginBottom: 12,
+  },
+  bottomCtaGradient: {
+    paddingVertical: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  bottomCtaButtonText: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    textAlign: 'center',
+  },
+  bottomRestoreLink: {
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
+  bottomRestoreLinkText: {
+    fontSize: 14,
+    color: '#3A8DFF',
+    fontWeight: '600',
   },
   planPrice: {
-    fontSize: 32,
+    fontSize: 36,
     fontWeight: '900',
-    color: '#3A8DFF',
     marginBottom: 8,
+    textAlign: 'center',
+  },
+  introPriceText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#7C3AED',
+    textAlign: 'center',
+    marginTop: 4,
+    backgroundColor: '#F3F4F6',
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 12,
+    alignSelf: 'center',
+  },
+  debugPanel: {
+    marginTop: 20,
+    padding: 12,
+    backgroundColor: '#F8F9FA',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  debugTitle: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#374151',
+    marginBottom: 8,
+  },
+  debugText: {
+    fontSize: 10,
+    color: '#6B7280',
+    marginBottom: 2,
+    fontFamily: 'Courier',
+  },
+  debugRegion: {
+    fontSize: 10,
+    color: '#9CA3AF',
+    marginTop: 4,
+    fontStyle: 'italic',
   },
   planSave: {
     color: '#FF9800',
@@ -412,24 +1133,174 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     marginBottom: 2,
   },
+  planOriginalPrice: {
+    color: '#B0BEC5',
+    fontSize: 16,
+    textDecorationLine: 'line-through',
+    marginBottom: 8,
+  },
   planDesc: {
     fontSize: 15,
     color: '#23223A',
     marginBottom: 18,
     textAlign: 'center',
   },
-  planCtaBtn: {
-    backgroundColor: '#3A8DFF',
-    borderRadius: 24,
-    paddingVertical: 12,
-    paddingHorizontal: 36,
-    marginTop: 6,
+  planFeatures: {
+    width: '100%',
+    alignItems: 'flex-start',
   },
-  planCtaText: {
-    color: '#fff',
-    fontSize: 17,
+  planFeatureItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  planFeatureText: {
+    fontSize: 14,
+    color: '#666',
+    marginLeft: 8,
+  },
+  trialInfoSection: {
+    marginHorizontal: 18,
+    marginBottom: 20,
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 20,
+    shadowColor: '#23223A',
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  trialInfoTitle: {
+    fontSize: 18,
     fontWeight: '700',
-    letterSpacing: 1,
+    color: '#23223A',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  trialStatus: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8,
+  },
+  trialStatusText: {
+    fontSize: 14,
+    color: '#FF9500',
+    fontWeight: '600',
+    marginLeft: 6,
+  },
+  trialExpiredText: {
+    fontSize: 14,
+    color: '#FF3B30',
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  freeVersionInfo: {
+    marginHorizontal: 18,
+    marginBottom: 24,
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 20,
+    shadowColor: '#23223A',
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  freeVersionTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#23223A',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  freeVersionDesc: {
+    fontSize: 15,
+    color: '#23223A',
+    marginBottom: 12,
+    lineHeight: 22,
+  },
+  freeVersionFeatures: {
+    marginBottom: 16,
+  },
+  freeVersionFeature: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 6,
+    lineHeight: 20,
+  },
+  freeVersionUpgrade: {
+    fontSize: 14,
+    color: '#3A8DFF',
+    fontWeight: '600',
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+  restoreButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginHorizontal: 18,
+    marginBottom: 24,
+    padding: 12,
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+  },
+  restoreButtonText: {
+    fontSize: 14,
+    color: '#666',
+    marginLeft: 6,
+  },
+  ctaFixedWrapNew: { position: 'absolute', left: 0, right: 0, bottom: 0, backgroundColor: 'transparent', paddingBottom: 24, alignItems: 'center' },
+  ctaWrapNew: { width: '90%' },
+  ctaBtnNew: { 
+    borderRadius: 30, 
+    paddingVertical: 18, 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    justifyContent: 'center', 
+    shadowColor: '#FF9800', 
+    shadowOpacity: 0.18, 
+    shadowRadius: 12, 
+    elevation: 3,
+    backgroundColor: '#3A8DFF'
+  },
+  ctaBtnSubscribed: {
+    backgroundColor: '#43C463',
+  },
+  ctaTextNew: { fontSize: 20, fontWeight: '700', color: '#fff', fontFamily: 'System' },
+  testSection: {
+    marginHorizontal: 18,
+    marginTop: 24,
+    marginBottom: 24,
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 20,
+    shadowColor: '#23223A',
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  testSectionTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#23223A',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  testButton: {
+    backgroundColor: '#3A8DFF11',
+    borderRadius: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    marginBottom: 12,
+    alignItems: 'center',
+  },
+  testButtonText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#3A8DFF',
   },
 });
 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -16,6 +16,7 @@ import { useNavigation } from '../../components/navigation/NavigationContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialIcons } from '@expo/vector-icons';
+
 
 // 导入服务和工具
 import { unifiedSyncService } from '../../services/unifiedSyncService';
@@ -37,6 +38,9 @@ import { Show } from '../../context/ShowListContext';
 import { ExperienceParticles } from '../../components/common/ExperienceParticles';
 import { DataSyncIndicator } from '../../components/common/DataSyncIndicator';
 import { GuestModeIndicator } from '../../components/common/GuestModeIndicator';
+import { LevelUpModal } from '../../components/common/LevelUpModal';
+import { DailyRewardsButton } from './components/DailyRewardsButton';
+import { DailyRewardsModal } from './components/DailyRewardsModal';
 
 // 导入服务和常量
 import { TMDBService } from '../../services/tmdbService';
@@ -45,14 +49,25 @@ import { colors } from '../../constants/colors';
 // 导入类型
 import { UserExperienceInfo } from '../../types/experience';
 
+// 导入每日奖励Hook
+import { useDailyRewards } from './hooks/useDailyRewards';
+import { dailyRewardsManager } from './services/dailyRewardsManager';
+import { guestIdService } from '../../services/guestIdService';
+
 const ReviewIntroScreen = () => {
   // 创建页面专用日志器
   const logger = Logger.forPage('ReviewIntroScreen');
   const vocabularyContext = useVocabulary();
   const { shows } = useShowList();
-  const { navigate } = useNavigation();
+  const navigation = useNavigation();
+  const navigate = navigation?.navigate;
   const { appLanguage } = useAppLanguage();
   const { user } = useAuth();
+  
+  // 添加滚动视图引用
+  const scrollViewRef = useRef<ScrollView>(null);
+  
+
   
   // 安全检查，确保vocabularyContext存在
   const vocabulary = vocabularyContext?.vocabulary || [];
@@ -66,9 +81,43 @@ const ReviewIntroScreen = () => {
   // 使用 experienceManager 的状态管理
   const [experienceState, setExperienceState] = useState(experienceManager.getExperienceState());
   
-  // 使用统一动画管理器的动画值
-  const { progressBarAnimation } = animationManager.getAnimationValues();
+  // 获取动画值
+  const animationValues = animationManager.getAnimationValues();
   
+  // 跟踪动画值状态
+  const [animationState, setAnimationState] = useState({
+    numberValue: 0,
+    opacityValue: 0,
+    scaleValue: 1,
+    levelValue: 1
+  });
+
+  // 监听动画值变化
+  useEffect(() => {
+    const numberListener = animationValues.numberAnimation.addListener(({ value }) => {
+      setAnimationState(prev => ({ ...prev, numberValue: value }));
+    });
+    
+    const opacityListener = animationValues.opacityAnimation.addListener(({ value }) => {
+      setAnimationState(prev => ({ ...prev, opacityValue: value }));
+    });
+    
+    const scaleListener = animationValues.scaleAnimation.addListener(({ value }) => {
+      setAnimationState(prev => ({ ...prev, scaleValue: value }));
+    });
+    
+    const levelListener = animationValues.levelAnimation.addListener(({ value }) => {
+      setAnimationState(prev => ({ ...prev, levelValue: value }));
+    });
+
+    return () => {
+      animationValues.numberAnimation.removeListener(numberListener);
+      animationValues.opacityAnimation.removeListener(opacityListener);
+      animationValues.scaleAnimation.removeListener(scaleListener);
+      animationValues.levelAnimation.removeListener(levelListener);
+    };
+  }, [animationValues]);
+
   // 注册 experienceManager 状态回调
   useEffect(() => {
     const unsubscribe = experienceManager.registerStateCallback((updates) => {
@@ -95,13 +144,9 @@ const ReviewIntroScreen = () => {
     const initializeExperience = async () => {
       await experienceManager.managePageExperience(
         vocabulary?.length || 0,
-        progressBarAnimation,
-        (progressPercentage) => {
-          // 进度条更新回调 - 只在非动画状态下更新
-          if (!experienceState.isProgressBarAnimating) {
-            // 使用统一方法，避免后续动画回退
-            animationManager.setProgressBarImmediate(progressPercentage);
-          }
+        (progressPercentage: number) => {
+          // 经验值进度条更新回调
+          console.log('[ReviewIntroScreen] 经验值进度条更新:', progressPercentage);
         },
         (hasGain) => {
           // 检查完成回调
@@ -114,6 +159,123 @@ const ReviewIntroScreen = () => {
     
     initializeExperience();
   }, []);
+
+  // 经验值检测函数 - 使用 useCallback 避免重复创建
+  const checkExperienceGain = useCallback(async () => {
+    console.log('[ReviewIntroScreen] 检查经验值增益');
+    
+    // 方法1：检查 pendingExperienceGain 标记
+    const experienceGainedFlag = await AsyncStorage.getItem('pendingExperienceGain');
+    console.log('[ReviewIntroScreen] 从AsyncStorage读取的pendingExperienceGain:', experienceGainedFlag);
+    
+    if (experienceGainedFlag) {
+      try {
+        const { experienceGained, timestamp } = JSON.parse(experienceGainedFlag);
+        const now = Date.now();
+        
+        console.log('[ReviewIntroScreen] 解析后的经验值增益数据:', { experienceGained, timestamp, now, timeDiff: now - timestamp });
+        
+        // 检查是否是最近的经验值增益（30秒内，增加容错时间）
+        if (experienceGained && experienceGained > 0 && (now - timestamp) < 30000) {
+          console.log('[ReviewIntroScreen] 检测到经验值增益:', experienceGained);
+          
+          // 清除标记
+          await AsyncStorage.removeItem('pendingExperienceGain');
+          console.log('[ReviewIntroScreen] 已清除pendingExperienceGain标记');
+          
+          // 延迟一下再触发动画，确保页面完全加载
+          setTimeout(async () => {
+            try {
+              console.log('[ReviewIntroScreen] 开始触发经验值动画:', experienceGained);
+              
+              // 使用 experienceManager 的动画方法
+              await experienceManager.startExperienceAnimationWithState(
+                experienceGained,
+                (currentExp: number, progress: number) => {
+                  console.log('[ReviewIntroScreen] 经验值动画进度:', { currentExp, progress });
+                },
+                (finalExp: number, finalLevel: number) => {
+                  console.log('[ReviewIntroScreen] 经验值动画完成:', { finalExp, finalLevel });
+                }
+              );
+            } catch (error) {
+              console.error('[ReviewIntroScreen] 触发经验值动画失败:', error);
+            }
+          }, 500);
+          
+          return; // 如果通过标记检测到经验值增益，直接返回
+        } else {
+          console.log('[ReviewIntroScreen] 经验值增益数据无效或已过期:', { experienceGained, timeDiff: now - timestamp });
+          if (experienceGainedFlag) {
+            await AsyncStorage.removeItem('pendingExperienceGain');
+            console.log('[ReviewIntroScreen] 已清除过期的pendingExperienceGain标记');
+          }
+        }
+      } catch (error) {
+        console.error('[ReviewIntroScreen] 解析经验值增益标记失败:', error);
+        await AsyncStorage.removeItem('pendingExperienceGain');
+      }
+    }
+    
+    // 方法2：通过比较经验值变化来检测增益（备用机制）
+    try {
+      const lastExperienceKey = 'lastRecordedExperience';
+      const currentExperience = experienceManager.getExperienceState().userExperienceInfo?.experience || 0;
+      const lastExperience = await AsyncStorage.getItem(lastExperienceKey);
+      
+      if (lastExperience) {
+        const lastExp = parseInt(lastExperience);
+        // 只有当经验值真正增加时才触发动画
+        if (currentExperience > lastExp && lastExp > 0) {
+          const experienceGained = currentExperience - lastExp;
+          console.log('[ReviewIntroScreen] 通过经验值比较检测到增益:', { lastExp, currentExperience, experienceGained });
+          
+          // 更新记录的经验值
+          await AsyncStorage.setItem(lastExperienceKey, currentExperience.toString());
+          
+          // 触发经验值动画
+          setTimeout(async () => {
+            try {
+              console.log('[ReviewIntroScreen] 开始触发经验值动画（备用机制）:', experienceGained);
+              
+              await experienceManager.startExperienceAnimationWithState(
+                experienceGained,
+                (currentExp: number, progress: number) => {
+                  console.log('[ReviewIntroScreen] 经验值动画进度（备用机制）:', { currentExp, progress });
+                },
+                (finalExp: number, finalLevel: number) => {
+                  console.log('[ReviewIntroScreen] 经验值动画完成（备用机制）:', { finalExp, finalLevel });
+                }
+              );
+            } catch (error) {
+              console.error('[ReviewIntroScreen] 触发经验值动画失败（备用机制）:', error);
+            }
+          }, 500);
+          
+          return;
+        }
+      }
+      
+      // 记录当前经验值，供下次比较使用
+      await AsyncStorage.setItem(lastExperienceKey, currentExperience.toString());
+      console.log('[ReviewIntroScreen] 记录当前经验值:', currentExperience);
+      
+    } catch (error) {
+      console.error('[ReviewIntroScreen] 备用经验值检测机制失败:', error);
+    }
+    
+    console.log('[ReviewIntroScreen] 没有检测到经验值增益');
+  }, []);
+
+  // 保留原有的 useEffect 作为备用检测机制
+  useEffect(() => {
+    const checkExperienceGainOnFocus = async () => {
+      console.log('[ReviewIntroScreen] 组件挂载，备用检查经验值增益');
+      await checkExperienceGain();
+    };
+    
+    checkExperienceGainOnFocus();
+  }, [checkExperienceGain]);
   
   // ==================== 检查vocabulary刷新 ====================
   useEffect(() => {
@@ -150,8 +312,60 @@ const ReviewIntroScreen = () => {
     // 翻译函数会自动使用当前语言，无需手动设置
   }, [appLanguage]);
 
-  // 获取页面数据
-  const pageData = dataManagerService.preparePageData(shows, vocabulary);
+  // ==================== 每日奖励系统 ====================
+  const {
+    rewardsState,
+    hasAvailableRewards,
+    availableRewardsCount,
+    claimReward,
+    claimAllRewards,
+    refreshRewards
+  } = useDailyRewards(appLanguage);
+
+  // 添加调试日志
+  useEffect(() => {
+    console.log('[ReviewIntroScreen] 每日奖励系统状态:', {
+      hasAvailableRewards,
+      availableRewardsCount,
+      rewardsCount: rewardsState.rewards.length,
+      isLoading: rewardsState.isLoading,
+      rewards: rewardsState.rewards.map(r => ({ id: r.id, name: r.name, status: r.status }))
+    });
+  }, [hasAvailableRewards, availableRewardsCount, rewardsState.rewards, rewardsState.isLoading]);
+
+  // 测试 dailyRewardsManager 是否正常工作
+  useEffect(() => {
+    const testDailyRewardsManager = async () => {
+      try {
+        console.log('[ReviewIntroScreen] 测试 dailyRewardsManager...');
+        const rewards = await dailyRewardsManager.checkRewardConditions();
+        console.log('[ReviewIntroScreen] dailyRewardsManager 检查结果:', rewards);
+      } catch (error) {
+        console.error('[ReviewIntroScreen] dailyRewardsManager 测试失败:', error);
+      }
+    };
+    
+    testDailyRewardsManager();
+  }, []);
+
+  // 每日奖励弹窗状态
+  const [dailyRewardsModalVisible, setDailyRewardsModalVisible] = useState(false);
+
+  // 打开每日奖励弹窗
+  const openDailyRewardsModal = () => {
+    setDailyRewardsModalVisible(true);
+  };
+
+  // 关闭每日奖励弹窗
+  const closeDailyRewardsModal = () => {
+    setDailyRewardsModalVisible(false);
+  };
+
+  // 使用 useMemo 缓存页面数据，避免重复计算
+  const pageData = useMemo(() => {
+    return dataManagerService.preparePageData(shows, vocabulary);
+  }, [shows, vocabulary]);
+  
   const { showItems, wordbookItems, showItemsWithCounts, wordbookItemsWithCounts } = pageData;
 
   // 点击挑战横幅，切换到 review Tab（swiper 页面）
@@ -188,245 +402,395 @@ const ReviewIntroScreen = () => {
   }, []); // 只在组件初始化时执行一次
 
   return (
-
-
-    
-    <View style={styles.container}>
-      
-
-      
-      {/* 学习统计板块 - 包含问候语 */}
-      <View style={styles.learningStatsContainer}>
-        {/* 问候语区域 */}
-        <View style={styles.greetingSection}>
-          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-            <Text style={styles.greetingText}>
-              {t('hello_greeting', appLanguage)}{user?.nickname || t('guest_user', appLanguage)}
-            </Text>
-            <View style={{ marginLeft: 8 }}>
-              <DataSyncIndicator visible={true} showDetails={false} />
-            </View>
-          </View>
-        </View>
-        
-        {/* 经验值和等级区域 */}
-        <View style={styles.experienceSection}>
-          <View style={styles.experienceHeader}>
-            <View style={styles.levelContainer}>
-              <Text style={styles.experienceLabel}>
-                {experienceState.userExperienceInfo ? `${t('level_text', appLanguage)} ${experienceState.userExperienceInfo.level}` : '开始学习获得经验值'}
-              </Text>
-              <View style={styles.levelBadge}>
-                {experienceState.userExperienceInfo?.level && experienceState.userExperienceInfo.level >= 10 && <MaterialIcons name="workspace-premium" size={16} color={colors.accent[500]} />}
-                {experienceState.userExperienceInfo?.level && experienceState.userExperienceInfo.level >= 5 && experienceState.userExperienceInfo.level < 10 && <MaterialIcons name="star" size={16} color={colors.accent[500]} />}
-                {experienceState.userExperienceInfo?.level && experienceState.userExperienceInfo.level >= 1 && experienceState.userExperienceInfo.level < 5 && <MaterialIcons name="emoji-events" size={16} color={colors.accent[500]} />}
+    <>
+      <ScrollView 
+        ref={scrollViewRef}
+        style={styles.container}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
+        refreshControl={
+          <RefreshControl
+            refreshing={false}
+            onRefresh={refreshLearningProgress}
+            colors={[colors.primary[500]]}
+            tintColor={colors.primary[500]}
+          />
+        }
+      >
+        {/* 学习统计板块 - 包含问候语 */}
+        <View style={styles.learningStatsContainer}>
+          {/* 问候语区域 */}
+          <View style={styles.greetingSection}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <Text style={styles.greetingText}>
+                  {t('hello_greeting', appLanguage)}{user?.nickname || 'Guest'}
+                </Text>
+                <View style={{ marginLeft: 8 }}>
+                  <DataSyncIndicator visible={true} showDetails={false} />
+                </View>
               </View>
-            </View>
-            <Text style={styles.experienceProgressText}>
-                            {experienceState.userExperienceInfo
-                ? `${experienceState.animatedExperience}/${experienceManager.getCurrentLevelRequiredExp(experienceState.userExperienceInfo.level)} XP`
-                : '0/100 XP'
-              }
-            </Text>
-          </View>
-          <View style={styles.progressBarContainer}>
-            {/* 蓝色渐变进度条 */}
-            <Animated.View style={[styles.progressBarFill, { width: progressBarAnimation.interpolate({
-              inputRange: [0, 100],
-              outputRange: ['0%', '100%']
-            }) }]}>
-              <LinearGradient
-                colors={[colors.primary[400], colors.primary[600]]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={styles.progressBarGradient}
-              />
-            </Animated.View>
-            {/* 调试信息 */}
-            <Text style={{position: 'absolute', right: 5, top: 2, fontSize: 10, color: 'red'}}>
-              {Math.round(experienceState.progressBarValue * 100)}%
-            </Text>
-          </View>
-        </View>
-        
-        {/* 统计数据区域 */}
-        <View style={styles.statsSection}>
-          {/* 已收集词汇 */}
-          <View style={styles.statItem}>
-            <View style={styles.statContent}>
-              <Text style={styles.statNumber}>{experienceState.animatedCollectedWords}</Text>
-                          <Text style={styles.statUnit}>{t('words_unit', appLanguage)}</Text>
-          </View>
-          <Text style={styles.statLabel}>{t('collected_vocabulary', appLanguage)}</Text>
-        </View>
-        
-        {/* 竖线隔断 */}
-        <View style={styles.statDivider} />
-        
-        {/* 累计复习 */}
-        <View style={styles.statItem}>
-          <View style={styles.statContent}>
-            <Text style={styles.statNumber}>{experienceState.userExperienceInfo?.totalExperience || 0}</Text>
-            <Text style={styles.statUnit}>{t('times_unit', appLanguage)}</Text>
-          </View>
-          <Text style={styles.statLabel}>{t('cumulative_review', appLanguage)}</Text>
-        </View>
-        
-        {/* 竖线隔断 */}
-        <View style={styles.statDivider} />
-        
-        {/* 连续学习 */}
-        <View style={styles.statItem}>
-          <View style={styles.statContent}>
-            <Text style={styles.statNumber}>{experienceState.userExperienceInfo?.currentStreak || 0}</Text>
-            <Text style={styles.statUnit}>{t('days_unit', appLanguage)}</Text>
-          </View>
-          <Text style={styles.statLabel}>{t('continuous_learning', appLanguage)}</Text>
-        </View>
-        </View>
-      </View>
-      
-      {/* 挑战词卡SLIDER */}
-      <View style={styles.challengeSliderContainer}>
-        <Text style={styles.challengeSliderTitle}>{t('challenge_cards', appLanguage)}</Text>
-        <ScrollView 
-          horizontal 
-          showsHorizontalScrollIndicator={false} 
-          style={styles.challengeSlider}
-          contentContainerStyle={styles.challengeSliderContent}
-        >
-          {/* 智能挑战词卡 */}
-          <TouchableOpacity 
-            style={styles.challengeCard} 
-            activeOpacity={0.8} 
-            onPress={() => handlePressChallenge('shuffle')}
-          >
-            <View style={styles.challengeCardHeader}>
-              <MaterialIcons name="lightbulb" size={24} color={colors.primary[500]} />
-              <Text style={styles.challengeCardTitle}>{t('smart_challenge', appLanguage)}</Text>
-            </View>
-            <Text style={styles.challengeCardSubtitle}>
-              {t('mastered_cards', appLanguage, { count: todayCount })}
-            </Text>
-            <View style={styles.challengeCardFooter}>
-              <Text style={styles.challengeCardExp}>+15 {t('exp_gained', appLanguage)}</Text>
-              <MaterialIcons name="arrow-forward" size={16} color={colors.primary[500]} />
-            </View>
-          </TouchableOpacity>
 
-          {/* 错词挑战词卡 */}
-          <TouchableOpacity 
-            style={styles.challengeCard}
-            activeOpacity={0.8} 
-            onPress={() => handlePressChallenge('wrong_words')}
+            </View>
+          </View>
+          
+          {/* 经验值和等级区域 */}
+          <View style={styles.experienceSection}>
+            <View style={styles.experienceHeader}>
+              <View style={styles.levelContainer}>
+                <Text style={styles.experienceLabel}>
+                  {experienceManager.getExperienceDisplayData().levelText}
+                </Text>
+                <View style={styles.levelBadge}>
+                  {experienceManager.getExperienceDisplayData().levelBadge.hasPremium && <MaterialIcons name="workspace-premium" size={16} color={colors.accent[500]} />}
+                  {experienceManager.getExperienceDisplayData().levelBadge.hasStar && <MaterialIcons name="star" size={16} color={colors.accent[500]} />}
+                  {experienceManager.getExperienceDisplayData().levelBadge.hasEvent && <MaterialIcons name="emoji-events" size={16} color={colors.accent[500]} />}
+                </View>
+              </View>
+              <Text style={styles.experienceProgressText}>
+                {experienceManager.getExperienceDisplayData().experienceText}
+              </Text>
+            </View>
+            <View style={styles.progressBarContainer}>
+              {/* 蓝色渐变进度条 - 使用静态进度条显示经验值进度 */}
+              <View style={[styles.progressBarFill, { 
+                width: `${experienceManager.getExperienceDisplayData().progressPercentage * 100}%` 
+              }]}>
+                <LinearGradient
+                  colors={[colors.primary[400], colors.primary[600]]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={styles.progressBarGradient}
+                />
+              </View>
+
+            </View>
+          </View>
+          
+          {/* 统计数据区域 */}
+          <View style={styles.statsSection}>
+            {/* 已收集词汇 */}
+            <View style={styles.statItem}>
+              <View style={styles.statContent}>
+                <Text style={styles.statNumber}>{experienceState.animatedCollectedWords}</Text>
+                <Text style={styles.statUnit}>{t('words_unit', appLanguage)}</Text>
+              </View>
+              <Text style={styles.statLabel}>{t('collected_vocabulary', appLanguage)}</Text>
+            </View>
+            
+            {/* 竖线隔断 */}
+            <View style={styles.statDivider} />
+            
+            {/* 累计复习 */}
+            <View style={styles.statItem}>
+              <View style={styles.statContent}>
+                <Text style={styles.statNumber}>{experienceState.userExperienceInfo?.totalExperience || 0}</Text>
+                <Text style={styles.statUnit}>{t('times_unit', appLanguage)}</Text>
+              </View>
+              <Text style={styles.statLabel}>{t('cumulative_review', appLanguage)}</Text>
+            </View>
+            
+            {/* 竖线隔断 */}
+            <View style={styles.statDivider} />
+            
+            {/* 连续学习 */}
+            <View style={styles.statItem}>
+              <View style={styles.statContent}>
+                <Text style={styles.statNumber}>{experienceState.userExperienceInfo?.currentStreak || 0}</Text>
+                <Text style={styles.statUnit}>{t('days_unit', appLanguage)}</Text>
+              </View>
+              <Text style={styles.statLabel}>{t('continuous_learning', appLanguage)}</Text>
+            </View>
+          </View>
+        </View>
+        
+        {/* 每日奖励区域 */}
+        <DailyRewardsButton
+          hasAvailableRewards={hasAvailableRewards}
+          availableCount={availableRewardsCount}
+          onPress={openDailyRewardsModal}
+        />
+        
+        {/* 挑战词卡SLIDER */}
+        <View style={styles.challengeSliderContainer}>
+          <Text style={styles.challengeSliderTitle}>{t('challenge_cards', appLanguage)}</Text>
+          <ScrollView 
+            horizontal 
+            showsHorizontalScrollIndicator={false} 
+            style={styles.challengeSlider}
+            contentContainerStyle={styles.challengeSliderContent}
           >
-            <View style={styles.challengeCardHeader}>
-              <MaterialIcons name="error" size={24} color={colors.primary[500]} />
-              <Text style={styles.challengeCardTitle}>{t('wrong_words_challenge', appLanguage)}</Text>
+            {/* 智能挑战词卡 */}
+            <View style={styles.challengeCard}>
+              <View style={styles.challengeCardContent}>
+                {/* 中央大图标 */}
+                <View style={styles.challengeCardIconCenter}>
+                  <MaterialIcons name="lightbulb" size={48} color={colors.primary[500]} />
+                </View>
+                
+                {/* 标题文本 */}
+                <Text style={styles.challengeCardTitleCenter}>
+                  {t('smart_challenge', appLanguage)}
+                </Text>
+                
+                {/* 描述文本 */}
+                <Text style={styles.challengeCardSubtitleCenter}>
+                  {t('mastered_cards', appLanguage, { count: todayCount })}
+                </Text>
+              </View>
+              
+              {/* 底部挑战按钮 */}
               <TouchableOpacity 
-                onPress={(e) => {
-                  e.stopPropagation();
-                  wrongWordsManager.refreshWrongWordsCount(vocabulary);
-                }}
-                style={{ marginLeft: 'auto', padding: 4 }}
+                style={[
+                  styles.challengeButton,
+                  todayCount > 0 ? styles.challengeButtonActive : styles.challengeButtonDisabled
+                ]}
+                activeOpacity={0.95} 
+                onPress={() => todayCount > 0 && handlePressChallenge('shuffle')}
+                disabled={todayCount === 0}
               >
-                <MaterialIcons name="refresh" size={16} color={colors.primary[500]} />
-              </TouchableOpacity>
-            </View>
-            <Text style={styles.challengeCardSubtitle}>
-              {wrongWordsCount > 0 
-                ? `${t('wrong_words_count', appLanguage, { count: wrongWordsCount })}`
-                : '暂无错词，继续学习吧！'
-              }
-            </Text>
-            <View style={styles.challengeCardFooter}>
-              <Text style={styles.challengeCardExp}>+20 {t('exp_gained', appLanguage)}</Text>
-              <MaterialIcons name="arrow-forward" size={16} color={colors.primary[500]} />
-            </View>
-          </TouchableOpacity>
-        </ScrollView>
-      </View>
-      
-      {/* 第二行：剧集复习 */}
-      {/* 剧集复习板块 */}
-      <View style={styles.showsSection}>
-        <Text style={styles.showsTitle}>{t('series_review', appLanguage)}</Text>
-        {showItems.length > 0 ? (
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.showsScroll}>
-            {showItemsWithCounts.map(({ show: item, wordCount }) => (
-              <TouchableOpacity key={item.id} style={styles.showCard} activeOpacity={0.85} onPress={() => handlePressShow(item)}>
-                <View style={styles.posterContainer}>
-                  <Image
-                    source={{
-                      uri: item.poster_path
-                        ? TMDBService.getImageUrl(item.poster_path, 'w185')
-                        : 'https://via.placeholder.com/120x120/CCCCCC/FFFFFF?text=No+Image',
-                    }}
-                    style={styles.showPoster}
-                    resizeMode="cover"
-                  />
-                </View>
-                <View style={styles.showInfoBox}>
-                  <Text style={styles.showName} numberOfLines={1}>{item.name}</Text>
-                  <Text style={styles.showWordCount}>{t('words_count', appLanguage, { count: wordCount })}</Text>
+                {/* 主要内容区域 */}
+                <View style={styles.challengeButtonContent}>
+                  {/* 上半部分：奖励信息 */}
+                  <View style={styles.challengeButtonReward}>
+                    <Text style={styles.challengeButtonRewardText}>
+                      {t('per_word_xp', appLanguage)}
+                    </Text>
+                  </View>
+                  
+                  {/* 下半部分：行动文案 */}
+                  <Text 
+                    style={styles.challengeButtonActionText}
+                    numberOfLines={1}
+                    ellipsizeMode="tail"
+                  >
+                    {todayCount > 0 ? t('start_challenge', appLanguage) : t('no_words_to_challenge', appLanguage)}
+                  </Text>
                 </View>
               </TouchableOpacity>
-            ))}
-          </ScrollView>
-        ) : (
-          <TouchableOpacity
-            style={{ height: EMPTY_SECTION_HEIGHT, justifyContent: 'center', alignItems: 'center' }}
-            activeOpacity={0.7}
-            onPress={() => navigate('main', { tab: 'shows' })}
-          >
-            <MaterialIcons name="movie" size={36} color={colors.text.secondary} style={{ marginBottom: 8 }} />
-            <Text style={{ color: colors.text.secondary, fontSize: 16 }}>{t('add_shows', appLanguage)}</Text>
-          </TouchableOpacity>
-        )}
-      </View>
+            </View>
 
-      {/* 第三行：单词本复习 */}
-      {/* 单词本复习板块 */}
-      <View style={styles.wordbookSection}>
-        <Text style={styles.wordbookTitle}>{t('wordbook_review', appLanguage)}</Text>
-        {wordbookItems.length > 0 ? (
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.wordbookScroll}>
-            {wordbookItemsWithCounts.map(({ show: item, wordCount }) => (
-              <TouchableOpacity key={item.id} style={styles.wordbookCard} activeOpacity={0.8} onPress={() => handlePressWordbook(item)}>
-                <View style={styles.wordbookIconWrap}>
-                  <MaterialIcons 
-                    name={(item.icon || 'book-outline') as any} 
-                    size={32} 
-                    color={colors.primary[400]} 
-                  />
+            {/* 错词挑战词卡 */}
+            <View style={styles.challengeCard}>
+              <View style={styles.challengeCardContent}>
+                {/* 中央大图标 */}
+                <View style={styles.challengeCardIconCenter}>
+                  <MaterialIcons name="error" size={48} color={colors.primary[500]} />
                 </View>
-                <Text style={styles.wordbookName}>{item.name}</Text>
-                <Text style={styles.wordbookWordCount}>{t('words_count', appLanguage, { count: wordCount })}</Text>
+                
+                {/* 标题文本 */}
+                <Text style={styles.challengeCardTitleCenter}>
+                  {t('wrong_words_challenge', appLanguage)}
+                </Text>
+                
+                {/* 描述文本 */}
+                <Text style={styles.challengeCardSubtitleCenter}>
+                  {wrongWordsCount > 0 
+                    ? `${t('wrong_words_count', appLanguage, { count: wrongWordsCount })}`
+                    : t('no_errors_continue_learning', appLanguage)
+                  }
+                </Text>
+              </View>
+              
+              {/* 底部挑战按钮 */}
+              <TouchableOpacity 
+                style={[
+                  styles.challengeButton,
+                  wrongWordsCount > 0 ? styles.challengeButtonActive : styles.challengeButtonDisabled
+                ]}
+                activeOpacity={0.95} 
+                onPress={() => wrongWordsCount > 0 && handlePressChallenge('wrong_words')}
+                disabled={wrongWordsCount === 0}
+              >
+                {/* 主要内容区域 */}
+                <View style={styles.challengeButtonContent}>
+                  {/* 上半部分：奖励信息 */}
+                  <View style={styles.challengeButtonReward}>
+                    <Text style={styles.challengeButtonRewardText}>
+                      {t('per_word_xp', appLanguage)}
+                    </Text>
+                  </View>
+                  
+                  {/* 下半部分：行动文案 */}
+                  <Text 
+                    style={styles.challengeButtonActionText}
+                    numberOfLines={1}
+                    ellipsizeMode="tail"
+                  >
+                    {wrongWordsCount > 0 ? t('start_review_now', appLanguage) : t('no_words_to_challenge', appLanguage)}
+                  </Text>
+                </View>
               </TouchableOpacity>
-            ))}
+            </View>
           </ScrollView>
-        ) : (
-          <TouchableOpacity
-            style={{ height: EMPTY_SECTION_HEIGHT, justifyContent: 'center', alignItems: 'center' }}
-            activeOpacity={0.7}
-            onPress={() => navigate('main', { tab: 'vocabulary' })}
+        </View>
+        
+        {/* 第二行：剧集复习 */}
+        {/* 剧集复习板块 */}
+        <View style={styles.showsSection}>
+          <Text style={styles.showsTitle}>{t('series_review', appLanguage)}</Text>
+          {showItems.length > 0 ? (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.showsScroll}>
+              {showItemsWithCounts.map(({ show: item, wordCount }) => (
+                <TouchableOpacity key={item.id} style={styles.showCard} activeOpacity={0.85} onPress={() => handlePressShow(item)}>
+                  <View style={styles.posterContainer}>
+                    <Image
+                      source={{
+                        uri: item.poster_path
+                          ? TMDBService.getImageUrl(item.poster_path, 'w185')
+                          : 'https://via.placeholder.com/120x120/CCCCCC/FFFFFF?text=No+Image',
+                      }}
+                      style={styles.showPoster}
+                      resizeMode="cover"
+                    />
+                  </View>
+                  <View style={styles.showInfoBox}>
+                    <Text style={styles.showName} numberOfLines={1}>{item.name}</Text>
+                    <Text style={styles.showWordCount}>{t('words_count', appLanguage, { count: wordCount })}</Text>
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          ) : (
+            <TouchableOpacity
+              style={{ height: EMPTY_SECTION_HEIGHT, justifyContent: 'center', alignItems: 'center' }}
+              activeOpacity={0.7}
+              onPress={() => navigate('main', { tab: 'shows' })}
+            >
+              <MaterialIcons name="movie" size={36} color={colors.text.secondary} style={{ marginBottom: 18 }} />
+              <Text style={{ color: colors.text.secondary, fontSize: 16 }}>{t('add_shows', appLanguage)}</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+
+        {/* 第三行：单词本复习 */}
+        {/* 单词本复习板块 */}
+        <View style={styles.wordbookSection}>
+          <Text style={styles.wordbookTitle}>{t('wordbook_review', appLanguage)}</Text>
+          {wordbookItems.length > 0 ? (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.wordbookScroll}>
+              {wordbookItemsWithCounts.map(({ show: item, wordCount }) => (
+                <TouchableOpacity key={item.id} style={styles.wordbookCard} activeOpacity={0.8} onPress={() => handlePressWordbook(item)}>
+                  <View style={styles.wordbookIconWrap}>
+                    <MaterialIcons 
+                      name={(item.icon || 'book-outline') as any} 
+                      size={32} 
+                      color={colors.primary[400]} 
+                    />
+                  </View>
+                  <Text style={styles.wordbookName}>{item.name}</Text>
+                  <Text style={styles.wordbookWordCount}>{t('words_count', appLanguage, { count: wordCount })}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          ) : (
+            <TouchableOpacity
+              style={{ height: EMPTY_SECTION_HEIGHT, justifyContent: 'center', alignItems: 'center' }}
+              activeOpacity={0.7}
+              onPress={() => navigate('main', { tab: 'vocabulary' })}
+            >
+              <MaterialIcons name="library-books" size={36} color={colors.text.secondary} style={{ marginBottom: 8 }} />
+              <Text style={{ color: colors.text.secondary, fontSize: 16 }}>{t('add_wordbook', appLanguage)}</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+        {/* 升级弹窗 */}
+        <LevelUpModal
+          visible={experienceState.showLevelUpModal}
+          levelUpInfo={experienceState.levelUpInfo}
+          onClose={() => experienceManager.closeLevelUpModal()}
+        />
+        
+        {/* 每日奖励弹窗 */}
+        <DailyRewardsModal
+          visible={dailyRewardsModalVisible}
+          onClose={closeDailyRewardsModal}
+          rewards={rewardsState.rewards}
+          onClaimReward={claimReward}
+          onClaimAll={claimAllRewards}
+          onRefresh={refreshRewards}
+          isLoading={rewardsState.isLoading}
+        />
+      </ScrollView>
+      
+      {/* 经验值动画弹窗 */}
+      <Animated.View
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          justifyContent: 'center',
+          alignItems: 'center',
+          opacity: animationState.opacityValue,
+          zIndex: 1000,
+        }}
+        pointerEvents="none"
+      >
+        <Animated.View
+          style={{
+            backgroundColor: colors.background.primary,
+            borderRadius: 20,
+            padding: 30,
+            alignItems: 'center',
+            transform: [
+              { scale: animationState.scaleValue }
+            ],
+            shadowColor: '#000',
+            shadowOffset: {
+              width: 0,
+              height: 4,
+            },
+            shadowOpacity: 0.3,
+            shadowRadius: 8,
+            elevation: 8,
+          }}
+        >
+          {/* 经验值数字动画 */}
+          <Animated.Text
+            style={{
+              fontSize: 48,
+              fontWeight: 'bold',
+              color: colors.primary[500],
+              marginBottom: 10,
+            }}
           >
-            <MaterialIcons name="library-books" size={36} color={colors.text.secondary} style={{ marginBottom: 8 }} />
-            <Text style={{ color: colors.text.secondary, fontSize: 16 }}>{t('add_wordbook', appLanguage)}</Text>
-          </TouchableOpacity>
-        )}
-      </View>
-    </View>
+            +{Math.round(animationState.numberValue * 4)} XP
+          </Animated.Text>
+          
+          {/* 等级动画 */}
+          <Animated.View
+            style={{
+              transform: [
+                { scale: animationState.levelValue }
+              ],
+            }}
+          >
+            <Text style={{
+              fontSize: 18,
+              color: colors.text.secondary,
+              textAlign: 'center',
+            }}>
+              获得经验值！
+            </Text>
+          </Animated.View>
+        </Animated.View>
+      </Animated.View>
+    </>
   );
 };
 
 const styles = StyleSheet.create({
   container: { 
     flex: 1, 
-    backgroundColor: colors.background.primary, 
+    backgroundColor: colors.background.primary,
+  },
+  scrollContent: {
     paddingHorizontal: 20,
-    paddingTop: Platform.OS === 'ios' ? 50 : 36, // 增加顶部间距，让第一个板块与顶部有足够距离
-    // justifyContent: 'space-between', // 移除这行，让内容自然流式排列
+    paddingTop: Platform.OS === 'ios' ? 50 : 36,
+    paddingBottom: 40, // 增加底部间距，确保内容不被遮挡
   },
   // 统一信息区域样式
   unifiedInfoContainer: {
@@ -552,12 +916,12 @@ const styles = StyleSheet.create({
   challengeScroll: { flexGrow: 0 },
   challengeIconWrap: { marginBottom: 12 },
 // 剧集复习样式
-  showsSection: { marginBottom: 12 }, // 增加与单词本复习板块的距离，让两个复习板块有明显分隔
-  showsTitle: { fontSize: 18, fontWeight: 'bold', color: colors.text.primary, marginBottom: 8 }, // 减少底部间距，从12改为8
+  showsSection: { marginBottom: 20 }, // 增加与单词本复习板块的距离
+  showsTitle: { fontSize: 18, fontWeight: 'bold', color: colors.text.primary, marginBottom: 12 }, // 增加标题底部间距
   showsScroll: { flexGrow: 0 },
   showCard: { 
     width: 120, 
-    height: 170, 
+    height: 200, // 增加高度从170到200，让海报完整展示
     borderRadius: 16, 
     marginRight: 16,
     overflow: 'hidden',
@@ -567,7 +931,7 @@ const styles = StyleSheet.create({
   },
   posterContainer: {
     width: '100%',
-    height: 112, // 上半部分 2/3
+    height: 150, // 增加海报高度从112到140，让海报更完整展示
     backgroundColor: colors.background.tertiary,
   },
   showPoster: {
@@ -589,8 +953,8 @@ const styles = StyleSheet.create({
   showName: { fontSize: 14, fontWeight: 'bold', color: colors.text.primary, textAlign: 'center', marginBottom: 2, width: '100%' },
   showWordCount: { fontSize: 12, color: colors.text.secondary, textAlign: 'center' },
   // 单词本复习样式
-  wordbookSection: { marginBottom: 12 }, // 增加底部间距，让最后一个板块与屏幕底部有足够距离
-  wordbookTitle: { fontSize: 18, fontWeight: 'bold', color: colors.text.primary, marginBottom: 8 },
+  wordbookSection: { marginBottom: 20 }, // 增加底部间距，让最后一个板块与屏幕底部有足够距离
+  wordbookTitle: { fontSize: 18, fontWeight: 'bold', color: colors.text.primary, marginBottom: 12 }, // 增加标题底部间距
   wordbookScroll: { flexGrow: 0 },
   wordbookCard: { 
     width: 120, 
@@ -618,7 +982,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background.secondary,
     borderRadius: 16,
     padding: 20,
-    marginBottom: 8, // 增加与挑战横幅的距离，让板块之间有更明显的分隔
+    marginBottom: 16, // 增加与每日奖励按钮的距离
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -688,7 +1052,7 @@ const styles = StyleSheet.create({
   },
   // 挑战词卡SLIDER样式
   challengeSliderContainer: {
-    marginBottom: 16,
+    marginBottom: 20, // 增加与剧集复习板块的距离
   },
   challengeSliderTitle: {
     fontSize: 18,
@@ -709,14 +1073,46 @@ const styles = StyleSheet.create({
     padding: 16,
     marginRight: 12,
     width: 200,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 2,
+    height: 260,
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    flexDirection: 'column',
+  },
+  challengeCardContent: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  // 中央大图标样式
+  challengeCardIconCenter: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8,
+  },
+  // 居中对齐的标题样式
+  challengeCardTitleCenter: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: colors.text.primary,
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  // 居中对齐的描述样式
+  challengeCardSubtitleCenter: {
+    fontSize: 14,
+    color: colors.text.secondary,
+    textAlign: 'center',
+    marginBottom: 16,
+    lineHeight: 18,
+  },
+  // 刷新按钮样式
+  challengeCardRefreshButton: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    padding: 8,
+    borderRadius: 20,
+    backgroundColor: 'rgba(124, 58, 237, 0.1)',
   },
 
   challengeCardHeader: {
@@ -746,6 +1142,57 @@ const styles = StyleSheet.create({
     color: colors.primary[500],
   },
 
+  // 挑战按钮样式 - 简洁扁平化
+  challengeButton: {
+    marginTop: 16,
+    marginHorizontal: 0,
+    width: '100%',
+    height: 52,
+    borderRadius: 26,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  challengeButtonActive: {
+    backgroundColor: colors.primary[500],
+  },
+  challengeButtonDisabled: {
+    backgroundColor: colors.gray[300],
+    shadowOpacity: 0,
+    elevation: 0,
+  },
+  challengeButtonContent: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  challengeButtonReward: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 2,
+  },
+  challengeButtonRewardText: {
+    color: colors.white,
+    fontSize: 14,
+    fontWeight: '600',
+    textAlign: 'center',
+    letterSpacing: 0.2,
+    lineHeight: 18,
+  },
+  challengeButtonActionText: {
+    color: colors.white,
+    fontSize: 11,
+    fontWeight: '500',
+    textAlign: 'center',
+    opacity: 0.85,
+    marginTop: 1,
+    lineHeight: 14,
+  },
 
 });
 

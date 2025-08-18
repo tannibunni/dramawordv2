@@ -34,12 +34,12 @@ import { API_BASE_URL } from '../../constants/config';
 import Toast from '../../components/common/Toast';
 import Logger from '../../utils/logger';
 import { unifiedSyncService } from '../../services/unifiedSyncService';
-import ReviewCompleteScreen, { ReviewStats, ReviewAction } from './ReviewCompleteScreen';
+import ReviewCompleteScreen from './ReviewCompleteScreen';
+import { useReviewStats, ReviewStats, ReviewAction } from './hooks/useReviewStats';
 // import WrongWordsCompleteScreen, { WrongWordsReviewStats, WrongWordsReviewAction } from './WrongWordsCompleteScreen';
 
 // 导入新的hooks和组件
 import { useReviewLogic } from './hooks/useReviewLogic';
-import { useReviewStats } from './hooks/useReviewStats';
 import { useReviewProgress } from './hooks/useReviewProgress';
 import { useReviewActions } from './hooks/useReviewActions';
 import { ReviewProgressBar } from './components/ReviewProgressBar';
@@ -426,7 +426,7 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
             stats={finalStats || reviewStats}
             actions={reviewActions}
             type={type}
-            onBack={async () => {
+            onBack={async (experienceGained?: number) => {
               // 同步到后端
               try {
                 const token = await AsyncStorage.getItem('authToken');
@@ -473,6 +473,23 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
               
               // 标记需要刷新vocabulary数据
               await AsyncStorage.setItem('refreshVocabulary', 'true');
+              
+              // 如果有经验值增益，存储到AsyncStorage中供ReviewIntroScreen检测
+              if (experienceGained && experienceGained > 0) {
+                console.log('🎯 ReviewScreen: 存储经验值增益到AsyncStorage:', experienceGained);
+                const experienceData = {
+                  experienceGained,
+                  timestamp: Date.now()
+                };
+                console.log('🎯 ReviewScreen: 存储的经验值数据:', experienceData);
+                await AsyncStorage.setItem('pendingExperienceGain', JSON.stringify(experienceData));
+                
+                // 验证存储是否成功
+                const storedData = await AsyncStorage.getItem('pendingExperienceGain');
+                console.log('🎯 ReviewScreen: 验证存储结果:', storedData);
+              } else {
+                console.log('🎯 ReviewScreen: 无经验值增益，不设置标记');
+              }
               
               // 导航回review intro页面
               navigate('main', { tab: 'review' });
@@ -488,7 +505,7 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
             stats={finalStats || reviewStats}
             actions={reviewActions}
             type={type}
-            onBack={async () => {
+            onBack={async (experienceGained?: number) => {
               // 同步到后端
               try {
                 const token = await AsyncStorage.getItem('authToken');
@@ -535,6 +552,23 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
               
               // 标记需要刷新vocabulary数据
               await AsyncStorage.setItem('refreshVocabulary', 'true');
+              
+              // 如果有经验值增益，存储到AsyncStorage中供ReviewIntroScreen检测
+              if (experienceGained && experienceGained > 0) {
+                console.log('🎯 ReviewScreen: 存储经验值增益到AsyncStorage:', experienceGained);
+                const experienceData = {
+                  experienceGained,
+                  timestamp: Date.now()
+                };
+                console.log('🎯 ReviewScreen: 存储的经验值数据:', experienceData);
+                await AsyncStorage.setItem('pendingExperienceGain', JSON.stringify(experienceData));
+                
+                // 验证存储是否成功
+                const storedData = await AsyncStorage.getItem('pendingExperienceGain');
+                console.log('🎯 ReviewScreen: 验证存储结果:', storedData);
+              } else {
+                console.log('🎯 ReviewScreen: 无经验值增益，不设置标记');
+              }
               
               // 导航回review intro页面
               navigate('main', { tab: 'review' });
@@ -634,7 +668,7 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
       <ReviewProgressBar 
         progress={currentProgress}
         total={words.length}
-        current={swiperIndex}
+        current={swiperIndex === 0 ? 0 : swiperIndex}  // 修复：第一张显示0，其他显示已完成的卡片数
         progressAnimation={progressAnimation}
       />
       
@@ -683,8 +717,8 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
             console.log('🎯 Swiper onSwipedAll 触发 - 所有卡片已划完');
             console.log('🔍 检查待处理操作数量 - pendingOperations:', pendingOperations);
             
-            // 确保进度条立即设置为100%
-            progressAnimation.setValue(100);
+            // 移除立即设置进度条为100%的代码，让moveToNextWord中的延迟逻辑能够正确执行
+            // progressAnimation.setValue(100); // 删除这行
             
             // 由于 Swiper 组件的限制，onSwipedAll 可能在 onSwipedRight 之前触发
             // 我们改为在 handleSwipeRight 中处理完成逻辑，这里只做备用处理
