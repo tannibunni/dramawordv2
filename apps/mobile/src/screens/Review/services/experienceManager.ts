@@ -226,14 +226,28 @@ class ExperienceManager implements IExperienceManager {
         if (userStats) {
           const parsedStats = JSON.parse(userStats);
           if (parsedStats.experience > 0) {
-            // 检查等级一致性
+            // 检查等级一致性并重新计算相关值
             const calculatedLevel = this.calculateLevel(parsedStats.experience);
-            if (calculatedLevel !== parsedStats.level) {
-              // 等级不一致，更新本地存储
+            const experienceToNextLevel = this.calculateExpToNextLevel(parsedStats.experience);
+            const progressPercentage = this.calculateProgressPercentage(parsedStats.experience);
+            
+            // 如果等级不一致或相关值需要更新，则更新本地存储
+            if (calculatedLevel !== parsedStats.level || 
+                parsedStats.experienceToNextLevel !== experienceToNextLevel ||
+                parsedStats.progressPercentage !== progressPercentage) {
+              
               const updatedStats = {
                 ...parsedStats,
-                level: calculatedLevel
+                level: calculatedLevel,
+                experienceToNextLevel,
+                progressPercentage
               };
+              
+              console.log('[experienceManager] 游客模式：更新经验值数据:', {
+                old: { level: parsedStats.level, experienceToNextLevel: parsedStats.experienceToNextLevel, progressPercentage: parsedStats.progressPercentage },
+                new: { level: calculatedLevel, experienceToNextLevel, progressPercentage }
+              });
+              
               await AsyncStorage.setItem('userExperienceInfo', JSON.stringify(updatedStats));
               return updatedStats;
             }
@@ -271,14 +285,28 @@ class ExperienceManager implements IExperienceManager {
         if (userStats) {
           const parsedStats = JSON.parse(userStats);
           if (parsedStats.experience > 0) {
-            // 检查等级一致性
+            // 检查等级一致性并重新计算相关值
             const calculatedLevel = this.calculateLevel(parsedStats.experience);
-            if (calculatedLevel !== parsedStats.level) {
-              // 等级不一致，更新本地存储
+            const experienceToNextLevel = this.calculateExpToNextLevel(parsedStats.experience);
+            const progressPercentage = this.calculateProgressPercentage(parsedStats.experience);
+            
+            // 如果等级不一致或相关值需要更新，则更新本地存储
+            if (calculatedLevel !== parsedStats.level || 
+                parsedStats.experienceToNextLevel !== experienceToNextLevel ||
+                parsedStats.progressPercentage !== progressPercentage) {
+              
               const updatedStats = {
                 ...parsedStats,
-                level: calculatedLevel
+                level: calculatedLevel,
+                experienceToNextLevel,
+                progressPercentage
               };
+              
+              console.log('[experienceManager] 注册用户：更新经验值数据:', {
+                old: { level: parsedStats.level, experienceToNextLevel: parsedStats.experienceToNextLevel, progressPercentage: parsedStats.progressPercentage },
+                new: { level: calculatedLevel, experienceToNextLevel, progressPercentage }
+              });
+              
               await AsyncStorage.setItem('userExperienceInfo', JSON.stringify(updatedStats));
               return updatedStats;
             }
