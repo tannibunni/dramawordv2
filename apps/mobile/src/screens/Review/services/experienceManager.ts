@@ -615,14 +615,9 @@ class ExperienceManager implements IExperienceManager {
     onComplete?: (finalExp: number, finalLevel: number) => void
   ): Promise<void> {
     try {
-      // 检查当前经验值是否已经包含了gainedExp
-      // 如果currentExp已经是最新值，则不需要再添加
-      const expectedCurrentExp = currentExp - gainedExp;
-      const actualCurrentExp = this.getExperienceState().userExperienceInfo?.experience || 0;
-      
-      // 如果当前状态中的经验值已经是最新值，直接使用
-      const animationStartExp = actualCurrentExp >= currentExp ? actualCurrentExp - gainedExp : expectedCurrentExp;
-      const animationEndExp = actualCurrentExp >= currentExp ? actualCurrentExp : currentExp;
+      // 简化逻辑：直接使用传入的参数，避免复杂的计算错误
+      const animationStartExp = currentExp - gainedExp;
+      const animationEndExp = currentExp;
       
       const oldLevel = this.calculateLevel(animationStartExp);
       const newLevel = this.calculateLevel(animationEndExp);
