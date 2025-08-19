@@ -231,28 +231,22 @@ class ExperienceManager implements IExperienceManager {
             const experienceToNextLevel = this.calculateExpToNextLevel(parsedStats.experience);
             const progressPercentage = this.calculateProgressPercentage(parsedStats.experience);
             
-            // 如果等级不一致或相关值需要更新，则更新本地存储
-            if (calculatedLevel !== parsedStats.level || 
-                parsedStats.experienceToNextLevel !== experienceToNextLevel ||
-                parsedStats.progressPercentage !== progressPercentage) {
-              
-              const updatedStats = {
-                ...parsedStats,
-                level: calculatedLevel,
-                experienceToNextLevel,
-                progressPercentage
-              };
-              
-              console.log('[experienceManager] 游客模式：更新经验值数据:', {
-                old: { level: parsedStats.level, experienceToNextLevel: parsedStats.experienceToNextLevel, progressPercentage: parsedStats.progressPercentage },
-                new: { level: calculatedLevel, experienceToNextLevel, progressPercentage }
-              });
-              
-              await AsyncStorage.setItem('userExperienceInfo', JSON.stringify(updatedStats));
-              return updatedStats;
-            }
+            // 强制重新计算，确保数据一致性
+            const updatedStats = {
+              ...parsedStats,
+              level: calculatedLevel,
+              experienceToNextLevel,
+              progressPercentage
+            };
             
-            return parsedStats;
+            console.log('[experienceManager] 游客模式：强制更新经验值数据:', {
+              old: { level: parsedStats.level, experienceToNextLevel: parsedStats.experienceToNextLevel, progressPercentage: parsedStats.progressPercentage },
+              new: { level: calculatedLevel, experienceToNextLevel, progressPercentage }
+            });
+            
+            // 总是更新本地存储，确保数据一致性
+            await AsyncStorage.setItem('userExperienceInfo', JSON.stringify(updatedStats));
+            return updatedStats;
           }
         }
         
@@ -290,28 +284,22 @@ class ExperienceManager implements IExperienceManager {
             const experienceToNextLevel = this.calculateExpToNextLevel(parsedStats.experience);
             const progressPercentage = this.calculateProgressPercentage(parsedStats.experience);
             
-            // 如果等级不一致或相关值需要更新，则更新本地存储
-            if (calculatedLevel !== parsedStats.level || 
-                parsedStats.experienceToNextLevel !== experienceToNextLevel ||
-                parsedStats.progressPercentage !== progressPercentage) {
-              
-              const updatedStats = {
-                ...parsedStats,
-                level: calculatedLevel,
-                experienceToNextLevel,
-                progressPercentage
-              };
-              
-              console.log('[experienceManager] 注册用户：更新经验值数据:', {
-                old: { level: parsedStats.level, experienceToNextLevel: parsedStats.experienceToNextLevel, progressPercentage: parsedStats.progressPercentage },
-                new: { level: calculatedLevel, experienceToNextLevel, progressPercentage }
-              });
-              
-              await AsyncStorage.setItem('userExperienceInfo', JSON.stringify(updatedStats));
-              return updatedStats;
-            }
+            // 强制重新计算，确保数据一致性
+            const updatedStats = {
+              ...parsedStats,
+              level: calculatedLevel,
+              experienceToNextLevel,
+              progressPercentage
+            };
             
-            return parsedStats;
+            console.log('[experienceManager] 注册用户：强制更新经验值数据:', {
+              old: { level: parsedStats.level, experienceToNextLevel: parsedStats.experienceToNextLevel, progressPercentage: parsedStats.progressPercentage },
+              new: { level: calculatedLevel, experienceToNextLevel, progressPercentage }
+            });
+            
+            // 总是更新本地存储，确保数据一致性
+            await AsyncStorage.setItem('userExperienceInfo', JSON.stringify(updatedStats));
+            return updatedStats;
           }
         }
         
