@@ -76,31 +76,24 @@ const ReviewCompleteScreen: React.FC<ReviewCompleteScreenProps> = ({
   // 处理完成按钮点击
   const handleComplete = async () => {
     if (experienceGained > 0) {
-      console.log('[ReviewCompleteScreen] 用户点击完成，准备添加经验值:', experienceGained);
+      console.log('[ReviewCompleteScreen] 用户点击完成，准备传递经验值增益:', experienceGained);
       
       try {
-        // 先获取添加前的经验值信息
-        const oldInfo = await experienceManager.getCurrentExperienceInfo();
-        if (!oldInfo) {
+        // 先获取当前经验值信息（不添加，只获取）
+        const currentInfo = await experienceManager.getCurrentExperienceInfo();
+        if (!currentInfo) {
           console.log('[ReviewCompleteScreen] 无法获取当前经验值信息');
           onBack();
           return;
         }
         
-        console.log('[ReviewCompleteScreen] 添加前经验值:', oldInfo.experience);
+        console.log('[ReviewCompleteScreen] 当前经验值:', currentInfo.experience, '将获得:', experienceGained);
         
-        // 添加总经验值
-        const result = await experienceManager.addReviewTotalExperience(experienceGained);
+        // 不在这里添加经验值，而是传递给ReviewIntroScreen处理动画
+        // 动画完成后，ReviewIntroScreen会调用experienceManager.addReviewTotalExperience
+        console.log('[ReviewCompleteScreen] 调用onBack回调，传递经验值增益:', experienceGained);
+        onBack(experienceGained);
         
-        if (result && result.success) {
-          console.log('[ReviewCompleteScreen] 经验值增益成功:', result);
-          // 传递经验值信息给onBack回调，让ReviewIntroScreen处理动画
-          console.log('[ReviewCompleteScreen] 调用onBack回调，传递经验值:', experienceGained);
-          onBack(experienceGained);
-        } else {
-          console.log('[ReviewCompleteScreen] 经验值增益失败，直接返回');
-          onBack();
-        }
       } catch (error) {
         console.error('[ReviewCompleteScreen] 处理经验值增益时出错:', error);
         onBack();

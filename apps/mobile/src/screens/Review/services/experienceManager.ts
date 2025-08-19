@@ -806,7 +806,21 @@ class ExperienceManager implements IExperienceManager {
         },
         (finalExp: number, finalLevel: number) => {
           console.log('[experienceManager] 经验值动画完成:', { finalExp, finalLevel });
-          // 动画完成后，确保状态显示最终值并重置动画状态
+          
+          // 动画完成后，真正添加经验值到数据库
+          this.addReviewTotalExperience(experienceGained)
+            .then(result => {
+              if (result && result.success) {
+                console.log('[experienceManager] 经验值真正添加成功:', result);
+              } else {
+                console.error('[experienceManager] 经验值真正添加失败:', result);
+              }
+            })
+            .catch(error => {
+              console.error('[experienceManager] 真正添加经验值时出错:', error);
+            });
+          
+          // 确保状态显示最终值并重置动画状态
           this.updateState({
             progressBarValue: this.calculateProgressPercentage(finalExp),
             userExperienceInfo: {
