@@ -396,10 +396,24 @@ const ReviewIntroScreen = () => {
     console.log('🔍 ReviewIntroScreen: 组件初始化，立即计算错词数量');
     console.log('🔍 vocabulary 状态:', vocabulary ? `有${vocabulary.length}个单词` : '无数据');
     if (vocabulary && vocabulary.length > 0) {
-      // 使用 wrongWordsManager 刷新错词数量
-      wrongWordsManager.refreshWrongWordsCount(vocabulary);
+      // 使用 wrongWordsManager 刷新错词数量并更新状态
+      wrongWordsManager.refreshWrongWordsCount(vocabulary).then((count) => {
+        console.log('🔍 ReviewIntroScreen: 错词数量刷新完成:', count);
+        setWrongWordsCount(count);
+      });
     }
   }, []); // 只在组件初始化时执行一次
+
+  // 监听 vocabulary 变化，更新错词数量
+  useEffect(() => {
+    if (vocabulary && vocabulary.length > 0) {
+      console.log('🔍 ReviewIntroScreen: vocabulary 变化，更新错词数量');
+      wrongWordsManager.refreshWrongWordsCount(vocabulary).then((count) => {
+        console.log('🔍 ReviewIntroScreen: 错词数量更新完成:', count);
+        setWrongWordsCount(count);
+      });
+    }
+  }, [vocabulary]); // 监听 vocabulary 变化
 
   return (
     <>
