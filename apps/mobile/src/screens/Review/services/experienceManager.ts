@@ -615,9 +615,9 @@ class ExperienceManager implements IExperienceManager {
     onComplete?: (finalExp: number, finalLevel: number) => void
   ): Promise<void> {
     try {
-      // 简化逻辑：直接使用传入的参数，避免复杂的计算错误
-      const animationStartExp = currentExp - gainedExp;
-      const animationEndExp = currentExp;
+      // 修复：动画应该从用户当前看到的经验值开始，增长到最终值
+      const animationStartExp = currentExp;  // 从当前值开始
+      const animationEndExp = currentExp + gainedExp;  // 增长到最终值
       
       const oldLevel = this.calculateLevel(animationStartExp);
       const newLevel = this.calculateLevel(animationEndExp);
