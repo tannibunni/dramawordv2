@@ -977,9 +977,8 @@ class ExperienceManager implements IExperienceManager {
       }
       
       if (currentState.userExperienceInfo) {
-        // 重新从本地存储读取最新经验值，确保数据同步
-        const latestExperienceInfo = await this.getCurrentExperienceInfo();
-        const currentExp = latestExperienceInfo?.experience || currentState.userExperienceInfo.experience;
+        // 使用当前状态中的经验值，避免从本地存储重新读取导致的不一致
+        const currentExp = currentState.userExperienceInfo.experience;
         
         console.log('[experienceManager] 启动经验值动画，当前经验值:', currentExp, '获得经验值:', gainedExp);
         
