@@ -507,15 +507,30 @@ export class WrongWordsManager {
   public async calculateWrongWordsCount(vocabulary: any[]): Promise<number> {
     try {
       if (!vocabulary || vocabulary.length === 0) {
+        console.log('🔧 WrongWordsManager: 词汇表为空，返回0');
         return 0;
       }
       
-      // 计算错词数量
-      const count = vocabulary.filter(word => 
+      // 方法1：从词汇表计算错词数量
+      const vocabularyCount = vocabulary.filter(word => 
         word.incorrectCount > 0 || word.consecutiveIncorrect > 0
       ).length;
       
-      return count;
+      // 方法2：从错词集合计算错词数量
+      const collectionCount = this.getWrongWords().length;
+      
+      console.log('🔧 WrongWordsManager: 错词数量计算:', {
+        vocabularyCount,
+        collectionCount,
+        totalWords: vocabulary.length,
+        wrongWordsList: this.getWrongWords()
+      });
+      
+      // 返回较大的数量，确保错词挑战能正常工作
+      const finalCount = Math.max(vocabularyCount, collectionCount);
+      console.log('🔧 WrongWordsManager: 最终错词数量:', finalCount);
+      
+      return finalCount;
     } catch (error) {
       console.error('🔧 WrongWordsManager: 计算错词数量失败', error);
       return 0;

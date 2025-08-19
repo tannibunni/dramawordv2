@@ -86,8 +86,21 @@ export const useReviewLogic = ({ type, id, reviewMode }: ReviewLogicProps) => {
           
           return wrongWordsWithDetails.slice(0, MIN_REVIEW_BATCH);
         } else {
-          console.log('🔍 错词管理器中没有错词，返回空数组');
-          return [];
+          console.log('🔍 错词管理器中没有错词，尝试从词汇表筛选');
+          
+          // 如果错词集合为空，从词汇表中筛选错词
+          const vocabularyWrongWords = vocabulary.filter(w => 
+            (w.incorrectCount || 0) > 0 || (w.consecutiveIncorrect || 0) > 0
+          );
+          
+          console.log(`🔍 从词汇表筛选到 ${vocabularyWrongWords.length} 个错词`);
+          
+          if (vocabularyWrongWords.length > 0) {
+            return vocabularyWrongWords.slice(0, MIN_REVIEW_BATCH);
+          } else {
+            console.log('🔍 词汇表中也没有错词，返回空数组');
+            return [];
+          }
         }
       }
       
