@@ -260,7 +260,7 @@ const ReviewIntroScreen = () => {
     };
     
     checkExperienceGainOnFocus();
-  }, [checkExperienceGain]);
+  }, []); // 移除 checkExperienceGain 依赖，避免重复调用
   
   // ==================== 检查vocabulary刷新 ====================
   useEffect(() => {

@@ -734,6 +734,12 @@ class ExperienceManager implements IExperienceManager {
   // 手动触发经验值动画（由ReviewIntroScreen调用）
   public async triggerExperienceAnimation(experienceGained: number): Promise<void> {
     try {
+      // 防止重复触发动画
+      if (this.getExperienceState().isProgressBarAnimating) {
+        console.log('[experienceManager] 动画正在进行中，跳过重复触发');
+        return;
+      }
+      
       console.log('[experienceManager] 手动触发经验值动画:', experienceGained);
       
       // 获取当前经验值信息
@@ -753,6 +759,11 @@ class ExperienceManager implements IExperienceManager {
         newExperience,
         oldProgress,
         newProgress
+      });
+      
+      // 设置动画状态，防止重复触发
+      this.updateState({
+        isProgressBarAnimating: true
       });
       
       // 先更新状态，确保动画从正确的起点开始
@@ -777,7 +788,7 @@ class ExperienceManager implements IExperienceManager {
         },
         (finalExp: number, finalLevel: number) => {
           console.log('[experienceManager] 经验值动画完成:', { finalExp, finalLevel });
-          // 动画完成后，确保状态显示最终值
+          // 动画完成后，确保状态显示最终值并重置动画状态
           this.updateState({
             progressBarValue: this.calculateProgressPercentage(finalExp),
             userExperienceInfo: {
@@ -785,12 +796,17 @@ class ExperienceManager implements IExperienceManager {
               experience: finalExp,
               level: finalLevel,
               progressPercentage: this.calculateProgressPercentage(finalExp)
-            }
+            },
+            isProgressBarAnimating: false
           });
         }
       );
     } catch (error) {
       console.error('[experienceManager] 手动触发经验值动画失败:', error);
+      // 出错时也要重置动画状态
+      this.updateState({
+        isProgressBarAnimating: false
+      });
     }
   }
 
