@@ -755,21 +755,37 @@ class ExperienceManager implements IExperienceManager {
         newProgress
       });
       
-      // 使用带回调的动画方法，实时更新进度条
+      // 先更新状态，确保动画从正确的起点开始
+      this.updateState({
+        progressBarValue: oldProgress
+      });
+      
+      // 使用带回调的动画方法，实时更新进度条和经验值
       await this.startExperienceAnimationWithState(
         experienceGained,
         (currentExp: number, progress: number) => {
-          // 实时更新进度条状态
+          // 实时更新进度条状态和经验值
           this.updateState({
-            progressBarValue: progress
+            progressBarValue: progress,
+            userExperienceInfo: {
+              ...currentInfo,
+              experience: currentExp,
+              progressPercentage: progress
+            }
           });
-          console.log('[experienceManager] 进度条更新:', { currentExp, progress });
+          console.log('[experienceManager] 进度条和经验值更新:', { currentExp, progress });
         },
         (finalExp: number, finalLevel: number) => {
           console.log('[experienceManager] 经验值动画完成:', { finalExp, finalLevel });
-          // 动画完成后，确保进度条显示最终值
+          // 动画完成后，确保状态显示最终值
           this.updateState({
-            progressBarValue: this.calculateProgressPercentage(finalExp)
+            progressBarValue: this.calculateProgressPercentage(finalExp),
+            userExperienceInfo: {
+              ...currentInfo,
+              experience: finalExp,
+              level: finalLevel,
+              progressPercentage: this.calculateProgressPercentage(finalExp)
+            }
           });
         }
       );

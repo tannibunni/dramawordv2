@@ -447,7 +447,7 @@ const ReviewIntroScreen = () => {
                 </View>
               </View>
               <Text style={styles.experienceProgressText}>
-                {experienceManager.getExperienceDisplayData().experienceText}
+                {experienceState.userExperienceInfo?.experience || 0} / {experienceState.userExperienceInfo?.experienceToNextLevel || 50} XP
               </Text>
             </View>
             <View style={styles.progressBarContainer}>
