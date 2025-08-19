@@ -731,6 +731,16 @@ class ExperienceManager implements IExperienceManager {
     }
   }
 
+  // 手动触发经验值动画（由ReviewIntroScreen调用）
+  public async triggerExperienceAnimation(experienceGained: number): Promise<void> {
+    try {
+      console.log('[experienceManager] 手动触发经验值动画:', experienceGained);
+      await this.startExperienceAnimationWithState(experienceGained);
+    } catch (error) {
+      console.error('[experienceManager] 手动触发经验值动画失败:', error);
+    }
+  }
+
   // ==================== 经验值加载和初始化 ====================
   
   // 加载用户经验值信息

@@ -188,16 +188,8 @@ const ReviewIntroScreen = () => {
             try {
               console.log('[ReviewIntroScreen] 开始触发经验值动画:', experienceGained);
               
-              // 使用 experienceManager 的动画方法
-              await experienceManager.startExperienceAnimationWithState(
-                experienceGained,
-                (currentExp: number, progress: number) => {
-                  console.log('[ReviewIntroScreen] 经验值动画进度:', { currentExp, progress });
-                },
-                (finalExp: number, finalLevel: number) => {
-                  console.log('[ReviewIntroScreen] 经验值动画完成:', { finalExp, finalLevel });
-                }
-              );
+              // 使用新的手动触发方法
+              await experienceManager.triggerExperienceAnimation(experienceGained);
             } catch (error) {
               console.error('[ReviewIntroScreen] 触发经验值动画失败:', error);
             }
@@ -238,15 +230,8 @@ const ReviewIntroScreen = () => {
             try {
               console.log('[ReviewIntroScreen] 开始触发经验值动画（备用机制）:', experienceGained);
               
-              await experienceManager.startExperienceAnimationWithState(
-                experienceGained,
-                (currentExp: number, progress: number) => {
-                  console.log('[ReviewIntroScreen] 经验值动画进度（备用机制）:', { currentExp, progress });
-                },
-                (finalExp: number, finalLevel: number) => {
-                  console.log('[ReviewIntroScreen] 经验值动画完成（备用机制）:', { finalExp, finalLevel });
-                }
-              );
+              // 使用新的手动触发方法
+              await experienceManager.triggerExperienceAnimation(experienceGained);
             } catch (error) {
               console.error('[ReviewIntroScreen] 触发经验值动画失败（备用机制）:', error);
             }
