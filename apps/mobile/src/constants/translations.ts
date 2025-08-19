@@ -484,7 +484,7 @@ export const translations: Record<AppLanguage, Record<TranslationKey, string>> =
   'zh-CN': {
     // Profile页面
     guest_user: '游客用户',
-    intermediate_learner: '中级学习者',
+    intermediate_learner: 'LEVEL 1',
     join_date: '加入时间',
     login: '登录',
     logged_in: '已登录',

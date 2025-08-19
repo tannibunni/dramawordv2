@@ -1255,12 +1255,7 @@ class ExperienceManager implements IExperienceManager {
 
   // 获取等级文本
   public getLevelText(level: number): string {
-    if (level === 1) return '新手';
-    if (level === 2) return '学徒';
-    if (level === 3) return '熟练';
-    if (level === 4) return '精通';
-    if (level === 5) return '大师';
-    return `Level ${level}`;
+    return `LEVEL ${level}`;
   }
 
   // ==================== 页面统一管理 ====================
@@ -1360,7 +1355,7 @@ class ExperienceManager implements IExperienceManager {
     if (!userExperienceInfo) {
       return {
         level: 1,
-        levelText: '新手',
+        levelText: 'LEVEL 1',
         experienceText: '0 XP',
         progressPercentage: 0,
         levelBadge: {
