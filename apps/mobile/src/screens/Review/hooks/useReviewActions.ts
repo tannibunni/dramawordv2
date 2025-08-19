@@ -102,6 +102,15 @@ export const useReviewActions = ({
           }).catch(error => {
             console.error('❌ 保存错词集合失败:', error);
           });
+          
+          // 验证错词是否真的被添加
+          const wrongWords = wrongWordsManager.getWrongWords();
+          console.log('🔍 验证错词集合内容:', {
+            word,
+            isInSet: wrongWords.includes(word),
+            totalCount: wrongWords.length,
+            allWords: wrongWords
+          });
         } else {
           console.log('ℹ️ 错词已存在于错词集合中:', word);
         }
@@ -134,12 +143,9 @@ export const useReviewActions = ({
     const isLastCard = swiperIndex === words.length - 1;
     console.log(`🔍 检查是否是最后一张卡片: swiperIndex=${swiperIndex}, words.length=${words.length}, isLastCard=${isLastCard}`);
     
-    if (isLastCard && onReviewComplete) {
-      console.log('🎯 正在查看最后一张卡片，用户还没有划它，不触发完成状态');
-      // 不触发完成状态，让用户继续划最后一张卡片
-    } else {
-      moveToNextWord(words.length);
-    }
+    // 修复：左滑时总是调用 moveToNextWord，确保进度条更新
+    console.log(`🔄 左滑完成，调用 moveToNextWord 更新进度条`);
+    moveToNextWord(words.length);
   }, [words, swiperIndex, convertReviewWordToWord, updateBackendWordProgress, updateStats, updateSession, moveToNextWord, updateWord]);
 
   // 处理右滑操作（记住）

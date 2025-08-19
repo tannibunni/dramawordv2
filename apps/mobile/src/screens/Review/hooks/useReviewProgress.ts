@@ -28,18 +28,27 @@ export const useReviewProgress = (totalWords: number) => {
     // 进度条不允许回退，保证单调递增
     const newProgress = Math.max(currentProgress, computedProgress);
     
-    // 只在进度变化显著时记录日志
-    if (Math.abs(newProgress - currentProgress) >= 10) {
-      console.log(`📊 进度条更新: ${currentProgress.toFixed(0)}% → ${newProgress.toFixed(0)}%`);
-    }
+    // 添加详细的进度更新日志
+    console.log(`📊 进度条更新触发:`, {
+      swiperIndex,
+      totalWords,
+      completedCards,
+      currentProgress: currentProgress.toFixed(2),
+      computedProgress: computedProgress.toFixed(2),
+      newProgress: newProgress.toFixed(2),
+      progressChange: (newProgress - currentProgress).toFixed(2)
+    });
     
     // 避免频繁更新
     if (Math.abs(newProgress - currentProgress) < 0.1) {
+      console.log('📊 进度变化太小，跳过更新');
       return;
     }
     
     // 使用 requestAnimationFrame 确保在下一帧更新状态，避免渲染过程中的状态更新
     requestAnimationFrame(() => {
+      console.log(`🎬 开始进度条动画: ${currentProgress.toFixed(2)}% → ${newProgress.toFixed(2)}%`);
+      
       // 动画更新进度条
       Animated.timing(progressAnimation, {
         toValue: newProgress,
@@ -131,6 +140,15 @@ export const useReviewProgress = (totalWords: number) => {
     if (swiperIndex < totalWords) {
       const newIndex = swiperIndex + 1;
       console.log('📱 移动到下一个单词 - new index:', newIndex);
+      
+      // 添加详细的索引更新日志
+      console.log(`📊 moveToNextWord 详细日志:`, {
+        oldSwiperIndex: swiperIndex,
+        newSwiperIndex: newIndex,
+        totalWords,
+        willTriggerProgressUpdate: true
+      });
+      
       setSwiperIndex(newIndex);
       
       // 如果已经查看完所有卡片（newIndex === totalWords），表示复习完成

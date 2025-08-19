@@ -33,17 +33,15 @@ export const LoginButton: React.FC<LoginButtonProps> = ({
 }) => {
   const { appLanguage } = useAppLanguage();
   
-  // 添加微信登录按钮的初始化日志
+  // 添加登录按钮的初始化日志
   React.useEffect(() => {
-    if (type === 'wechat') {
-      console.log('💬 微信登录按钮组件初始化');
-      console.log('💬 按钮配置:', {
-        type,
-        loading,
-        disabled,
-        appLanguage
-      });
-    }
+    console.log(`[LoginButton] ${type} 按钮组件初始化`);
+    console.log(`[LoginButton] 按钮配置:`, {
+      type,
+      loading,
+      disabled,
+      appLanguage
+    });
   }, [type, loading, disabled, appLanguage]);
   
   const getButtonConfig = (type: LoginButtonType) => {
