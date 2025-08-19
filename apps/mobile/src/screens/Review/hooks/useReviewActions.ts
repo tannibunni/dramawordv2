@@ -91,29 +91,34 @@ export const useReviewActions = ({
           ...updatedWordData
         };
         
+        // 先尝试添加错词
         const added = wrongWordsManager.addWrongWord(word, wordDataForWrongWords);
         if (added) {
           console.log('✅ 错词已实时添加到错词集合:', word);
-          console.log('📊 当前错词总数:', wrongWordsManager.getWrongWordsCount());
-          
-          // 立即保存错词集合到本地存储
-          wrongWordsManager.saveToStorage().then(() => {
-            console.log('✅ 错词集合已保存到本地存储');
-          }).catch(error => {
-            console.error('❌ 保存错词集合失败:', error);
-          });
-          
-          // 验证错词是否真的被添加
-          const wrongWords = wrongWordsManager.getWrongWords();
-          console.log('🔍 验证错词集合内容:', {
-            word,
-            isInSet: wrongWords.includes(word),
-            totalCount: wrongWords.length,
-            allWords: wrongWords
-          });
         } else {
-          console.log('ℹ️ 错词已存在于错词集合中:', word);
+          console.log('ℹ️ 错词已存在于错词集合中，更新状态:', word);
+          // 如果错词已存在，更新其状态
+          wrongWordsManager.updateWrongWord(word, false, wordDataForWrongWords);
         }
+        
+        // 无论是否新添加，都要保存和验证
+        console.log('📊 当前错词总数:', wrongWordsManager.getWrongWordsCount());
+        
+        // 立即保存错词集合到本地存储
+        wrongWordsManager.saveToStorage().then(() => {
+          console.log('✅ 错词集合已保存到本地存储');
+        }).catch(error => {
+          console.error('❌ 保存错词集合失败:', error);
+        });
+        
+        // 验证错词是否真的在集合中
+        const wrongWords = wrongWordsManager.getWrongWords();
+        console.log('🔍 验证错词集合内容:', {
+          word,
+          isInSet: wrongWords.includes(word),
+          totalCount: wrongWords.length,
+          allWords: wrongWords
+        });
       }
       
       // 5. 立即更新后端用户词汇表
