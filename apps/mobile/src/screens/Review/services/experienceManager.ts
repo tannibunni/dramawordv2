@@ -815,18 +815,28 @@ class ExperienceManager implements IExperienceManager {
   // 加载用户经验值信息
   public async loadUserExperienceInfo(vocabularyLength: number = 0): Promise<void> {
     try {
+      console.log('[experienceManager] 开始加载用户经验值信息...');
       const experienceInfo = await this.getCurrentExperienceInfo();
       
       if (experienceInfo) {
+        console.log('[experienceManager] 成功加载经验值信息:', experienceInfo);
+        
+        // 计算进度条值
+        const progressValue = this.calculateProgressPercentage(experienceInfo.experience);
+        
         this.updateState({
           userExperienceInfo: experienceInfo,
+          progressBarValue: progressValue,
           isLoadingExperience: false,
           hasCheckedExperience: true
         });
         
+        console.log('[experienceManager] 状态更新完成，进度条值:', progressValue);
+        
         // 更新统计信息
         this.updateStatistics(vocabularyLength);
       } else {
+        console.log('[experienceManager] 没有找到经验值信息，使用默认值');
         // 用户还没有学习记录，经验值为0
         this.updateState({
           userExperienceInfo: {
@@ -841,6 +851,7 @@ class ExperienceManager implements IExperienceManager {
             currentStreak: 0,
             contributedWords: 0
           },
+          progressBarValue: 0,
           isLoadingExperience: false,
           hasCheckedExperience: true
         });
