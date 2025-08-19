@@ -451,9 +451,9 @@ const ReviewIntroScreen = () => {
               </Text>
             </View>
             <View style={styles.progressBarContainer}>
-              {/* 蓝色渐变进度条 - 使用静态进度条显示经验值进度 */}
+              {/* 蓝色渐变进度条 - 使用动画进度条显示经验值进度 */}
               <View style={[styles.progressBarFill, { 
-                width: `${experienceManager.getExperienceDisplayData().progressPercentage * 100}%` 
+                width: `${experienceState.progressBarValue * 100}%` 
               }]}>
                 <LinearGradient
                   colors={[colors.primary[400], colors.primary[600]]}

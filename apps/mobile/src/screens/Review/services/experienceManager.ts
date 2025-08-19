@@ -735,7 +735,44 @@ class ExperienceManager implements IExperienceManager {
   public async triggerExperienceAnimation(experienceGained: number): Promise<void> {
     try {
       console.log('[experienceManager] 手动触发经验值动画:', experienceGained);
-      await this.startExperienceAnimationWithState(experienceGained);
+      
+      // 获取当前经验值信息
+      const currentInfo = await this.getCurrentExperienceInfo();
+      if (!currentInfo) {
+        console.error('[experienceManager] 无法获取当前经验值信息');
+        return;
+      }
+      
+      const oldExperience = currentInfo.experience;
+      const newExperience = oldExperience + experienceGained;
+      const oldProgress = this.calculateProgressPercentage(oldExperience);
+      const newProgress = this.calculateProgressPercentage(newExperience);
+      
+      console.log('[experienceManager] 动画参数:', {
+        oldExperience,
+        newExperience,
+        oldProgress,
+        newProgress
+      });
+      
+      // 使用带回调的动画方法，实时更新进度条
+      await this.startExperienceAnimationWithState(
+        experienceGained,
+        (currentExp: number, progress: number) => {
+          // 实时更新进度条状态
+          this.updateState({
+            progressBarValue: progress
+          });
+          console.log('[experienceManager] 进度条更新:', { currentExp, progress });
+        },
+        (finalExp: number, finalLevel: number) => {
+          console.log('[experienceManager] 经验值动画完成:', { finalExp, finalLevel });
+          // 动画完成后，确保进度条显示最终值
+          this.updateState({
+            progressBarValue: this.calculateProgressPercentage(finalExp)
+          });
+        }
+      );
     } catch (error) {
       console.error('[experienceManager] 手动触发经验值动画失败:', error);
     }
