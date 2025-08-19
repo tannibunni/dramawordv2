@@ -228,7 +228,8 @@ class ExperienceManager implements IExperienceManager {
           if (parsedStats.experience > 0) {
             // 检查等级一致性并重新计算相关值
             const calculatedLevel = this.calculateLevel(parsedStats.experience);
-            const experienceToNextLevel = this.calculateExpToNextLevel(parsedStats.experience);
+            // 修复：显示当前等级需要的总经验值，而不是还需要多少经验值升级
+            const experienceToNextLevel = this.calculateLevelRequiredExp(calculatedLevel);
             const progressPercentage = this.calculateProgressPercentage(parsedStats.experience);
             
             // 强制重新计算，确保数据一致性
@@ -281,7 +282,8 @@ class ExperienceManager implements IExperienceManager {
           if (parsedStats.experience > 0) {
             // 检查等级一致性并重新计算相关值
             const calculatedLevel = this.calculateLevel(parsedStats.experience);
-            const experienceToNextLevel = this.calculateExpToNextLevel(parsedStats.experience);
+            // 修复：显示当前等级需要的总经验值，而不是还需要多少经验值升级
+            const experienceToNextLevel = this.calculateLevelRequiredExp(calculatedLevel);
             const progressPercentage = this.calculateProgressPercentage(parsedStats.experience);
             
             // 强制重新计算，确保数据一致性
