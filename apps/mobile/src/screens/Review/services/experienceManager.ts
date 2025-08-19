@@ -184,7 +184,8 @@ class ExperienceManager implements IExperienceManager {
   // 计算等级信息
   private calculateLevelInfo(experience: number): LevelInfo {
     const level = this.calculateLevel(experience);
-    const experienceToNextLevel = this.calculateExpToNextLevel(experience);
+    // 修复：显示当前等级需要的总经验值，而不是还需要多少经验值升级
+    const experienceToNextLevel = this.calculateLevelRequiredExp(level);
     const progressPercentage = this.calculateProgressPercentage(experience);
     const currentLevelExp = this.getExperienceInCurrentLevel(experience);
     const previousLevelExp = level === 1 ? 0 : this.calculateLevelRequiredExp(level - 1);
@@ -393,7 +394,8 @@ class ExperienceManager implements IExperienceManager {
         ...currentInfo,
         experience: newExperience,
         level: newLevel,
-        experienceToNextLevel: this.calculateExpToNextLevel(newExperience),
+        // 修复：显示当前等级需要的总经验值，而不是还需要多少经验值升级
+        experienceToNextLevel: this.calculateLevelRequiredExp(newLevel),
         progressPercentage: this.calculateProgressPercentage(newExperience),
         totalExperience: currentInfo.totalExperience + xpToGain
       };
@@ -663,7 +665,8 @@ class ExperienceManager implements IExperienceManager {
         ...currentState.userExperienceInfo,
         experience,
         level,
-        experienceToNextLevel: this.calculateExpToNextLevel(experience),
+        // 修复：显示当前等级需要的总经验值，而不是还需要多少经验值升级
+        experienceToNextLevel: this.calculateLevelRequiredExp(level),
         progressPercentage: this.calculateProgressPercentage(experience)
       };
       
@@ -688,7 +691,8 @@ class ExperienceManager implements IExperienceManager {
           ...currentExperienceInfo,
           experience,
           level,
-          experienceToNextLevel: this.calculateExpToNextLevel(experience),
+          // 修复：显示当前等级需要的总经验值，而不是还需要多少经验值升级
+          experienceToNextLevel: this.calculateLevelRequiredExp(level),
           progressPercentage: this.calculateProgressPercentage(experience)
         };
         
@@ -701,7 +705,8 @@ class ExperienceManager implements IExperienceManager {
         const newExperienceInfo = {
           experience,
           level,
-          experienceToNextLevel: this.calculateExpToNextLevel(experience),
+          // 修复：显示当前等级需要的总经验值，而不是还需要多少经验值升级
+          experienceToNextLevel: this.calculateLevelRequiredExp(level),
           progressPercentage: this.calculateProgressPercentage(experience),
           totalExperience: experience,
           dailyReviewXP: 0,
