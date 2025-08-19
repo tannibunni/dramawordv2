@@ -21,7 +21,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 // 导入服务和工具
 import { unifiedSyncService } from '../../services/unifiedSyncService';
 import { experienceManager } from './services/experienceManager';
-import { animationManager } from '../../services/animationManager';
+
 import { wrongWordsManager } from './services/wrongWordsManager';
 import { t } from '../../constants/translations';
 import { dataManagerService } from './services/dataManagerService';
@@ -81,42 +81,7 @@ const ReviewIntroScreen = () => {
   // 使用 experienceManager 的状态管理
   const [experienceState, setExperienceState] = useState(experienceManager.getExperienceState());
   
-  // 获取动画值
-  const animationValues = animationManager.getAnimationValues();
-  
-  // 跟踪动画值状态
-  const [animationState, setAnimationState] = useState({
-    numberValue: 0,
-    opacityValue: 0,
-    scaleValue: 1,
-    levelValue: 1
-  });
 
-  // 监听动画值变化
-  useEffect(() => {
-    const numberListener = animationValues.numberAnimation.addListener(({ value }) => {
-      setAnimationState(prev => ({ ...prev, numberValue: value }));
-    });
-    
-    const opacityListener = animationValues.opacityAnimation.addListener(({ value }) => {
-      setAnimationState(prev => ({ ...prev, opacityValue: value }));
-    });
-    
-    const scaleListener = animationValues.scaleAnimation.addListener(({ value }) => {
-      setAnimationState(prev => ({ ...prev, scaleValue: value }));
-    });
-    
-    const levelListener = animationValues.levelAnimation.addListener(({ value }) => {
-      setAnimationState(prev => ({ ...prev, levelValue: value }));
-    });
-
-    return () => {
-      animationValues.numberAnimation.removeListener(numberListener);
-      animationValues.opacityAnimation.removeListener(opacityListener);
-      animationValues.scaleAnimation.removeListener(scaleListener);
-      animationValues.levelAnimation.removeListener(levelListener);
-    };
-  }, [animationValues]);
 
   // 注册 experienceManager 状态回调
   useEffect(() => {
@@ -712,71 +677,7 @@ const ReviewIntroScreen = () => {
         />
       </ScrollView>
       
-      {/* 经验值动画弹窗 */}
-      <Animated.View
-        style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: 'rgba(0, 0, 0, 0.5)',
-          justifyContent: 'center',
-          alignItems: 'center',
-          opacity: animationState.opacityValue,
-          zIndex: 1000,
-        }}
-        pointerEvents="none"
-      >
-        <Animated.View
-          style={{
-            backgroundColor: colors.background.primary,
-            borderRadius: 20,
-            padding: 30,
-            alignItems: 'center',
-            transform: [
-              { scale: animationState.scaleValue }
-            ],
-            shadowColor: '#000',
-            shadowOffset: {
-              width: 0,
-              height: 4,
-            },
-            shadowOpacity: 0.3,
-            shadowRadius: 8,
-            elevation: 8,
-          }}
-        >
-          {/* 经验值数字动画 */}
-          <Animated.Text
-            style={{
-              fontSize: 48,
-              fontWeight: 'bold',
-              color: colors.primary[500],
-              marginBottom: 10,
-            }}
-          >
-            +{Math.round(animationState.numberValue * 4)} XP
-          </Animated.Text>
-          
-          {/* 等级动画 */}
-          <Animated.View
-            style={{
-              transform: [
-                { scale: animationState.levelValue }
-              ],
-            }}
-          >
-            <Text style={{
-              fontSize: 18,
-              color: colors.text.secondary,
-              textAlign: 'center',
-            }}>
-              获得经验值！
-            </Text>
-          </Animated.View>
-        </Animated.View>
-      </Animated.View>
+
     </>
   );
 };
