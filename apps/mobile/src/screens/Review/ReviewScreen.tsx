@@ -447,10 +447,11 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
     }, 1200);
   };
 
-  // 根据复习类型选择完成页面
-  // 修复闪屏问题：只有在完成图片显示完毕后才跳转
+  // 早期返回：如果复习已完成且没有显示完成图片，直接跳转完成页面
+  // 这是最根本的解决方案，完全避免闪屏
   if (isReviewComplete && !showCompletionImage) {
-    console.log('🚀 跳转条件满足: isReviewComplete=true, showCompletionImage=false，准备跳转');
+    console.log('🚀 早期返回：复习已完成，直接跳转完成页面，避免闪屏');
+    
     // 错词挑战模式暂时使用普通完成页面
     if (type === 'wrong_words') {
       console.log('🔧 ReviewScreen: 进入错词挑战完成页面逻辑（使用普通完成页面）');
