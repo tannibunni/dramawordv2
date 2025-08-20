@@ -698,8 +698,10 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   const setupAppCloseSync = () => {
     // 监听APP状态变化
     const handleAppStateChange = (nextAppState: string) => {
+      console.log('🔄 [ProfileScreen] AppState 变化:', nextAppState);
+      
       if (nextAppState === 'background' || nextAppState === 'inactive') {
-        console.log('🔄 APP进入后台，开始同步数据...');
+        console.log('🔄 [ProfileScreen] APP进入后台，开始同步数据...');
         syncOnAppClose();
       }
     };
@@ -716,11 +718,21 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   // 新增：APP关闭时同步数据
   const syncOnAppClose = async () => {
     try {
-      console.log('🔄 开始APP关闭时同步...');
+      console.log('🔄 [ProfileScreen] 开始APP关闭时同步...');
+      console.log('🔄 [ProfileScreen] 当前用户ID:', user?.id);
+      console.log('🔄 [ProfileScreen] 当前登录类型:', loginType);
       
       const userId = user?.id;
       if (!userId) {
-        console.log('⚠️ 用户未登录，跳过APP关闭同步');
+        console.log('⚠️ [ProfileScreen] 用户未登录，跳过APP关闭同步');
+        return;
+      }
+      
+      // 检查是否真的需要同步（避免频繁触发）
+      const lastSync = await AsyncStorage.getItem('lastAppCloseSync');
+      const now = Date.now();
+      if (lastSync && (now - parseInt(lastSync)) < 30000) { // 30秒内不重复同步
+        console.log('⚠️ [ProfileScreen] 30秒内已同步过，跳过重复同步');
         return;
       }
       
