@@ -10,9 +10,8 @@ import {
   Alert,
   ScrollView,
   Platform,
-  ActivityIndicator,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { colors } from '../../constants/colors';
 import Swiper from 'react-native-deck-swiper';
 import WordCard from '../../components/cards/WordCard';
@@ -94,10 +93,6 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
   const { user } = useAuth();
   const swiperRef = useRef<any>(null);
   
-  // 完成动画相关状态
-  const [showCompletionAnimation, setShowCompletionAnimation] = useState(false);
-  const completionProgressAnimation = useRef(new Animated.Value(0)).current;
-  
   // 设置翻译服务语言
   useEffect(() => {
     // 翻译函数会自动使用当前语言，无需手动设置
@@ -175,25 +170,6 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
       }
     }
   });
-
-  // 监听复习完成状态，启动完成动画
-  useEffect(() => {
-    if (isReviewComplete && !showCompletionAnimation) {
-      setShowCompletionAnimation(true);
-      
-      // 启动完成进度条动画
-      Animated.timing(completionProgressAnimation, {
-        toValue: 100,
-        duration: 2000, // 2秒动画
-        useNativeDriver: false,
-      }).start();
-      
-      // 2.5秒后隐藏动画，显示完成页面
-      setTimeout(() => {
-        setShowCompletionAnimation(false);
-      }, 2500);
-    }
-  }, [isReviewComplete, showCompletionAnimation, completionProgressAnimation]);
 
   // 监控艾宾浩斯记忆法状态变化，显示Toast提示（仅在切换复习模式后）
   useEffect(() => {
@@ -435,40 +411,8 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
   };
 
   // 根据复习类型选择完成页面
-  if (isReviewComplete && showCompletionAnimation) {
-    // 显示完成动画，填补页面空白
-    return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: colors.background.primary }}>
-        <View style={styles.completionAnimationContainer}>
-          {/* 完成动画内容 */}
-          <View style={styles.completionAnimationContent}>
-            <Text style={styles.completionTitle}>🎉 复习完成！</Text>
-            <Text style={styles.completionSubtitle}>正在准备结果...</Text>
-            
-            {/* 进度条动画 */}
-            <View style={styles.completionProgressContainer}>
-              <View style={styles.completionProgressBar}>
-                <Animated.View 
-                  style={[
-                    styles.completionProgressFill,
-                    { width: completionProgressAnimation }
-                  ]} 
-                />
-              </View>
-            </View>
-            
-            {/* 加载动画 */}
-            <View style={styles.loadingSpinner}>
-              <ActivityIndicator size="large" color={colors.primary[500]} />
-            </View>
-          </View>
-        </View>
-      </SafeAreaView>
-    );
-  }
-  
   if (isReviewComplete) {
-    // 错词挑战模式暂时使用普通完成页面
+        // 错词挑战模式暂时使用普通完成页面
     if (type === 'wrong_words') {
       console.log('🔧 ReviewScreen: 进入错词挑战完成页面逻辑（使用普通完成页面）');
       console.log('🔧 ReviewScreen: reviewActions:', reviewActions);
@@ -789,6 +733,17 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
           cardHorizontalMargin={0}
           containerStyle={{ flex: 1, width: '100%' }}
         />
+        
+        {/* 复习完成图片 - 在4秒等待期间显示 */}
+        {isReviewComplete && (
+          <View style={styles.completionImageContainer}>
+            <View style={styles.completionImageWrapper}>
+              <MaterialIcons name="celebration" size={80} color={colors.primary[500]} />
+              <Text style={styles.completionTitle}>{t('review_completed', appLanguage)}</Text>
+              <Text style={styles.completionSubtitle}>{t('great_job', appLanguage)}</Text>
+            </View>
+          </View>
+        )}
       </View>
     </SafeAreaView>
   );
@@ -888,49 +843,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: colors.text.secondary,
     textAlign: 'center',
-  },
-  // 完成动画样式
-  completionAnimationContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: colors.background.primary,
-  },
-  completionAnimationContent: {
-    alignItems: 'center',
-    padding: 40,
-  },
-  completionTitle: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: colors.text.primary,
-    marginBottom: 12,
-    textAlign: 'center',
-  },
-  completionSubtitle: {
-    fontSize: 16,
-    color: colors.text.secondary,
-    marginBottom: 32,
-    textAlign: 'center',
-  },
-  completionProgressContainer: {
-    width: 200,
-    marginBottom: 32,
-  },
-  completionProgressBar: {
-    width: '100%',
-    height: 8,
-    backgroundColor: colors.background.tertiary,
-    borderRadius: 4,
-    overflow: 'hidden',
-  },
-  completionProgressFill: {
-    height: '100%',
-    backgroundColor: colors.primary[500],
-    borderRadius: 4,
-  },
-  loadingSpinner: {
-    marginTop: 20,
   },
   hintContainer: {
     padding: 16,
@@ -1237,6 +1149,43 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 16,
     fontWeight: '600',
+  },
+  // 复习完成图片样式
+  completionImageContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: colors.background.primary,
+    zIndex: 100,
+  },
+  completionImageWrapper: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 40,
+    borderRadius: 24,
+    backgroundColor: colors.background.secondary,
+    shadowColor: colors.neutral[900],
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.1,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  completionTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: colors.text.primary,
+    marginTop: 16,
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  completionSubtitle: {
+    fontSize: 16,
+    color: colors.text.secondary,
+    textAlign: 'center',
   },
 });
 
