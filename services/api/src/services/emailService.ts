@@ -16,7 +16,7 @@ const createTransporter = () => {
   }
 
   // 生产环境使用实际邮件服务
-  const emailService = process.env.EMAIL_SERVICE || 'gmail';
+  const emailService = process.env.EMAIL_SERVICE || 'zoho';
   
   if (emailService === 'zoho') {
     return nodemailer.createTransport({
@@ -24,7 +24,7 @@ const createTransporter = () => {
       port: 587,
       secure: false, // Zoho使用STARTTLS
       auth: {
-        user: process.env.ZOHO_USER || 'noreply@dramaword.com',
+        user: process.env.ZOHO_USER || 'info@jilicharm.com',
         pass: process.env.ZOHO_PASSWORD
       },
       tls: {
