@@ -193,6 +193,7 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
       
       // 使用requestAnimationFrame确保状态更新在正确的时机进行
       requestAnimationFrame(() => {
+        console.log('🎬 设置showCompletionImage=true，开始显示完成图片');
         setShowCompletionImage(true);
       });
       
@@ -203,6 +204,7 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
         
         // 使用requestAnimationFrame确保状态更新在正确的时机进行
         requestAnimationFrame(() => {
+          console.log('🎬 设置showCompletionImage=false，准备跳转');
           setShowCompletionImage(false);
         });
       }, 1500);
@@ -449,6 +451,7 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
 
   // 早期返回：如果复习已完成且没有显示完成图片，直接跳转完成页面
   // 这是最根本的解决方案，完全避免闪屏
+  // 注意：当showCompletionImage=true时，不应该早期返回，让完成图片完整显示
   if (isReviewComplete && !showCompletionImage) {
     console.log('🚀 早期返回：复习已完成，直接跳转完成页面，避免闪屏');
     
