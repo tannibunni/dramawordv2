@@ -16,7 +16,7 @@ const createTransporter = () => {
   }
 
   // 生产环境使用实际邮件服务
-  const emailService = process.env.EMAIL_SERVICE || 'zoho';
+  const emailService = process.env.EMAIL_SERVICE || 'gmail';
   
   if (emailService === 'zoho') {
     return nodemailer.createTransport({
