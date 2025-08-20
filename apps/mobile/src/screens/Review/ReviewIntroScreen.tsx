@@ -81,6 +81,14 @@ const ReviewIntroScreen = () => {
   // 使用 experienceManager 的状态管理
   const [experienceState, setExperienceState] = useState(experienceManager.getExperienceState());
   
+  // 用户统计数据状态
+  const [userStats, setUserStats] = useState<{
+    collectedWords: number;
+    contributedWords: number;
+    totalReviews: number;
+    currentStreak: number;
+  } | null>(null);
+  
 
 
   // 注册 experienceManager 状态回调
@@ -100,6 +108,22 @@ const ReviewIntroScreen = () => {
     
     return unsubscribe;
   }, []);
+  
+  // 加载用户统计数据
+  useEffect(() => {
+    const loadUserStats = async () => {
+      try {
+        const stats = await AsyncStorage.getItem('userStats');
+        if (stats) {
+          setUserStats(JSON.parse(stats));
+        }
+      } catch (error) {
+        console.error('[ReviewIntroScreen] 加载用户统计数据失败:', error);
+      }
+    };
+    
+    loadUserStats();
+  }, [vocabulary]); // 当vocabulary变化时重新加载，确保复习次数是最新的
   
   // ==================== 经验值状态管理 ====================
   useEffect(() => {
@@ -448,7 +472,7 @@ const ReviewIntroScreen = () => {
             {/* 累计复习 */}
             <View style={styles.statItem}>
               <View style={styles.statContent}>
-                <Text style={styles.statNumber}>{experienceState.userExperienceInfo?.totalExperience || 0}</Text>
+                <Text style={styles.statNumber}>{userStats?.totalReviews || 0}</Text>
                 <Text style={styles.statUnit}>{t('times_unit', appLanguage)}</Text>
               </View>
               <Text style={styles.statLabel}>{t('cumulative_review', appLanguage)}</Text>
