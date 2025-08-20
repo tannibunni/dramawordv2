@@ -16,7 +16,22 @@ const createTransporter = () => {
   }
 
   // 生产环境使用实际邮件服务
-  const emailService = process.env.EMAIL_SERVICE || 'gmail';
+  const emailService = process.env.EMAIL_SERVICE || 'zoho';
+  
+  if (emailService === 'zoho') {
+    return nodemailer.createTransport({
+      host: 'smtp.zoho.com',
+      port: 587,
+      secure: false, // Zoho使用STARTTLS
+      auth: {
+        user: process.env.ZOHO_USER || 'noreply@dramaword.com',
+        pass: process.env.ZOHO_PASSWORD
+      },
+      tls: {
+        rejectUnauthorized: false
+      }
+    });
+  }
   
   if (emailService === 'gmail') {
     return nodemailer.createTransport({
@@ -51,13 +66,13 @@ export const sendVerificationEmail = async (
 ): Promise<void> => {
   try {
     const transporter = createTransporter();
-    const frontendUrl = process.env.FRONTEND_URL || 'https://dramaword.app';
+    const frontendUrl = process.env.FRONTEND_URL || 'dramaword://';
     const verificationUrl = `${frontendUrl}/verify-email?token=${token}`;
 
     const mailOptions = {
       from: {
         name: 'DramaWord',
-        address: process.env.EMAIL_FROM || 'noreply@dramaword.app'
+        address: process.env.EMAIL_FROM || 'noreply@dramaword.com'
       },
       to: email,
       subject: '验证您的 DramaWord 账户 | Verify Your DramaWord Account',
@@ -134,13 +149,13 @@ export const sendPasswordResetEmail = async (
 ): Promise<void> => {
   try {
     const transporter = createTransporter();
-    const frontendUrl = process.env.FRONTEND_URL || 'https://dramaword.app';
+    const frontendUrl = process.env.FRONTEND_URL || 'dramaword://';
     const resetUrl = `${frontendUrl}/reset-password?token=${token}`;
 
     const mailOptions = {
       from: {
         name: 'DramaWord',
-        address: process.env.EMAIL_FROM || 'noreply@dramaword.app'
+        address: process.env.EMAIL_FROM || 'noreply@dramaword.com'
       },
       to: email,
       subject: '重置您的 DramaWord 密码 | Reset Your DramaWord Password',

@@ -99,9 +99,15 @@ router.get('/env-check', (req, res) => {
   try {
     const envVars = {
       EMAIL_SERVICE: process.env.EMAIL_SERVICE,
+      // Gmail配置
       GMAIL_USER: process.env.GMAIL_USER,
       GMAIL_APP_PASSWORD: process.env.GMAIL_APP_PASSWORD ? 
         `${process.env.GMAIL_APP_PASSWORD.substring(0, 4)}...${process.env.GMAIL_APP_PASSWORD.substring(process.env.GMAIL_APP_PASSWORD.length - 4)}` : 
+        'NOT_SET',
+      // Zoho配置
+      ZOHO_USER: process.env.ZOHO_USER,
+      ZOHO_PASSWORD: process.env.ZOHO_PASSWORD ? 
+        `${process.env.ZOHO_PASSWORD.substring(0, 4)}...${process.env.ZOHO_PASSWORD.substring(process.env.ZOHO_PASSWORD.length - 4)}` : 
         'NOT_SET',
       EMAIL_FROM: process.env.EMAIL_FROM,
       FRONTEND_URL: process.env.FRONTEND_URL,
