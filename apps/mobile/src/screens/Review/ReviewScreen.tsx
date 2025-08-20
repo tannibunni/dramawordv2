@@ -190,13 +190,21 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
     if (isReviewComplete) {
       console.log('🎯 复习完成状态触发，显示完成图片');
       console.log('📊 状态变化: isReviewComplete=true, showCompletionImage=false → true');
-      setShowCompletionImage(true);
+      
+      // 使用requestAnimationFrame确保状态更新在正确的时机进行
+      requestAnimationFrame(() => {
+        setShowCompletionImage(true);
+      });
       
       // 1.5秒后隐藏完成图片，准备跳转（与进度条动画时长同步）
       const timer = setTimeout(() => {
         console.log('🖼️ 完成图片显示1.5秒后，准备跳转');
         console.log('📊 状态变化: showCompletionImage=true → false');
-        setShowCompletionImage(false);
+        
+        // 使用requestAnimationFrame确保状态更新在正确的时机进行
+        requestAnimationFrame(() => {
+          setShowCompletionImage(false);
+        });
       }, 1500);
       
       return () => clearTimeout(timer);
@@ -705,7 +713,8 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
       
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', paddingTop: 2 }}>
         {/* 当复习完成时，不显示Swiper，避免闪屏 */}
-        {!isReviewComplete ? (
+        {/* 使用更严格的条件：只有在复习未完成且没有显示完成图片时才显示Swiper */}
+        {!isReviewComplete && !showCompletionImage ? (
           <Swiper
             ref={swiperRef}
             cards={words}
