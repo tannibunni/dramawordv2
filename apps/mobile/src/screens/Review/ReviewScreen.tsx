@@ -720,64 +720,64 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
             verticalSwipe={false}
             disableTopSwipe
             disableBottomSwipe
-          onSwipedLeft={async (cardIndex) => {
-            // 安全检查：确保cardIndex在有效范围内
-            if (cardIndex < 0 || cardIndex >= words.length || !words[cardIndex]) {
-              console.warn('⚠️ onSwipedLeft: cardIndex超出范围或words[cardIndex]为undefined:', { cardIndex, wordsLength: words.length });
-              return;
-            }
-            
-            const word = words[cardIndex].word;
-            if (word) {
-              setPendingOperations(prev => prev + 1);
-              try {
-                await handleSwipeLeft(word);
-                // 错误答案，重置连击
-                handleWrongAnswer();
-              } finally {
-                setPendingOperations(prev => Math.max(0, prev - 1));
+            onSwipedLeft={async (cardIndex) => {
+              // 安全检查：确保cardIndex在有效范围内
+              if (cardIndex < 0 || cardIndex >= words.length || !words[cardIndex]) {
+                console.warn('⚠️ onSwipedLeft: cardIndex超出范围或words[cardIndex]为undefined:', { cardIndex, wordsLength: words.length });
+                return;
               }
-            }
-          }}
-          onSwipedRight={async (cardIndex) => {
-            // 安全检查：确保cardIndex在有效范围内
-            if (cardIndex < 0 || cardIndex >= words.length || !words[cardIndex]) {
-              console.warn('⚠️ onSwipedRight: cardIndex超出范围或words[cardIndex]为undefined:', { cardIndex, wordsLength: words.length });
-              return;
-            }
-            
-            const word = words[cardIndex].word;
-            if (word) {
-              setPendingOperations(prev => prev + 1);
-              try {
-                await handleSwipeRight(word);
-                // 正确答案，检查五连击
-                handleCorrectAnswer();
-              } finally {
-                setPendingOperations(prev => Math.max(0, prev - 1));
+              
+              const word = words[cardIndex].word;
+              if (word) {
+                setPendingOperations(prev => prev + 1);
+                try {
+                  await handleSwipeLeft(word);
+                  // 错误答案，重置连击
+                  handleWrongAnswer();
+                } finally {
+                  setPendingOperations(prev => Math.max(0, prev - 1));
+                }
               }
-            }
-          }}
-          onSwipedAll={() => {
-            console.log('🎯 Swiper onSwipedAll 触发 - 所有卡片已划完');
-            console.log('🔍 检查待处理操作数量 - pendingOperations:', pendingOperations);
-            
-            // 移除立即设置进度条为100%的代码，让moveToNextWord中的延迟逻辑能够正确执行
-            // progressAnimation.setValue(100); // 删除这行
-            
-            // 由于 Swiper 组件的限制，onSwipedAll 可能在 onSwipedRight 之前触发
-            // 我们改为在 handleSwipeRight 中处理完成逻辑，这里只做备用处理
-            if (pendingOperations === 0 && !isReviewComplete) {
-              console.log('✅ 无待处理操作，立即触发完成页面（备用）');
-              handleSwipedAll();
-            } else {
-              console.log('⏳ 有待处理操作，等待 handleSwipeRight 中的完成逻辑');
-            }
-          }}
-          cardVerticalMargin={8}
-          cardHorizontalMargin={0}
-          containerStyle={{ flex: 1, width: '100%' }}
-        />
+            }}
+            onSwipedRight={async (cardIndex) => {
+              // 安全检查：确保cardIndex在有效范围内
+              if (cardIndex < 0 || cardIndex >= words.length || !words[cardIndex]) {
+                console.warn('⚠️ onSwipedRight: cardIndex超出范围或words[cardIndex]为undefined:', { cardIndex, wordsLength: words.length });
+                return;
+              }
+              
+              const word = words[cardIndex].word;
+              if (word) {
+                setPendingOperations(prev => prev + 1);
+                try {
+                  await handleSwipeRight(word);
+                  // 正确答案，检查五连击
+                  handleCorrectAnswer();
+                } finally {
+                  setPendingOperations(prev => Math.max(0, prev - 1));
+                }
+              }
+            }}
+            onSwipedAll={() => {
+              console.log('🎯 Swiper onSwipedAll 触发 - 所有卡片已划完');
+              console.log('🔍 检查待处理操作数量 - pendingOperations:', pendingOperations);
+              
+              // 移除立即设置进度条为100%的代码，让moveToNextWord中的延迟逻辑能够正确执行
+              // progressAnimation.setValue(100); // 删除这行
+              
+              // 由于 Swiper 组件的限制，onSwipedAll 可能在 onSwipedRight 之前触发
+              // 我们改为在 handleSwipeRight 中处理完成逻辑，这里只做备用处理
+              if (pendingOperations === 0 && !isReviewComplete) {
+                console.log('✅ 无待处理操作，立即触发完成页面（备用）');
+                handleSwipedAll();
+              } else {
+                console.log('⏳ 有待处理操作，等待 handleSwipeRight 中的完成逻辑');
+              }
+            }}
+            cardVerticalMargin={8}
+            cardHorizontalMargin={0}
+            containerStyle={{ flex: 1, width: '100%' }}
+          />
         ) : null}
         
         {/* 复习完成图片 - 在4秒等待期间显示 */}
