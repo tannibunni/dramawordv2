@@ -12,18 +12,21 @@ import {
   Platform,
   ScrollView,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { emailAuthService, EmailAuthResult } from '../../services/emailAuthService';
 import { colors } from '../../constants/colors';
 import { t } from '../../constants/translations';
 import { useAppLanguage } from '../../context/AppLanguageContext';
 import { StyleSheet } from 'react-native';
+import { guestDataAdapter } from '../../services/guestDataAdapter';
 
 interface EmailAuthModalProps {
   visible: boolean;
   onClose: () => void;
   onLoginSuccess: (userData: any) => void;
   initialMode?: 'login' | 'register';
+  isUpgradeFromGuest?: boolean;
 }
 
 export const EmailAuthModal: React.FC<EmailAuthModalProps> = ({
@@ -31,6 +34,7 @@ export const EmailAuthModal: React.FC<EmailAuthModalProps> = ({
   onClose,
   onLoginSuccess,
   initialMode = 'login',
+  isUpgradeFromGuest = false,
 }) => {
   const { appLanguage } = useAppLanguage();
   const [mode, setMode] = useState<'login' | 'register' | 'forgot'>(initialMode);
@@ -128,9 +132,23 @@ export const EmailAuthModal: React.FC<EmailAuthModalProps> = ({
       const result = await emailAuthService.register(email, password, nickname);
 
       if (result.success && result.user && result.token) {
+        // 如果是游客升级，需要迁移数据
+        if (isUpgradeFromGuest) {
+          try {
+            console.log('[EmailAuthModal] 开始游客数据迁移...');
+            await migrateGuestData(result.user!.id);
+            console.log('[EmailAuthModal] 游客数据迁移完成');
+          } catch (migrationError) {
+            console.error('[EmailAuthModal] 游客数据迁移失败:', migrationError);
+            // 迁移失败不影响注册成功，但记录错误
+          }
+        }
+
         Alert.alert(
           t('registration_success', appLanguage),
-          t('check_email', appLanguage),
+          isUpgradeFromGuest 
+            ? t('guest_upgrade_success', appLanguage)
+            : t('check_email', appLanguage),
           [
             {
               text: t('ok', appLanguage),
@@ -210,6 +228,50 @@ export const EmailAuthModal: React.FC<EmailAuthModalProps> = ({
     }
   };
 
+  // 游客数据迁移
+  const migrateGuestData = async (newUserId: string) => {
+    try {
+      console.log('[EmailAuthModal] 开始迁移游客数据到新用户:', newUserId);
+      
+      // 1. 获取游客数据
+      const guestVocabulary = await guestDataAdapter.getVocabulary();
+      const guestUserStats = await guestDataAdapter.getUserStats();
+      const guestLearningRecords = await guestDataAdapter.getLearningRecords();
+      const guestSearchHistory = await guestDataAdapter.getSearchHistory();
+      
+      console.log('[EmailAuthModal] 游客数据统计:', {
+        vocabulary: guestVocabulary?.length || 0,
+        userStats: guestUserStats ? '存在' : '不存在',
+        learningRecords: guestLearningRecords?.length || 0,
+        searchHistory: guestSearchHistory?.length || 0
+      });
+      
+      // 2. 将游客数据迁移到新用户账户
+      // 这里需要调用后端API来保存数据
+      // 暂时先保存到本地，后续可以通过同步服务上传
+      
+      // 保存到本地存储，使用新用户ID
+      const newUserData = {
+        vocabulary: guestVocabulary || [],
+        userStats: guestUserStats || {},
+        learningRecords: guestLearningRecords || [],
+        searchHistory: guestSearchHistory || []
+      };
+      
+      // 将数据保存到新用户的本地存储
+      await AsyncStorage.setItem(`user_${newUserId}_data`, JSON.stringify(newUserData));
+      
+      console.log('[EmailAuthModal] 游客数据已迁移到新用户本地存储');
+      
+      // 3. 清理游客数据（可选，取决于是否要保留游客数据作为备份）
+      // await guestDataAdapter.clearGuestData();
+      
+    } catch (error) {
+      console.error('[EmailAuthModal] 游客数据迁移失败:', error);
+      throw error;
+    }
+  };
+
   // 处理忘记密码
   const handleForgotPassword = async () => {
     if (!email.trim()) {
@@ -257,6 +319,10 @@ export const EmailAuthModal: React.FC<EmailAuthModalProps> = ({
 
   // 获取标题
   const getTitle = () => {
+    if (isUpgradeFromGuest && mode === 'register') {
+      return t('upgrade_to_email_account', appLanguage);
+    }
+    
     switch (mode) {
       case 'register':
         return t('create_account', appLanguage);

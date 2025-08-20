@@ -33,11 +33,17 @@ import { API_BASE_URL } from '../../constants/config';
 interface LoginScreenProps {
   onLoginSuccess: (userData: any) => void;
   onGuestLogin: () => void;
+  route?: {
+    params?: {
+      upgradeFromGuest?: boolean;
+    };
+  };
 }
 
 export const LoginScreen: React.FC<LoginScreenProps> = ({
   onLoginSuccess,
   onGuestLogin,
+  route,
 }) => {
   const { appLanguage } = useAppLanguage();
   const [phoneModalVisible, setPhoneModalVisible] = useState(false);
@@ -45,6 +51,9 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
   const [loading, setLoading] = useState(false);
   const [privacyVisible, setPrivacyVisible] = useState(false);
   const [termsVisible, setTermsVisible] = useState(false);
+  
+  // 检查是否从游客升级
+  const isUpgradeFromGuest = route?.params?.upgradeFromGuest || false;
 
   // 下载用户云端数据
   const downloadUserData = async (userId: string, loginType?: string) => {
@@ -779,6 +788,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
         onClose={() => setEmailModalVisible(false)}
         onLoginSuccess={handleEmailLoginSuccess}
         initialMode="login"
+        isUpgradeFromGuest={isUpgradeFromGuest}
       />
 
       {/* 用户协议 Modal */}

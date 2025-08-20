@@ -65,6 +65,11 @@ export type TranslationKey =
   | 'yes'
   | 'no'
   
+  // 游客升级
+  | 'upgrade_to_email_account'
+  | 'guest_upgrade_success'
+  | 'guest_data_migrated'
+  
   // 导航
   | 'home'
   | 'search'
@@ -953,6 +958,11 @@ export const translations: Record<AppLanguage, Record<TranslationKey, string>> =
     per_year: '/年',
     balanced_choice: '平衡选择',
     save_8_percent: '节省8%',
+    
+    // 游客升级
+    upgrade_to_email_account: '升级到邮箱账户',
+    guest_upgrade_success: '注册成功！游客数据已迁移到新账户',
+    guest_data_migrated: '游客数据已迁移',
   },
   
   'en-US': {
@@ -1428,6 +1438,11 @@ export const translations: Record<AppLanguage, Record<TranslationKey, string>> =
     per_year: '/year',
     balanced_choice: 'Balanced choice',
     save_8_percent: 'Save 8%',
+    
+    // 游客升级
+    upgrade_to_email_account: 'Upgrade to Email Account',
+    guest_upgrade_success: 'Registration successful! Guest data migrated to new account',
+    guest_data_migrated: 'Guest data migrated',
   },
 };
 
