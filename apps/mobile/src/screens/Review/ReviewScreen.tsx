@@ -189,11 +189,13 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
   useEffect(() => {
     if (isReviewComplete) {
       console.log('🎯 复习完成状态触发，显示完成图片');
+      console.log('📊 状态变化: isReviewComplete=true, showCompletionImage=false → true');
       setShowCompletionImage(true);
       
       // 2秒后隐藏完成图片，准备跳转
       const timer = setTimeout(() => {
         console.log('🖼️ 完成图片显示2秒后，准备跳转');
+        console.log('📊 状态变化: showCompletionImage=true → false');
         setShowCompletionImage(false);
       }, 2000);
       
@@ -438,7 +440,9 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
   };
 
   // 根据复习类型选择完成页面
+  // 修复闪屏问题：只有在完成图片显示完毕后才跳转
   if (isReviewComplete && !showCompletionImage) {
+    console.log('🚀 跳转条件满足: isReviewComplete=true, showCompletionImage=false，准备跳转');
     // 错词挑战模式暂时使用普通完成页面
     if (type === 'wrong_words') {
       console.log('🔧 ReviewScreen: 进入错词挑战完成页面逻辑（使用普通完成页面）');
