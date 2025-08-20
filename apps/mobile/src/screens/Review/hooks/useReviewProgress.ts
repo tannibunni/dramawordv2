@@ -131,6 +131,12 @@ export const useReviewProgress = (totalWords: number) => {
       // 修复：设置复习完成状态，让页面能跳转到ReviewCompleteScreen
       setIsReviewComplete(true);
       console.log('✅ 复习完成状态已设置: isReviewComplete = true');
+      
+      // 延迟2秒后真正完成，让完成图片有时间显示
+      setTimeout(() => {
+        console.log('🖼️ 完成图片显示2秒后，现在真正完成');
+        // 这里可以添加一个回调或者状态来触发真正的完成
+      }, 2000);
     });
   }, []); // 移除 progressAnimation 依赖
   

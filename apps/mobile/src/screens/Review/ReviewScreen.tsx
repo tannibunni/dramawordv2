@@ -87,6 +87,7 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
   const [cardMode, setCardMode] = useState<'swipe' | 'flip'>('swipe');
   const [showAnswer, setShowAnswer] = useState(false);
   const [session, setSession] = useState<ReviewSession | null>(null);
+  const [showCompletionImage, setShowCompletionImage] = useState(false);
   
   const { navigate } = useNavigation();
   const { appLanguage } = useAppLanguage();
@@ -183,6 +184,22 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
       setShowEbbinghausTip(false); // 显示一次后关闭
     }
   }, [isEbbinghaus, reviewMode, type, showEbbinghausTip]);
+
+  // 监控复习完成状态，控制完成图片的显示
+  useEffect(() => {
+    if (isReviewComplete) {
+      console.log('🎯 复习完成状态触发，显示完成图片');
+      setShowCompletionImage(true);
+      
+      // 2秒后隐藏完成图片，准备跳转
+      const timer = setTimeout(() => {
+        console.log('🖼️ 完成图片显示2秒后，准备跳转');
+        setShowCompletionImage(false);
+      }, 2000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [isReviewComplete]);
 
   const [wordDataCache, setWordDataCache] = useState<{ [key: string]: WordData }>({});
   const [isWordDataLoading, setIsWordDataLoading] = useState(true);
@@ -309,6 +326,16 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
 
   // 渲染卡片内容
   const renderCard = (item: ReviewWord, index: number) => {
+    // 安全检查：确保item存在且有效
+    if (!item || !item.word) {
+      console.warn('⚠️ renderCard: item或item.word为undefined:', { item, index });
+      return (
+        <View style={{ height: 300, justifyContent: 'center', alignItems: 'center' }}>
+          <Text>卡片数据无效</Text>
+        </View>
+      );
+    }
+    
     console.log(`🔄 renderCard 被调用 - index: ${index}, word: ${item.word}`);
     console.log(`🔄 wordDataCache 状态:`, Object.keys(wordDataCache));
     console.log(`🔄 查找 ${item.word} 的缓存数据:`, wordDataCache[item.word]);
@@ -411,8 +438,8 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
   };
 
   // 根据复习类型选择完成页面
-  if (isReviewComplete) {
-        // 错词挑战模式暂时使用普通完成页面
+  if (isReviewComplete && !showCompletionImage) {
+    // 错词挑战模式暂时使用普通完成页面
     if (type === 'wrong_words') {
       console.log('🔧 ReviewScreen: 进入错词挑战完成页面逻辑（使用普通完成页面）');
       console.log('🔧 ReviewScreen: reviewActions:', reviewActions);
@@ -688,7 +715,13 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
           disableTopSwipe
           disableBottomSwipe
           onSwipedLeft={async (cardIndex) => {
-            const word = words[cardIndex]?.word;
+            // 安全检查：确保cardIndex在有效范围内
+            if (cardIndex < 0 || cardIndex >= words.length || !words[cardIndex]) {
+              console.warn('⚠️ onSwipedLeft: cardIndex超出范围或words[cardIndex]为undefined:', { cardIndex, wordsLength: words.length });
+              return;
+            }
+            
+            const word = words[cardIndex].word;
             if (word) {
               setPendingOperations(prev => prev + 1);
               try {
@@ -701,7 +734,13 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
             }
           }}
           onSwipedRight={async (cardIndex) => {
-            const word = words[cardIndex]?.word;
+            // 安全检查：确保cardIndex在有效范围内
+            if (cardIndex < 0 || cardIndex >= words.length || !words[cardIndex]) {
+              console.warn('⚠️ onSwipedRight: cardIndex超出范围或words[cardIndex]为undefined:', { cardIndex, wordsLength: words.length });
+              return;
+            }
+            
+            const word = words[cardIndex].word;
             if (word) {
               setPendingOperations(prev => prev + 1);
               try {
@@ -735,7 +774,7 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
         />
         
         {/* 复习完成图片 - 在4秒等待期间显示 */}
-        {isReviewComplete && (
+        {showCompletionImage && (
           <View style={styles.completionImageContainer}>
             <View style={styles.completionImageWrapper}>
               <MaterialIcons name="celebration" size={80} color={colors.primary[500]} />
