@@ -192,12 +192,12 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
       console.log('📊 状态变化: isReviewComplete=true, showCompletionImage=false → true');
       setShowCompletionImage(true);
       
-      // 2秒后隐藏完成图片，准备跳转
+      // 1.5秒后隐藏完成图片，准备跳转（与进度条动画时长同步）
       const timer = setTimeout(() => {
-        console.log('🖼️ 完成图片显示2秒后，准备跳转');
+        console.log('🖼️ 完成图片显示1.5秒后，准备跳转');
         console.log('📊 状态变化: showCompletionImage=true → false');
         setShowCompletionImage(false);
-      }, 2000);
+      }, 1500);
       
       return () => clearTimeout(timer);
     }
@@ -704,20 +704,22 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
       />
       
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', paddingTop: 2 }}>
-        <Swiper
-          ref={swiperRef}
-          cards={words}
-          renderCard={renderCard}
-          cardIndex={swiperIndex}
-          backgroundColor="transparent"
-          stackSize={3}
-          stackSeparation={18}
-          stackScale={8}
-          showSecondCard
-          animateCardOpacity
-          verticalSwipe={false}
-          disableTopSwipe
-          disableBottomSwipe
+        {/* 当复习完成时，不显示Swiper，避免闪屏 */}
+        {!isReviewComplete ? (
+          <Swiper
+            ref={swiperRef}
+            cards={words}
+            renderCard={renderCard}
+            cardIndex={swiperIndex}
+            backgroundColor="transparent"
+            stackSize={3}
+            stackSeparation={18}
+            stackScale={8}
+            showSecondCard
+            animateCardOpacity
+            verticalSwipe={false}
+            disableTopSwipe
+            disableBottomSwipe
           onSwipedLeft={async (cardIndex) => {
             // 安全检查：确保cardIndex在有效范围内
             if (cardIndex < 0 || cardIndex >= words.length || !words[cardIndex]) {
@@ -776,6 +778,7 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
           cardHorizontalMargin={0}
           containerStyle={{ flex: 1, width: '100%' }}
         />
+        ) : null}
         
         {/* 复习完成图片 - 在4秒等待期间显示 */}
         {showCompletionImage && (
