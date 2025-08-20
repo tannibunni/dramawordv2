@@ -90,10 +90,6 @@ export type TranslationKey =
   | 'experience'
   | 'level'
   
-  // 复习完成
-  | 'review_completed'
-  | 'great_job'
-  
   // 错误和提示
   | 'network_error'
   | 'server_error'
@@ -957,8 +953,6 @@ export const translations: Record<AppLanguage, Record<TranslationKey, string>> =
     per_year: '/年',
     balanced_choice: '平衡选择',
     save_8_percent: '节省8%',
-    review_completed: '复习完成',
-    great_job: '太棒了！',
   },
   
   'en-US': {
@@ -1434,8 +1428,6 @@ export const translations: Record<AppLanguage, Record<TranslationKey, string>> =
     per_year: '/year',
     balanced_choice: 'Balanced choice',
     save_8_percent: 'Save 8%',
-    review_completed: 'Review Completed',
-    great_job: 'Great Job!',
   },
 };
 

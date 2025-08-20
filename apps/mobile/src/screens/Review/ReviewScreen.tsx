@@ -11,7 +11,7 @@ import {
   ScrollView,
   Platform,
 } from 'react-native';
-import { Ionicons, MaterialIcons } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../constants/colors';
 import Swiper from 'react-native-deck-swiper';
 import WordCard from '../../components/cards/WordCard';
@@ -87,7 +87,6 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
   const [cardMode, setCardMode] = useState<'swipe' | 'flip'>('swipe');
   const [showAnswer, setShowAnswer] = useState(false);
   const [session, setSession] = useState<ReviewSession | null>(null);
-  const [showCompletionImage, setShowCompletionImage] = useState(false);
   
   const { navigate } = useNavigation();
   const { appLanguage } = useAppLanguage();
@@ -184,34 +183,6 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
       setShowEbbinghausTip(false); // 显示一次后关闭
     }
   }, [isEbbinghaus, reviewMode, type, showEbbinghausTip]);
-
-  // 监控复习完成状态，控制完成图片的显示
-  useEffect(() => {
-    if (isReviewComplete) {
-      console.log('🎯 复习完成状态触发，显示完成图片');
-      console.log('📊 状态变化: isReviewComplete=true, showCompletionImage=false → true');
-      
-      // 使用requestAnimationFrame确保状态更新在正确的时机进行
-      requestAnimationFrame(() => {
-        console.log('🎬 设置showCompletionImage=true，开始显示完成图片');
-        setShowCompletionImage(true);
-      });
-      
-      // 1.5秒后隐藏完成图片，准备跳转（与进度条动画时长同步）
-      const timer = setTimeout(() => {
-        console.log('🖼️ 完成图片显示1.5秒后，准备跳转');
-        console.log('📊 状态变化: showCompletionImage=true → false');
-        
-        // 使用requestAnimationFrame确保状态更新在正确的时机进行
-        requestAnimationFrame(() => {
-          console.log('🎬 设置showCompletionImage=false，准备跳转');
-          setShowCompletionImage(false);
-        });
-      }, 1500);
-      
-      return () => clearTimeout(timer);
-    }
-  }, [isReviewComplete]);
 
   const [wordDataCache, setWordDataCache] = useState<{ [key: string]: WordData }>({});
   const [isWordDataLoading, setIsWordDataLoading] = useState(true);
@@ -338,16 +309,6 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
 
   // 渲染卡片内容
   const renderCard = (item: ReviewWord, index: number) => {
-    // 安全检查：确保item存在且有效
-    if (!item || !item.word) {
-      console.warn('⚠️ renderCard: item或item.word为undefined:', { item, index });
-      return (
-        <View style={{ height: 300, justifyContent: 'center', alignItems: 'center' }}>
-          <Text>卡片数据无效</Text>
-        </View>
-      );
-    }
-    
     console.log(`🔄 renderCard 被调用 - index: ${index}, word: ${item.word}`);
     console.log(`🔄 wordDataCache 状态:`, Object.keys(wordDataCache));
     console.log(`🔄 查找 ${item.word} 的缓存数据:`, wordDataCache[item.word]);
@@ -449,13 +410,9 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
     }, 1200);
   };
 
-  // 早期返回：如果复习已完成且没有显示完成图片，直接跳转完成页面
-  // 这是最根本的解决方案，完全避免闪屏
-  // 注意：当showCompletionImage=true时，不应该早期返回，让完成图片完整显示
-  if (isReviewComplete && !showCompletionImage) {
-    console.log('🚀 早期返回：复习已完成，直接跳转完成页面，避免闪屏');
-    
-    // 错词挑战模式暂时使用普通完成页面
+  // 根据复习类型选择完成页面
+  if (isReviewComplete) {
+        // 错词挑战模式暂时使用普通完成页面
     if (type === 'wrong_words') {
       console.log('🔧 ReviewScreen: 进入错词挑战完成页面逻辑（使用普通完成页面）');
       console.log('🔧 ReviewScreen: reviewActions:', reviewActions);
@@ -470,48 +427,73 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
             actions={reviewActions}
             type={type}
             onBack={async (experienceGained?: number) => {
-              // 同步到后端
-              try {
-                const token = await AsyncStorage.getItem('authToken');
-                if (token) {
-                  // 更新复习次数和连续学习
-                  await fetch(`${API_BASE_URL}/users/stats`, {
-                    method: 'PUT',
-                    headers: {
-                      'Content-Type': 'application/json',
-                      'Authorization': `Bearer ${token}`,
-                    },
-                    body: JSON.stringify({
-                      totalReviews: 1, // 增加1次复习
-                      updateContinuousLearning: true // 标记需要更新连续学习
-                    }),
-                  });
-                  console.log('✅ 复习次数和连续学习已同步到后端');
+              // 同步到后端（仅注册用户）
+              if (user && user.loginType !== 'guest') {
+                try {
+                  const token = await AsyncStorage.getItem('authToken');
+                  if (token) {
+                    // 更新复习次数和连续学习
+                    await fetch(`${API_BASE_URL}/users/stats`, {
+                      method: 'PUT',
+                      headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`,
+                      },
+                      body: JSON.stringify({
+                        totalReviews: 1, // 增加1次复习
+                        updateContinuousLearning: true // 标记需要更新连续学习
+                      }),
+                    });
+                    console.log('✅ 复习次数和连续学习已同步到后端');
+                  }
+                } catch (error) {
+                  console.error('❌ 更新复习次数失败:', error);
                 }
-              } catch (error) {
-                console.error('❌ 更新复习次数失败:', error);
+              } else {
+                console.log('👤 游客模式，数据仅保存本地，不加入同步队列');
               }
               
-              // 更新本地 userStats
+              // 更新本地 userStats（包含连续学习天数）
               const currentStats = await AsyncStorage.getItem('userStats');
               if (currentStats) {
                 const stats = JSON.parse(currentStats);
+                const today = new Date().toDateString();
+                const lastStudyDate = stats.lastStudyDate;
+                
+                // 计算连续学习天数
+                let newStreak = stats.currentStreak || 0;
+                if (lastStudyDate === today) {
+                  // 今天已经学习过，不增加连续天数
+                  console.log('📅 今天已经学习过，连续天数保持不变:', newStreak);
+                } else if (lastStudyDate === new Date(Date.now() - 24 * 60 * 60 * 1000).toDateString()) {
+                  // 昨天学习过，连续天数+1
+                  newStreak += 1;
+                  console.log('📅 昨天学习过，连续天数+1:', newStreak);
+                } else {
+                  // 超过1天没学习，重置连续天数
+                  newStreak = 1;
+                  console.log('📅 超过1天没学习，重置连续天数为1');
+                }
+                
                 const updatedStats = {
                   ...stats,
-                  totalReviews: (stats.totalReviews || 0) + 1
+                  totalReviews: (stats.totalReviews || 0) + 1,
+                  currentStreak: newStreak,
+                  lastStudyDate: today
                 };
                 await AsyncStorage.setItem('userStats', JSON.stringify(updatedStats));
-                console.log('✅ 本地 userStats 已更新');
+                console.log('✅ 本地 userStats 已更新，连续天数:', newStreak);
               } else {
                 // 如果本地没有 userStats，创建新的
                 const newStats = {
                   collectedWords: 0,
                   contributedWords: 0,
                   totalReviews: 1,
-                  currentStreak: 0
+                  currentStreak: 1,
+                  lastStudyDate: new Date().toDateString()
                 };
                 await AsyncStorage.setItem('userStats', JSON.stringify(newStats));
-                console.log('✅ 创建新的 userStats');
+                console.log('✅ 创建新的 userStats，连续天数: 1');
               }
               
               // 标记需要刷新vocabulary数据
@@ -549,48 +531,73 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
             actions={reviewActions}
             type={type}
             onBack={async (experienceGained?: number) => {
-              // 同步到后端
-              try {
-                const token = await AsyncStorage.getItem('authToken');
-                if (token) {
-                  // 更新复习次数和连续学习
-                  await fetch(`${API_BASE_URL}/users/stats`, {
-                    method: 'PUT',
-                    headers: {
-                      'Content-Type': 'application/json',
-                      'Authorization': `Bearer ${token}`,
-                    },
-                    body: JSON.stringify({
-                      totalReviews: 1, // 增加1次复习
-                      updateContinuousLearning: true // 标记需要更新连续学习
-                    }),
-                  });
-                  console.log('✅ 复习次数和连续学习已同步到后端');
+              // 同步到后端（仅注册用户）
+              if (user && user.loginType !== 'guest') {
+                try {
+                  const token = await AsyncStorage.getItem('authToken');
+                  if (token) {
+                    // 更新复习次数和连续学习
+                    await fetch(`${API_BASE_URL}/users/stats`, {
+                      method: 'PUT',
+                      headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`,
+                      },
+                      body: JSON.stringify({
+                        totalReviews: 1, // 增加1次复习
+                        updateContinuousLearning: true // 标记需要更新连续学习
+                      }),
+                    });
+                    console.log('✅ 复习次数和连续学习已同步到后端');
+                  }
+                } catch (error) {
+                  console.error('❌ 更新复习次数失败:', error);
                 }
-              } catch (error) {
-                console.error('❌ 更新复习次数失败:', error);
+              } else {
+                console.log('👤 游客模式，数据仅保存本地，不加入同步队列');
               }
               
-              // 更新本地 userStats
+              // 更新本地 userStats（包含连续学习天数）
               const currentStats = await AsyncStorage.getItem('userStats');
               if (currentStats) {
                 const stats = JSON.parse(currentStats);
+                const today = new Date().toDateString();
+                const lastStudyDate = stats.lastStudyDate;
+                
+                // 计算连续学习天数
+                let newStreak = stats.currentStreak || 0;
+                if (lastStudyDate === today) {
+                  // 今天已经学习过，不增加连续天数
+                  console.log('📅 今天已经学习过，连续天数保持不变:', newStreak);
+                } else if (lastStudyDate === new Date(Date.now() - 24 * 60 * 60 * 1000).toDateString()) {
+                  // 昨天学习过，连续天数+1
+                  newStreak += 1;
+                  console.log('📅 昨天学习过，连续天数+1:', newStreak);
+                } else {
+                  // 超过1天没学习，重置连续天数
+                  newStreak = 1;
+                  console.log('📅 超过1天没学习，重置连续天数为1');
+                }
+                
                 const updatedStats = {
                   ...stats,
-                  totalReviews: (stats.totalReviews || 0) + 1
+                  totalReviews: (stats.totalReviews || 0) + 1,
+                  currentStreak: newStreak,
+                  lastStudyDate: today
                 };
                 await AsyncStorage.setItem('userStats', JSON.stringify(updatedStats));
-                console.log('✅ 本地 userStats 已更新');
+                console.log('✅ 本地 userStats 已更新，连续天数:', newStreak);
               } else {
                 // 如果本地没有 userStats，创建新的
                 const newStats = {
                   collectedWords: 0,
                   contributedWords: 0,
                   totalReviews: 1,
-                  currentStreak: 0
+                  currentStreak: 1,
+                  lastStudyDate: new Date().toDateString()
                 };
                 await AsyncStorage.setItem('userStats', JSON.stringify(newStats));
-                console.log('✅ 创建新的 userStats');
+                console.log('✅ 创建新的 userStats，连续天数: 1');
               }
               
               // 标记需要刷新vocabulary数据
@@ -716,95 +723,66 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
       />
       
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', paddingTop: 2 }}>
-        {/* 当复习完成时，不显示Swiper，避免闪屏 */}
-        {/* 使用更严格的条件：只有在复习未完成且没有显示完成图片时才显示Swiper */}
-        {!isReviewComplete && !showCompletionImage ? (
-          <Swiper
-            ref={swiperRef}
-            cards={words}
-            renderCard={renderCard}
-            cardIndex={swiperIndex}
-            backgroundColor="transparent"
-            stackSize={3}
-            stackSeparation={18}
-            stackScale={8}
-            showSecondCard
-            animateCardOpacity
-            verticalSwipe={false}
-            disableTopSwipe
-            disableBottomSwipe
-            onSwipedLeft={async (cardIndex) => {
-              // 安全检查：确保cardIndex在有效范围内
-              if (cardIndex < 0 || cardIndex >= words.length || !words[cardIndex]) {
-                console.warn('⚠️ onSwipedLeft: cardIndex超出范围或words[cardIndex]为undefined:', { cardIndex, wordsLength: words.length });
-                return;
+        <Swiper
+          ref={swiperRef}
+          cards={words}
+          renderCard={renderCard}
+          cardIndex={swiperIndex}
+          backgroundColor="transparent"
+          stackSize={3}
+          stackSeparation={18}
+          stackScale={8}
+          showSecondCard
+          animateCardOpacity
+          verticalSwipe={false}
+          disableTopSwipe
+          disableBottomSwipe
+          onSwipedLeft={async (cardIndex) => {
+            const word = words[cardIndex]?.word;
+            if (word) {
+              setPendingOperations(prev => prev + 1);
+              try {
+                await handleSwipeLeft(word);
+                // 错误答案，重置连击
+                handleWrongAnswer();
+              } finally {
+                setPendingOperations(prev => Math.max(0, prev - 1));
               }
-              
-              const word = words[cardIndex].word;
-              if (word) {
-                setPendingOperations(prev => prev + 1);
-                try {
-                  await handleSwipeLeft(word);
-                  // 错误答案，重置连击
-                  handleWrongAnswer();
-                } finally {
-                  setPendingOperations(prev => Math.max(0, prev - 1));
-                }
+            }
+          }}
+          onSwipedRight={async (cardIndex) => {
+            const word = words[cardIndex]?.word;
+            if (word) {
+              setPendingOperations(prev => prev + 1);
+              try {
+                await handleSwipeRight(word);
+                // 正确答案，检查五连击
+                handleCorrectAnswer();
+              } finally {
+                setPendingOperations(prev => Math.max(0, prev - 1));
               }
-            }}
-            onSwipedRight={async (cardIndex) => {
-              // 安全检查：确保cardIndex在有效范围内
-              if (cardIndex < 0 || cardIndex >= words.length || !words[cardIndex]) {
-                console.warn('⚠️ onSwipedRight: cardIndex超出范围或words[cardIndex]为undefined:', { cardIndex, wordsLength: words.length });
-                return;
-              }
-              
-              const word = words[cardIndex].word;
-              if (word) {
-                setPendingOperations(prev => prev + 1);
-                try {
-                  await handleSwipeRight(word);
-                  // 正确答案，检查五连击
-                  handleCorrectAnswer();
-                } finally {
-                  setPendingOperations(prev => Math.max(0, prev - 1));
-                }
-              }
-            }}
-            onSwipedAll={() => {
-              console.log('🎯 Swiper onSwipedAll 触发 - 所有卡片已划完');
-              console.log('🔍 检查待处理操作数量 - pendingOperations:', pendingOperations);
-              
-              // 移除立即设置进度条为100%的代码，让moveToNextWord中的延迟逻辑能够正确执行
-              // progressAnimation.setValue(100); // 删除这行
-              
-              // 由于 Swiper 组件的限制，onSwipedAll 可能在 onSwipedRight 之前触发
-              // 我们改为在 handleSwipeRight 中处理完成逻辑，这里只做备用处理
-              if (pendingOperations === 0 && !isReviewComplete) {
-                console.log('✅ 无待处理操作，立即触发完成页面（备用）');
-                handleSwipedAll();
-              } else {
-                console.log('⏳ 有待处理操作，等待 handleSwipeRight 中的完成逻辑');
-              }
-            }}
-            cardVerticalMargin={8}
-            cardHorizontalMargin={0}
-            containerStyle={{ flex: 1, width: '100%' }}
-          />
-        ) : null}
-        
-        {/* 复习完成图片 - 在4秒等待期间显示 */}
-        {showCompletionImage && (
-          <View style={styles.completionImageContainer}>
-            <View style={styles.completionImageWrapper}>
-              <MaterialIcons name="celebration" size={80} color={colors.primary[500]} />
-              <Text style={styles.completionTitle}>{t('review_completed', appLanguage)}</Text>
-              <Text style={styles.completionSubtitle}>{t('great_job', appLanguage)}</Text>
-            </View>
-          </View>
-        )}
-        
-
+            }
+          }}
+          onSwipedAll={() => {
+            console.log('🎯 Swiper onSwipedAll 触发 - 所有卡片已划完');
+            console.log('🔍 检查待处理操作数量 - pendingOperations:', pendingOperations);
+            
+            // 移除立即设置进度条为100%的代码，让moveToNextWord中的延迟逻辑能够正确执行
+            // progressAnimation.setValue(100); // 删除这行
+            
+            // 由于 Swiper 组件的限制，onSwipedAll 可能在 onSwipedRight 之前触发
+            // 我们改为在 handleSwipeRight 中处理完成逻辑，这里只做备用处理
+            if (pendingOperations === 0 && !isReviewComplete) {
+              console.log('✅ 无待处理操作，立即触发完成页面（备用）');
+              handleSwipedAll();
+            } else {
+              console.log('⏳ 有待处理操作，等待 handleSwipeRight 中的完成逻辑');
+            }
+          }}
+          cardVerticalMargin={8}
+          cardHorizontalMargin={0}
+          containerStyle={{ flex: 1, width: '100%' }}
+        />
       </View>
     </SafeAreaView>
   );
@@ -1210,43 +1188,6 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 16,
     fontWeight: '600',
-  },
-  // 复习完成图片样式
-  completionImageContainer: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: colors.background.primary,
-    zIndex: 100,
-  },
-  completionImageWrapper: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 40,
-    borderRadius: 24,
-    backgroundColor: colors.background.secondary,
-    shadowColor: colors.neutral[900],
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.1,
-    shadowRadius: 16,
-    elevation: 8,
-  },
-  completionTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: colors.text.primary,
-    marginTop: 16,
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  completionSubtitle: {
-    fontSize: 16,
-    color: colors.text.secondary,
-    textAlign: 'center',
   },
 });
 

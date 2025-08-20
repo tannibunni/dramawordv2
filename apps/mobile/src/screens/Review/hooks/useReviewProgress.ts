@@ -131,12 +131,6 @@ export const useReviewProgress = (totalWords: number) => {
       // 修复：设置复习完成状态，让页面能跳转到ReviewCompleteScreen
       setIsReviewComplete(true);
       console.log('✅ 复习完成状态已设置: isReviewComplete = true');
-      
-      // 延迟2秒后真正完成，让完成图片有时间显示
-      setTimeout(() => {
-        console.log('🖼️ 完成图片显示2秒后，现在真正完成');
-        // 这里可以添加一个回调或者状态来触发真正的完成
-      }, 2000);
     });
   }, []); // 移除 progressAnimation 依赖
   
@@ -184,26 +178,24 @@ export const useReviewProgress = (totalWords: number) => {
             if (finished) {
               console.log('✅ 进度条动画到100%完成');
               setCurrentProgress(100);
-              
-              // 进度条动画完成后，立即显示完成图片
-              console.log('🎯 进度条动画完成，立即显示完成图片');
-              setComplete();
             } else {
               console.log('⚠️ 进度条动画被中断，强制设置为100%');
               // 使用 requestAnimationFrame 避免在渲染过程中直接修改动画值
               requestAnimationFrame(() => {
                 progressAnimation.setValue(100);
                 setCurrentProgress(100);
-                
-                // 即使动画被中断，也要显示完成图片
-                console.log('🎯 进度条动画中断，强制显示完成图片');
-                setComplete();
               });
             }
           });
         });
         
-        console.log('✅ 进度条动画已启动，完成后将立即显示完成图片');
+        console.log('✅ 进度条动画已启动，等待4秒后进入完成页面');
+        
+        // 延迟后显示完成页面，让用户有足够时间看到 8/8 和 100% 进度条
+        setTimeout(() => {
+          console.log('🏁 延迟结束，现在进入完成页面');
+          setComplete();
+        }, 4000); // 4秒延迟，让用户充分看到完整的进度
       } else {
         console.log('📱 继续下一张卡');
       }
