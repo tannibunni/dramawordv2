@@ -267,16 +267,16 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
 
   // 恢复登录功能
   const handleLoginPress = () => {
-    // 使用自定义导航跳转到登录页面
-    navigate('login');
+    // 游客模式下，传递升级标记
+    const isGuest = !isAuthenticated || !user || loginType === 'guest';
+    if (isGuest) {
+      navigate('login', { upgradeFromGuest: true });
+    } else {
+      navigate('login');
+    }
   };
 
-  // 游客升级到邮箱账户
-  const handleGuestUpgrade = () => {
-    console.log('🚀 游客升级到邮箱账户');
-    // 导航到登录页面，并传递升级标记
-    navigate('login', { upgradeFromGuest: true });
-  };
+
 
   const renderUserInfo = () => {
     // 当前版本使用自动生成的游客ID，无需登录按钮
@@ -302,26 +302,14 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
               </TouchableOpacity>
             </View>
 
-            {/* 游客模式提醒和升级按钮 */}
+            {/* 游客模式提醒 */}
             {isGuest && (
-              <View style={styles.guestUpgradeContainer}>
-                <Text style={styles.guestReminder}>
-                  {appLanguage === 'zh-CN' 
-                    ? '注册账号可保存词汇数据、同步学习进度、获得更多功能' 
-                    : 'Register to save vocabulary data, sync learning progress, and unlock more features'
-                  }
-                </Text>
-                <TouchableOpacity 
-                  style={styles.upgradeButton} 
-                  onPress={handleGuestUpgrade}
-                  activeOpacity={0.8}
-                >
-                  <Ionicons name="arrow-up-circle-outline" size={16} color={colors.primary[600]} />
-                  <Text style={styles.upgradeButtonText}>
-                    {t('upgrade_to_email_account', appLanguage)}
-                  </Text>
-                </TouchableOpacity>
-              </View>
+              <Text style={styles.guestReminder}>
+                {appLanguage === 'zh-CN' 
+                  ? '注册账号可保存词汇数据、同步学习进度、获得更多功能' 
+                  : 'Register to save vocabulary data, sync learning progress, and unlock more features'
+                }
+              </Text>
             )}
 
             {!isGuest && (
@@ -1405,25 +1393,5 @@ const styles = StyleSheet.create({
   logoutButton: {
     backgroundColor: colors.error[500],
   },
-  guestUpgradeContainer: {
-    marginTop: 12,
-    alignItems: 'center',
-  },
-  upgradeButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.primary[50],
-    borderWidth: 1,
-    borderColor: colors.primary[300],
-    borderRadius: 8,
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    marginTop: 8,
-  },
-  upgradeButtonText: {
-    color: colors.primary[600],
-    fontSize: 14,
-    fontWeight: '600',
-    marginLeft: 6,
-  },
+
 }); 

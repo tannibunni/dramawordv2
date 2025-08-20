@@ -69,6 +69,8 @@ export type TranslationKey =
   | 'upgrade_to_email_account'
   | 'guest_upgrade_success'
   | 'guest_data_migrated'
+  | 'upgrade_to_email_account_flow'
+  | 'upgrade_to_apple_account_flow'
   
   // 导航
   | 'home'
@@ -963,6 +965,8 @@ export const translations: Record<AppLanguage, Record<TranslationKey, string>> =
     upgrade_to_email_account: '升级到邮箱账户',
     guest_upgrade_success: '注册成功！游客数据已迁移到新账户',
     guest_data_migrated: '游客数据已迁移',
+    upgrade_to_email_account_flow: '升级到邮箱账户',
+    upgrade_to_apple_account_flow: '升级到苹果账户',
   },
   
   'en-US': {
@@ -1443,6 +1447,8 @@ export const translations: Record<AppLanguage, Record<TranslationKey, string>> =
     upgrade_to_email_account: 'Upgrade to Email Account',
     guest_upgrade_success: 'Registration successful! Guest data migrated to new account',
     guest_data_migrated: 'Guest data migrated',
+    upgrade_to_email_account_flow: 'Upgrade to Email Account',
+    upgrade_to_apple_account_flow: 'Upgrade to Apple Account',
   },
 };
 

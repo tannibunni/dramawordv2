@@ -708,7 +708,12 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
             </View>
             <Text style={styles.appName}>{t('app_name', appLanguage)}</Text>
           </View>
-          <Text style={styles.slogan}>{t('app_slogan', appLanguage)}</Text>
+          <Text style={styles.slogan}>
+            {isUpgradeFromGuest 
+              ? (appLanguage === 'zh-CN' ? '选择登录方式，您的学习数据将自动迁移' : 'Choose login method, your learning data will be automatically migrated')
+              : t('app_slogan', appLanguage)
+            }
+          </Text>
           <Text style={styles.versionInfo}>
             {t('current_version', appLanguage)}
           </Text>
@@ -721,6 +726,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
             type="email"
             onPress={handleEmailLogin}
             loading={loading}
+            customText={isUpgradeFromGuest ? t('upgrade_to_email_account_flow', appLanguage) : undefined}
           />
           
           {/* 其他登录方式 */}
@@ -750,6 +756,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
               type="apple"
               onPress={handleAppleLogin}
               loading={loading}
+              customText={isUpgradeFromGuest ? t('upgrade_to_apple_account_flow', appLanguage) : undefined}
             />
           )}
           

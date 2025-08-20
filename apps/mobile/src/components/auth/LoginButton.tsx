@@ -21,6 +21,7 @@ interface LoginButtonProps {
   disabled?: boolean;
   style?: ViewStyle;
   textStyle?: TextStyle;
+  customText?: string;
 }
 
 export const LoginButton: React.FC<LoginButtonProps> = ({
@@ -30,6 +31,7 @@ export const LoginButton: React.FC<LoginButtonProps> = ({
   disabled = false,
   style,
   textStyle,
+  customText,
 }) => {
   const { appLanguage } = useAppLanguage();
   
@@ -92,6 +94,7 @@ export const LoginButton: React.FC<LoginButtonProps> = ({
   };
 
   const config = getButtonConfig(type);
+  const displayText = customText || config.text;
 
   return (
     <TouchableOpacity
@@ -136,7 +139,7 @@ export const LoginButton: React.FC<LoginButtonProps> = ({
               textStyle,
             ]}
           >
-            {config.text}
+            {displayText}
           </Text>
         </>
       )}
