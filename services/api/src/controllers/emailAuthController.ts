@@ -63,8 +63,21 @@ export const registerWithEmail = async (req: Request, res: Response) => {
     const verificationToken = crypto.randomBytes(32).toString('hex');
     const verificationExpiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24小时后过期
 
-    // 生成用户名
-    const username = `user_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
+    // 生成用户名 - 确保不超过50字符限制
+    const timestamp = Date.now();
+    const randomSuffix = Math.random().toString(36).substr(2, 3); // 减少随机后缀长度
+    let username = `user_${timestamp}_${randomSuffix}`;
+    
+    // 验证用户名长度，如果超长则使用更短的格式
+    if (username.length > 50) {
+      username = `u_${timestamp}_${randomSuffix}`;
+      if (username.length > 50) {
+        username = `u_${timestamp}`;
+        if (username.length > 50) {
+          throw new Error('无法生成有效的用户名，时间戳过长');
+        }
+      }
+    }
 
     // 创建用户
     const user = new User({

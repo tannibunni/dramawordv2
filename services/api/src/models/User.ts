@@ -113,7 +113,7 @@ const UserSchema = new Schema<IUser>({
     unique: true,
     trim: true,
     minlength: 3,
-    maxlength: 20
+    maxlength: 50  // 增加长度限制，确保生成的用户名不会超出
   },
   nickname: {
     type: String,
