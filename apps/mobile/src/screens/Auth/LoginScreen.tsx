@@ -55,6 +55,137 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
   // 检查是否从游客升级
   const isUpgradeFromGuest = route?.params?.upgradeFromGuest || false;
 
+  // 游客数据迁移到苹果账户
+  const migrateGuestDataToApple = async (userData: any) => {
+    try {
+      console.log('🔄 开始迁移游客数据到苹果账户...');
+      
+      // 获取游客数据
+      const guestData = await getGuestData();
+      
+      if (!guestData || Object.keys(guestData).length === 0) {
+        console.log('ℹ️ 没有找到游客数据，跳过迁移');
+        return;
+      }
+      
+      console.log('📊 找到游客数据:', Object.keys(guestData));
+      
+      // 迁移学习记录
+      if (guestData.learningRecords) {
+        await AsyncStorage.setItem('learningRecords', JSON.stringify(guestData.learningRecords));
+        console.log('✅ 学习记录迁移成功');
+      }
+      
+      // 迁移词汇数据
+      if (guestData.vocabulary) {
+        await AsyncStorage.setItem('vocabulary', JSON.stringify(guestData.vocabulary));
+        console.log('✅ 词汇数据迁移成功');
+      }
+      
+      // 迁移剧单数据
+      if (guestData.shows) {
+        await AsyncStorage.setItem('user_shows', JSON.stringify(guestData.shows));
+        console.log('✅ 剧单数据迁移成功');
+      }
+      
+      // 迁移用户设置
+      if (guestData.userSettings) {
+        await AsyncStorage.setItem('userSettings', JSON.stringify(guestData.userSettings));
+        console.log('✅ 用户设置迁移成功');
+      }
+      
+      // 迁移学习统计
+      if (guestData.userStats) {
+        await AsyncStorage.setItem('userStats', JSON.stringify(guestData.userStats));
+        console.log('✅ 学习统计迁移成功');
+      }
+      
+      // 迁移错词数据
+      if (guestData.wrongWords) {
+        await AsyncStorage.setItem('wrongWords', JSON.stringify(guestData.wrongWords));
+        console.log('✅ 错词数据迁移成功');
+      }
+      
+      // 清除游客数据
+      await clearGuestData();
+      console.log('🧹 游客数据清除完成');
+      
+      console.log('🎉 游客数据迁移完成！');
+      
+      // 显示成功提示
+      Alert.alert(
+        '升级成功',
+        '您的学习数据已成功迁移到苹果账户！',
+        [{ text: '确定', style: 'default' }]
+      );
+      
+    } catch (error) {
+      console.error('❌ 游客数据迁移失败:', error);
+      // 不显示错误提示，避免影响用户体验
+    }
+  };
+
+  // 获取游客数据
+  const getGuestData = async () => {
+    try {
+      const guestId = await AsyncStorage.getItem('guestId');
+      if (!guestId) return null;
+      
+      const data = {};
+      
+      // 获取各种游客数据
+      const keys = [
+        'learningRecords',
+        'vocabulary', 
+        'user_shows',
+        'userSettings',
+        'userStats',
+        'wrongWords'
+      ];
+      
+      for (const key of keys) {
+        const value = await AsyncStorage.getItem(key);
+        if (value) {
+          data[key] = JSON.parse(value);
+        }
+      }
+      
+      return data;
+    } catch (error) {
+      console.error('❌ 获取游客数据失败:', error);
+      return null;
+    }
+  };
+
+  // 清除游客数据
+  const clearGuestData = async () => {
+    try {
+      const guestId = await AsyncStorage.getItem('guestId');
+      if (!guestId) return;
+      
+      // 清除游客ID
+      await AsyncStorage.removeItem('guestId');
+      
+      // 清除各种游客数据
+      const keys = [
+        'learningRecords',
+        'vocabulary',
+        'user_shows', 
+        'userSettings',
+        'userStats',
+        'wrongWords'
+      ];
+      
+      for (const key of keys) {
+        await AsyncStorage.removeItem(key);
+      }
+      
+      console.log('🧹 游客数据清除完成');
+    } catch (error) {
+      console.error('❌ 清除游客数据失败:', error);
+    }
+  };
+
   // 下载用户云端数据
   const downloadUserData = async (userId: string, loginType?: string) => {
     try {
@@ -474,6 +605,11 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
         
         // 新增：下载新用户的云端数据
         await downloadUserData(userData.id, 'apple');
+        
+        // 游客升级：迁移本地数据到新账户
+        if (isUpgradeFromGuest) {
+          await migrateGuestDataToApple(userData);
+        }
         
         onLoginSuccess(userData);
       } else {
