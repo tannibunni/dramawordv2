@@ -443,3 +443,49 @@ export const resetPassword = async (req: Request, res: Response) => {
     });
   }
 };
+
+// 删除测试用户（仅用于开发测试）
+export const deleteTestUser = async (req: Request, res: Response) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        error: '邮箱地址是必填项'
+      });
+    }
+
+    // 查找并删除用户
+    const deletedUser = await User.findOneAndDelete({
+      email: email.toLowerCase(),
+      'auth.loginType': 'email'
+    });
+
+    if (!deletedUser) {
+      return res.status(404).json({
+        success: false,
+        error: '用户不存在'
+      });
+    }
+
+    logger.info(`[EmailAuth] 测试用户已删除: ${email}`);
+
+    res.json({
+      success: true,
+      message: '测试用户已删除',
+      deletedUser: {
+        id: deletedUser._id,
+        email: deletedUser.email,
+        nickname: deletedUser.nickname
+      }
+    });
+
+  } catch (error) {
+    logger.error('[EmailAuth] 删除测试用户失败:', error);
+    res.status(500).json({
+      success: false,
+      error: '删除失败，请稍后重试'
+    });
+  }
+};

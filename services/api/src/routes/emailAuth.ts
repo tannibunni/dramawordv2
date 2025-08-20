@@ -5,7 +5,8 @@ import {
   verifyEmail, 
   resendVerificationEmail,
   forgotPassword,
-  resetPassword 
+  resetPassword,
+  deleteTestUser
 } from '../controllers/emailAuthController';
 import { validateRequest } from '../middleware/validateRequest';
 import { authenticateToken } from '../middleware/auth';
@@ -47,6 +48,12 @@ router.post('/forgot-password', forgotPassword);
  * POST /api/email-auth/reset-password
  */
 router.post('/reset-password', resetPassword);
+
+/**
+ * 删除测试用户（仅用于开发测试）
+ * DELETE /api/email-auth/test-user
+ */
+router.delete('/test-user', deleteTestUser);
 
 /**
  * 获取当前用户信息 (需要认证)
