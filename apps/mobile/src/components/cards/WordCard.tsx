@@ -545,12 +545,12 @@ const styles = StyleSheet.create({
   },
   arrowTip: {
     alignItems: 'center',
-    marginVertical: 8,
+    marginVertical: 4,  // 减少：8 → 4
   },
   arrowTipText: {
-    fontSize: 14,
+    fontSize: 13,        // 减少：14 → 13
     color: colors.text.tertiary,
-    marginBottom: 2,
+    marginBottom: 1,     // 减少：2 → 1
   },
   swipeHint: {
     alignItems: 'center',
@@ -762,7 +762,7 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: '100%',
     paddingHorizontal: 16,
-    marginTop: 24,
+    marginTop: 16,        // 减少：24 → 16
     gap: 12,
   },
   swipeHintLeft: {
