@@ -788,12 +788,7 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
           </View>
         )}
         
-        {/* 调试信息 */}
-        <View style={{ position: 'absolute', top: 100, right: 20, backgroundColor: 'rgba(0,0,0,0.7)', padding: 10, borderRadius: 8 }}>
-          <Text style={{ color: 'white', fontSize: 12 }}>
-            isReviewComplete: {String(isReviewComplete)}
-          </Text>
-        </View>
+
       </View>
     </SafeAreaView>
   );
