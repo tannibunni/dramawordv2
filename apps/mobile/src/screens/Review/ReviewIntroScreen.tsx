@@ -26,6 +26,7 @@ import { wrongWordsManager } from './services/wrongWordsManager';
 import { t } from '../../constants/translations';
 import { dataManagerService } from './services/dataManagerService';
 import Logger from '../../utils/logger';
+import { guestDataAdapter } from '../../services/guestDataAdapter';
 
 // 导入上下文和类型
 import { useVocabulary } from '../../context/VocabularyContext';
@@ -109,21 +110,35 @@ const ReviewIntroScreen = () => {
     return unsubscribe;
   }, []);
   
-  // 加载用户统计数据
-  useEffect(() => {
-    const loadUserStats = async () => {
-      try {
-        const stats = await AsyncStorage.getItem('userStats');
-        if (stats) {
-          setUserStats(JSON.parse(stats));
-        }
-      } catch (error) {
-        console.error('[ReviewIntroScreen] 加载用户统计数据失败:', error);
-      }
-    };
-    
-    loadUserStats();
-  }, [vocabulary]); // 当vocabulary变化时重新加载，确保复习次数是最新的
+          // 加载用户统计数据
+        useEffect(() => {
+          const loadUserStats = async () => {
+            try {
+              // 使用guestDataAdapter获取用户统计数据
+              const stats = await guestDataAdapter.getUserStats();
+              if (stats) {
+                setUserStats(stats);
+                console.log('[ReviewIntroScreen] 通过guestDataAdapter加载用户统计数据:', stats);
+              } else {
+                console.log('[ReviewIntroScreen] 未找到用户统计数据');
+              }
+            } catch (error) {
+              console.error('[ReviewIntroScreen] 通过guestDataAdapter加载用户统计数据失败:', error);
+              // 降级到直接AsyncStorage读取
+              try {
+                const stats = await AsyncStorage.getItem('userStats');
+                if (stats) {
+                  setUserStats(JSON.parse(stats));
+                  console.log('[ReviewIntroScreen] 降级：直接读取AsyncStorage用户统计数据');
+                }
+              } catch (fallbackError) {
+                console.error('[ReviewIntroScreen] 降级读取也失败:', fallbackError);
+              }
+            }
+          };
+          
+          loadUserStats();
+        }, [vocabulary]); // 当vocabulary变化时重新加载，确保复习次数是最新的
   
   // ==================== 经验值状态管理 ====================
   useEffect(() => {
