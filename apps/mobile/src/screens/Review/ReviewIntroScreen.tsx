@@ -146,19 +146,39 @@ const ReviewIntroScreen = () => {
     
     // 使用 experienceManager 统一管理页面经验值状态
     const initializeExperience = async () => {
-      await experienceManager.managePageExperience(
-        vocabulary?.length || 0,
-        (progressPercentage: number) => {
-          // 经验值进度条更新回调
-          console.log('[ReviewIntroScreen] 经验值进度条更新:', progressPercentage);
-        },
-        (hasGain) => {
-          // 检查完成回调
-          if (hasGain) {
-            logger.info('检测到经验值增益');
+      // 检查是否真的需要初始化经验值（避免TestFlight中的意外触发）
+      const lastInitTime = await AsyncStorage.getItem('lastReviewIntroInit');
+      const now = Date.now();
+      
+      if (lastInitTime && (now - parseInt(lastInitTime)) < 5000) { // 5秒内不重复初始化
+        console.log('[ReviewIntroScreen] 5秒内已初始化过，跳过重复初始化');
+        return;
+      }
+      
+      console.log('[ReviewIntroScreen] 开始初始化经验值状态');
+      
+      try {
+        await experienceManager.managePageExperience(
+          vocabulary?.length || 0,
+          (progressPercentage: number) => {
+            // 经验值进度条更新回调
+            console.log('[ReviewIntroScreen] 经验值进度条更新:', progressPercentage);
+          },
+          (hasGain) => {
+            // 检查完成回调
+            if (hasGain) {
+              logger.info('检测到经验值增益');
+            }
           }
-        }
-      );
+        );
+        
+        // 记录初始化时间
+        await AsyncStorage.setItem('lastReviewIntroInit', now.toString());
+        console.log('[ReviewIntroScreen] 经验值状态初始化完成');
+        
+      } catch (error) {
+        console.error('[ReviewIntroScreen] 经验值状态初始化失败:', error);
+      }
     };
     
     initializeExperience();
@@ -167,6 +187,18 @@ const ReviewIntroScreen = () => {
   // 经验值检测函数 - 使用 useCallback 避免重复创建
   const checkExperienceGain = useCallback(async () => {
     console.log('[ReviewIntroScreen] 检查经验值增益');
+    
+    // 检查是否最近已经检查过（避免频繁触发）
+    const lastCheckTime = await AsyncStorage.getItem('lastExperienceCheck');
+    const now = Date.now();
+    
+    if (lastCheckTime && (now - parseInt(lastCheckTime)) < 3000) { // 3秒内不重复检查
+      console.log('[ReviewIntroScreen] 3秒内已检查过经验值，跳过重复检查');
+      return;
+    }
+    
+    // 记录检查时间
+    await AsyncStorage.setItem('lastExperienceCheck', now.toString());
     
     // 方法1：检查 pendingExperienceGain 标记
     const experienceGainedFlag = await AsyncStorage.getItem('pendingExperienceGain');
