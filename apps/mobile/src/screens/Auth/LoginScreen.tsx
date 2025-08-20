@@ -707,11 +707,6 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
 
         {/* 登录按钮 */}
         <View style={styles.loginButtons}>
-          {/* 调试信息 */}
-          <Text style={{ color: 'red', textAlign: 'center', marginBottom: 10 }}>
-            调试：应该显示邮箱登录按钮
-          </Text>
-          
           {/* 邮箱登录 - 主要推荐方式 */}
           <LoginButton
             type="email"
