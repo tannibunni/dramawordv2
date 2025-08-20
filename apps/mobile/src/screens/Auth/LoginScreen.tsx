@@ -721,13 +721,15 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
 
         {/* 登录按钮 */}
         <View style={styles.loginButtons}>
-          {/* 邮箱登录 - 主要推荐方式 */}
-          <LoginButton
-            type="email"
-            onPress={handleEmailLogin}
-            loading={loading}
-            customText={isUpgradeFromGuest ? t('upgrade_to_email_account_flow', appLanguage) : undefined}
-          />
+          {/* 邮箱登录 - 暂时隐藏 */}
+          {false && (
+            <LoginButton
+              type="email"
+              onPress={handleEmailLogin}
+              loading={loading}
+              customText={isUpgradeFromGuest ? t('upgrade_to_email_account_flow', appLanguage) : undefined}
+            />
+          )}
           
           {/* 其他登录方式 */}
           {false && (
@@ -789,14 +791,16 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
         onLoginSuccess={handlePhoneLoginSuccess}
       />
 
-      {/* 邮箱登录模态框 */}
-      <EmailAuthModal
-        visible={emailModalVisible}
-        onClose={() => setEmailModalVisible(false)}
-        onLoginSuccess={handleEmailLoginSuccess}
-        initialMode="login"
-        isUpgradeFromGuest={isUpgradeFromGuest}
-      />
+      {/* 邮箱登录模态框 - 暂时隐藏 */}
+      {false && (
+        <EmailAuthModal
+          visible={emailModalVisible}
+          onClose={() => setEmailModalVisible(false)}
+          onLoginSuccess={handleEmailLoginSuccess}
+          initialMode="login"
+          isUpgradeFromGuest={isUpgradeFromGuest}
+        />
+      )}
 
       {/* 用户协议 Modal */}
       <Modal
