@@ -91,6 +91,38 @@ router.get('/collection/:collectionName', async (req, res) => {
   }
 });
 
+/**
+ * 检查环境变量配置
+ * GET /api/debug/env-check
+ */
+router.get('/env-check', (req, res) => {
+  try {
+    const envVars = {
+      EMAIL_SERVICE: process.env.EMAIL_SERVICE,
+      GMAIL_USER: process.env.GMAIL_USER,
+      GMAIL_APP_PASSWORD: process.env.GMAIL_APP_PASSWORD ? 
+        `${process.env.GMAIL_APP_PASSWORD.substring(0, 4)}...${process.env.GMAIL_APP_PASSWORD.substring(process.env.GMAIL_APP_PASSWORD.length - 4)}` : 
+        'NOT_SET',
+      EMAIL_FROM: process.env.EMAIL_FROM,
+      FRONTEND_URL: process.env.FRONTEND_URL,
+      NODE_ENV: process.env.NODE_ENV,
+      PORT: process.env.PORT
+    };
+    
+    res.json({
+      success: true,
+      message: '环境变量检查',
+      environment: envVars,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: '环境变量检查失败'
+    });
+  }
+});
+
 // 获取连接状态文本
 function getConnectionStateText(state: number): string {
   switch (state) {
