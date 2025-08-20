@@ -45,6 +45,7 @@ import { useReviewActions } from './hooks/useReviewActions';
 import { ReviewProgressBar } from './components/ReviewProgressBar';
 import { ReviewModeSelector } from './components/ReviewModeSelector';
 import { ReviewEmptyState } from './components/ReviewEmptyState';
+import { guestDataAdapter } from '../../services/guestDataAdapter';
 
 const { width, height } = Dimensions.get('window');
 
@@ -453,15 +454,14 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
                 console.log('👤 游客模式，数据仅保存本地，不加入同步队列');
               }
               
-              // 更新本地 userStats（包含连续学习天数）
-              const currentStats = await AsyncStorage.getItem('userStats');
-              if (currentStats) {
-                const stats = JSON.parse(currentStats);
+              // 更新本地 userStats（包含连续学习天数）- 使用guestDataAdapter
+              try {
+                const currentStats = await guestDataAdapter.getUserStats();
                 const today = new Date().toDateString();
-                const lastStudyDate = stats.lastStudyDate;
+                const lastStudyDate = currentStats?.lastStudyDate;
                 
                 // 计算连续学习天数
-                let newStreak = stats.currentStreak || 0;
+                let newStreak = currentStats?.currentStreak || 0;
                 if (lastStudyDate === today) {
                   // 今天已经学习过，不增加连续天数
                   console.log('📅 今天已经学习过，连续天数保持不变:', newStreak);
@@ -476,24 +476,36 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
                 }
                 
                 const updatedStats = {
-                  ...stats,
-                  totalReviews: (stats.totalReviews || 0) + 1,
+                  ...currentStats,
+                  totalReviews: (currentStats?.totalReviews || 0) + 1,
                   currentStreak: newStreak,
                   lastStudyDate: today
                 };
-                await AsyncStorage.setItem('userStats', JSON.stringify(updatedStats));
-                console.log('✅ 本地 userStats 已更新，连续天数:', newStreak);
-              } else {
-                // 如果本地没有 userStats，创建新的
-                const newStats = {
-                  collectedWords: 0,
-                  contributedWords: 0,
-                  totalReviews: 1,
-                  currentStreak: 1,
-                  lastStudyDate: new Date().toDateString()
-                };
-                await AsyncStorage.setItem('userStats', JSON.stringify(newStats));
-                console.log('✅ 创建新的 userStats，连续天数: 1');
+                await guestDataAdapter.setUserStats(updatedStats);
+                console.log('✅ 通过guestDataAdapter更新userStats，连续天数:', newStreak);
+              } catch (error) {
+                console.error('❌ 更新userStats失败:', error);
+                // 降级到直接AsyncStorage操作
+                const currentStats = await AsyncStorage.getItem('userStats');
+                if (currentStats) {
+                  const stats = JSON.parse(currentStats);
+                  const updatedStats = {
+                    ...stats,
+                    totalReviews: (stats.totalReviews || 0) + 1
+                  };
+                  await AsyncStorage.setItem('userStats', JSON.stringify(updatedStats));
+                  console.log('✅ 降级：直接更新AsyncStorage userStats');
+                } else {
+                  const newStats = {
+                    collectedWords: 0,
+                    contributedWords: 0,
+                    totalReviews: 1,
+                    currentStreak: 1,
+                    lastStudyDate: new Date().toDateString()
+                  };
+                  await AsyncStorage.setItem('userStats', JSON.stringify(newStats));
+                  console.log('✅ 降级：创建新的AsyncStorage userStats');
+                }
               }
               
               // 标记需要刷新vocabulary数据
@@ -557,15 +569,14 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
                 console.log('👤 游客模式，数据仅保存本地，不加入同步队列');
               }
               
-              // 更新本地 userStats（包含连续学习天数）
-              const currentStats = await AsyncStorage.getItem('userStats');
-              if (currentStats) {
-                const stats = JSON.parse(currentStats);
+              // 更新本地 userStats（包含连续学习天数）- 使用guestDataAdapter
+              try {
+                const currentStats = await guestDataAdapter.getUserStats();
                 const today = new Date().toDateString();
-                const lastStudyDate = stats.lastStudyDate;
+                const lastStudyDate = currentStats?.lastStudyDate;
                 
                 // 计算连续学习天数
-                let newStreak = stats.currentStreak || 0;
+                let newStreak = currentStats?.currentStreak || 0;
                 if (lastStudyDate === today) {
                   // 今天已经学习过，不增加连续天数
                   console.log('📅 今天已经学习过，连续天数保持不变:', newStreak);
@@ -580,24 +591,36 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
                 }
                 
                 const updatedStats = {
-                  ...stats,
-                  totalReviews: (stats.totalReviews || 0) + 1,
+                  ...currentStats,
+                  totalReviews: (currentStats?.totalReviews || 0) + 1,
                   currentStreak: newStreak,
                   lastStudyDate: today
                 };
-                await AsyncStorage.setItem('userStats', JSON.stringify(updatedStats));
-                console.log('✅ 本地 userStats 已更新，连续天数:', newStreak);
-              } else {
-                // 如果本地没有 userStats，创建新的
-                const newStats = {
-                  collectedWords: 0,
-                  contributedWords: 0,
-                  totalReviews: 1,
-                  currentStreak: 1,
-                  lastStudyDate: new Date().toDateString()
-                };
-                await AsyncStorage.setItem('userStats', JSON.stringify(newStats));
-                console.log('✅ 创建新的 userStats，连续天数: 1');
+                await guestDataAdapter.setUserStats(updatedStats);
+                console.log('✅ 通过guestDataAdapter更新userStats，连续天数:', newStreak);
+              } catch (error) {
+                console.error('❌ 更新userStats失败:', error);
+                // 降级到直接AsyncStorage操作
+                const currentStats = await AsyncStorage.getItem('userStats');
+                if (currentStats) {
+                  const stats = JSON.parse(currentStats);
+                  const updatedStats = {
+                    ...stats,
+                    totalReviews: (stats.totalReviews || 0) + 1
+                  };
+                  await AsyncStorage.setItem('userStats', JSON.stringify(updatedStats));
+                  console.log('✅ 降级：直接更新AsyncStorage userStats');
+                } else {
+                  const newStats = {
+                    collectedWords: 0,
+                    contributedWords: 0,
+                    totalReviews: 1,
+                    currentStreak: 1,
+                    lastStudyDate: new Date().toDateString()
+                  };
+                  await AsyncStorage.setItem('userStats', JSON.stringify(newStats));
+                  console.log('✅ 降级：创建新的AsyncStorage userStats');
+                }
               }
               
               // 标记需要刷新vocabulary数据
