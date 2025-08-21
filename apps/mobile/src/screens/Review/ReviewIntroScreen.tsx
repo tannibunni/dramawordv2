@@ -61,7 +61,9 @@ const ReviewIntroScreen = () => {
   const vocabularyContext = useVocabulary();
   const { shows } = useShowList();
   const navigation = useNavigation();
-  const navigate = navigation?.navigate;
+  const navigate = navigation?.navigate || (() => {
+    console.warn('[ReviewIntroScreen] 导航对象不可用，跳过导航操作');
+  });
   const { appLanguage } = useAppLanguage();
   const { user } = useAuth();
   
@@ -80,7 +82,17 @@ const ReviewIntroScreen = () => {
   
   // ==================== 经验值相关状态 ====================
   // 使用 experienceManager 的状态管理
-  const [experienceState, setExperienceState] = useState(experienceManager.getExperienceState());
+  const [experienceState, setExperienceState] = useState(() => {
+    const initialState = experienceManager.getExperienceState();
+    // 如果 userExperienceInfo 为空，先不设置状态，等待初始化完成
+    if (!initialState.userExperienceInfo) {
+      return {
+        ...initialState,
+        userExperienceInfo: null
+      };
+    }
+    return initialState;
+  });
   
   // 用户统计数据状态
   const [userStats, setUserStats] = useState<{
@@ -158,17 +170,12 @@ const ReviewIntroScreen = () => {
       console.log('[ReviewIntroScreen] 开始初始化经验值状态');
       
       try {
-        await experienceManager.managePageExperience(
-          vocabulary?.length || 0,
+        // 只初始化进度条和状态，不检查经验值增益
+        // 经验值增益检查由 checkExperienceGain 函数专门处理
+        await experienceManager.initializeProgressBarWithCallback(
           (progressPercentage: number) => {
             // 经验值进度条更新回调
             console.log('[ReviewIntroScreen] 经验值进度条更新:', progressPercentage);
-          },
-          (hasGain) => {
-            // 检查完成回调
-            if (hasGain) {
-              logger.info('检测到经验值增益');
-            }
           }
         );
         
@@ -192,8 +199,8 @@ const ReviewIntroScreen = () => {
     const lastCheckTime = await AsyncStorage.getItem('lastExperienceCheck');
     const now = Date.now();
     
-    if (lastCheckTime && (now - parseInt(lastCheckTime)) < 3000) { // 3秒内不重复检查
-      console.log('[ReviewIntroScreen] 3秒内已检查过经验值，跳过重复检查');
+    if (lastCheckTime && (now - parseInt(lastCheckTime)) < 5000) { // 增加到5秒内不重复检查
+      console.log('[ReviewIntroScreen] 5秒内已检查过经验值，跳过重复检查');
       return;
     }
     
@@ -211,8 +218,8 @@ const ReviewIntroScreen = () => {
         
         console.log('[ReviewIntroScreen] 解析后的经验值增益数据:', { experienceGained, timestamp, now, timeDiff: now - timestamp });
         
-        // 检查是否是最近的经验值增益（30秒内，增加容错时间）
-        if (experienceGained && experienceGained > 0 && (now - timestamp) < 30000) {
+        // 检查是否是最近的经验值增益（15秒内，减少容错时间）
+        if (experienceGained && experienceGained > 0 && (now - timestamp) < 15000) {
           console.log('[ReviewIntroScreen] 检测到经验值增益:', experienceGained);
           
           // 清除标记
@@ -246,6 +253,7 @@ const ReviewIntroScreen = () => {
     }
     
     // 方法2：通过比较经验值变化来检测增益（备用机制）
+    // 注意：这个方法现在只在有明确标记的情况下才使用，避免误触发
     try {
       const lastExperienceKey = 'lastRecordedExperience';
       const currentExperience = experienceManager.getExperienceState().userExperienceInfo?.experience || 0;
@@ -288,15 +296,43 @@ const ReviewIntroScreen = () => {
     console.log('[ReviewIntroScreen] 没有检测到经验值增益');
   }, []);
 
-  // 保留原有的 useEffect 作为备用检测机制
+  // 使用 useEffect 替代 useFocusEffect，因为这是自定义导航系统
   useEffect(() => {
-    const checkExperienceGainOnFocus = async () => {
-      console.log('[ReviewIntroScreen] 组件挂载，备用检查经验值增益');
-      await checkExperienceGain();
+    const checkExperienceGainOnMount = async () => {
+      // 检查是否有真正的经验值增益需要处理
+      const experienceGainedFlag = await AsyncStorage.getItem('pendingExperienceGain');
+      
+      if (experienceGainedFlag) {
+        try {
+          const { experienceGained, timestamp } = JSON.parse(experienceGainedFlag);
+          const now = Date.now();
+          
+          // 只有在15秒内的有效经验值增益才检查
+          if (experienceGained && experienceGained > 0 && (now - timestamp) < 15000) {
+            console.log('[ReviewIntroScreen] 检测到有效的经验值增益标记，进行检查');
+            await checkExperienceGain();
+          } else {
+            console.log('[ReviewIntroScreen] 组件挂载，但无有效经验值增益标记，跳过检查');
+            // 清理过期的标记
+            if (experienceGainedFlag) {
+              await AsyncStorage.removeItem('pendingExperienceGain');
+              console.log('[ReviewIntroScreen] 已清理过期的pendingExperienceGain标记');
+            }
+          }
+        } catch (error) {
+          console.error('[ReviewIntroScreen] 解析经验值增益标记失败:', error);
+          await AsyncStorage.removeItem('pendingExperienceGain');
+        }
+      } else {
+        console.log('[ReviewIntroScreen] 组件挂载，无经验值增益标记，跳过检查');
+      }
     };
     
-    checkExperienceGainOnFocus();
-  }, []); // 移除 checkExperienceGain 依赖，避免重复调用
+    // 延迟检查，确保页面完全加载
+    const timer = setTimeout(checkExperienceGainOnMount, 300);
+    
+    return () => clearTimeout(timer);
+  }, [checkExperienceGain]);
   
   // ==================== 检查vocabulary刷新 ====================
   useEffect(() => {
@@ -483,7 +519,7 @@ const ReviewIntroScreen = () => {
                 </View>
               </View>
               <Text style={styles.experienceProgressText}>
-                {experienceState.userExperienceInfo?.experience || 0} / {experienceState.userExperienceInfo?.experienceToNextLevel || 50} XP
+                {experienceState.userExperienceInfo?.experience || 0} / {experienceState.userExperienceInfo?.experienceToNextLevel || '...'} XP
               </Text>
             </View>
             <View style={styles.progressBarContainer}>

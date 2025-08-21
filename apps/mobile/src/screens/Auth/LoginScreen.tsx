@@ -36,6 +36,7 @@ interface LoginScreenProps {
   route?: {
     params?: {
       upgradeFromGuest?: boolean;
+      redirectToPurchase?: boolean;
     };
   };
 }
@@ -611,7 +612,23 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
           await migrateGuestDataToApple(userData);
         }
         
-        onLoginSuccess(userData);
+        // 检查是否需要跳转到购买页面
+        const shouldRedirectToPurchase = route?.params?.redirectToPurchase || false;
+        
+        if (shouldRedirectToPurchase) {
+          console.log('🍎 苹果登录成功，准备跳转到购买页面');
+          // 延迟跳转，确保数据迁移完成
+          setTimeout(() => {
+            // 这里需要通知父组件跳转到购买页面
+            // 由于LoginScreen是模态框，我们需要通过特殊的方式处理
+            onLoginSuccess({
+              ...userData,
+              redirectToPurchase: true
+            });
+          }, 1000);
+        } else {
+          onLoginSuccess(userData);
+        }
       } else {
         throw new Error(result.message || '苹果登录失败');
       }

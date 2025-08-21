@@ -177,7 +177,7 @@ const SubscriptionScreen = () => {
       return;
     }
 
-    // 检查是否为游客模式，给出友好提示
+    // 检查是否为游客模式，引导用户登录苹果ID
     try {
       const userData = await AsyncStorage.getItem('userData');
       const isGuest = userData ? JSON.parse(userData).loginType === 'guest' : true;
@@ -186,20 +186,16 @@ const SubscriptionScreen = () => {
         Alert.alert(
           appLanguage === 'zh-CN' ? '账户提示' : 'Account Notice',
           appLanguage === 'zh-CN' 
-            ? '为了更好地管理您的订阅和数据，建议您选择：\n\n1. 创建账户（推荐）- 使用邮箱注册，数据云端同步\n2. 游客购买 - 绑定Apple ID，功能受限\n\n您希望如何继续？'
-            : 'For better subscription and data management, we recommend:\n\n1. Create Account (Recommended) - Register with email, cloud sync\n2. Guest Purchase - Linked to Apple ID, limited features\n\nHow would you like to proceed?',
+            ? '为了更好地管理您的订阅和数据，建议您先登录苹果ID：\n\n• 数据云端同步\n• 跨设备访问\n• 完整功能支持\n• 安全的订阅管理\n\n是否前往登录苹果ID？'
+            : 'For better subscription and data management, we recommend logging in with Apple ID first:\n\n• Cloud data sync\n• Cross-device access\n• Full feature support\n• Secure subscription management\n\nWould you like to proceed to Apple ID login?',
           [
             { 
               text: appLanguage === 'zh-CN' ? '取消' : 'Cancel', 
               style: 'cancel' 
             },
             { 
-              text: appLanguage === 'zh-CN' ? '创建账户' : 'Create Account', 
-              onPress: () => handleCreateAccount()
-            },
-            { 
-              text: appLanguage === 'zh-CN' ? '游客购买' : 'Guest Purchase', 
-              onPress: () => proceedWithPurchase()
+              text: appLanguage === 'zh-CN' ? '登录苹果ID' : 'Login with Apple ID', 
+              onPress: () => handleAppleLoginRedirect()
             }
           ]
         );
@@ -213,6 +209,252 @@ const SubscriptionScreen = () => {
     proceedWithPurchase();
   };
 
+  // 游客数据迁移到苹果账户
+  const migrateGuestDataToApple = async (userData: any) => {
+    try {
+      console.log('🔄 开始迁移游客数据到苹果账户...');
+      
+      // 获取游客数据
+      const guestData = await getGuestData();
+      
+      if (!guestData || Object.keys(guestData).length === 0) {
+        console.log('ℹ️ 没有找到游客数据，跳过迁移');
+        return;
+      }
+      
+      console.log('📊 找到游客数据:', Object.keys(guestData));
+      
+      // 迁移学习记录
+      if (guestData.learningRecords) {
+        await AsyncStorage.setItem('learningRecords', JSON.stringify(guestData.learningRecords));
+        console.log('✅ 学习记录迁移成功');
+      }
+      
+      // 迁移词汇数据
+      if (guestData.vocabulary) {
+        await AsyncStorage.setItem('vocabulary', JSON.stringify(guestData.vocabulary));
+        console.log('✅ 词汇数据迁移成功');
+      }
+      
+      // 迁移剧单数据
+      if (guestData.shows) {
+        await AsyncStorage.setItem('user_shows', JSON.stringify(guestData.shows));
+        console.log('✅ 剧单数据迁移成功');
+      }
+      
+      // 迁移用户设置
+      if (guestData.userSettings) {
+        await AsyncStorage.setItem('userSettings', JSON.stringify(guestData.userSettings));
+        console.log('✅ 用户设置迁移成功');
+      }
+      
+      // 迁移学习统计
+      if (guestData.userStats) {
+        await AsyncStorage.setItem('userStats', JSON.stringify(guestData.userStats));
+        console.log('✅ 学习统计迁移成功');
+      }
+      
+      // 迁移错词数据
+      if (guestData.wrongWords) {
+        await AsyncStorage.setItem('wrongWords', JSON.stringify(guestData.wrongWords));
+        console.log('✅ 错词数据迁移成功');
+      }
+      
+      // 清除游客数据
+      await clearGuestData();
+      console.log('🧹 游客数据清除完成');
+      
+      console.log('🎉 游客数据迁移完成！');
+      
+    } catch (error) {
+      console.error('❌ 游客数据迁移失败:', error);
+      // 不显示错误提示，避免影响用户体验
+    }
+  };
+
+  // 获取游客数据
+  const getGuestData = async () => {
+    try {
+      const guestId = await AsyncStorage.getItem('guestId');
+      if (!guestId) return null;
+      
+      const data: Record<string, any> = {};
+      
+      // 获取各种游客数据
+      const keys = [
+        'learningRecords',
+        'vocabulary', 
+        'user_shows',
+        'userSettings',
+        'userStats',
+        'wrongWords',
+        'searchHistory',
+        'bookmarks'
+      ];
+      
+      for (const key of keys) {
+        try {
+          const value = await AsyncStorage.getItem(key);
+          if (value && value !== 'null') {
+            data[key] = JSON.parse(value);
+          }
+        } catch (error) {
+          console.log(`获取${key}失败:`, error);
+        }
+      }
+      
+      return data;
+    } catch (error) {
+      console.error('获取游客数据失败:', error);
+      return null;
+    }
+  };
+
+  // 清除游客数据
+  const clearGuestData = async () => {
+    try {
+      const keys = [
+        'guestId',
+        'learningRecords',
+        'vocabulary', 
+        'user_shows',
+        'userSettings',
+        'userStats',
+        'wrongWords',
+        'searchHistory',
+        'bookmarks'
+      ];
+      
+      for (const key of keys) {
+        await AsyncStorage.removeItem(key);
+      }
+      
+      console.log('游客数据清除完成');
+    } catch (error) {
+      console.error('清除游客数据失败:', error);
+    }
+  };
+
+  // 处理苹果ID登录（直接在当前页面执行）
+  const handleAppleLoginRedirect = async () => {
+    try {
+      setIsLoading(true);
+      
+      // 检查苹果登录是否可用
+      const AppleAuthentication = require('expo-apple-authentication');
+      const isAvailable = await AppleAuthentication.isAvailableAsync();
+      if (!isAvailable) {
+        Alert.alert(
+          appLanguage === 'zh-CN' ? '提示' : 'Notice',
+          appLanguage === 'zh-CN' ? '您的设备不支持苹果登录' : 'Apple Login is not available on your device'
+        );
+        return;
+      }
+
+      console.log('🍎 开始苹果登录流程...');
+      
+      // 执行苹果登录
+      const credential = await AppleAuthentication.signInAsync({
+        requestedScopes: [
+          AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+          AppleAuthentication.AppleAuthenticationScope.EMAIL,
+        ],
+      });
+
+      console.log('🍎 苹果登录成功，获取到凭证:', {
+        user: credential.user,
+        email: credential.email,
+        fullName: credential.fullName,
+        hasIdentityToken: !!credential.identityToken
+      });
+
+      if (!credential.identityToken) {
+        throw new Error('未获取到身份令牌');
+      }
+
+      // 调用后端登录API
+      const AppleService = require('../../services/appleService').AppleService;
+      const loginData = {
+        idToken: credential.identityToken,
+        email: credential.email || undefined,
+        fullName: credential.fullName ? {
+          givenName: credential.fullName.givenName || undefined,
+          familyName: credential.fullName.familyName || undefined,
+        } : undefined,
+      };
+      const result = await AppleService.login(loginData);
+      
+      console.log('🍎 Apple登录API响应:', result);
+      
+      if (result.success && result.data) {
+        console.log('🍎 Apple登录成功，获取到token:', result.data.token ? '有token' : '无token');
+        
+        // 保存用户信息到本地存储
+        const userData = {
+          id: result.data.user.id,
+          nickname: result.data.user.nickname,
+          email: result.data.user.email,
+          avatar: result.data.user.avatar,
+          loginType: 'apple',
+          token: result.data.token,
+        };
+        
+        console.log('🍎 准备保存的用户数据:', {
+          id: userData.id,
+          nickname: userData.nickname,
+          loginType: userData.loginType,
+          hasToken: !!userData.token
+        });
+        
+        // 清除旧缓存和迁移游客数据
+        const unifiedSyncService = require('../../services/unifiedSyncService').unifiedSyncService;
+        await unifiedSyncService.clearSyncQueue();
+        
+        // 迁移游客数据到苹果账户
+        await migrateGuestDataToApple(userData);
+        
+        // 更新认证状态
+        const { useAuth } = require('../../context/AuthContext');
+        // 这里需要通过其他方式更新认证状态，因为我们在组件内部
+        await AsyncStorage.setItem('userData', JSON.stringify(userData));
+        
+        Alert.alert(
+          appLanguage === 'zh-CN' ? '登录成功' : 'Login Success',
+          appLanguage === 'zh-CN' 
+            ? '您的游客数据已成功迁移到苹果账户！现在可以继续购买订阅。'
+            : 'Your guest data has been successfully migrated to your Apple account! You can now proceed with the subscription.',
+          [
+            { 
+              text: appLanguage === 'zh-CN' ? '继续购买' : 'Continue Purchase', 
+              onPress: () => {
+                // 登录成功后直接执行购买
+                setTimeout(() => {
+                  proceedWithPurchase();
+                }, 500);
+              }
+            }
+          ]
+        );
+      } else {
+        throw new Error(result.message || '苹果登录失败');
+      }
+    } catch (error: any) {
+      console.error('❌ 苹果登录失败:', error);
+      
+      if (error.code === 'ERR_CANCELED') {
+        console.log('用户取消了苹果登录');
+        return;
+      }
+      
+      Alert.alert(
+        appLanguage === 'zh-CN' ? '登录失败' : 'Login Failed', 
+        error instanceof Error ? error.message : (appLanguage === 'zh-CN' ? '苹果登录失败，请重试' : 'Apple login failed, please try again')
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   // 处理创建账户
   const handleCreateAccount = () => {
     Alert.alert(
@@ -224,10 +466,6 @@ const SubscriptionScreen = () => {
         { 
           text: appLanguage === 'zh-CN' ? '取消' : 'Cancel', 
           style: 'cancel' 
-        },
-        { 
-          text: appLanguage === 'zh-CN' ? '游客购买' : 'Guest Purchase', 
-          onPress: () => proceedWithPurchase()
         },
         { 
           text: appLanguage === 'zh-CN' ? '创建账户' : 'Create Account', 
@@ -597,29 +835,124 @@ const SubscriptionScreen = () => {
               <Text style={styles.testButtonText}>开始14天试用期</Text>
             </TouchableOpacity>
 
-            {/* 清除订阅状态 */}
-                <TouchableOpacity
+            {/* 清除用户数据（保留经验和学习数据） */}
+            <TouchableOpacity 
               style={styles.testButton} 
-                             onPress={async () => {
-                 try {
-                   await AsyncStorage.removeItem('subscription_status');
-                   await AsyncStorage.removeItem('subscription_record');
-                   
-                   // 重新初始化服务以重置状态
-                   await subscriptionService.initialize();
-                   
-                   // 刷新状态
-                   const newStatus = await subscriptionService.checkSubscriptionStatus();
-                   setSubscriptionStatus(newStatus);
-                   
-                   Alert.alert('成功', '订阅状态已清除，页面已刷新');
-                 } catch (error) {
-                   Alert.alert('错误', error instanceof Error ? error.message : '未知错误');
-                 }
-               }}
+              onPress={async () => {
+                try {
+                  Alert.alert(
+                    '确认清除',
+                    '这将删除：\n• 历史搜索数据\n• 剧单\n• 单词本\n• 已储存的单词\n\n但会保留：\n• 经验数据\n• 学习数据\n\n确定要继续吗？',
+                    [
+                      { text: '取消', style: 'cancel' },
+                      { 
+                        text: '确认清除', 
+                        style: 'destructive',
+                        onPress: async () => {
+                          try {
+                            // 清除用户数据但保留经验和学习数据
+                            const keysToRemove = [
+                              'searchHistory',
+                              'user_shows', 
+                              'vocabulary',
+                              'bookmarks',
+                              'wrongWords'
+                            ];
+                            
+                            for (const key of keysToRemove) {
+                              await AsyncStorage.removeItem(key);
+                            }
+                            
+                            Alert.alert('成功', '用户数据已清除（经验数据和学习数据已保留）');
+                          } catch (error) {
+                            Alert.alert('错误', error instanceof Error ? error.message : '未知错误');
+                          }
+                        }
+                      }
+                    ]
+                  );
+                } catch (error) {
+                  Alert.alert('错误', error instanceof Error ? error.message : '未知错误');
+                }
+              }}
+            >
+              <Text style={styles.testButtonText}>清除用户数据（保留经验）</Text>
+            </TouchableOpacity>
+
+            {/* 完全清除所有数据（仅开发模式可见） */}
+            {__DEV__ && (
+              <TouchableOpacity 
+                style={[styles.testButton, { backgroundColor: '#FF3B3011' }]} 
+                onPress={async () => {
+                  try {
+                    Alert.alert(
+                      '⚠️ 完全清除确认',
+                      '这将删除该用户ID下的所有数据：\n• 历史搜索数据\n• 剧单\n• 单词本\n• 已储存的单词\n• 经验数据\n• 学习数据\n• 储存语言\n\n⚠️ 此操作不可逆！确定要继续吗？',
+                      [
+                        { text: '取消', style: 'cancel' },
+                        { 
+                          text: '完全清除', 
+                          style: 'destructive',
+                          onPress: async () => {
+                            try {
+                              // 完全清除所有用户数据
+                              const allKeys = [
+                                'searchHistory',
+                                'user_shows', 
+                                'vocabulary',
+                                'bookmarks',
+                                'wrongWords',
+                                'learningRecords',
+                                'userStats',
+                                'userSettings',
+                                'appLanguage',
+                                'guestId'
+                              ];
+                              
+                              for (const key of allKeys) {
+                                await AsyncStorage.removeItem(key);
+                              }
+                              
+                              Alert.alert('成功', '所有用户数据已完全清除');
+                            } catch (error) {
+                              Alert.alert('错误', error instanceof Error ? error.message : '未知错误');
+                            }
+                          }
+                        }
+                      ]
+                    );
+                  } catch (error) {
+                    Alert.alert('错误', error instanceof Error ? error.message : '未知错误');
+                  }
+                }}
+              >
+                <Text style={[styles.testButtonText, { color: '#FF3B30' }]}>完全清除所有数据</Text>
+              </TouchableOpacity>
+            )}
+
+            {/* 清除订阅状态 */}
+            <TouchableOpacity
+              style={styles.testButton} 
+              onPress={async () => {
+                try {
+                  await AsyncStorage.removeItem('subscription_status');
+                  await AsyncStorage.removeItem('subscription_record');
+                  
+                  // 重新初始化服务以重置状态
+                  await subscriptionService.initialize();
+                  
+                  // 刷新状态
+                  const newStatus = await subscriptionService.checkSubscriptionStatus();
+                  setSubscriptionStatus(newStatus);
+                  
+                  Alert.alert('成功', '订阅状态已清除，页面已刷新');
+                } catch (error) {
+                  Alert.alert('错误', error instanceof Error ? error.message : '未知错误');
+                }
+              }}
             >
               <Text style={styles.testButtonText}>清除订阅状态</Text>
-                </TouchableOpacity>
+            </TouchableOpacity>
           </View>
         )}
       </ScrollView>

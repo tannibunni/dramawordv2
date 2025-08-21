@@ -84,7 +84,7 @@ class ExperienceManager implements IExperienceManager {
   private animationLockTimeout: ReturnType<typeof setTimeout> | null = null;
   private readonly ANIMATION_LOCK_TIMEOUT = 10000; // 10秒后自动释放锁
 
-  // 经验值状态管理
+  // 经验值状态管理 - 统一管理所有经验值相关状态
   private experienceState: ExperienceState = {
     userExperienceInfo: null,
     isLoadingExperience: true,
@@ -99,6 +99,13 @@ class ExperienceManager implements IExperienceManager {
     showLevelUpModal: false,
     levelUpInfo: null
   };
+  
+  // 单一经验值增长记录 - 避免重复触发
+  private lastExperienceGain: {
+    amount: number;
+    timestamp: number;
+    eventType: ExperienceEventType;
+  } | null = null;
 
   private stateCallbacks: ExperienceStateCallback[] = [];
 
@@ -436,6 +443,29 @@ class ExperienceManager implements IExperienceManager {
         });
       }
 
+      // 记录本次经验值增长，避免重复触发动画
+      this.lastExperienceGain = {
+        amount: xpToGain,
+        timestamp: Date.now(),
+        eventType
+      };
+      
+      // 设置pendingExperienceGain标记，供ReviewIntroScreen检测和触发动画
+      try {
+        const experienceGainData = JSON.stringify({
+          experienceGained: xpToGain,
+          timestamp: Date.now()
+        });
+        await AsyncStorage.setItem('pendingExperienceGain', experienceGainData);
+        console.log(`[experienceManager] 已设置pendingExperienceGain标记: ${xpToGain} XP`);
+      } catch (error) {
+        console.error('[experienceManager] 设置pendingExperienceGain标记失败:', error);
+      }
+      
+      // 注意：不再自动触发进度条动画，由ReviewIntroScreen通过检查pendingExperienceGain来触发
+      // 这样可以避免重复触发动画，确保动画只执行一次
+      console.log(`[experienceManager] 经验值添加完成: ${xpToGain} XP, 动画将在ReviewIntroScreen中触发`);
+
       this.isProcessing = false;
 
       const result: ExperienceGainResult = {
@@ -627,15 +657,26 @@ class ExperienceManager implements IExperienceManager {
     onComplete?: (finalExp: number, finalLevel: number) => void
   ): Promise<void> {
     try {
-      // 修复：动画应该从用户当前看到的经验值开始，增长到最终值
+      // 重要：currentExp 是当前经验值，动画应该从 currentExp 开始，增长到 (currentExp + gainedExp)
+      // 这样可以确保动画正确显示经验值增长过程
       const animationStartExp = currentExp;  // 从当前值开始
-      const animationEndExp = currentExp + gainedExp;  // 增长到最终值
+      const animationEndExp = currentExp + gainedExp;  // 增长到新值
       
       const oldLevel = this.calculateLevel(animationStartExp);
       const newLevel = this.calculateLevel(animationEndExp);
       const isLevelUp = newLevel > oldLevel;
       const oldProgress = this.calculateProgressPercentage(animationStartExp);
       const newProgress = this.calculateProgressPercentage(animationEndExp);
+      
+      console.log('[experienceManager] 动画参数计算:', {
+        gainedExp,
+        currentExp,
+        animationStartExp,
+        animationEndExp,
+        oldLevel,
+        newLevel,
+        isLevelUp
+      });
       
       const params = {
         oldExperience: animationStartExp,
@@ -770,25 +811,32 @@ class ExperienceManager implements IExperienceManager {
         return;
       }
       
-      console.log('[experienceManager] 手动触发经验值动画:', experienceGained);
-      
-      // 获取当前经验值信息
-      const currentInfo = await this.getCurrentExperienceInfo();
-      if (!currentInfo) {
-        console.error('[experienceManager] 无法获取当前经验值信息');
+      // 检查是否与最近的经验值增长匹配，避免重复触发
+      if (this.lastExperienceGain && 
+          this.lastExperienceGain.amount === experienceGained &&
+          (Date.now() - this.lastExperienceGain.timestamp) < 5000) {
+        console.log('[experienceManager] 检测到重复的经验值增长，跳过动画:', experienceGained);
         return;
       }
       
-      const oldExperience = currentInfo.experience;
-      const newExperience = oldExperience + experienceGained;
-      const oldProgress = this.calculateProgressPercentage(oldExperience);
-      const newProgress = this.calculateProgressPercentage(newExperience);
+      console.log('[experienceManager] 手动触发经验值动画:', experienceGained);
       
-      console.log('[experienceManager] 动画参数:', {
-        oldExperience,
-        newExperience,
-        oldProgress,
-        newProgress
+      // 重要：使用当前状态中的经验值信息，而不是重新从存储中读取
+      // 因为 addExperienceInternal 已经更新了状态，我们应该使用状态中的最新数据
+      const currentState = this.getExperienceState();
+      if (!currentState.userExperienceInfo) {
+        console.error('[experienceManager] 无法获取当前状态中的经验值信息');
+        return;
+      }
+      
+      // 使用状态中的最新经验值数据
+      const currentExperience = currentState.userExperienceInfo.experience;
+      const currentProgress = this.calculateProgressPercentage(currentExperience);
+      
+      console.log('[experienceManager] 动画参数（仅展示，不重复计算）:', {
+        currentExperience,
+        currentProgress,
+        experienceGained
       });
       
       // 设置动画状态，防止重复触发
@@ -798,7 +846,7 @@ class ExperienceManager implements IExperienceManager {
       
       // 先更新状态，确保动画从正确的起点开始
       this.updateState({
-        progressBarValue: oldProgress * 100
+        progressBarValue: currentProgress * 100
       });
       
       // 使用带回调的动画方法，实时更新进度条和经验值
@@ -809,39 +857,35 @@ class ExperienceManager implements IExperienceManager {
           this.updateState({
             progressBarValue: progress * 100,
             userExperienceInfo: {
-              ...currentInfo,
+              ...currentState.userExperienceInfo!,
               experience: currentExp,
               progressPercentage: progress
             }
           });
           console.log('[experienceManager] 进度条和经验值更新:', { currentExp, progress });
         },
-        (finalExp: number, finalLevel: number) => {
+        async (finalExp: number, finalLevel: number) => {
           console.log('[experienceManager] 经验值动画完成:', { finalExp, finalLevel });
           
-          // 动画完成后，真正添加经验值到数据库
-          this.addReviewTotalExperience(experienceGained)
-            .then(result => {
-              if (result && result.success) {
-                console.log('[experienceManager] 经验值真正添加成功:', result);
-              } else {
-                console.error('[experienceManager] 经验值真正添加失败:', result);
-              }
-            })
-            .catch(error => {
-              console.error('[experienceManager] 真正添加经验值时出错:', error);
-            });
+          // 重要：动画完成后，使用动画的最终值更新状态
+          // finalExp 是动画结束时的经验值，应该等于 currentExperience + experienceGained
+          const finalProgress = this.calculateProgressPercentage(finalExp);
           
-          // 确保状态显示最终值并重置动画状态
+          console.log('[experienceManager] 动画完成，使用动画最终值:', {
+            finalExp,
+            finalLevel,
+            finalProgress
+          });
+          
+          // 使用动画最终值更新UI
           this.updateState({
-            progressBarValue: this.calculateProgressPercentage(finalExp) * 100,
+            progressBarValue: finalProgress * 100,
             userExperienceInfo: {
-              ...currentInfo,
+              ...currentState.userExperienceInfo!,
               experience: finalExp,
               level: finalLevel,
-              // 修复：显示下一等级需要的总经验值，而不是当前等级需要的总经验值
               experienceToNextLevel: this.calculateLevelRequiredExp(finalLevel + 1),
-              progressPercentage: this.calculateProgressPercentage(finalExp)
+              progressPercentage: finalProgress
             },
             isProgressBarAnimating: false
           });
@@ -982,6 +1026,20 @@ class ExperienceManager implements IExperienceManager {
     return this.isAnimationRunning;
   }
   
+  // 获取最近的经验值增长记录
+  public getLastExperienceGain(): {
+    amount: number;
+    timestamp: number;
+    eventType: ExperienceEventType;
+  } | null {
+    return this.lastExperienceGain;
+  }
+  
+  // 清除最近的经验值增长记录
+  public clearLastExperienceGain(): void {
+    this.lastExperienceGain = null;
+  }
+  
   // 开始经验值动画（带状态管理）
   public async startExperienceAnimationWithState(
     gainedExp: number,
@@ -1008,12 +1066,22 @@ class ExperienceManager implements IExperienceManager {
         // 使用当前状态中的经验值，避免从本地存储重新读取导致的不一致
         const currentExp = currentState.userExperienceInfo.experience;
         
-        console.log('[experienceManager] 启动经验值动画，当前经验值:', currentExp, '获得经验值:', gainedExp);
+        // 重要：currentExp 是用户当前看到并期望的经验值
+        // 动画应该从 currentExp 开始，增长到 (currentExp + gainedExp)
+        const animationStartExp = currentExp;
+        const animationEndExp = currentExp + gainedExp;
+        
+        console.log('[experienceManager] 启动经验值动画参数:', {
+          currentExp,
+          gainedExp,
+          animationStartExp,
+          animationEndExp
+        });
         
         // 直接启动动画，不重复检查动画管理器状态
         await this.startExperienceAnimation(
           gainedExp,
-          currentExp,
+          animationStartExp,
           onProgressUpdate,
           (finalExp: number, finalLevel: number) => {
             // 动画完成回调
@@ -1022,6 +1090,7 @@ class ExperienceManager implements IExperienceManager {
             }
             
             // 动画完成后，确保状态正确更新
+            // finalExp 应该是 currentExp + gainedExp
             const finalProgress = this.calculateProgressPercentage(finalExp);
             this.updateState({
               progressBarValue: finalProgress * 100,
@@ -1103,22 +1172,29 @@ class ExperienceManager implements IExperienceManager {
   // ==================== 经验值进度条和增益检查管理 ====================
   
   // 初始化经验值进度条（带回调）
-  public initializeProgressBarWithCallback(
+  public async initializeProgressBarWithCallback(
     onProgressUpdate?: (progressPercentage: number) => void
-  ): void {
-    const currentState = this.getExperienceState();
-    
-    if (currentState.userExperienceInfo) {
-      const progressPercentage = this.calculateProgressPercentage(currentState.userExperienceInfo.experience);
+  ): Promise<void> {
+    try {
+      // 先加载用户经验值信息
+      await this.loadUserExperienceInfo();
       
-      this.updateState({
-        progressBarValue: progressPercentage * 100,
-        hasInitializedProgressBar: true
-      });
+      const currentState = this.getExperienceState();
       
-      if (onProgressUpdate) {
-        onProgressUpdate(progressPercentage * 100);
+      if (currentState.userExperienceInfo) {
+        const progressPercentage = this.calculateProgressPercentage(currentState.userExperienceInfo.experience);
+        
+        this.updateState({
+          progressBarValue: progressPercentage * 100,
+          hasInitializedProgressBar: true
+        });
+        
+        if (onProgressUpdate) {
+          onProgressUpdate(progressPercentage * 100);
+        }
       }
+    } catch (error) {
+      console.error('[experienceManager] 初始化进度条失败:', error);
     }
   }
 

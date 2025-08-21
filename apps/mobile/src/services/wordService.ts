@@ -220,59 +220,23 @@ export class WordService {
     }
   }
 
-  // 获取最近查词记录（支持本地/云端）
+  // 获取最近查词记录（多邻国方案：只从本地获取，不从云端下载）
   async getRecentWords(): Promise<RecentWord[]> {
-    const token = await getUserToken();
-    if (!token) {
-      // 游客：本地获取
-      try {
-        const local = await AsyncStorage.getItem(SEARCH_HISTORY_KEY);
-        if (local) {
-          const parsedData = JSON.parse(local);
-          if (parsedData && parsedData.length > 0) {
-            return parsedData;
-          }
-        }
-        // 如果没有本地数据，返回空数组（不返回模拟数据）
-        console.log('📚 没有本地搜索历史，返回空数组');
-        return [];
-      } catch (e) {
-        console.error('读取本地搜索历史失败:', e);
-        // 出错时返回空数组
-        return [];
-      }
-    }
-    // 登录用户：云端
+    // 多邻国方案：始终只从本地获取搜索历史，无论是否有token
     try {
-      const response = await fetch(`${API_BASE_URL}/words/recent-searches`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!response.ok) throw new WordServiceError(`获取最近查词失败: ${response.status}`, response.status);
-      const result = await response.json();
-      if (result.success && result.data) {
-        return result.data.map((word: any, index: number) => ({
-          id: `recent-${index}`,
-          word: word.word,
-          translation: word.definition || '暂无释义',
-          timestamp: word.timestamp || Date.now() - index * 1000,
-        }));
-      } else {
-        throw new WordServiceError(result.error || '获取最近查词失败');
-      }
-    } catch (error) {
-      console.error(`❌ 获取最近查词错误: ${error}`);
-      // 云端获取失败时，尝试本地获取，如果本地也没有则返回空数组
-      try {
-        const local = await AsyncStorage.getItem(SEARCH_HISTORY_KEY);
-        if (local) {
-          const parsedData = JSON.parse(local);
-          if (parsedData && parsedData.length > 0) {
-            return parsedData;
-          }
+      const local = await AsyncStorage.getItem(SEARCH_HISTORY_KEY);
+      if (local) {
+        const parsedData = JSON.parse(local);
+        if (parsedData && parsedData.length > 0) {
+          return parsedData;
         }
-      } catch (e) {
-        console.error('读取本地搜索历史失败:', e);
       }
+      // 如果没有本地数据，返回空数组（不返回模拟数据）
+      console.log('📚 没有本地搜索历史，返回空数组');
+      return [];
+    } catch (e) {
+      console.error('读取本地搜索历史失败:', e);
+      // 出错时返回空数组
       return [];
     }
   }

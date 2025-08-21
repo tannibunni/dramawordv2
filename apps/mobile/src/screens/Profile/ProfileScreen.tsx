@@ -396,36 +396,29 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
         <Ionicons name="chevron-forward" size={20} color={colors.neutral[500]} />
       </TouchableOpacity>
 
-      {/* 数据管理 */}
-      <TouchableOpacity style={styles.settingItem} onPress={handleClearAllData}>
-        <View style={styles.settingLeft}>
-          <Ionicons name="trash-outline" size={24} color={colors.error[500]} />
-          <Text style={[styles.settingText, { color: colors.error[500] }]}>{t('clear_all_data', appLanguage)}</Text>
-        </View>
-        <Ionicons name="chevron-forward" size={20} color={colors.neutral[500]} />
-      </TouchableOpacity>
-
-      {/* 清除本地数据 */}
+      {/* 清除用户数据（保留经验和学习数据） */}
       <TouchableOpacity style={styles.settingItem} onPress={handleClearLocalData}>
         <View style={styles.settingLeft}>
           <Ionicons name="trash-bin-outline" size={24} color={colors.warning[500]} />
           <Text style={[styles.settingText, { color: colors.warning[500] }]}>
-            {appLanguage === 'zh-CN' ? '清除本地数据' : 'Clear Local Data'}
+            {appLanguage === 'zh-CN' ? '清除用户数据（保留经验）' : 'Clear User Data (Keep Experience)'}
           </Text>
         </View>
         <Ionicons name="chevron-forward" size={20} color={colors.neutral[500]} />
       </TouchableOpacity>
 
-      {/* 完全重新初始化 */}
-      <TouchableOpacity style={styles.settingItem} onPress={() => clearDataService.completeReinstall()}>
-        <View style={styles.settingLeft}>
-          <Ionicons name="refresh-circle-outline" size={24} color={colors.error[500]} />
-          <Text style={[styles.settingText, { color: colors.error[500] }]}>
-            {appLanguage === 'zh-CN' ? '完全重新初始化' : 'Complete Reinstall'}
-          </Text>
-        </View>
-        <Ionicons name="chevron-forward" size={20} color={colors.neutral[500]} />
-      </TouchableOpacity>
+      {/* 完全清除所有数据（仅开发模式可见） */}
+      {__DEV__ && (
+        <TouchableOpacity style={styles.settingItem} onPress={handleClearAllData}>
+          <View style={styles.settingLeft}>
+            <Ionicons name="trash-outline" size={24} color={colors.error[500]} />
+            <Text style={[styles.settingText, { color: colors.error[500] }]}>
+              {appLanguage === 'zh-CN' ? '完全清除所有数据' : 'Clear All Data Completely'}
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color={colors.neutral[500]} />
+        </TouchableOpacity>
+      )}
 
       {/* 注销账户 - 仅对已登录用户显示 */}
       {isAuthenticated && loginType !== 'guest' && (
@@ -568,18 +561,103 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
 
   // 清除本地存储的所有数据
   const handleClearLocalData = async () => {
-    await clearDataService.clearAllData();
+    Alert.alert(
+      appLanguage === 'zh-CN' ? '清除用户数据' : 'Clear User Data',
+      appLanguage === 'zh-CN' 
+        ? '这将删除：\n• 历史搜索数据\n• 剧单\n• 单词本\n• 已储存的单词\n\n但会保留：\n• 经验数据\n• 学习数据\n\n确定要继续吗？'
+        : 'This will delete:\n• Search history\n• Shows\n• Vocabulary\n• Saved words\n\nBut will keep:\n• Experience data\n• Learning data\n\nAre you sure you want to continue?',
+      [
+        { text: t('cancel', appLanguage), style: 'cancel' },
+        { 
+          text: t('confirm', appLanguage), 
+          style: 'destructive', 
+          onPress: async () => {
+            try {
+              console.log('🗑️ 开始清除用户数据（保留经验和学习数据）...');
+              
+              // 清除词汇数据
+              await clearVocabulary();
+              
+              // 清除剧集数据
+              await clearShows();
+              
+              // 清除搜索历史
+              await wordService.clearSearchHistory();
+              
+              // 清除单词缓存
+              await cacheService.clearPrefix(CACHE_KEYS.WORD_DETAIL);
+              
+              // 只清除部分AsyncStorage数据（保留经验和学习数据）
+              await AsyncStorage.multiRemove([
+                'search_history',
+                'user_shows',
+                'vocabulary',
+                'bookmarks',
+                'wrongWords',
+                // 清除daily rewards数据，避免自动重置
+                'dailyRewards',
+                'dailyRewardsResetDate',
+                'dailyRewardsReset'
+              ]);
+              
+              // 清除daily rewards相关的动态键值
+              console.log('🗑️ 清除daily rewards动态键值...');
+              try {
+                const today = new Date().toDateString();
+                const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toDateString();
+                const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000).toDateString();
+                
+                // 清除今天、昨天、明天的所有可能键值（防止时区问题）
+                const dynamicKeys = [
+                  `newWords_${today}`,
+                  `dailyReview_${today}`,
+                  `studyTime_${today}`,
+                  `perfectReview_${today}`,
+                  `newWords_${yesterday}`,
+                  `dailyReview_${yesterday}`,
+                  `studyTime_${yesterday}`,
+                  `perfectReview_${yesterday}`,
+                  `newWords_${tomorrow}`,
+                  `dailyReview_${tomorrow}`,
+                  `studyTime_${tomorrow}`,
+                  `perfectReview_${tomorrow}`
+                ];
+                
+                await AsyncStorage.multiRemove(dynamicKeys);
+                console.log('🗑️ daily rewards动态键值清除完成');
+              } catch (error) {
+                console.log('🗑️ 清除daily rewards动态键值时出错:', error);
+              }
+              
+              console.log('✅ 用户数据清除完成（经验和学习数据已保留）');
+              Alert.alert(
+                appLanguage === 'zh-CN' ? '清除成功' : 'Clear Successful', 
+                appLanguage === 'zh-CN' ? '用户数据已清除（经验和学习数据已保留）' : 'User data cleared (experience and learning data preserved)'
+              );
+            } catch (error) {
+              console.error('清除用户数据失败:', error);
+              Alert.alert(
+                appLanguage === 'zh-CN' ? '清除失败' : 'Clear Failed', 
+                appLanguage === 'zh-CN' ? '清除数据时发生错误' : 'Error occurred while clearing data'
+              );
+            }
+          }
+        },
+      ]
+    );
   };
 
 
   const handleClearAllData = async () => {
     Alert.alert(
-      t('clear_all_data', appLanguage),
-      t('confirm_clear_data', appLanguage),
+      appLanguage === 'zh-CN' ? '⚠️ 完全清除确认' : '⚠️ Complete Clear Confirmation',
+      appLanguage === 'zh-CN' 
+        ? '这将删除该用户ID下的所有数据：\n• 历史搜索数据\n• 剧单\n• 单词本\n• 已储存的单词\n• 经验数据\n• 学习数据\n• 储存语言\n\n⚠️ 此操作不可逆！确定要继续吗？'
+        : 'This will delete all data under this user ID:\n• Search history\n• Shows\n• Vocabulary\n• Saved words\n• Experience data\n• Learning data\n• Stored languages\n\n⚠️ This operation cannot be undone! Are you sure you want to continue?',
       [
         { text: t('cancel', appLanguage), style: 'cancel' },
         { 
-          text: t('confirm', appLanguage), 
+          text: appLanguage === 'zh-CN' ? '完全清除' : 'Clear Completely', 
           style: 'destructive', 
           onPress: async () => {
             try {
@@ -648,7 +726,9 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
               await clearShows();
               
               // 清除搜索历史
-              await wordService.clearSearchHistory();
+              console.log('🗑️ 开始清除搜索历史...');
+              const searchHistoryCleared = await wordService.clearSearchHistory();
+              console.log('🗑️ 搜索历史清除结果:', searchHistoryCleared);
               
               // 清除用户学习数据
               await learningDataService.clearAll();
@@ -658,24 +738,110 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
               // 清除单词缓存（使用统一缓存服务）
               await cacheService.clearPrefix(CACHE_KEYS.WORD_DETAIL);
               
-              // 清除用户设置
+              // 清除用户设置和所有相关数据
               await AsyncStorage.multiRemove([
+                // 用户基础数据
+                'userData',
+                'loginType',
+                'userToken',
+                'guestId',
                 'user_settings',
+                'user_profile',
+                'userStats',
+                'userExperienceInfo',
+                'userBadges',
+                // 学习数据
                 'learning_records',
+                'learningRecords',
+                'learningLanguages',
+                // Review相关数据
                 'review_sessions',
+                'pendingExperienceGain',
+                'lastReviewIntroInit',
+                'lastExperienceCheck',
+                'lastRecordedExperience',
+                'experienceState',
+                'progressBarValue',
+                'hasInitializedProgressBar',
+                'refreshVocabulary',
+                // Daily Rewards数据
+                'dailyRewards',
+                'dailyRewardsResetDate',
+                'dailyRewardsReset', // 添加这个键，以防万一
+                // 词汇和内容数据
+                'vocabulary',
+                'user_shows',
+                'wrong_words_collection',
+                'wrongWords',
+                'bookmarks',
+                'cachedRecommendations',
+                // 搜索和历史数据
+                'search_history',
+                'searchHistory',
+                // 设置和配置
                 'app_settings',
                 'selected_language',
                 'language_progress',
-                'search_history',
-                'user_token',
-                'user_profile'
+                // 订阅数据
+                'subscription_status',
+                'subscription_record',
+                // 同步数据
+                'unifiedSyncQueue',
+                'deviceId',
+                'lastSyncTime',
+                'lastAppCloseSync',
+                // 其他临时数据
+                'initialLanguageSetup'
               ]);
+              
+              // 清除所有daily rewards相关的动态键值
+              console.log('🗑️ 清除daily rewards动态键值...');
+              try {
+                const today = new Date().toDateString();
+                const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toDateString();
+                const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000).toDateString();
+                
+                // 清除今天、昨天、明天的所有可能键值（防止时区问题）
+                const dynamicKeys = [
+                  `newWords_${today}`,
+                  `dailyReview_${today}`,
+                  `studyTime_${today}`,
+                  `perfectReview_${today}`,
+                  `newWords_${yesterday}`,
+                  `dailyReview_${yesterday}`,
+                  `studyTime_${yesterday}`,
+                  `perfectReview_${yesterday}`,
+                  `newWords_${tomorrow}`,
+                  `dailyReview_${tomorrow}`,
+                  `studyTime_${tomorrow}`,
+                  `perfectReview_${tomorrow}`
+                ];
+                
+                await AsyncStorage.multiRemove(dynamicKeys);
+                console.log('🗑️ daily rewards动态键值清除完成');
+              } catch (error) {
+                console.log('🗑️ 清除daily rewards动态键值时出错:', error);
+              }
+              
+              // 验证搜索历史是否已清除
+              console.log('🔍 验证搜索历史清除状态...');
+              try {
+                const remainingSearchHistory = await AsyncStorage.getItem('search_history');
+                console.log('🔍 清除后的search_history状态:', remainingSearchHistory);
+                const recentWords = await wordService.getRecentWords();
+                console.log('🔍 清除后getRecentWords结果:', recentWords);
+              } catch (error) {
+                console.log('🔍 验证搜索历史清除状态时出错:', error);
+              }
               
               // 获取缓存统计信息
               const stats = await cacheService.getStats();
               console.log('🗑️ 清除所有数据完成，缓存统计:', stats);
               
-              Alert.alert(t('clear_success', appLanguage), t('all_data_cleared', appLanguage));
+              Alert.alert(
+                appLanguage === 'zh-CN' ? '清除成功' : 'Clear Successful', 
+                appLanguage === 'zh-CN' ? '所有用户数据已完全清除' : 'All user data has been completely cleared'
+              );
             } catch (error) {
               console.error('清除所有数据失败:', error);
               Alert.alert(t('clear_failed', appLanguage), t('clear_error', appLanguage));

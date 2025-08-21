@@ -194,17 +194,29 @@ class DailyRewardsManager {
         rewards = this.createDefaultRewards(language);
       }
 
+      // 重要：对于新用户或刚清除数据的用户，所有奖励都应该是locked状态
+      // 只有在用户实际完成相应行为后，奖励才能变成available状态
+      console.log('[DailyRewardsManager] 开始检查奖励条件，当前奖励数量:', rewards.length);
+      
       // 检查每个奖励的条件
       for (const reward of rewards) {
-        if (reward.status === 'claimed') continue;
+        if (reward.status === 'claimed') {
+          console.log(`[DailyRewardsManager] 奖励 ${reward.id} 已被领取，跳过检查`);
+          continue;
+        }
         
+        // 检查条件是否满足
         const isConditionMet = await this.checkSingleRewardCondition(reward.id);
+        console.log(`[DailyRewardsManager] 奖励 ${reward.id} 条件检查结果:`, isConditionMet);
+        
         if (isConditionMet) {
           reward.status = 'available';
           reward.condition = await this.getRewardProgress(reward.id, language);
+          console.log(`[DailyRewardsManager] 奖励 ${reward.id} 条件满足，设置为available`);
         } else {
           reward.status = 'locked';
           reward.condition = await this.getRewardProgress(reward.id, language);
+          console.log(`[DailyRewardsManager] 奖励 ${reward.id} 条件不满足，设置为locked`);
         }
       }
 
@@ -410,6 +422,12 @@ class DailyRewardsManager {
         this.notifyStateChange(rewards); // 通知回调
         
         console.log(`[DailyRewardsManager] 奖励 ${rewardId} 领取成功，获得 ${reward.xpAmount} XP`);
+        
+        // 注意：不需要在这里调用 triggerExperienceAnimation
+        // 因为 experienceManager.addExperience 已经处理了经验值增长
+        // 动画会在 ReviewIntroScreen 中通过检查 pendingExperienceGain 来触发
+        console.log(`[DailyRewardsManager] 奖励 ${rewardId} 经验值添加成功，动画将在 ReviewIntroScreen 中触发`);
+        
         return result;
       }
       

@@ -160,7 +160,7 @@ export class AnimationManager {
   public startExperienceAnimation(params: ExperienceAnimationParams, callbacks: {
     onStart?: () => void;
     onProgress?: (currentExp: number, currentProgress: number) => void;
-    onComplete?: (finalExp: number, finalProgress: number) => void;
+    onComplete?: (finalExp: number, finalLevel: number) => void;
   } = {}): void {
     logger.info('尝试启动经验值动画', 'startExperienceAnimation');
     
@@ -322,7 +322,7 @@ export class AnimationManager {
         this.setProgressBarValue(Math.max(this.currentProgressBarValue, Math.max(0, Math.min(100, newProgress * 100))));
       }
       
-      callbacks.onComplete?.(newExperience, newProgress);
+      callbacks.onComplete?.(newExperience, newLevel);
       
       logger.info('统一经验值动画完成', 'startExperienceAnimation');
     });

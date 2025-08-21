@@ -17,31 +17,9 @@ export const DailyRewardsButton: React.FC<DailyRewardsButtonProps> = ({
   onPress
 }) => {
   const { appLanguage } = useAppLanguage();
-  const pulseAnimation = useRef(new Animated.Value(1)).current;
   const scaleAnimation = useRef(new Animated.Value(1)).current;
 
-  // 闪烁动画效果
-  useEffect(() => {
-    if (hasAvailableRewards) {
-      const pulseLoop = Animated.loop(
-        Animated.sequence([
-          Animated.timing(pulseAnimation, {
-            toValue: 1.1,
-            duration: 1000,
-            useNativeDriver: true,
-          }),
-          Animated.timing(pulseAnimation, {
-            toValue: 1,
-            duration: 1000,
-            useNativeDriver: true,
-          }),
-        ])
-      );
-      pulseLoop.start();
 
-      return () => pulseLoop.stop();
-    }
-  }, [hasAvailableRewards, pulseAnimation]);
 
   // 点击动画效果
   const handlePress = () => {
@@ -76,8 +54,7 @@ export const DailyRewardsButton: React.FC<DailyRewardsButtonProps> = ({
           hasAvailableRewards ? styles.availableButton : styles.disabledButton,
           {
             transform: [
-              { scale: scaleAnimation },
-              { scale: hasAvailableRewards ? pulseAnimation : 1 }
+              { scale: scaleAnimation }
             ]
           }
         ]}
