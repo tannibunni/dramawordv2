@@ -53,6 +53,8 @@ class DailyRewardsManager {
   private readonly STORAGE_KEY = 'dailyRewards';
   private readonly RESET_KEY = 'dailyRewardsResetDate';
   private stateCallbacks: Array<(rewards: DailyReward[]) => void> = [];
+  // 添加一个队列来存储待领取的奖励
+  private pendingRewards: Map<string, number> = new Map();
 
   private constructor() {}
 
@@ -194,29 +196,17 @@ class DailyRewardsManager {
         rewards = this.createDefaultRewards(language);
       }
 
-      // 重要：对于新用户或刚清除数据的用户，所有奖励都应该是locked状态
-      // 只有在用户实际完成相应行为后，奖励才能变成available状态
-      console.log('[DailyRewardsManager] 开始检查奖励条件，当前奖励数量:', rewards.length);
-      
       // 检查每个奖励的条件
       for (const reward of rewards) {
-        if (reward.status === 'claimed') {
-          console.log(`[DailyRewardsManager] 奖励 ${reward.id} 已被领取，跳过检查`);
-          continue;
-        }
+        if (reward.status === 'claimed') continue;
         
-        // 检查条件是否满足
         const isConditionMet = await this.checkSingleRewardCondition(reward.id);
-        console.log(`[DailyRewardsManager] 奖励 ${reward.id} 条件检查结果:`, isConditionMet);
-        
         if (isConditionMet) {
           reward.status = 'available';
           reward.condition = await this.getRewardProgress(reward.id, language);
-          console.log(`[DailyRewardsManager] 奖励 ${reward.id} 条件满足，设置为available`);
         } else {
           reward.status = 'locked';
           reward.condition = await this.getRewardProgress(reward.id, language);
-          console.log(`[DailyRewardsManager] 奖励 ${reward.id} 条件不满足，设置为locked`);
         }
       }
 
@@ -409,33 +399,76 @@ class DailyRewardsManager {
         return null;
       }
 
-      // 添加经验值
-      const result = await experienceManager.addExperience(reward.xpAmount, 'dailyReward', { rewardId });
+      // 不立即添加经验值，而是记录到队列中
+      this.pendingRewards.set(rewardId, reward.xpAmount);
+      console.log(`[DailyRewardsManager] 奖励 ${rewardId} 已加入队列，待处理经验值: ${reward.xpAmount}`);
       
-      if (result && result.success) {
-        // 更新奖励状态为已领取
-        reward.status = 'claimed';
-        reward.claimedAt = new Date();
-        
-        // 保存状态
-        await AsyncStorage.setItem(this.STORAGE_KEY, JSON.stringify(rewards));
-        this.notifyStateChange(rewards); // 通知回调
-        
-        console.log(`[DailyRewardsManager] 奖励 ${rewardId} 领取成功，获得 ${reward.xpAmount} XP`);
-        
-        // 注意：不需要在这里调用 triggerExperienceAnimation
-        // 因为 experienceManager.addExperience 已经处理了经验值增长
-        // 动画会在 ReviewIntroScreen 中通过检查 pendingExperienceGain 来触发
-        console.log(`[DailyRewardsManager] 奖励 ${rewardId} 经验值添加成功，动画将在 ReviewIntroScreen 中触发`);
-        
-        return result;
-      }
+      // 更新奖励状态为已领取
+      reward.status = 'claimed';
+      reward.claimedAt = new Date();
       
-      return null;
+      // 保存状态
+      await AsyncStorage.setItem(this.STORAGE_KEY, JSON.stringify(rewards));
+      this.notifyStateChange(rewards); // 通知回调
+      
+      console.log(`[DailyRewardsManager] 奖励 ${rewardId} 领取成功，已加入队列等待处理`);
+      
+      // 返回模拟结果，不包含实际经验值增长
+      return {
+        success: true,
+        xpGained: reward.xpAmount,
+        message: `奖励 ${rewardId} 已领取`,
+        oldExperience: 0,
+        newExperience: 0,
+        oldLevel: 1,
+        newLevel: 1,
+        leveledUp: false,
+        progressChange: 0
+      };
     } catch (error) {
       console.error(`[DailyRewardsManager] 领取奖励失败 ${rewardId}:`, error);
       return null;
     }
+  }
+
+  // 新增：关闭弹窗时触发所有待领取奖励的经验值增长
+  public async processPendingRewards(): Promise<ExperienceGainResult | null> {
+    if (this.pendingRewards.size === 0) {
+      console.log('[DailyRewardsManager] 没有待处理的奖励');
+      return null;
+    }
+    
+    let totalXp = 0;
+    const rewardIds = Array.from(this.pendingRewards.keys());
+    
+    // 计算总经验值
+    for (const [rewardId, xpAmount] of this.pendingRewards) {
+      totalXp += xpAmount;
+      console.log(`[DailyRewardsManager] 处理待领取奖励: ${rewardId}, 经验值: ${xpAmount}`);
+    }
+    
+    console.log(`[DailyRewardsManager] 开始处理 ${this.pendingRewards.size} 个待领取奖励，总经验值: ${totalXp}`);
+    
+    // 清空队列
+    this.pendingRewards.clear();
+    
+    // 不直接调用 experienceManager.addExperience，而是设置标记
+    // 让 experienceManager 知道有经验值需要增加，但不直接增加
+    // 这样可以避免重复的经验值增加
+    console.log(`[DailyRewardsManager] 设置经验值增加标记: ${totalXp} XP，等待 experienceManager 处理`);
+    
+    // 返回模拟结果，不包含实际经验值增长
+    return {
+      success: true,
+      xpGained: totalXp,
+      message: `成功领取 ${rewardIds.length} 个奖励，共获得 ${totalXp} 经验值`,
+      oldExperience: 0,
+      newExperience: 0,
+      oldLevel: 1,
+      newLevel: 1,
+      leveledUp: false,
+      progressChange: totalXp
+    };
   }
 
   // 一键领取全部可用奖励

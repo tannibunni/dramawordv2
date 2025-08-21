@@ -27,21 +27,16 @@ export interface ExperienceAnimationParams {
 export class AnimationManager {
   private static instance: AnimationManager;
   private isAnimating: boolean = false;
-  private animationQueue: Array<() => void> = [];
   private animationStartTime: number = 0; // 添加动画开始时间属性
   
   // 记录当前进度条的数值（0-100），用于避免动画期间回退
   private currentProgressBarValue: number = 0;
   
-  // 动画值
-  public readonly experienceAnimation = new Animated.Value(0);
+  // 动画值 - 只保留实际使用的动画
   public readonly scaleAnimation = new Animated.Value(1);
   public readonly opacityAnimation = new Animated.Value(0);
-  public readonly progressAnimation = new Animated.Value(0);
   public readonly numberAnimation = new Animated.Value(0);
   public readonly levelAnimation = new Animated.Value(1);
-  public readonly collectedWordsAnimation = new Animated.Value(0);
-  public readonly contributedWordsAnimation = new Animated.Value(0);
   public readonly progressBarAnimation = new Animated.Value(0);
 
   private constructor() {}
@@ -53,33 +48,52 @@ export class AnimationManager {
     return AnimationManager.instance;
   }
 
-  // 统一的等级计算函数
+  // 统一的等级计算函数 - 与 ExperienceManager 保持一致
   public calculateLevel(exp: number): number {
-    if (exp <= 0) return 1;
-    
-    let level = 1;
-    while (true) {
-      const totalExpForNextLevel = 50 * Math.pow(level + 1, 2);
-      if (exp < totalExpForNextLevel) {
-        break;
-      }
-      level++;
-    }
-    return level;
+    if (exp < 50) return 1;
+    if (exp < 75) return 2;   // 50 × 1.5 = 75
+    if (exp < 112) return 3;  // 75 × 1.5 = 112.5 ≈ 112
+    if (exp < 168) return 4;  // 112 × 1.5 = 168
+    if (exp < 252) return 5;  // 168 × 1.5 = 252
+    if (exp < 452) return 6;  // 252 + 200 = 452
+    // 6级以后：每200经验值升一级
+    return Math.floor((exp - 452) / 200) + 7;
   }
 
-  // 统一的进度计算函数
+  // 统一的进度计算函数 - 与 ExperienceManager 保持一致
   public calculateProgress(experience: number, level: number): number {
     if (experience <= 0) return 0;
     
-    const totalExpForNextLevel = 50 * Math.pow(level + 1, 2);
-    const totalExpForCurrentLevel = 50 * Math.pow(level, 2);
-    const expNeededForCurrentLevel = totalExpForNextLevel - totalExpForCurrentLevel;
+    // 使用与 ExperienceManager 相同的逻辑
+    if (level === 1) {
+      return Math.min(100, Math.max(0, (experience / 50) * 100));
+    }
+    
+    // 计算当前等级所需的总经验值
+    let totalExpForCurrentLevel: number;
+    if (level === 2) totalExpForCurrentLevel = 75;
+    else if (level === 3) totalExpForCurrentLevel = 112;
+    else if (level === 4) totalExpForCurrentLevel = 168;
+    else if (level === 5) totalExpForCurrentLevel = 252;
+    else if (level === 6) totalExpForCurrentLevel = 452;
+    else totalExpForCurrentLevel = 452 + (level - 6) * 200;
+    
+    // 计算上一等级所需的总经验值
+    let totalExpForPreviousLevel: number;
+    if (level === 2) totalExpForPreviousLevel = 50;
+    else if (level === 3) totalExpForPreviousLevel = 75;
+    else if (level === 4) totalExpForPreviousLevel = 112;
+    else if (level === 5) totalExpForPreviousLevel = 168;
+    else if (level === 6) totalExpForPreviousLevel = 252;
+    else totalExpForPreviousLevel = 452 + (level - 7) * 200;
     
     // 计算当前等级内的经验值
-    const expInCurrentLevel = experience - totalExpForCurrentLevel;
-    const progressPercentage = (expInCurrentLevel / expNeededForCurrentLevel) * 100;
+    const expInCurrentLevel = experience - totalExpForPreviousLevel;
+    const expNeededForCurrentLevel = totalExpForCurrentLevel - totalExpForPreviousLevel;
     
+    if (expNeededForCurrentLevel <= 0) return 0;
+    
+    const progressPercentage = (expInCurrentLevel / expNeededForCurrentLevel) * 100;
     return Math.min(100, Math.max(0, progressPercentage));
   }
 
@@ -87,14 +101,10 @@ export class AnimationManager {
   public resetAnimationValues(): void {
     // 只在非动画状态下重置，避免中断正在进行的动画
     if (!this.isAnimating) {
-      this.experienceAnimation.setValue(0);
       this.scaleAnimation.setValue(1);
       this.opacityAnimation.setValue(0);
-      this.progressAnimation.setValue(0);
       this.numberAnimation.setValue(0);
       this.levelAnimation.setValue(1);
-      this.collectedWordsAnimation.setValue(0);
-      this.contributedWordsAnimation.setValue(0);
       this.progressBarAnimation.setValue(0);
       this.currentProgressBarValue = 0;
     }
@@ -104,7 +114,6 @@ export class AnimationManager {
   public cleanupListeners(): void {
     this.numberAnimation.removeAllListeners();
     this.progressBarAnimation.removeAllListeners();
-    this.experienceAnimation.removeAllListeners();
     this.scaleAnimation.removeAllListeners();
     this.opacityAnimation.removeAllListeners();
     this.levelAnimation.removeAllListeners();
@@ -160,7 +169,7 @@ export class AnimationManager {
   public startExperienceAnimation(params: ExperienceAnimationParams, callbacks: {
     onStart?: () => void;
     onProgress?: (currentExp: number, currentProgress: number) => void;
-    onComplete?: (finalExp: number, finalLevel: number) => void;
+    onComplete?: (finalExp: number, finalProgress: number) => void;
   } = {}): void {
     logger.info('尝试启动经验值动画', 'startExperienceAnimation');
     
@@ -322,7 +331,7 @@ export class AnimationManager {
         this.setProgressBarValue(Math.max(this.currentProgressBarValue, Math.max(0, Math.min(100, newProgress * 100))));
       }
       
-      callbacks.onComplete?.(newExperience, newLevel);
+      callbacks.onComplete?.(newExperience, newProgress);
       
       logger.info('统一经验值动画完成', 'startExperienceAnimation');
     });
@@ -372,36 +381,15 @@ export class AnimationManager {
     });
   }
 
-  // 统一的统计数字动画
-  public startStatisticsAnimation(
-    collectedWords: number,
-    contributedWords: number,
-    config: AnimationConfig = {}
-  ): void {
-    const { duration = 1500 } = config;
-    
-    // 设置初始值，确保动画从当前值开始
-    this.collectedWordsAnimation.setValue(0);
-    this.contributedWordsAnimation.setValue(0);
-    
-    // 收集单词数量动画
-    this.startNumberAnimation(this.collectedWordsAnimation, collectedWords, { duration });
-    
-    // 贡献单词数量动画
-    this.startNumberAnimation(this.contributedWordsAnimation, contributedWords, { duration });
-  }
+  // 注意: startStatisticsAnimation 方法已删除，因为相关动画值未被使用
 
-  // 获取动画值
+  // 获取动画值 - 只返回实际使用的动画
   public getAnimationValues() {
     return {
-      experienceAnimation: this.experienceAnimation,
       scaleAnimation: this.scaleAnimation,
       opacityAnimation: this.opacityAnimation,
-      progressAnimation: this.progressAnimation,
       numberAnimation: this.numberAnimation,
       levelAnimation: this.levelAnimation,
-      collectedWordsAnimation: this.collectedWordsAnimation,
-      contributedWordsAnimation: this.contributedWordsAnimation,
       progressBarAnimation: this.progressBarAnimation,
     };
   }
@@ -409,13 +397,15 @@ export class AnimationManager {
   // 统一设置进度条的助手，避免回退
   private setProgressBarValue(nextValue: number): void {
     const clamped = Math.max(0, Math.min(100, nextValue));
-    // 保证单调不减
+    // 保证单调不减 - 进度条永远不会回退
     const finalValue = Math.max(clamped, this.currentProgressBarValue);
     this.currentProgressBarValue = finalValue;
     this.progressBarAnimation.setValue(finalValue);
     
-    // 通知经验值管理器更新进度条状态
-    // 注意：这里需要经验值管理器来调用，避免循环依赖
+    // 添加调试日志（仅在开发环境）
+    if (__DEV__) {
+      console.log(`[AnimationManager] 进度条更新: ${clamped}% → ${finalValue}% (保护后)`);
+    }
   }
 
   // 对外暴露：立即设置进度条，同时同步内部记录，避免后续动画回退

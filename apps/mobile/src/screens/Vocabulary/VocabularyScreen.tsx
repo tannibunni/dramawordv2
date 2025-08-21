@@ -27,8 +27,8 @@ import { TranslationKey } from '../../constants/translations';
 import { wordService } from '../../services/wordService';
 import { unifiedSyncService } from '../../services/unifiedSyncService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useSubscription } from '../../hooks/useSubscription';
-import UpgradePrompt from '../../components/common/UpgradePrompt';
+import FeatureAccessService from '../../services/featureAccessService';
+import { UpgradeModal } from '../../components/common/UpgradeModal';
 
 const { width } = Dimensions.get('window');
 
@@ -59,17 +59,9 @@ const VocabularyScreen: React.FC = () => {
   // 新增：语言筛选状态
   const [selectedFilterLanguage, setSelectedFilterLanguage] = useState<string>('');
   
-  // 订阅权限控制
-  const { 
-    canAccessFeature, 
-    canAccessLanguage, 
-    showUpgradePrompt, 
-    isSubscribed 
-  } = useSubscription();
-  
-  // 升级提示状态
-  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
-  const [upgradeFeature, setUpgradeFeature] = useState<string>('');
+  // 功能权限检查状态
+  const [upgradeModalVisible, setUpgradeModalVisible] = useState(false);
+  const [lockedFeature, setLockedFeature] = useState<string | null>(null);
 
 
 
@@ -85,10 +77,9 @@ const VocabularyScreen: React.FC = () => {
   ]);
 
   // 检查单词储存限制
-  const checkWordStorageLimit = () => {
-    if (!canAccessFeature('word_storage') && vocabulary.length >= 3) {
-      setUpgradeFeature('word_storage');
-      setShowUpgradeModal(true);
+  const checkWordStorageLimit = async () => {
+    const canAccess = await FeatureAccessService.checkAndHandleAccess('vocabulary');
+    if (!canAccess) {
       return false;
     }
     return true;
@@ -98,6 +89,18 @@ const VocabularyScreen: React.FC = () => {
     filterWords();
     updateBadges();
   }, [vocabulary, searchText, selectedFilterLanguage]);
+
+  // 设置功能权限检查的回调
+  useEffect(() => {
+    FeatureAccessService.setUpgradeModalCallback((feature) => {
+      setLockedFeature(feature);
+      setUpgradeModalVisible(true);
+    });
+
+    return () => {
+      FeatureAccessService.setUpgradeModalCallback(undefined);
+    };
+  }, []);
 
   // 新增：加载徽章数据
   useEffect(() => {
@@ -193,13 +196,10 @@ const VocabularyScreen: React.FC = () => {
     if (selectedFilterLanguage) {
       const languageCode = selectedFilterLanguage.toLowerCase();
       
-      // 检查语言权限
-      if (!canAccessLanguage(languageCode)) {
-        // 如果用户没有权限访问该语言，显示升级提示
-        setUpgradeFeature('other_languages');
-        setShowUpgradeModal(true);
-        return; // 不进行筛选，显示所有单词
-      }
+      // 检查语言权限 - 暂时允许所有语言，后续可以添加语言权限检查
+      // if (!canAccessLanguage(languageCode)) {
+      //   return; // 不进行筛选，显示所有单词
+      // }
       
       filtered = filtered.filter(word => {
         // 优先检查单词的语言属性（来自cloudwords或用户词汇表）
@@ -702,16 +702,18 @@ const VocabularyScreen: React.FC = () => {
         </View>
       )}
       
-      {/* 升级提示组件 */}
-      <UpgradePrompt
-        visible={showUpgradeModal}
-        onClose={() => setShowUpgradeModal(false)}
+
+
+      {/* 功能权限升级弹窗 */}
+      <UpgradeModal
+        visible={upgradeModalVisible}
+        onClose={() => setUpgradeModalVisible(false)}
+        feature={lockedFeature as any}
         onUpgrade={() => {
-          setShowUpgradeModal(false);
-          // 导航到订阅页面
-          // 这里需要根据你的导航结构来调整
+          setUpgradeModalVisible(false);
+          // 这里可以添加导航到订阅页面的逻辑
+          // navigate('Subscription');
         }}
-        feature={upgradeFeature}
       />
     </SafeAreaView>
   );

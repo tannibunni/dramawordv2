@@ -30,6 +30,10 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useAppLanguage } from '../../context/AppLanguageContext';
 import { t } from '../../constants/translations';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+// 导入功能权限控制相关组件
+import FeatureAccessService, { FeatureType } from '../../services/featureAccessService';
+import { UpgradeModal } from '../../components/common/UpgradeModal';
+import { useNavigation } from '../../components/navigation/NavigationContext';
 
 
 // 推荐内容类型定义
@@ -58,17 +62,48 @@ const generateShadow = (elevation: number) => ({
 });
 
 const ShowsScreen: React.FC = () => {
+  const { navigate, params } = useNavigation();
   const { shows, addShow, changeShowStatus, removeShow, updateShow, ensureShowLanguage } = useShowList();
   const { appLanguage } = useAppLanguage();
   const targetLang = appLanguage === 'zh-CN' ? 'zh-CN' : 'en-US';
   
+  // 升级弹窗相关状态
+  const [upgradeModalVisible, setUpgradeModalVisible] = useState(false);
+  const [lockedFeature, setLockedFeature] = useState<FeatureType | null>(null);
+  
   // 使用统一的翻译函数
   const { vocabulary, removeWord } = useVocabulary();
+  
   const [filteredShows, setFilteredShows] = useState<Show[]>([]);
   const [searchText, setSearchText] = useState('');
   const [searchResults, setSearchResults] = useState<TMDBShow[]>([]);
   const [selectedShow, setSelectedShow] = useState<Show | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
+  
+  // 设置功能权限检查的回调
+  useEffect(() => {
+    FeatureAccessService.setUpgradeModalCallback((feature) => {
+      console.log('[ShowsScreen] 功能被锁定，显示升级弹窗:', feature);
+      setLockedFeature(feature);
+      // 如果当前显示详情Modal，不立即显示升级弹窗
+      // 让addShowFromDetailModal函数来处理Modal关闭和升级弹窗的时序
+      if (!showDetailModal) {
+        setUpgradeModalVisible(true);
+      }
+    });
+
+    return () => {
+      FeatureAccessService.setUpgradeModalCallback(undefined);
+    };
+  }, [showDetailModal]);
+
+  // 处理路由参数中的filter设置
+  useEffect(() => {
+    if (params?.filter) {
+      console.log('[ShowsScreen] 从路由参数设置filter:', params.filter);
+      setFilter(params.filter as 'recommendations' | 'shows' | 'wordbooks');
+    }
+  }, [params?.filter]);
   const [filter, setFilter] = useState<'recommendations' | 'shows' | 'wordbooks'>('shows');
   const [showStatusFilter, setShowStatusFilter] = useState<'all' | 'not_completed' | 'completed'>('all');
   const [searchLoading, setSearchLoading] = useState(false);
@@ -113,7 +148,20 @@ const ShowsScreen: React.FC = () => {
     setShowWordbookEditModal(true);
   };
 
-  const openCreateWordbook = () => {
+  const openCreateWordbook = async () => {
+    console.log('[ShowsScreen] 用户点击创建单词本按钮，检查功能权限');
+    
+    // 检查剧集列表功能权限（创建单词本属于showList功能）
+    const canAccess = await FeatureAccessService.checkAndHandleAccess('showList');
+    if (!canAccess) {
+      console.log('[ShowsScreen] 创建单词本功能被锁定，显示升级弹窗');
+      // 设置被锁定的功能
+      setLockedFeature('showList');
+      setUpgradeModalVisible(true);
+      return;
+    }
+    
+    console.log('[ShowsScreen] 创建单词本功能权限通过，打开创建单词本模态框');
     setIsCreatingWordbook(true);
     setEditingWordbook(null);
     setShowWordbookEditModal(true);
@@ -611,12 +659,22 @@ const ShowsScreen: React.FC = () => {
     }
   };
 
-  const addShowToWatching = (show: TMDBShow, onAdded?: () => void) => {
-    console.log('addShowToWatching 被调用，参数 show:', show);
+  const addShowToWatching = async (show: TMDBShow, onAdded?: () => void) => {
+    console.log('[ShowsScreen] addShowToWatching 被调用，参数 show:', show);
+    
+    // 检查剧集列表功能权限
+    const canAccess = await FeatureAccessService.checkAndHandleAccess('showList');
+    if (!canAccess) {
+      console.log('[ShowsScreen] 剧集列表功能被锁定，已显示升级弹窗');
+      return;
+    }
+    
     if (shows.some(s => Number(s.id) === Number(show.id))) {
       console.log('addShowToWatching: 剧集已存在，id:', show.id);
       return;
     }
+    
+    console.log('[ShowsScreen] 剧集列表功能权限通过，继续添加剧集');
     const newShow: Show = {
       ...show,
       id: Number(show.id),
@@ -632,6 +690,44 @@ const ShowsScreen: React.FC = () => {
       console.log('addShowToWatching: 当前 shows:', shows);
     }, 500);
     if (onAdded) onAdded();
+  };
+
+  // 从剧集详情Modal添加剧集到剧单 - 优雅的用户体验处理
+  const addShowFromDetailModal = async (show: TMDBShow | Show) => {
+    console.log('[ShowsScreen] addShowFromDetailModal 被调用，参数 show:', show);
+    
+    // 检查剧集列表功能权限
+    const canAccess = await FeatureAccessService.checkAndHandleAccess('showList');
+    if (!canAccess) {
+      console.log('[ShowsScreen] 剧集列表功能被锁定，先关闭Modal再显示升级弹窗');
+      // 设置被锁定的功能
+      setLockedFeature('showList');
+      // 先关闭当前Modal以避免两个弹窗重叠
+      setShowDetailModal(false);
+      // 短暂延迟后显示升级弹窗，确保Modal关闭动画完成
+      setTimeout(() => {
+        setUpgradeModalVisible(true);
+      }, 300);
+      return;
+    }
+    
+    if (shows.some(s => Number(s.id) === Number(show.id))) {
+      console.log('addShowFromDetailModal: 剧集已存在，id:', show.id);
+      return;
+    }
+    
+    console.log('[ShowsScreen] 剧集列表功能权限通过，继续添加剧集');
+    const newShow: Show = {
+      ...show,
+      id: Number(show.id),
+      status: 'plan_to_watch',
+      wordCount: 0,
+    };
+    console.log('addShowFromDetailModal: 调用 addShow, newShow:', newShow);
+    addShow(newShow);
+    
+    // 关闭Modal
+    setShowDetailModal(false);
   };
 
   const filterShows = () => {
@@ -1753,7 +1849,8 @@ const ShowsScreen: React.FC = () => {
                             <TouchableOpacity
                               style={{ flex: 1, marginHorizontal: 16, backgroundColor: colors.primary[500], borderRadius: 10, paddingVertical: 14, alignItems: 'center', borderWidth: 2, borderColor: colors.primary[700] }}
                               onPress={() => {
-                                addShowToWatching(selectedShow, () => setShowDetailModal(false));
+                                console.log('[ShowsScreen] 剧集详情Modal中的"加入剧单"按钮被点击');
+                                addShowFromDetailModal(selectedShow);
                               }}
                             >
                               <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 16, flexDirection: 'row', alignItems: 'center' }}>
@@ -1839,6 +1936,24 @@ const ShowsScreen: React.FC = () => {
         isCreating={isCreatingWordbook}
         onClose={closeWordbookEdit}
         onSave={handleWordbookSave}
+      />
+      
+      {/* 升级弹窗 */}
+      <UpgradeModal
+        visible={upgradeModalVisible}
+        onClose={() => setUpgradeModalVisible(false)}
+        feature={lockedFeature as any}
+        onUpgrade={() => {
+          console.log('[ShowsScreen] 开始处理升级操作');
+          setUpgradeModalVisible(false);
+          console.log('[ShowsScreen] 升级弹窗已关闭，准备导航到Subscription页面');
+          try {
+            navigate('Subscription');
+            console.log('[ShowsScreen] 导航到Subscription页面成功');
+          } catch (error) {
+            console.error('[ShowsScreen] 导航到Subscription页面失败:', error);
+          }
+        }}
       />
     </SafeAreaView>
   );

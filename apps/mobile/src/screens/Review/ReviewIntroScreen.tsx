@@ -55,6 +55,10 @@ import { useDailyRewards } from './hooks/useDailyRewards';
 import { dailyRewardsManager } from './services/dailyRewardsManager';
 import { guestIdService } from '../../services/guestIdService';
 
+// 导入功能权限检查
+import FeatureAccessService from '../../services/featureAccessService';
+import { UpgradeModal } from '../../components/common/UpgradeModal';
+
 const ReviewIntroScreen = () => {
   // 创建页面专用日志器
   const logger = Logger.forPage('ReviewIntroScreen');
@@ -101,6 +105,10 @@ const ReviewIntroScreen = () => {
     totalReviews: number;
     currentStreak: number;
   } | null>(null);
+
+  // 功能权限检查相关状态
+  const [upgradeModalVisible, setUpgradeModalVisible] = useState(false);
+  const [lockedFeature, setLockedFeature] = useState<string | null>(null);
   
 
 
@@ -120,6 +128,18 @@ const ReviewIntroScreen = () => {
     });
     
     return unsubscribe;
+  }, []);
+
+  // 设置功能权限检查的回调
+  useEffect(() => {
+    FeatureAccessService.setUpgradeModalCallback((feature) => {
+      setLockedFeature(feature);
+      setUpgradeModalVisible(true);
+    });
+
+    return () => {
+      FeatureAccessService.setUpgradeModalCallback(undefined);
+    };
   }, []);
   
           // 加载用户统计数据
@@ -357,12 +377,12 @@ const ReviewIntroScreen = () => {
     }
   }, [vocabulary]);
   
-  // 当词汇表变化时更新统计
-  useEffect(() => {
-    if (vocabulary) {
-      experienceManager.updateStatisticsWithAnimation(vocabulary.length);
-    }
-  }, [vocabulary, experienceState.userExperienceInfo?.contributedWords]);
+  // 移除复杂的统计更新，直接使用 vocabulary.length 显示
+  // useEffect(() => {
+  //   if (vocabulary) {
+  //     experienceManager.updateStatisticsWithAnimation(vocabulary.length);
+  //   }
+  // }, [vocabulary, experienceState.userExperienceInfo?.contributedWords]);
 
   // 设置翻译服务语言
   useEffect(() => {
@@ -414,8 +434,30 @@ const ReviewIntroScreen = () => {
   };
 
   // 关闭每日奖励弹窗
-  const closeDailyRewardsModal = () => {
-    setDailyRewardsModalVisible(false);
+  const closeDailyRewardsModal = async () => {
+    try {
+      // 处理所有待领取的奖励，但不直接增加经验值
+      const result = await dailyRewardsManager.processPendingRewards();
+      if (result && result.success && result.xpGained > 0) {
+        console.log(`[ReviewIntroScreen] 每日奖励弹窗关闭，准备触发经验值动画: ${result.xpGained} XP`);
+        
+        // 手动触发经验值动画，避免重复增加
+        setTimeout(async () => {
+          try {
+            await experienceManager.triggerExperienceAnimation(result.xpGained);
+            console.log(`[ReviewIntroScreen] 经验值动画触发成功: ${result.xpGained} XP`);
+          } catch (error) {
+            console.error('[ReviewIntroScreen] 触发经验值动画失败:', error);
+          }
+        }, 100); // 延迟100ms确保弹窗完全关闭
+      } else {
+        console.log('[ReviewIntroScreen] 每日奖励弹窗关闭，无经验值需要处理');
+      }
+    } catch (error) {
+      console.error('[ReviewIntroScreen] 处理待领取奖励失败:', error);
+    } finally {
+      setDailyRewardsModalVisible(false);
+    }
   };
 
   // 使用 useMemo 缓存页面数据，避免重复计算
@@ -426,23 +468,34 @@ const ReviewIntroScreen = () => {
   const { showItems, wordbookItems, showItemsWithCounts, wordbookItemsWithCounts } = pageData;
 
   // 点击挑战横幅，切换到 review Tab（swiper 页面）
-  const handlePressChallenge = (key: string) => {
-    if (key === 'shuffle') {
-      navigate('ReviewScreen', { type: 'shuffle' });
-    } else if (key === 'wrong_words') {
-      navigate('ReviewScreen', { type: 'wrong_words' });
+  const handlePressChallenge = async (key: string) => {
+    if (key === 'shuffle' || key === 'wrong_words') {
+      const canAccess = await FeatureAccessService.checkAndHandleAccess('review');
+      if (canAccess) {
+        if (key === 'shuffle') {
+          navigate('ReviewScreen', { type: 'shuffle' });
+        } else if (key === 'wrong_words') {
+          navigate('ReviewScreen', { type: 'wrong_words' });
+        }
+      }
     }
     // 其他挑战可在此扩展
   };
 
   // 点击剧集
-  const handlePressShow = (item: Show) => {
-    navigate('ReviewScreen', { type: 'show', id: item.id });
+  const handlePressShow = async (item: Show) => {
+    const canAccess = await FeatureAccessService.checkAndHandleAccess('review');
+    if (canAccess) {
+      navigate('ReviewScreen', { type: 'show', id: item.id });
+    }
   };
 
   // 点击单词本
-  const handlePressWordbook = (item: Show) => {
-    navigate('ReviewScreen', { type: 'wordbook', id: item.id });
+  const handlePressWordbook = async (item: Show) => {
+    const canAccess = await FeatureAccessService.checkAndHandleAccess('review');
+    if (canAccess) {
+      navigate('ReviewScreen', { type: 'wordbook', id: item.id });
+    }
   };
 
   // 在组件顶部添加常量
@@ -543,7 +596,7 @@ const ReviewIntroScreen = () => {
             {/* 已收集词汇 */}
             <View style={styles.statItem}>
               <View style={styles.statContent}>
-                <Text style={styles.statNumber}>{experienceState.animatedCollectedWords}</Text>
+                <Text style={styles.statNumber}>{vocabulary?.length || 0}</Text>
                 <Text style={styles.statUnit}>{t('words_unit', appLanguage)}</Text>
               </View>
               <Text style={styles.statLabel}>{t('collected_vocabulary', appLanguage)}</Text>
@@ -758,7 +811,7 @@ const ReviewIntroScreen = () => {
             <TouchableOpacity
               style={{ height: EMPTY_SECTION_HEIGHT, justifyContent: 'center', alignItems: 'center' }}
               activeOpacity={0.7}
-              onPress={() => navigate('main', { tab: 'vocabulary' })}
+              onPress={() => navigate('main', { tab: 'shows', filter: 'wordbooks' })}
             >
               <MaterialIcons name="library-books" size={36} color={colors.text.secondary} style={{ marginBottom: 8 }} />
               <Text style={{ color: colors.text.secondary, fontSize: 16 }}>{t('add_wordbook', appLanguage)}</Text>
@@ -781,6 +834,24 @@ const ReviewIntroScreen = () => {
           onClaimAll={claimAllRewards}
           onRefresh={refreshRewards}
           isLoading={rewardsState.isLoading}
+        />
+
+        {/* 功能权限升级弹窗 */}
+        <UpgradeModal
+          visible={upgradeModalVisible}
+          onClose={() => setUpgradeModalVisible(false)}
+          feature={lockedFeature as any}
+          onUpgrade={() => {
+            console.log('[ReviewIntroScreen] 开始处理升级操作');
+            setUpgradeModalVisible(false);
+            console.log('[ReviewIntroScreen] 升级弹窗已关闭，准备导航到Subscription页面');
+            try {
+              navigate('Subscription');
+              console.log('[ReviewIntroScreen] 导航到Subscription页面成功');
+            } catch (error) {
+              console.error('[ReviewIntroScreen] 导航到Subscription页面失败:', error);
+            }
+          }}
         />
       </ScrollView>
       

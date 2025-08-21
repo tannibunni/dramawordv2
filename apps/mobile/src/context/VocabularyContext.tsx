@@ -1,8 +1,9 @@
-import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback, useRef } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { WordData } from '../types/word';
 import { unifiedSyncService } from '../services/unifiedSyncService';
 import { dailyRewardsManager } from '../screens/Review/services/dailyRewardsManager';
+import { experienceManager } from '../screens/Review/services/experienceManager';
 import { API_BASE_URL } from '../constants/config';
 import { subscriptionService } from '../services/subscriptionService';
 
@@ -248,6 +249,13 @@ export const VocabularyProvider = ({ children }: { children: ReactNode }) => {
       
       // 记录新单词到每日奖励系统
       dailyRewardsManager.recordNewWord();
+
+      // 移除手动调用，因为 ReviewIntroScreen 中的 useEffect 会自动处理
+      // const newVocabularyLength = prev.length + 1;
+      // setTimeout(() => {
+      //   experienceManager.updateStatistics(newVocabularyLength);
+      //   console.log(`[VocabularyContext] 收藏单词后更新统计信息: ${newVocabularyLength}`);
+      // }, 100); // 延迟100ms确保状态更新完成
 
       // vocabularyLogger.info(`添加新单词: ${newWord.word}, 来源剧集: ${sourceShow?.name}, 来源ID: ${sourceShow?.id}`); // Removed as per new_code
       // vocabularyLogger.info('新单词完整数据', newWord); // Removed as per new_code

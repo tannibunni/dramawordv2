@@ -125,9 +125,9 @@ export const getTranslatedSubscriptionPlans = (language: AppLanguage = 'zh-CN'):
     if (plan.id === 'com.tannibunni.dramawordmobile.premium_monthly') {
       description = `${t('most_flexible_choice', language)}，${t('cancel_anytime', language)}`;
     } else if (plan.id === 'com.tannibunni.dramawordmobile.premium_quarterly') {
-      description = `${t('balanced_choice', language)}，月均$3.66，${t('save_8_percent', language)}`;
+      description = `${t('balanced_choice', language)}，$3.66/month，${t('save_8_percent', language)}`;
     } else if (plan.id === 'com.tannibunni.dramawordmobile.premium_yearly') {
-      description = `${t('save_amount', language, { amount: '$12.89' })}，月均$3.00，节省25%，${t('most_cost_effective', language)}`;
+      description = `${t('save_amount', language, { amount: '$12.89' })}，$3.00/month，25% Off，${t('most_cost_effective', language)}`;
     }
     
     return {

@@ -96,7 +96,7 @@ const getFeatureTable = (subscriptionStatus: any, appLanguage: 'zh-CN' | 'en-US'
 };
 
 const SubscriptionScreen = () => {
-  const [selectedTab, setSelectedTab] = useState('yearly');
+  const [selectedTab, setSelectedTab] = useState('com.tannibunni.dramawordmobile.premium_monthly');
   const [subscriptionStatus, setSubscriptionStatus] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [showBottomCta, setShowBottomCta] = useState(false);
@@ -566,7 +566,9 @@ const SubscriptionScreen = () => {
           {subscriptionStatus.isActive ? (
             <>
               <View style={styles.statusBannerTitleContainer}>
-                <Ionicons name="diamond" size={18} color="#4CAF50" style={styles.statusBannerIcon} />
+                <View style={styles.statusIconContainer}>
+                  <Ionicons name="diamond" size={20} color="#4CAF50" />
+                </View>
                 <Text style={styles.statusBannerTitle}>{t('premium_user', appLanguage)}</Text>
               </View>
               <Text style={styles.statusBannerSubtitle}>
@@ -580,19 +582,23 @@ const SubscriptionScreen = () => {
           ) : subscriptionStatus.isTrial ? (
             <>
               <View style={styles.statusBannerTitleContainer}>
-                <Ionicons name="time" size={18} color="#FF9500" style={styles.statusBannerIcon} />
+                <View style={styles.statusIconContainer}>
+                  <Ionicons name="time" size={20} color="#FF9500" />
+                </View>
                 <Text style={styles.statusBannerTitle}>{t('trial_user', appLanguage)}</Text>
               </View>
               <Text style={styles.statusBannerSubtitle}>
                 {t('trial_countdown', appLanguage, {
-                  days: Math.ceil((new Date(subscriptionStatus.trialEndsAt).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
+                  days: Math.floor((new Date(subscriptionStatus.trialEndsAt).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
                 })}, {t('enjoy_all_features', appLanguage)}
               </Text>
             </>
           ) : (
             <>
               <View style={styles.statusBannerTitleContainer}>
-                <Ionicons name="phone-portrait" size={18} color="#666666" style={styles.statusBannerIcon} />
+                <View style={styles.statusIconContainer}>
+                  <Ionicons name="phone-portrait" size={20} color="#666666" />
+                </View>
                 <Text style={styles.statusBannerTitle}>{t('free_user', appLanguage)}</Text>
               </View>
               <Text style={styles.statusBannerSubtitle}>
@@ -1004,35 +1010,45 @@ const styles = StyleSheet.create({
     marginTop: 60,
     marginBottom: 16,
     backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 16,
+    borderRadius: 16,
+    padding: 20,
     alignItems: 'center',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
-    elevation: 3,
-    borderLeftWidth: 4,
-    borderLeftColor: '#3A8DFF',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 4,
   },
   statusBannerTitleContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 4,
+    marginBottom: 8,
   },
-  statusBannerIcon: {
-    marginRight: 8,
+  statusIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#F8F9FA',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    elevation: 2,
   },
   statusBannerTitle: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: '700',
-    color: '#1976D2',
+    color: '#1A1A1A',
   },
   statusBannerSubtitle: {
     fontSize: 14,
-    color: '#424242',
+    color: '#666666',
     textAlign: 'center',
     lineHeight: 20,
+    paddingHorizontal: 8,
   },
   headerStatusBar: {
     flexDirection: 'row',
@@ -1049,20 +1065,7 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 3,
   },
-  statusIconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: '#FFFFFF',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
-  },
+
   statusTextContainer: {
     flex: 1,
   },

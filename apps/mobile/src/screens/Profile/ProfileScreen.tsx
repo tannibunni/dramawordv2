@@ -45,6 +45,7 @@ import { subscriptionService } from '../../services/subscriptionService';
 import { guestIdService } from '../../services/guestIdService';
 
 
+
 interface UserStats {
   totalWords: number;
   masteredWords: number;
@@ -75,6 +76,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   const [feedbackModalVisible, setFeedbackModalVisible] = useState(false);
   const [deleteAccountModalVisible, setDeleteAccountModalVisible] = useState(false);
   const [subscriptionStatus, setSubscriptionStatus] = useState<any>(null);
+
 
   const { vocabulary, clearVocabulary } = useVocabulary();
   const { shows, clearShows } = useShowList();
@@ -180,6 +182,59 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
         // 游客模式使用统一的服务
         return 'Guest';
     }
+  };
+
+  // 获取会员状态信息
+  const getMembershipInfo = () => {
+    if (!subscriptionStatus) return null;
+
+    if (subscriptionStatus.isActive) {
+      // 付费会员
+      const planType = subscriptionStatus.productId?.includes('monthly') ? 'Monthly' : 
+                      subscriptionStatus.productId?.includes('quarterly') ? 'Quarterly' :
+                      subscriptionStatus.productId?.includes('yearly') ? 'Yearly' : 'Premium';
+      
+      // 计算到期日期 - 假设从当前时间开始计算
+      const now = new Date();
+      let expiryDate = new Date();
+      if (subscriptionStatus.productId?.includes('monthly')) {
+        expiryDate.setMonth(now.getMonth() + 1);
+      } else if (subscriptionStatus.productId?.includes('quarterly')) {
+        expiryDate.setMonth(now.getMonth() + 3);
+      } else if (subscriptionStatus.productId?.includes('yearly')) {
+        expiryDate.setFullYear(now.getFullYear() + 1);
+      }
+      
+      const formattedDate = expiryDate.toLocaleDateString(appLanguage === 'zh-CN' ? 'zh-CN' : 'en-US', {
+        year: 'numeric',
+        month: appLanguage === 'zh-CN' ? 'long' : 'short',
+        day: 'numeric'
+      });
+
+      return {
+        type: 'premium',
+        duration: planType,
+        expiryDate: formattedDate
+      };
+    } else if (subscriptionStatus.isTrial && subscriptionStatus.trialEndsAt) {
+      // 试用会员
+      const timeLeft = new Date(subscriptionStatus.trialEndsAt).getTime() - new Date().getTime();
+      const daysLeft = Math.floor(timeLeft / (1000 * 60 * 60 * 24));
+      
+      const formattedDate = new Date(subscriptionStatus.trialEndsAt).toLocaleDateString(appLanguage === 'zh-CN' ? 'zh-CN' : 'en-US', {
+        year: 'numeric',
+        month: appLanguage === 'zh-CN' ? 'long' : 'short',
+        day: 'numeric'
+      });
+
+      return {
+        type: 'trial',
+        duration: `${daysLeft} ${appLanguage === 'zh-CN' ? '天' : 'days'}`,
+        expiryDate: formattedDate
+      };
+    }
+
+    return null;
   };
 
 
@@ -294,6 +349,17 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
           <View style={styles.userDetails}>
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
               <Text style={styles.userName}>{getUserNickname()}</Text>
+              {/* VIP皇冠图标 - 仅对付费会员显示 */}
+              {subscriptionStatus?.isActive && (
+                <View style={styles.vipCrownContainer}>
+                  <Ionicons 
+                    name="diamond" 
+                    size={18} 
+                    color="#FFD700" 
+                    style={styles.vipCrownIcon}
+                  />
+                </View>
+              )}
               <View style={{ marginLeft: 8 }}>
                 <DataSyncIndicator visible={true} showDetails={false} />
               </View>
@@ -301,6 +367,18 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                 <Ionicons name="pencil" size={16} color={colors.primary[500]} />
               </TouchableOpacity>
             </View>
+
+            {/* 会员时效信息 */}
+            {getMembershipInfo() && (
+              <View style={styles.membershipInfoContainer}>
+                <Text style={styles.membershipInfo}>
+                  {getMembershipInfo()?.type === 'premium' 
+                    ? `${getMembershipInfo()?.duration} ${appLanguage === 'zh-CN' ? '会员' : 'Member'}`
+                    : `${getMembershipInfo()?.duration} ${appLanguage === 'zh-CN' ? '试用剩余' : 'trial remaining'}`
+                  } • {appLanguage === 'zh-CN' ? '到期日' : 'Expires'}: {getMembershipInfo()?.expiryDate}
+                </Text>
+              </View>
+            )}
 
             {/* 游客模式提醒 */}
             {isGuest && (
@@ -373,6 +451,20 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
         <Ionicons name="chevron-forward" size={20} color={colors.neutral[500]} />
       </TouchableOpacity>
 
+      {/* 订阅管理 - 仅对付费订阅会员显示 */}
+      {subscriptionStatus?.isActive && (
+        <TouchableOpacity 
+          style={styles.settingItem}
+          onPress={handleGoToSubscription}
+        >
+          <View style={styles.settingLeft}>
+            <Ionicons name="diamond" size={24} color="#4CAF50" />
+            <Text style={styles.settingLabel}>{t('manage_subscription', appLanguage)}</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color={colors.neutral[500]} />
+        </TouchableOpacity>
+      )}
+
 
 
       <TouchableOpacity 
@@ -407,6 +499,8 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
         <Ionicons name="chevron-forward" size={20} color={colors.neutral[500]} />
       </TouchableOpacity>
 
+
+
       {/* 完全清除所有数据（仅开发模式可见） */}
       {__DEV__ && (
         <TouchableOpacity style={styles.settingItem} onPress={handleClearAllData}>
@@ -431,6 +525,46 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
           </View>
           <Ionicons name="chevron-forward" size={20} color={colors.neutral[500]} />
         </TouchableOpacity>
+      )}
+
+      {/* 开发模式测试按钮 */}
+      {__DEV__ && (
+        <View style={styles.devTestSection}>
+          <Text style={styles.devTestSectionTitle}>🧪 开发测试</Text>
+          
+          {/* 订阅状态测试按钮 */}
+          <TouchableOpacity 
+            style={styles.devTestButton} 
+            onPress={() => handleTestSubscriptionState('trial_expired')}
+          >
+            <Ionicons name="time" size={20} color={colors.white} />
+            <Text style={styles.devTestButtonText}>模拟试用期到期</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            style={styles.devTestButton} 
+            onPress={() => handleTestSubscriptionState('premium_monthly')}
+          >
+            <Ionicons name="diamond" size={20} color={colors.white} />
+            <Text style={styles.devTestButtonText}>模拟付费会员</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            style={styles.devTestButton} 
+            onPress={() => handleTestSubscriptionState('trial_active')}
+          >
+            <Ionicons name="refresh" size={20} color={colors.white} />
+            <Text style={styles.devTestButtonText}>重置为试用期</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            style={styles.devTestButton} 
+            onPress={handleClearTestState}
+          >
+            <Ionicons name="trash" size={20} color={colors.white} />
+            <Text style={styles.devTestButtonText}>清除测试状态</Text>
+          </TouchableOpacity>
+        </View>
       )}
     </View>
   );
@@ -593,41 +727,8 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                 'user_shows',
                 'vocabulary',
                 'bookmarks',
-                'wrongWords',
-                // 清除daily rewards数据，避免自动重置
-                'dailyRewards',
-                'dailyRewardsResetDate',
-                'dailyRewardsReset'
+                'wrongWords'
               ]);
-              
-              // 清除daily rewards相关的动态键值
-              console.log('🗑️ 清除daily rewards动态键值...');
-              try {
-                const today = new Date().toDateString();
-                const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toDateString();
-                const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000).toDateString();
-                
-                // 清除今天、昨天、明天的所有可能键值（防止时区问题）
-                const dynamicKeys = [
-                  `newWords_${today}`,
-                  `dailyReview_${today}`,
-                  `studyTime_${today}`,
-                  `perfectReview_${today}`,
-                  `newWords_${yesterday}`,
-                  `dailyReview_${yesterday}`,
-                  `studyTime_${yesterday}`,
-                  `perfectReview_${yesterday}`,
-                  `newWords_${tomorrow}`,
-                  `dailyReview_${tomorrow}`,
-                  `studyTime_${tomorrow}`,
-                  `perfectReview_${tomorrow}`
-                ];
-                
-                await AsyncStorage.multiRemove(dynamicKeys);
-                console.log('🗑️ daily rewards动态键值清除完成');
-              } catch (error) {
-                console.log('🗑️ 清除daily rewards动态键值时出错:', error);
-              }
               
               console.log('✅ 用户数据清除完成（经验和学习数据已保留）');
               Alert.alert(
@@ -647,6 +748,56 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
     );
   };
 
+
+  // 测试订阅状态处理函数
+  const handleTestSubscriptionState = async (state: 'trial_expired' | 'premium_monthly' | 'trial_active') => {
+    if (!__DEV__) return;
+    
+    try {
+      // 导入测试服务
+      const SubscriptionTestService = (await import('../../services/subscriptionTestService')).default;
+      
+      await SubscriptionTestService.setTestState(state);
+      
+      // 刷新订阅状态
+      const newStatus = await subscriptionService.checkSubscriptionStatus();
+      setSubscriptionStatus(newStatus);
+      
+      // 显示成功提示
+      const stateNames = {
+        'trial_expired': '试用期已结束',
+        'premium_monthly': '付费会员',
+        'trial_active': '试用期激活'
+      };
+      
+      Alert.alert(
+        '测试状态已更新',
+        `已切换到: ${stateNames[state]}`,
+        [{ text: '确定' }]
+      );
+    } catch (error) {
+      console.error('设置测试状态失败:', error);
+      Alert.alert('错误', '设置测试状态失败');
+    }
+  };
+
+  const handleClearTestState = async () => {
+    if (!__DEV__) return;
+    
+    try {
+      const SubscriptionTestService = (await import('../../services/subscriptionTestService')).default;
+      await SubscriptionTestService.clearTestState();
+      
+      // 刷新订阅状态
+      const newStatus = await subscriptionService.checkSubscriptionStatus();
+      setSubscriptionStatus(newStatus);
+      
+      Alert.alert('成功', '已清除测试状态');
+    } catch (error) {
+      console.error('清除测试状态失败:', error);
+      Alert.alert('错误', '清除测试状态失败');
+    }
+  };
 
   const handleClearAllData = async () => {
     Alert.alert(
@@ -767,7 +918,6 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                 // Daily Rewards数据
                 'dailyRewards',
                 'dailyRewardsResetDate',
-                'dailyRewardsReset', // 添加这个键，以防万一
                 // 词汇和内容数据
                 'vocabulary',
                 'user_shows',
@@ -794,33 +944,24 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                 'initialLanguageSetup'
               ]);
               
-              // 清除所有daily rewards相关的动态键值
-              console.log('🗑️ 清除daily rewards动态键值...');
+              // 清除Daily Rewards的特定日期键
+              console.log('🗑️ 开始清除Daily Rewards的特定日期键...');
               try {
-                const today = new Date().toDateString();
-                const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toDateString();
-                const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000).toDateString();
-                
-                // 清除今天、昨天、明天的所有可能键值（防止时区问题）
-                const dynamicKeys = [
-                  `newWords_${today}`,
-                  `dailyReview_${today}`,
-                  `studyTime_${today}`,
-                  `perfectReview_${today}`,
-                  `newWords_${yesterday}`,
-                  `dailyReview_${yesterday}`,
-                  `studyTime_${yesterday}`,
-                  `perfectReview_${yesterday}`,
-                  `newWords_${tomorrow}`,
-                  `dailyReview_${tomorrow}`,
-                  `studyTime_${tomorrow}`,
-                  `perfectReview_${tomorrow}`
-                ];
-                
-                await AsyncStorage.multiRemove(dynamicKeys);
-                console.log('🗑️ daily rewards动态键值清除完成');
+                const allKeys = await AsyncStorage.getAllKeys();
+                const dailyRewardsKeys = allKeys.filter(key => 
+                  key.startsWith('newWords_') || 
+                  key.startsWith('dailyReview_') || 
+                  key.startsWith('studyTime_') || 
+                  key.startsWith('perfectReview_') ||
+                  key.includes('currentStreak')
+                );
+                console.log('🗑️ 找到的Daily Rewards特定键:', dailyRewardsKeys);
+                if (dailyRewardsKeys.length > 0) {
+                  await AsyncStorage.multiRemove(dailyRewardsKeys);
+                  console.log('🗑️ Daily Rewards特定键清除完成');
+                }
               } catch (error) {
-                console.log('🗑️ 清除daily rewards动态键值时出错:', error);
+                console.log('🗑️ 清除Daily Rewards特定键时出错:', error);
               }
               
               // 验证搜索历史是否已清除
@@ -1016,11 +1157,14 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   };
 
   const renderSubscriptionEntry = () => {
+    // 付费订阅会员不显示订阅板块
+    if (subscriptionStatus?.isActive) {
+      return null;
+    }
+
     // 根据订阅状态显示不同内容
     const getSubscriptionIcon = () => {
-      if (subscriptionStatus?.isActive) {
-        return 'diamond';
-      } else if (subscriptionStatus?.isTrial) {
+      if (subscriptionStatus?.isTrial) {
         return 'time';
       } else {
         return 'phone-portrait';
@@ -1028,9 +1172,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
     };
 
     const getSubscriptionTitle = () => {
-      if (subscriptionStatus?.isActive) {
-        return t('subscription_management', appLanguage);
-      } else if (subscriptionStatus?.isTrial) {
+      if (subscriptionStatus?.isTrial) {
         return t('trial_user', appLanguage);
       } else {
         return t('free_user', appLanguage);
@@ -1038,12 +1180,9 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
     };
 
     const getSubscriptionDesc = () => {
-      if (subscriptionStatus?.isActive) {
-        const planType = subscriptionStatus.productId?.includes('monthly') ? t('monthly_plan', appLanguage) : 
-                        subscriptionStatus.productId?.includes('yearly') ? t('yearly_plan', appLanguage) : t('lifetime_plan', appLanguage);
-        return t('subscription_active', appLanguage, { plan: planType }) + '，' + t('enjoy_all_features', appLanguage);
-      } else if (subscriptionStatus?.isTrial && subscriptionStatus?.trialEndsAt) {
-        const daysLeft = Math.ceil((new Date(subscriptionStatus.trialEndsAt).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
+      if (subscriptionStatus?.isTrial && subscriptionStatus?.trialEndsAt) {
+        const timeLeft = new Date(subscriptionStatus.trialEndsAt).getTime() - new Date().getTime();
+        const daysLeft = Math.floor(timeLeft / (1000 * 60 * 60 * 24));
         return t('trial_countdown', appLanguage, { days: daysLeft }) + '，' + t('enjoy_all_features', appLanguage);
       } else {
         return t('trial_ended_limitations', appLanguage);
@@ -1051,9 +1190,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
     };
 
     const getButtonText = () => {
-      if (subscriptionStatus?.isActive) {
-        return t('manage_subscription', appLanguage);
-      } else if (subscriptionStatus?.isTrial) {
+      if (subscriptionStatus?.isTrial) {
         return t('subscribe_now', appLanguage);
       } else {
         return t('start_trial', appLanguage);
@@ -1067,7 +1204,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
             <Ionicons 
               name={getSubscriptionIcon()} 
               size={20} 
-              color={subscriptionStatus?.isActive ? '#4CAF50' : subscriptionStatus?.isTrial ? '#FF9500' : '#666666'} 
+              color={subscriptionStatus?.isTrial ? '#FF9500' : '#666666'} 
               style={styles.subscriptionTitleIcon}
             />
             <Text style={styles.subscriptionTitle}>
@@ -1156,6 +1293,8 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
         onClose={() => setDeleteAccountModalVisible(false)}
         onAccountDeleted={handleAccountDeleted}
       />
+
+
       
 
       
@@ -1244,6 +1383,28 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: colors.text.primary,
     marginBottom: 4,
+  },
+  vipCrownContainer: {
+    marginLeft: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  vipCrownIcon: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  membershipInfoContainer: {
+    marginTop: 4,
+    marginBottom: 8,
+  },
+  membershipInfo: {
+    fontSize: 12,
+    color: colors.text.secondary,
+    fontWeight: '500',
+    lineHeight: 16,
   },
 
   userEmail: {
@@ -1570,6 +1731,40 @@ const styles = StyleSheet.create({
   },
   logoutButton: {
     backgroundColor: colors.error[500],
+  },
+
+  // 开发测试相关样式
+  devTestSection: {
+    marginTop: 20,
+    marginBottom: 30,
+    paddingHorizontal: 20,
+  },
+  devTestSectionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.text.primary,
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  devTestButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.primary[500],
+    borderRadius: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    marginBottom: 12,
+    shadowColor: colors.primary[200],
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  devTestButtonText: {
+    color: colors.white,
+    fontSize: 16,
+    fontWeight: '600',
+    marginLeft: 8,
   },
 
 }); 

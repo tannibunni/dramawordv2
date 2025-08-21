@@ -455,8 +455,7 @@ class IAPService {
         };
       } else {
         // 如果没有存储的状态，为新用户自动启动14天试用期
-        const trialEndsAt = new Date();
-        trialEndsAt.setDate(trialEndsAt.getDate() + 14); // 14天后
+        const trialEndsAt = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000); // 14天后，使用毫秒计算
 
         this.subscriptionStatus = {
           isActive: false,
@@ -474,8 +473,7 @@ class IAPService {
     } catch (error) {
       console.error('[IAPService] 加载订阅状态失败:', error);
       // 错误时为新用户启动试用期
-      const trialEndsAt = new Date();
-      trialEndsAt.setDate(trialEndsAt.getDate() + 14);
+      const trialEndsAt = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000);
 
       this.subscriptionStatus = {
         isActive: false,

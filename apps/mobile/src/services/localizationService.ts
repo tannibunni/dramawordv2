@@ -68,6 +68,12 @@ class LocalizationService {
     try {
       console.log('[LocalizationService] 从 App Store Connect 获取价格...');
       
+      // 检查是否在开发环境或模拟器中
+      if (__DEV__) {
+        console.log('[LocalizationService] 🔧 开发环境，跳过 App Store 请求，使用备用定价');
+        return this.getMinimalFallbackProducts();
+      }
+      
       // 从 Apple App Store 获取真实价格
       const iapProducts = await getProducts({
         skus: [
@@ -77,17 +83,25 @@ class LocalizationService {
         ]
       });
 
-      if (iapProducts.length > 0) {
+      // 添加空值检查
+      if (iapProducts && Array.isArray(iapProducts) && iapProducts.length > 0) {
         console.log(`[LocalizationService] ✅ 成功获取 ${iapProducts.length} 个 App Store 产品`);
         iapProducts.forEach(product => {
-          console.log(`[LocalizationService] 产品: ${product.productId}, 价格: ${product.localizedPrice}, 货币: ${product.currency}`);
+          if (product && product.productId) {
+            console.log(`[LocalizationService] 产品: ${product.productId}, 价格: ${product.localizedPrice || 'N/A'}, 货币: ${product.currency || 'N/A'}`);
+          }
         });
         return this.parseIAPProducts(iapProducts);
       } else {
-        console.warn('[LocalizationService] ⚠️ App Store 返回了空产品列表');
+        console.warn('[LocalizationService] ⚠️ App Store 返回了空产品列表或无效数据');
       }
     } catch (error) {
       console.error('[LocalizationService] ❌ App Store 获取失败:', error);
+      
+      // 如果是特定的 getItems 错误，提供更详细的错误信息
+      if (error instanceof Error && error.message.includes('getItems')) {
+        console.warn('[LocalizationService] ⚠️ 检测到 getItems 错误，可能是 App Store 配置问题或网络问题');
+      }
     }
 
     // 仅在 App Store 完全不可用时使用备用定价

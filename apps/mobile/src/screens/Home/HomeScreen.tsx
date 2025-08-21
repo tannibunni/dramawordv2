@@ -30,6 +30,10 @@ import { useAppLanguage } from '../../context/AppLanguageContext';
 import { SUPPORTED_LANGUAGES, SupportedLanguageCode } from '../../constants/config';
 import { shouldShowLanguageReminder, generateLanguageReminderMessage } from '../../utils/languageDetector';
 import { t } from '../../constants/translations';
+// 导入功能权限控制相关组件
+import FeatureAccessService, { FeatureType } from '../../services/featureAccessService';
+import { UpgradeModal } from '../../components/common/UpgradeModal';
+import { useNavigation } from '../../components/navigation/NavigationContext';
 // import { LanguageDebugInfo } from '../../components/common/LanguageDebugInfo';
 
 interface HomeScreenProps {
@@ -39,6 +43,7 @@ interface HomeScreenProps {
 }
 
 const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
+  const { navigate } = useNavigation();
   const [searchText, setSearchText] = useState('');
   const [recentWords, setRecentWords] = useState<RecentWord[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -65,6 +70,10 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   const [chToEnQuery, setChToEnQuery] = useState<string>('');
   const { selectedLanguage, getCurrentLanguageConfig, setSelectedLanguage } = useLanguage();
   const { appLanguage } = useAppLanguage();
+  
+  // 升级弹窗相关状态
+  const [upgradeModalVisible, setUpgradeModalVisible] = useState(false);
+  const [lockedFeature, setLockedFeature] = useState<FeatureType | null>(null);
   
   // 设置翻译服务语言
   useEffect(() => {
@@ -120,6 +129,19 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
 
   useEffect(() => {
     loadRecentWords();
+  }, []);
+
+  // 设置功能权限检查的回调
+  useEffect(() => {
+    FeatureAccessService.setUpgradeModalCallback((feature) => {
+      console.log('[HomeScreen] 功能被锁定，显示升级弹窗:', feature);
+      setLockedFeature(feature);
+      setUpgradeModalVisible(true);
+    });
+
+    return () => {
+      FeatureAccessService.setUpgradeModalCallback(undefined);
+    };
   }, []);
 
   // 定期清理过期的语言提醒缓存
@@ -453,7 +475,17 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   const isCollected = searchResult && vocabulary.some(w => w.word.trim().toLowerCase() === searchResult.word.trim().toLowerCase());
 
   // 收藏按钮点击
-  const handleCollect = () => {
+  const handleCollect = async () => {
+    console.log('[HomeScreen] 用户点击收藏按钮，检查词汇本权限');
+    
+    // 检查词汇本功能权限
+    const canAccess = await FeatureAccessService.checkAndHandleAccess('vocabulary');
+    if (!canAccess) {
+      console.log('[HomeScreen] 词汇本功能被锁定，已显示升级弹窗');
+      return;
+    }
+    
+    console.log('[HomeScreen] 词汇本功能权限通过，显示标记单词来源弹窗');
     setShowCollectModal(true);
   };
 
@@ -1010,6 +1042,25 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
           </View>
         </KeyboardAvoidingView>
       </Modal>
+      
+      {/* 升级弹窗 */}
+      <UpgradeModal
+        visible={upgradeModalVisible}
+        onClose={() => setUpgradeModalVisible(false)}
+        feature={lockedFeature as any}
+        onUpgrade={() => {
+          console.log('[HomeScreen] 开始处理升级操作');
+          setUpgradeModalVisible(false);
+          console.log('[HomeScreen] 升级弹窗已关闭，准备导航到Subscription页面');
+          try {
+            navigate('Subscription');
+            console.log('[HomeScreen] 导航到Subscription页面成功');
+          } catch (error) {
+            console.error('[HomeScreen] 导航到Subscription页面失败:', error);
+          }
+        }}
+      />
+      
       {/* 删除新建单词本弹窗，改为内联输入框 */}
       {/* <LanguageDebugInfo /> */}
     </SafeAreaView>

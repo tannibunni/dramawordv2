@@ -1,9 +1,10 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useRef } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Animated } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../../constants/colors';
 import { useAppLanguage } from '../../../context/AppLanguageContext';
 import { t } from '../../../constants/translations';
+import FeatureAccessService from '../../../services/featureAccessService';
 
 interface DailyRewardsButtonProps {
   hasAvailableRewards: boolean;
@@ -19,10 +20,14 @@ export const DailyRewardsButton: React.FC<DailyRewardsButtonProps> = ({
   const { appLanguage } = useAppLanguage();
   const scaleAnimation = useRef(new Animated.Value(1)).current;
 
-
-
   // 点击动画效果
-  const handlePress = () => {
+  const handlePress = async () => {
+    // 检查功能权限
+    const canAccess = await FeatureAccessService.checkAndHandleAccess('dailyRewards');
+    if (!canAccess) {
+      return; // 权限检查失败，不执行后续操作
+    }
+
     Animated.sequence([
       Animated.timing(scaleAnimation, {
         toValue: 0.95,

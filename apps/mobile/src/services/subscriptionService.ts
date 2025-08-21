@@ -132,6 +132,24 @@ class SubscriptionService {
   public async checkSubscriptionStatus(): Promise<SubscriptionStatus> {
     try {
       const oldStatus = this.currentStatus;
+      
+      // 在开发模式下，检查是否有测试状态
+      if (__DEV__) {
+        const testStatus = await this.getTestSubscriptionStatus();
+        if (testStatus) {
+          this.currentStatus = testStatus;
+          
+          // 如果状态发生变化，通知所有回调
+          if (JSON.stringify(oldStatus) !== JSON.stringify(this.currentStatus)) {
+            this.notifyStateChange(this.currentStatus);
+          }
+          
+          console.log('🧪 [SubscriptionService] 使用测试订阅状态:', this.currentStatus);
+          return this.currentStatus;
+        }
+      }
+      
+      // 正常模式下从IAP服务获取状态
       this.currentStatus = await iapService.checkSubscriptionStatus();
       
       // 如果状态发生变化，通知所有回调
@@ -190,18 +208,25 @@ class SubscriptionService {
   /**
    * 获取试用期信息
    */
-  public getTrialInfo(): { isActive: boolean; daysLeft: number; endDate?: Date } {
+  public getTrialInfo(): { isActive: boolean; daysLeft: number; endDate?: Date; hoursLeft?: number } {
     if (!this.isInTrialPeriod()) {
       return { isActive: false, daysLeft: 0 };
     }
 
     const now = new Date();
     const trialEnd = new Date(this.currentStatus.trialEndsAt!);
-    const daysLeft = Math.ceil((trialEnd.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+    const timeLeft = trialEnd.getTime() - now.getTime();
+    
+    // 计算剩余天数（向下取整，更准确）
+    const daysLeft = Math.floor(timeLeft / (1000 * 60 * 60 * 24));
+    
+    // 计算剩余小时数
+    const hoursLeft = Math.floor((timeLeft % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
 
     return {
       isActive: true,
       daysLeft: Math.max(0, daysLeft),
+      hoursLeft: Math.max(0, hoursLeft),
       endDate: trialEnd,
     };
   }
@@ -422,6 +447,25 @@ class SubscriptionService {
 
 
   // ==================== 私有方法 ====================
+
+  /**
+   * 获取测试订阅状态（仅开发模式）
+   */
+  private async getTestSubscriptionStatus(): Promise<SubscriptionStatus | null> {
+    if (!__DEV__) return null;
+    
+    try {
+      const testData = await AsyncStorage.getItem('test_subscription_state');
+      if (testData) {
+        const parsed = JSON.parse(testData);
+        return parsed.data;
+      }
+    } catch (error) {
+      console.error('[SubscriptionService] 获取测试状态失败:', error);
+    }
+    
+    return null;
+  }
 
   /**
    * 通知状态变化

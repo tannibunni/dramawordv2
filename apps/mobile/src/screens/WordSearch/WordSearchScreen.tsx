@@ -16,8 +16,8 @@ import { wordService, RecentWord } from '../../services/wordService';
 import WordCard from '../../components/cards/WordCard';
 import { useAppLanguage } from '../../context/AppLanguageContext';
 import { t } from '../../constants/translations';
-import { useSubscription } from '../../hooks/useSubscription';
-import UpgradePrompt from '../../components/common/UpgradePrompt';
+import FeatureAccessService from '../../services/featureAccessService';
+import { UpgradeModal } from '../../components/common/UpgradeModal';
 
 const WordSearchScreen: React.FC = () => {
   const [searchText, setSearchText] = useState('');
@@ -28,15 +28,24 @@ const WordSearchScreen: React.FC = () => {
 
   const { appLanguage } = useAppLanguage();
   
-  // 订阅权限控制
-  const { canAccessLanguage, showUpgradePrompt } = useSubscription();
-  
-  // 升级提示状态
-  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
-  const [upgradeFeature, setUpgradeFeature] = useState<string>('');
+  // 功能权限检查状态
+  const [upgradeModalVisible, setUpgradeModalVisible] = useState(false);
+  const [lockedFeature, setLockedFeature] = useState<string | null>(null);
 
   useEffect(() => {
     loadRecentWords();
+  }, []);
+
+  // 设置功能权限检查的回调
+  useEffect(() => {
+    FeatureAccessService.setUpgradeModalCallback((feature) => {
+      setLockedFeature(feature);
+      setUpgradeModalVisible(true);
+    });
+
+    return () => {
+      FeatureAccessService.setUpgradeModalCallback(undefined);
+    };
   }, []);
 
   const loadRecentWords = async () => {
@@ -70,11 +79,12 @@ const WordSearchScreen: React.FC = () => {
       detectedLanguage = 'ko'; // 韩文字母
     }
     
-    // 检查语言权限
-    if (!canAccessLanguage(detectedLanguage)) {
-      setUpgradeFeature('other_languages');
-      setShowUpgradeModal(true);
-      return;
+    // 检查高级搜索功能权限
+    if (detectedLanguage !== 'en' && detectedLanguage !== 'zh') {
+      const canAccess = await FeatureAccessService.checkAndHandleAccess('advancedSearch');
+      if (!canAccess) {
+        return;
+      }
     }
     
     setIsLoading(true);
@@ -199,16 +209,16 @@ const WordSearchScreen: React.FC = () => {
         )}
       </ScrollView>
       
-      {/* 升级提示组件 */}
-      <UpgradePrompt
-        visible={showUpgradeModal}
-        onClose={() => setShowUpgradeModal(false)}
+      {/* 功能权限升级弹窗 */}
+      <UpgradeModal
+        visible={upgradeModalVisible}
+        onClose={() => setUpgradeModalVisible(false)}
+        feature={lockedFeature as any}
         onUpgrade={() => {
-          setShowUpgradeModal(false);
-          // 导航到订阅页面
-          // 这里需要根据你的导航结构来调整
+          setUpgradeModalVisible(false);
+          // 这里可以添加导航到订阅页面的逻辑
+          // navigate('Subscription');
         }}
-        feature={upgradeFeature}
       />
     </SafeAreaView>
   );
