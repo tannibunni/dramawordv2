@@ -113,25 +113,28 @@ class ExperienceManager implements IExperienceManager {
 
   // ==================== 经验值计算 ====================
 
-  // 计算等级
+  // 计算等级（支持无限等级）
   private calculateLevel(experience: number): number {
     if (experience < 50) return 1;
     if (experience < 75) return 2;   // 50 × 1.5 = 75
     if (experience < 112) return 3;  // 75 × 1.5 = 112.5 ≈ 112
     if (experience < 168) return 4;  // 112 × 1.5 = 168
     if (experience < 252) return 5;  // 168 × 1.5 = 252
-    return Math.floor((experience - 252) / 200) + 6;
+    if (experience < 452) return 6;  // 252 + 200 = 452
+    // 6级以后：每200经验值升一级
+    return Math.floor((experience - 452) / 200) + 7;
   }
 
-  // 计算当前等级所需经验值（累积值）
+  // 计算当前等级所需经验值（累积值，支持无限等级）
   private calculateLevelRequiredExp(level: number): number {
     if (level === 1) return 50;
     if (level === 2) return 75;   // 50 × 1.5
     if (level === 3) return 112;  // 75 × 1.5
     if (level === 4) return 168;  // 112 × 1.5
     if (level === 5) return 252;  // 168 × 1.5
-    // 后续等级：252 + (level - 6) * 200
-    return 252 + (level - 6) * 200;
+    if (level === 6) return 452;  // 252 + 200
+    // 6级以后：每200经验值升一级，支持无限等级
+    return 452 + (level - 6) * 200;
   }
 
   // 计算升级所需经验值
@@ -158,7 +161,16 @@ class ExperienceManager implements IExperienceManager {
     const previousLevelExp = currentLevel === 1 ? 0 : this.calculateLevelRequiredExp(currentLevel - 1);
     const expNeededForCurrentLevel = this.calculateLevelRequiredExp(currentLevel) - previousLevelExp;
     
-    return currentLevelExp / expNeededForCurrentLevel;
+    // 防止除零错误
+    if (expNeededForCurrentLevel <= 0) {
+      console.warn(`[experienceManager] 计算进度百分比时出现异常: expNeededForCurrentLevel=${expNeededForCurrentLevel}, currentLevel=${currentLevel}, experience=${experience}`);
+      return 0;
+    }
+    
+    const progressPercentage = currentLevelExp / expNeededForCurrentLevel;
+    
+    // 确保返回值在有效范围内
+    return Math.max(0, Math.min(1, progressPercentage));
   }
 
   // 检查是否升级
@@ -184,8 +196,8 @@ class ExperienceManager implements IExperienceManager {
   // 计算等级信息
   private calculateLevelInfo(experience: number): LevelInfo {
     const level = this.calculateLevel(experience);
-    // 修复：显示当前等级需要的总经验值，而不是还需要多少经验值升级
-    const experienceToNextLevel = this.calculateLevelRequiredExp(level);
+    // 修复：显示下一等级需要的总经验值，而不是当前等级需要的总经验值
+    const experienceToNextLevel = this.calculateLevelRequiredExp(level + 1);
     const progressPercentage = this.calculateProgressPercentage(experience);
     const currentLevelExp = this.getExperienceInCurrentLevel(experience);
     const previousLevelExp = level === 1 ? 0 : this.calculateLevelRequiredExp(level - 1);
@@ -229,8 +241,8 @@ class ExperienceManager implements IExperienceManager {
           if (parsedStats.experience > 0) {
             // 检查等级一致性并重新计算相关值
             const calculatedLevel = this.calculateLevel(parsedStats.experience);
-            // 修复：显示当前等级需要的总经验值，而不是还需要多少经验值升级
-            const experienceToNextLevel = this.calculateLevelRequiredExp(calculatedLevel);
+            // 修复：显示下一等级需要的总经验值，而不是当前等级需要的总经验值
+            const experienceToNextLevel = this.calculateLevelRequiredExp(calculatedLevel + 1);
             const progressPercentage = this.calculateProgressPercentage(parsedStats.experience);
             
             // 强制重新计算，确保数据一致性
@@ -257,7 +269,7 @@ class ExperienceManager implements IExperienceManager {
         const defaultExperienceInfo: UserExperienceInfo = {
           experience: 0,
           level: 1,
-          experienceToNextLevel: 50,
+          experienceToNextLevel: 75, // 修复：显示下一等级(2级)需要的总经验值
           progressPercentage: 0,
           totalExperience: 0,
           dailyReviewXP: 0,
@@ -283,8 +295,8 @@ class ExperienceManager implements IExperienceManager {
           if (parsedStats.experience > 0) {
             // 检查等级一致性并重新计算相关值
             const calculatedLevel = this.calculateLevel(parsedStats.experience);
-            // 修复：显示当前等级需要的总经验值，而不是还需要多少经验值升级
-            const experienceToNextLevel = this.calculateLevelRequiredExp(calculatedLevel);
+            // 修复：显示下一等级需要的总经验值，而不是当前等级需要的总经验值
+            const experienceToNextLevel = this.calculateLevelRequiredExp(calculatedLevel + 1);
             const progressPercentage = this.calculateProgressPercentage(parsedStats.experience);
             
             // 强制重新计算，确保数据一致性
@@ -312,7 +324,7 @@ class ExperienceManager implements IExperienceManager {
         const defaultExperienceInfo: UserExperienceInfo = {
           experience: 0,
           level: 1,
-          experienceToNextLevel: 50,
+          experienceToNextLevel: 75, // 修复：显示下一等级(2级)需要的总经验值
           progressPercentage: 0,
           totalExperience: 0,
           dailyReviewXP: 0,
@@ -394,8 +406,8 @@ class ExperienceManager implements IExperienceManager {
         ...currentInfo,
         experience: newExperience,
         level: newLevel,
-        // 修复：显示当前等级需要的总经验值，而不是还需要多少经验值升级
-        experienceToNextLevel: this.calculateLevelRequiredExp(newLevel),
+        // 修复：显示下一等级需要的总经验值，而不是当前等级需要的总经验值
+        experienceToNextLevel: this.calculateLevelRequiredExp(newLevel + 1),
         progressPercentage: this.calculateProgressPercentage(newExperience),
         totalExperience: currentInfo.totalExperience + xpToGain
       };
@@ -660,8 +672,8 @@ class ExperienceManager implements IExperienceManager {
         ...currentState.userExperienceInfo,
         experience,
         level,
-        // 修复：显示当前等级需要的总经验值，而不是还需要多少经验值升级
-        experienceToNextLevel: this.calculateLevelRequiredExp(level),
+        // 修复：显示下一等级需要的总经验值，而不是当前等级需要的总经验值
+        experienceToNextLevel: this.calculateLevelRequiredExp(level + 1),
         progressPercentage: this.calculateProgressPercentage(experience)
       };
       
@@ -686,8 +698,8 @@ class ExperienceManager implements IExperienceManager {
           ...currentExperienceInfo,
           experience,
           level,
-          // 修复：显示当前等级需要的总经验值，而不是还需要多少经验值升级
-          experienceToNextLevel: this.calculateLevelRequiredExp(level),
+          // 修复：显示下一等级需要的总经验值，而不是当前等级需要的总经验值
+          experienceToNextLevel: this.calculateLevelRequiredExp(level + 1),
           progressPercentage: this.calculateProgressPercentage(experience)
         };
         
@@ -700,8 +712,8 @@ class ExperienceManager implements IExperienceManager {
         const newExperienceInfo = {
           experience,
           level,
-          // 修复：显示当前等级需要的总经验值，而不是还需要多少经验值升级
-          experienceToNextLevel: this.calculateLevelRequiredExp(level),
+          // 修复：显示下一等级需要的总经验值，而不是当前等级需要的总经验值
+          experienceToNextLevel: this.calculateLevelRequiredExp(level + 1),
           progressPercentage: this.calculateProgressPercentage(experience),
           totalExperience: experience,
           dailyReviewXP: 0,
@@ -786,7 +798,7 @@ class ExperienceManager implements IExperienceManager {
       
       // 先更新状态，确保动画从正确的起点开始
       this.updateState({
-        progressBarValue: oldProgress
+        progressBarValue: oldProgress * 100
       });
       
       // 使用带回调的动画方法，实时更新进度条和经验值
@@ -795,7 +807,7 @@ class ExperienceManager implements IExperienceManager {
         (currentExp: number, progress: number) => {
           // 实时更新进度条状态和经验值
           this.updateState({
-            progressBarValue: progress,
+            progressBarValue: progress * 100,
             userExperienceInfo: {
               ...currentInfo,
               experience: currentExp,
@@ -822,11 +834,13 @@ class ExperienceManager implements IExperienceManager {
           
           // 确保状态显示最终值并重置动画状态
           this.updateState({
-            progressBarValue: this.calculateProgressPercentage(finalExp),
+            progressBarValue: this.calculateProgressPercentage(finalExp) * 100,
             userExperienceInfo: {
               ...currentInfo,
               experience: finalExp,
               level: finalLevel,
+              // 修复：显示下一等级需要的总经验值，而不是当前等级需要的总经验值
+              experienceToNextLevel: this.calculateLevelRequiredExp(finalLevel + 1),
               progressPercentage: this.calculateProgressPercentage(finalExp)
             },
             isProgressBarAnimating: false
@@ -858,7 +872,7 @@ class ExperienceManager implements IExperienceManager {
         
         this.updateState({
           userExperienceInfo: experienceInfo,
-          progressBarValue: progressValue,
+          progressBarValue: progressValue * 100,
           isLoadingExperience: false,
           hasCheckedExperience: true
         });
@@ -874,7 +888,7 @@ class ExperienceManager implements IExperienceManager {
           userExperienceInfo: {
             experience: 0,
             level: 1,
-            experienceToNextLevel: 50,
+            experienceToNextLevel: 75, // 修复：显示下一等级(2级)需要的总经验值
             progressPercentage: 0,
             totalExperience: 0,
             dailyReviewXP: 0,
@@ -1006,6 +1020,20 @@ class ExperienceManager implements IExperienceManager {
             if (onComplete) {
               onComplete(finalExp, finalLevel);
             }
+            
+            // 动画完成后，确保状态正确更新
+            const finalProgress = this.calculateProgressPercentage(finalExp);
+            this.updateState({
+              progressBarValue: finalProgress * 100,
+              userExperienceInfo: {
+                ...currentState.userExperienceInfo!,
+                experience: finalExp,
+                level: finalLevel,
+                experienceToNextLevel: this.calculateLevelRequiredExp(finalLevel + 1),
+                progressPercentage: finalProgress
+              }
+            });
+            
             // 释放动画锁
             this.releaseAnimationLock();
           }
@@ -1084,12 +1112,12 @@ class ExperienceManager implements IExperienceManager {
       const progressPercentage = this.calculateProgressPercentage(currentState.userExperienceInfo.experience);
       
       this.updateState({
-        progressBarValue: progressPercentage,
+        progressBarValue: progressPercentage * 100,
         hasInitializedProgressBar: true
       });
       
       if (onProgressUpdate) {
-        onProgressUpdate(progressPercentage);
+        onProgressUpdate(progressPercentage * 100);
       }
     }
   }

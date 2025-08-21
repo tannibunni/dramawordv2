@@ -217,8 +217,8 @@ export class AnimationManager {
 
       if (isLevelUp) {
         // 等级提升视觉优化：
-        // 动画过程中只让进度条从 oldProgress 增长到 100%，不展示回到 0 的阶段，
-        // 动画完成后再一次性设置为新等级的 newProgress，避免“退回又增长”的观感。
+        // 动画过程中进度条从 oldProgress 增长到 100%，表示完成当前等级
+        // 动画完成后，进度条会重置为新等级的进度（从0开始）
         currentProgress = Math.min(1, oldProgress + value * (1 - oldProgress));
       } else {
         // 同等级内，进度条从旧进度平滑增长到新进度
@@ -312,9 +312,16 @@ export class AnimationManager {
       logger.info('动画序列完成，重置状态', 'startExperienceAnimation');
       this.setAnimatingState(false);
       this.cleanupListeners();
+      
       // 动画完成时，确保最终数值对齐
-      // 动画完成时对齐最终进度，但仍遵循单调不减
-      this.setProgressBarValue(Math.max(this.currentProgressBarValue, Math.max(0, Math.min(100, newProgress * 100))));
+      if (isLevelUp) {
+        // 升级后，进度条应该显示新等级的进度（从0开始）
+        this.setProgressBarValue(newProgress * 100);
+      } else {
+        // 同等级内，进度条显示最终进度
+        this.setProgressBarValue(Math.max(this.currentProgressBarValue, Math.max(0, Math.min(100, newProgress * 100))));
+      }
+      
       callbacks.onComplete?.(newExperience, newProgress);
       
       logger.info('统一经验值动画完成', 'startExperienceAnimation');
@@ -406,6 +413,9 @@ export class AnimationManager {
     const finalValue = Math.max(clamped, this.currentProgressBarValue);
     this.currentProgressBarValue = finalValue;
     this.progressBarAnimation.setValue(finalValue);
+    
+    // 通知经验值管理器更新进度条状态
+    // 注意：这里需要经验值管理器来调用，避免循环依赖
   }
 
   // 对外暴露：立即设置进度条，同时同步内部记录，避免后续动画回退

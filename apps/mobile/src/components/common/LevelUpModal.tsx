@@ -7,7 +7,10 @@ import {
   Animated,
   Dimensions,
   TouchableOpacity,
+  StatusBar,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { MaterialIcons } from '@expo/vector-icons';
 import { colors } from '../../constants/colors';
 
 interface LevelUpModalProps {
@@ -29,26 +32,28 @@ export const LevelUpModal: React.FC<LevelUpModalProps> = ({
   levelUpInfo,
   onClose,
 }) => {
-  const scaleAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(height)).current;
   const opacityAnim = useRef(new Animated.Value(0)).current;
-  const levelScaleAnim = useRef(new Animated.Value(1)).current;
-  const confettiAnim = useRef(new Animated.Value(0)).current;
+  const scaleAnim = useRef(new Animated.Value(0.8)).current;
+  const shieldScaleAnim = useRef(new Animated.Value(0)).current;
+  const sparkleAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     if (visible && levelUpInfo) {
       // 重置动画值
-      scaleAnim.setValue(0);
+      slideAnim.setValue(height);
       opacityAnim.setValue(0);
-      levelScaleAnim.setValue(1);
-      confettiAnim.setValue(0);
+      scaleAnim.setValue(0.8);
+      shieldScaleAnim.setValue(0);
+      sparkleAnim.setValue(0);
 
       // 开始动画序列
       Animated.sequence([
-        // 弹窗出现
+        // Modal滑入
         Animated.parallel([
-          Animated.timing(scaleAnim, {
-            toValue: 1,
-            duration: 300,
+          Animated.timing(slideAnim, {
+            toValue: 0,
+            duration: 400,
             useNativeDriver: true,
           }),
           Animated.timing(opacityAnim, {
@@ -56,26 +61,35 @@ export const LevelUpModal: React.FC<LevelUpModalProps> = ({
             duration: 300,
             useNativeDriver: true,
           }),
-        ]),
-        // 等级数字缩放动画
-        Animated.sequence([
-          Animated.timing(levelScaleAnim, {
-            toValue: 1.3,
-            duration: 200,
-            useNativeDriver: true,
-          }),
-          Animated.timing(levelScaleAnim, {
+          Animated.timing(scaleAnim, {
             toValue: 1,
-            duration: 200,
+            duration: 400,
             useNativeDriver: true,
           }),
         ]),
-        // 彩带动画
-        Animated.timing(confettiAnim, {
+        // 盾牌图标弹出
+        Animated.spring(shieldScaleAnim, {
           toValue: 1,
-          duration: 500,
-          useNativeDriver: false,
+          useNativeDriver: true,
+          tension: 100,
+          friction: 6,
         }),
+        // 星光闪烁效果
+        Animated.loop(
+          Animated.sequence([
+            Animated.timing(sparkleAnim, {
+              toValue: 1,
+              duration: 800,
+              useNativeDriver: true,
+            }),
+            Animated.timing(sparkleAnim, {
+              toValue: 0,
+              duration: 800,
+              useNativeDriver: true,
+            }),
+          ]),
+          { iterations: -1 }
+        ),
       ]).start();
     }
   }, [visible, levelUpInfo]);
@@ -84,182 +98,243 @@ export const LevelUpModal: React.FC<LevelUpModalProps> = ({
     return null;
   }
 
-  const { oldLevel, newLevel, levelsGained } = levelUpInfo;
+  const { newLevel } = levelUpInfo;
 
   return (
     <Modal
       visible={visible}
-      transparent
+      transparent={false}
       animationType="none"
       onRequestClose={onClose}
+      statusBarTranslucent
     >
-      <View style={styles.overlay}>
-        {/* 背景遮罩 */}
+      <StatusBar backgroundColor="transparent" barStyle="light-content" translucent />
+      
+      {/* 全屏蓝色渐变背景 */}
+      <LinearGradient
+        colors={['#4A90E2', '#7B68EE', '#9370DB']}
+        style={styles.gradientBackground}
+      >
         <Animated.View
           style={[
-            styles.background,
+            styles.container,
             {
               opacity: opacityAnim,
-            },
-          ]}
-        />
-
-        {/* 弹窗内容 */}
-        <Animated.View
-          style={[
-            styles.modalContainer,
-            {
-              opacity: opacityAnim,
-              transform: [{ scale: scaleAnim }],
+              transform: [{ translateY: slideAnim }, { scale: scaleAnim }],
             },
           ]}
         >
-          {/* 升级标题 */}
-          <View style={styles.header}>
-            <Text style={styles.congratsText}>🎉 恭喜升级！</Text>
-          </View>
-
-          {/* 等级信息 */}
-          <View style={styles.levelContainer}>
-            <Text style={styles.levelLabel}>从</Text>
-            <Animated.Text
-              style={[
-                styles.levelNumber,
-                {
-                  transform: [{ scale: levelScaleAnim }],
-                },
-              ]}
-            >
-              Level {oldLevel}
-            </Animated.Text>
-            <Text style={styles.levelLabel}>升级到</Text>
-            <Animated.Text
-              style={[
-                styles.levelNumber,
-                {
-                  transform: [{ scale: levelScaleAnim }],
-                },
-              ]}
-            >
-              Level {newLevel}
-            </Animated.Text>
-          </View>
-
-          {/* 升级数量 */}
-          {levelsGained > 1 && (
-            <View style={styles.multipleLevels}>
-              <Text style={styles.multipleLevelsText}>
-                一次性升级 {levelsGained} 个等级！
-              </Text>
-            </View>
-          )}
-
-          {/* 彩带效果 */}
+          {/* 星光装饰 */}
           <Animated.View
             style={[
-              styles.confetti,
+              styles.sparkleContainer,
               {
-                opacity: confettiAnim,
+                opacity: sparkleAnim,
               },
             ]}
           >
-            <Text style={styles.confettiText}>✨</Text>
-            <Text style={styles.confettiText}>🎊</Text>
-            <Text style={styles.confettiText}>🎉</Text>
+            {[...Array(12)].map((_, index) => (
+              <View
+                key={index}
+                style={[
+                  styles.sparkle,
+                  {
+                    top: Math.random() * height * 0.6,
+                    left: Math.random() * width,
+                  },
+                ]}
+              >
+                <MaterialIcons name="star" size={16} color="rgba(255,255,255,0.8)" />
+              </View>
+            ))}
           </Animated.View>
 
-          {/* 关闭按钮 */}
-          <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-            <Text style={styles.closeButtonText}>太棒了！</Text>
-          </TouchableOpacity>
+          {/* 主要内容区域 */}
+          <View style={styles.contentContainer}>
+            {/* 盾牌图标 */}
+            <Animated.View
+              style={[
+                styles.shieldContainer,
+                {
+                  transform: [{ scale: shieldScaleAnim }],
+                },
+              ]}
+            >
+              <View style={styles.shieldOuter}>
+                <View style={styles.shieldMiddle}>
+                  <View style={styles.shieldInner}>
+                    <MaterialIcons name="star" size={48} color="white" />
+                  </View>
+                </View>
+              </View>
+            </Animated.View>
+
+            {/* 祝贺文字 */}
+            <Text style={styles.congratulationsText}>Congratulations, you</Text>
+            <Text style={styles.promotedText}>have been promoted to</Text>
+
+            {/* 等级显示 */}
+            <View style={styles.levelDisplay}>
+              <Text style={styles.levelNumber}>{newLevel}</Text>
+              <Text style={styles.levelSuffix}>th</Text>
+            </View>
+            <Text style={styles.levelText}>Level</Text>
+          </View>
+
+          {/* 底部按钮区域 */}
+          <View style={styles.buttonContainer}>
+            {/* View Journey 按钮 */}
+            <TouchableOpacity style={styles.journeyButton} onPress={onClose}>
+              <Text style={styles.journeyButtonText}>View Journey</Text>
+            </TouchableOpacity>
+
+            {/* Continue 按钮 */}
+            <TouchableOpacity style={styles.continueButton} onPress={onClose}>
+              <Text style={styles.continueButtonText}>Continue</Text>
+            </TouchableOpacity>
+          </View>
         </Animated.View>
-      </View>
+      </LinearGradient>
     </Modal>
   );
 };
 
 const styles = StyleSheet.create({
-  overlay: {
+  gradientBackground: {
+    flex: 1,
+    width: '100%',
+    height: '100%',
+  },
+  container: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 60,
   },
-  background: {
+  sparkleContainer: {
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    zIndex: 1,
   },
-  modalContainer: {
-    backgroundColor: 'white',
-    borderRadius: 20,
-    padding: 30,
+  sparkle: {
+    position: 'absolute',
+  },
+  contentContainer: {
     alignItems: 'center',
-    maxWidth: width * 0.85,
+    justifyContent: 'center',
+    flex: 1,
+    zIndex: 2,
+  },
+  shieldContainer: {
+    marginBottom: 40,
+  },
+  shieldOuter: {
+    width: 140,
+    height: 140,
+    borderRadius: 70,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 3,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+  },
+  shieldMiddle: {
+    width: 110,
+    height: 110,
+    borderRadius: 55,
+    backgroundColor: 'rgba(255, 255, 255, 0.25)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: 'rgba(255, 255, 255, 0.4)',
+  },
+  shieldInner: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: '#4A90E2',
+    justifyContent: 'center',
+    alignItems: 'center',
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
-      height: 10,
+      height: 4,
     },
     shadowOpacity: 0.3,
-    shadowRadius: 20,
-    elevation: 10,
+    shadowRadius: 8,
+    elevation: 8,
   },
-  header: {
-    marginBottom: 20,
-  },
-  congratsText: {
+  congratulationsText: {
     fontSize: 24,
-    fontWeight: 'bold',
-    color: colors.primary[500],
+    color: 'white',
+    fontWeight: '400',
     textAlign: 'center',
+    marginBottom: 8,
+    opacity: 0.9,
   },
-  levelContainer: {
+  promotedText: {
+    fontSize: 24,
+    color: 'white',
+    fontWeight: '400',
+    textAlign: 'center',
+    marginBottom: 30,
+    opacity: 0.9,
+  },
+  levelDisplay: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'baseline',
     justifyContent: 'center',
-    flexWrap: 'wrap',
-    marginBottom: 20,
-  },
-  levelLabel: {
-    fontSize: 18,
-    color: '#666',
-    marginHorizontal: 10,
+    marginBottom: 8,
   },
   levelNumber: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: colors.primary[500],
-    marginHorizontal: 5,
+    fontSize: 120,
+    color: 'white',
+    fontWeight: '300',
+    lineHeight: 120,
   },
-  multipleLevels: {
+  levelSuffix: {
+    fontSize: 32,
+    color: 'white',
+    fontWeight: '300',
+    marginLeft: 4,
     marginBottom: 20,
   },
-  multipleLevelsText: {
-    fontSize: 16,
-    color: '#FF6B35',
-    fontWeight: '600',
-    textAlign: 'center',
-  },
-  confetti: {
-    flexDirection: 'row',
-    marginBottom: 25,
-  },
-  confettiText: {
-    fontSize: 24,
-    marginHorizontal: 5,
-  },
-  closeButton: {
-    backgroundColor: colors.primary[500],
-    paddingHorizontal: 30,
-    paddingVertical: 12,
-    borderRadius: 25,
-  },
-  closeButtonText: {
+  levelText: {
+    fontSize: 32,
     color: 'white',
-    fontSize: 16,
+    fontWeight: '400',
+    textAlign: 'center',
+    marginBottom: 60,
+  },
+  buttonContainer: {
+    width: '100%',
+    paddingHorizontal: 20,
+    zIndex: 2,
+  },
+  journeyButton: {
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+    paddingVertical: 16,
+    borderRadius: 25,
+    marginBottom: 16,
+    alignItems: 'center',
+  },
+  journeyButtonText: {
+    color: 'white',
+    fontSize: 18,
     fontWeight: '600',
+  },
+  continueButton: {
+    backgroundColor: 'transparent',
+    paddingVertical: 16,
+    alignItems: 'center',
+  },
+  continueButtonText: {
+    color: 'rgba(255, 255, 255, 0.8)',
+    fontSize: 18,
+    fontWeight: '400',
   },
 });

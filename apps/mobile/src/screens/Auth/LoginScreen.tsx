@@ -131,7 +131,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
       const guestId = await AsyncStorage.getItem('guestId');
       if (!guestId) return null;
       
-      const data = {};
+      const data: Record<string, any> = {};
       
       // 获取各种游客数据
       const keys = [
