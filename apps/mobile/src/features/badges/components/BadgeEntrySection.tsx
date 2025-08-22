@@ -118,12 +118,9 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 20,
     marginHorizontal: 20,
-    marginVertical: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
+    marginTop: 8, // 缩小与上面板块的距离
+    marginBottom: 12,
+    // 去掉阴影，符合iOS风格
   },
   header: {
     flexDirection: 'row',
