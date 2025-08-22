@@ -496,12 +496,12 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
         <Ionicons name="chevron-forward" size={20} color={colors.neutral[500]} />
       </TouchableOpacity>
 
-      {/* 清除用户数据（保留经验和学习数据） */}
+      {/* 清除用户数据 */}
       <TouchableOpacity style={styles.settingItem} onPress={handleClearLocalData}>
         <View style={styles.settingLeft}>
-          <Ionicons name="trash-bin-outline" size={24} color={colors.warning[500]} />
-          <Text style={[styles.settingText, { color: colors.warning[500] }]}>
-            {appLanguage === 'zh-CN' ? '清除用户数据（保留经验）' : 'Clear User Data (Keep Experience)'}
+          <Ionicons name="trash-bin-outline" size={24} color={colors.error[500]} />
+          <Text style={[styles.settingText, { color: colors.error[500] }]}>
+            {appLanguage === 'zh-CN' ? '清除用户数据' : 'Clear User Data'}
           </Text>
         </View>
         <Ionicons name="chevron-forward" size={20} color={colors.neutral[500]} />
