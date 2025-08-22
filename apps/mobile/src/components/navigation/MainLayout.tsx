@@ -9,6 +9,7 @@ import ShowsScreen from '../../screens/Shows/ShowsScreen';
 import { ProfileScreen } from '../../screens/Profile/ProfileScreen';
 import { LoginScreen } from '../../screens/Auth/LoginScreen';
 import SubscriptionScreen from '../../screens/Profile/SubscriptionScreen';
+import { BadgeWallScreen } from '../../features/badges';
 import { colors } from '../../constants/colors';
 import { useNavigation } from './NavigationContext';
 import { useAuth } from '../../context/AuthContext';
@@ -57,6 +58,8 @@ const MainContent: React.FC<MainLayoutProps> = ({ initialTab = 'search' }) => {
         return <SubscriptionScreen />;
       case 'ReviewScreen':
         return <ReviewScreen {...params} />;
+      case 'badgeWall':
+        return <BadgeWallScreen />;
       case 'main':
       default:
         return (
