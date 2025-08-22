@@ -90,35 +90,52 @@ class IAPService {
       
       if (isDevelopment && useSandbox) {
         console.log('[IAPService] 🧪 开发环境 - 使用沙盒模式');
+        
+        // 开发环境：先尝试沙盒模式，失败后使用模拟模式
+        try {
+          // 初始化连接
+          await initConnection();
+          console.log('[IAPService] ✅ IAP连接已建立');
+          
+          // 设置购买监听器
+          this.setupPurchaseListeners();
+          
+          // 尝试获取真实产品信息
+          await this.loadRealProducts();
+          
+          // 加载订阅状态
+          await this.loadSubscriptionStatus();
+          
+          // 恢复购买
+          await this.restorePurchasesPrivate();
+          
+          this.isInitialized = true;
+          console.log('[IAPService] ✅ 沙盒模式初始化成功');
+          return true;
+        } catch (sandboxError) {
+          console.log('[IAPService] ⚠️ 沙盒模式失败，切换到模拟模式:', sandboxError);
+          // 继续执行下面的模拟模式逻辑
+        }
       } else if (isDevelopment) {
         console.log('[IAPService] 🚀 开发环境 - 使用真实IAP');
       } else {
         console.log('[IAPService] 🚀 生产环境 - 使用真实IAP');
       }
 
-      // 初始化连接
-      await initConnection();
-      console.log('[IAPService] ✅ IAP连接已建立');
+      // 如果沙盒模式失败或不是沙盒环境，使用模拟模式
+      console.log('[IAPService] 🎭 使用模拟模式进行测试');
       
-      // 设置购买监听器
-      this.setupPurchaseListeners();
-      
-      // 获取真实产品信息
-      await this.loadRealProducts();
-      
-      // 加载订阅状态
+      // 设置模拟产品
+      this.products = MOCK_PRODUCTS;
       await this.loadSubscriptionStatus();
-      
-      // 恢复购买
-      await this.restorePurchasesPrivate();
-      
       this.isInitialized = true;
-      console.log('[IAPService] ✅ 真实IAP服务初始化完成');
-      return true;
-    } catch (error) {
-      console.error('[IAPService] ❌ 真实IAP初始化失败，切换到模拟模式:', error);
       
-      // 备用：使用模拟产品
+      console.log('[IAPService] ✅ 模拟模式初始化完成');
+      return false; // 表示使用了模拟模式
+    } catch (error) {
+      console.error('[IAPService] ❌ 所有初始化方式都失败:', error);
+      
+      // 最后的备用方案：使用模拟产品
       this.products = MOCK_PRODUCTS;
       await this.loadSubscriptionStatus();
       this.isInitialized = true;
