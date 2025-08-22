@@ -105,6 +105,9 @@ export class BadgeService {
   // 获取用户徽章进度（基于规则引擎计算）
   async getUserBadgeProgress(userId: string): Promise<UserBadgeProgress[]> {
     try {
+      // 获取所有徽章定义
+      const badgeDefinitions = await this.getBadgeDefinitions();
+      
       // 获取用户行为数据
       let userBehavior = await this.badgeDataService.getUserBehavior(userId);
       
@@ -128,15 +131,31 @@ export class BadgeService {
       // 使用规则引擎评估徽章状态
       const unlockResults = await this.badgeRuleEngine.evaluateUserBadges(userId, userBehavior);
       
-      // 转换为UserBadgeProgress格式
-      const progress: UserBadgeProgress[] = unlockResults.map(result => ({
-        userId,
-        badgeId: result.badgeId,
-        unlocked: result.unlocked,
-        progress: result.progress,
-        target: result.target,
-        unlockedAt: result.unlockDate
-      }));
+      // 确保所有徽章都有进度记录，未解锁的显示为锁定状态
+      const progress: UserBadgeProgress[] = badgeDefinitions.map(badge => {
+        const existingProgress = unlockResults.find(result => result.badgeId === badge.id);
+        
+        if (existingProgress) {
+          return {
+            userId,
+            badgeId: existingProgress.badgeId,
+            unlocked: existingProgress.unlocked,
+            progress: existingProgress.progress,
+            target: existingProgress.target,
+            unlockedAt: existingProgress.unlockDate
+          };
+        } else {
+          // 如果规则引擎没有返回这个徽章的结果，创建默认的锁定状态
+          return {
+            userId,
+            badgeId: badge.id,
+            unlocked: false,
+            progress: 0,
+            target: badge.target,
+            unlockedAt: undefined
+          };
+        }
+      });
       
       // 保存进度到本地存储
       await this.badgeDataService.batchUpdateBadgeProgress(userId, unlockResults);

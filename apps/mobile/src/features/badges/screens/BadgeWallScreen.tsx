@@ -63,12 +63,21 @@ export const BadgeWallScreen: React.FC = () => {
 
   const renderBadgeItem = ({ item }: { item: BadgeDefinition }) => {
     const progress = userProgress.find(p => p.badgeId === item.id);
-    if (!progress) return null;
+    
+    // 如果没有进度数据，创建一个默认的锁定状态
+    const defaultProgress: UserBadgeProgress = {
+      userId: 'guest',
+      badgeId: item.id,
+      unlocked: false,
+      progress: 0,
+      target: item.target,
+      unlockedAt: undefined
+    };
 
     return (
       <BadgeCard
         badge={item}
-        userProgress={progress}
+        userProgress={progress || defaultProgress}
         onPress={handleBadgePress}
       />
     );

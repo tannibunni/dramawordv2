@@ -23,24 +23,49 @@ export const BadgeEntrySection: React.FC<BadgeEntrySectionProps> = ({
   userProgress,
   onViewAll,
 }) => {
-  // 获取最近3个已解锁的徽章
+  // 获取最近3个已解锁的徽章，如果没有解锁的，显示前3个徽章
   const unlockedBadges = userProgress
     .filter(p => p.unlocked)
-    .sort((a, b) => (b.unlockedAt?.getTime() || 0) - (a.unlockedAt?.getTime() || 0))
-    .slice(0, 3);
+    .sort((a, b) => (b.unlockedAt?.getTime() || 0) - (a.unlockedAt?.getTime() || 0));
 
-  // 获取对应的徽章定义
-  const recentBadges = unlockedBadges.map(progress => {
-    const badge = badges.find(b => b.id === progress.badgeId);
-    return badge ? { ...badge, progress } : null;
-  }).filter(Boolean);
+  let recentBadges: Array<{ badge: BadgeDefinition; progress: UserBadgeProgress }> = [];
+  
+  if (unlockedBadges.length > 0) {
+    // 如果有解锁的徽章，显示最近解锁的3个
+    const recentUnlocked = unlockedBadges.slice(0, 3);
+    recentBadges = recentUnlocked.map(progress => {
+      const badge = badges.find(b => b.id === progress.badgeId);
+      return badge ? { badge, progress } : null;
+    }).filter(Boolean) as Array<{ badge: BadgeDefinition; progress: UserBadgeProgress }>;
+  } else {
+    // 如果没有解锁的徽章，显示前3个徽章（锁定状态）
+    recentBadges = badges.slice(0, 3).map(badge => {
+      const progress = userProgress.find(p => p.badgeId === badge.id) || {
+        userId: 'guest',
+        badgeId: badge.id,
+        unlocked: false,
+        progress: 0,
+        target: badge.target,
+        unlockedAt: undefined
+      };
+      return { badge, progress };
+    });
+  }
 
-  const renderBadgeIcon = (badge: BadgeDefinition) => {
-    return (
-      <View style={styles.badgeIcon}>
-        <Ionicons name="trophy" size={24} color="#FFD700" />
-      </View>
-    );
+  const renderBadgeIcon = (badge: BadgeDefinition, progress: UserBadgeProgress) => {
+    if (progress.unlocked) {
+      return (
+        <View style={styles.badgeIcon}>
+          <Ionicons name="trophy" size={24} color="#FFD700" />
+        </View>
+      );
+    } else {
+      return (
+        <View style={styles.badgePlaceholder}>
+          <Ionicons name="lock-closed" size={24} color="#E0E0E0" />
+        </View>
+      );
+    }
   };
 
   const renderPlaceholder = () => {
@@ -63,17 +88,17 @@ export const BadgeEntrySection: React.FC<BadgeEntrySectionProps> = ({
 
       {/* 徽章展示区 */}
       <View style={styles.badgesContainer}>
-        {recentBadges.map((badge, index) => (
-          <View key={badge?.id || index} style={styles.badgeItem}>
-            {renderBadgeIcon(badge!)}
+        {recentBadges.map(({ badge, progress }, index) => (
+          <View key={badge.id || index} style={styles.badgeItem}>
+            {renderBadgeIcon(badge, progress)}
             <Text style={styles.badgeName} numberOfLines={1}>
-              {badge?.name}
+              {badge.name}
             </Text>
           </View>
         ))}
         
-        {/* 占位符 */}
-        {Array.from({ length: 3 - recentBadges.length }).map((_, index) => (
+        {/* 占位符 - 如果徽章数量不足3个，显示占位符 */}
+        {Array.from({ length: Math.max(0, 3 - recentBadges.length) }).map((_, index) => (
           <View key={`placeholder-${index}`} style={styles.badgeItem}>
             {renderPlaceholder()}
             <Text style={styles.badgeNamePlaceholder}>未解锁</Text>
