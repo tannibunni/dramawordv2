@@ -84,8 +84,18 @@ class IAPService {
         return true;
       }
 
-      console.log('[IAPService] 🚀 初始化真实IAP服务...');
+      // 检查环境配置
+      const isDevelopment = __DEV__ || process.env.EXPO_PUBLIC_ENVIRONMENT === 'development';
+      const useSandbox = process.env.EXPO_PUBLIC_IAP_SANDBOX === 'true';
       
+      if (isDevelopment && useSandbox) {
+        console.log('[IAPService] 🧪 开发环境 - 使用沙盒模式');
+      } else if (isDevelopment) {
+        console.log('[IAPService] 🚀 开发环境 - 使用真实IAP');
+      } else {
+        console.log('[IAPService] 🚀 生产环境 - 使用真实IAP');
+      }
+
       // 初始化连接
       await initConnection();
       console.log('[IAPService] ✅ IAP连接已建立');
