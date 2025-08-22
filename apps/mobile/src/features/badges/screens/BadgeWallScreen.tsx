@@ -7,12 +7,14 @@ import {
   SafeAreaView,
   ActivityIndicator,
   Dimensions,
+  TouchableOpacity,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { BadgeCard } from '../components/BadgeCard';
 import { BadgeDetailModal } from '../components/BadgeDetailModal';
 import { BadgeDefinition, UserBadgeProgress } from '../types/badge';
 import badgeService from '../services/badgeService';
+import { useNavigation } from '../../../components/navigation/NavigationContext';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -23,6 +25,7 @@ export const BadgeWallScreen: React.FC = () => {
   const [selectedBadge, setSelectedBadge] = useState<BadgeDefinition | null>(null);
   const [selectedProgress, setSelectedProgress] = useState<UserBadgeProgress | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
+  const { goBack } = useNavigation();
 
   useEffect(() => {
     loadBadgeData();
@@ -87,7 +90,13 @@ export const BadgeWallScreen: React.FC = () => {
     <SafeAreaView style={styles.container}>
       {/* 标题区域 */}
       <View style={styles.header}>
-        <Text style={styles.title}>我的徽章</Text>
+        <View style={styles.headerTop}>
+          <TouchableOpacity style={styles.closeButton} onPress={goBack}>
+            <Ionicons name="close" size={24} color="#666" />
+          </TouchableOpacity>
+          <Text style={styles.title}>我的徽章</Text>
+          <View style={styles.placeholder} />
+        </View>
         <Text style={styles.subtitle}>
           已解锁 {unlockedCount} / {totalCount}
         </Text>
@@ -136,11 +145,26 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#F0F0F0',
   },
+  headerTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  closeButton: {
+    padding: 8,
+    borderRadius: 20,
+    backgroundColor: '#F5F5F5',
+  },
   title: {
     fontSize: 28,
     fontWeight: '700',
     color: '#333',
-    marginBottom: 8,
+    flex: 1,
+    textAlign: 'center',
+  },
+  placeholder: {
+    width: 40,
   },
   subtitle: {
     fontSize: 16,
