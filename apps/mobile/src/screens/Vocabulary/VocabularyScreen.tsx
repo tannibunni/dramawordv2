@@ -1227,8 +1227,8 @@ const styles = StyleSheet.create({
   partOfSpeechTag: { backgroundColor: colors.primary[50], color: colors.primary[700], fontSize: 13, fontWeight: '700', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 2, marginRight: 8 },
   tvShowTag: { backgroundColor: colors.primary[50] },
   tvShowTagText: { color: colors.primary[700] },
-  wordbookShowTag: { backgroundColor: colors.success[50] },
-  wordbookShowTagText: { color: colors.success[700] },
+  wordbookShowTag: { backgroundColor: colors.success[100] },
+  wordbookShowTagText: { color: colors.success[800] },
   searchExpandBtnWrapper: {
     // 让父容器撑满整行，确保按钮宽度和激活搜索框一致
     width: '100%',

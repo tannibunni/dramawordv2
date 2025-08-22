@@ -187,7 +187,7 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
   },
   wordbookTag: {
-    backgroundColor: colors.success[400], // 绿色
+    backgroundColor: colors.success[600], // 更和谐的绿色
   },
   showTagText: {
     color: colors.text.inverse,
