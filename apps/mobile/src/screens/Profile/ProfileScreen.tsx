@@ -808,6 +808,12 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   };
 
   const handleClearAllData = async () => {
+    // 额外的开发模式保护
+    if (!__DEV__) {
+      console.warn('⚠️ 尝试在生产模式下调用完全清除数据函数');
+      return;
+    }
+    
     Alert.alert(
       appLanguage === 'zh-CN' ? '⚠️ 完全清除确认' : '⚠️ Complete Clear Confirmation',
       appLanguage === 'zh-CN' 
