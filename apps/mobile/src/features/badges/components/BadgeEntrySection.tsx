@@ -82,7 +82,7 @@ export const BadgeEntrySection: React.FC<BadgeEntrySectionProps> = ({
       <View style={styles.header}>
         <Text style={styles.title}>我的徽章</Text>
         <TouchableOpacity style={styles.viewAllButton} onPress={onViewAll}>
-          <Text style={styles.viewAllText}>VIEW ALL {'>>'}</Text>
+          <Text style={styles.viewAllText}>VIEW ALL</Text>
         </TouchableOpacity>
       </View>
 
@@ -134,13 +134,17 @@ const styles = StyleSheet.create({
     color: '#333',
   },
   viewAllButton: {
-    paddingVertical: 4,
-    paddingHorizontal: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    backgroundColor: '#7C3AED',
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   viewAllText: {
     fontSize: 14,
-    color: '#7C3AED',
-    fontWeight: '500',
+    color: '#FFFFFF',
+    fontWeight: '600',
   },
   badgesContainer: {
     flexDirection: 'row',
