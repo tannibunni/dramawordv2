@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 
 // 页面类型定义
-export type ScreenType = 'main' | 'wordCard' | 'login' | 'Subscription' | 'ReviewScreen';
+export type ScreenType = 'main' | 'wordCard' | 'login' | 'Subscription' | 'ReviewScreen' | 'badgeWall';
 
 // 导航参数
 export interface NavigationParams {

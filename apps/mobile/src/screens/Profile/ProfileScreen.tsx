@@ -43,6 +43,7 @@ import DataSyncIndicator from '../../components/common/DataSyncIndicator';
 import { clearDataService } from '../../services/clearDataService';
 import { subscriptionService } from '../../services/subscriptionService';
 import { guestIdService } from '../../services/guestIdService';
+import { BadgeEntrySection, useBadges } from '../../features/badges';
 
 
 
@@ -84,6 +85,9 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   const { user, loginType, isAuthenticated, logout: authLogout, login, updateUser } = useAuth();
   const { appLanguage } = useAppLanguage();
   const userService = UserService.getInstance();
+  
+  // 徽章系统
+  const { badges, userProgress, loading: badgesLoading } = useBadges(user?.id || 'guest');
 
   // 自动打开语言设置
   useEffect(() => {
@@ -1156,6 +1160,10 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
     Alert.alert('账户已注销', '您的账户已成功删除，感谢您使用剧词记！');
   };
 
+  const handleViewAllBadges = () => {
+    navigate('badgeWall');
+  };
+
   const renderSubscriptionEntry = () => {
     // 付费订阅会员不显示订阅板块
     if (subscriptionStatus?.isActive) {
@@ -1257,6 +1265,14 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
         {renderUserInfo()}
         {renderSubscriptionEntry()}
+        {/* 徽章入口区块 */}
+        {!badgesLoading && badges.length > 0 && (
+          <BadgeEntrySection
+            badges={badges}
+            userProgress={userProgress}
+            onViewAll={handleViewAllBadges}
+          />
+        )}
         {/* {renderStats()} 学习统计板块已删除 */}
         {renderSettings()}
       </ScrollView>
