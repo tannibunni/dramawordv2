@@ -466,7 +466,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
           onPress={handleGoToSubscription}
         >
           <View style={styles.settingLeft}>
-            <Ionicons name="diamond" size={24} color="#4CAF50" />
+            <Ionicons name="diamond" size={24} color={colors.primary[500]} />
             <Text style={styles.settingLabel}>{t('manage_subscription', appLanguage)}</Text>
           </View>
           <Ionicons name="chevron-forward" size={20} color={colors.neutral[500]} />
