@@ -10,7 +10,8 @@ export type FeatureType =
   | 'advancedSearch'        // 高级搜索
   | 'learningStats'         // 学习统计
   | 'dataSync'              // 数据同步
-  | 'customSettings';       // 自定义设置
+  | 'customSettings'        // 自定义设置
+  | 'badges';               // 徽章系统
 
 // 功能配置接口
 interface FeatureConfig {
@@ -83,6 +84,13 @@ const FEATURE_CONFIGS: Record<FeatureType, FeatureConfig> = {
     name: 'customSettings',
     displayName: '自定义设置',
     description: '个性化学习设置',
+    requiresSubscription: true,
+    trialAccess: true,
+  },
+  badges: {
+    name: 'badges',
+    displayName: '徽章系统',
+    description: '成就徽章和进度追踪',
     requiresSubscription: true,
     trialAccess: true,
   },

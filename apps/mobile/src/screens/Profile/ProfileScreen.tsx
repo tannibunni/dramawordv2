@@ -44,6 +44,8 @@ import { clearDataService } from '../../services/clearDataService';
 import { subscriptionService } from '../../services/subscriptionService';
 import { guestIdService } from '../../services/guestIdService';
 import { BadgeEntrySection, useBadges } from '../../features/badges';
+import FeatureAccessService from '../../services/featureAccessService';
+import { UpgradeModal } from '../../components/common/UpgradeModal';
 
 
 
@@ -77,6 +79,8 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   const [feedbackModalVisible, setFeedbackModalVisible] = useState(false);
   const [deleteAccountModalVisible, setDeleteAccountModalVisible] = useState(false);
   const [subscriptionStatus, setSubscriptionStatus] = useState<any>(null);
+  const [upgradeModalVisible, setUpgradeModalVisible] = useState(false);
+  const [lockedFeature, setLockedFeature] = useState<string | null>(null);
 
 
   const { vocabulary, clearVocabulary } = useVocabulary();
@@ -1160,7 +1164,16 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
     Alert.alert('账户已注销', '您的账户已成功删除，感谢您使用剧词记！');
   };
 
-  const handleViewAllBadges = () => {
+  const handleViewAllBadges = async () => {
+    console.log('[ProfileScreen] 用户点击VIEW ALL徽章按钮，检查功能权限');
+    const canAccess = await FeatureAccessService.checkAndHandleAccess('badges');
+    if (!canAccess) {
+      console.log('[ProfileScreen] 徽章功能被锁定，显示升级弹窗');
+      setLockedFeature('badges');
+      setUpgradeModalVisible(true);
+      return;
+    }
+    console.log('[ProfileScreen] 徽章功能权限通过，导航到徽章墙');
     navigate('badgeWall');
   };
 
@@ -1314,6 +1327,17 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
       
 
       
+      {/* 升级弹窗 */}
+      <UpgradeModal
+        visible={upgradeModalVisible}
+        onClose={() => setUpgradeModalVisible(false)}
+        feature={lockedFeature as any}
+        onUpgrade={() => {
+          setUpgradeModalVisible(false);
+          navigate('Subscription');
+        }}
+      />
+
       {/* 关于我们弹窗 */}
       <Modal
         visible={aboutModalVisible}
