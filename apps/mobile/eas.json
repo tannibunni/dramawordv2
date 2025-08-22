@@ -10,7 +10,7 @@
       "env": {
         "EXPO_PUBLIC_ENVIRONMENT": "development",
         "EXPO_PUBLIC_IAP_SANDBOX": "true",
-        "EXPO_PUBLIC_API_BASE_URL": "https://dramaword-api.onrender.com"
+        "EXPO_PUBLIC_API_BASE_URL": "https://dramawordv2.onrender.com/api"
       },
       "ios": {
         "resourceClass": "m-medium"
@@ -21,7 +21,7 @@
       "env": {
         "EXPO_PUBLIC_ENVIRONMENT": "staging",
         "EXPO_PUBLIC_IAP_SANDBOX": "true",
-        "EXPO_PUBLIC_API_BASE_URL": "https://dramaword-api.onrender.com"
+        "EXPO_PUBLIC_API_BASE_URL": "https://dramawordv2.onrender.com/api"
       }
     },
     "production": {
@@ -29,7 +29,7 @@
       "env": {
         "EXPO_PUBLIC_ENVIRONMENT": "production",
         "EXPO_PUBLIC_IAP_SANDBOX": "false",
-        "EXPO_PUBLIC_API_BASE_URL": "https://dramaword-api.onrender.com"
+        "EXPO_PUBLIC_API_BASE_URL": "https://dramawordv2.onrender.com/api"
       }
     }
   },
