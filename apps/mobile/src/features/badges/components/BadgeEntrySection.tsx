@@ -8,6 +8,8 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { BadgeDefinition, UserBadgeProgress } from '../types/badge';
+import { useAppLanguage } from '../../../context/AppLanguageContext';
+import { t } from '../../../constants/translations';
 
 const { width: screenWidth } = Dimensions.get('window');
 const badgeSize = (screenWidth - 72) / 3; // 3列布局，左右各24px边距，中间16px间距
@@ -23,6 +25,7 @@ export const BadgeEntrySection: React.FC<BadgeEntrySectionProps> = ({
   userProgress,
   onViewAll,
 }) => {
+  const { appLanguage } = useAppLanguage();
   // 获取最近3个已解锁的徽章，如果没有解锁的，显示前3个徽章
   const unlockedBadges = userProgress
     .filter(p => p.unlocked)
@@ -80,9 +83,9 @@ export const BadgeEntrySection: React.FC<BadgeEntrySectionProps> = ({
     <View style={styles.container}>
       {/* 标题和VIEW ALL按钮 */}
       <View style={styles.header}>
-        <Text style={styles.title}>我的徽章</Text>
+        <Text style={styles.title}>{t('my_badges', appLanguage)}</Text>
         <TouchableOpacity style={styles.viewAllButton} onPress={onViewAll}>
-          <Text style={styles.viewAllText}>VIEW ALL</Text>
+          <Text style={styles.viewAllText}>{t('view_all', appLanguage)}</Text>
         </TouchableOpacity>
       </View>
 
@@ -101,7 +104,7 @@ export const BadgeEntrySection: React.FC<BadgeEntrySectionProps> = ({
         {Array.from({ length: Math.max(0, 3 - recentBadges.length) }).map((_, index) => (
           <View key={`placeholder-${index}`} style={styles.badgeItem}>
             {renderPlaceholder()}
-            <Text style={styles.badgeNamePlaceholder}>未解锁</Text>
+            <Text style={styles.badgeNamePlaceholder}>{t('locked', appLanguage)}</Text>
           </View>
         ))}
       </View>
@@ -134,17 +137,13 @@ const styles = StyleSheet.create({
     color: '#333',
   },
   viewAllButton: {
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    backgroundColor: '#3B82F6',
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
+    paddingVertical: 4,
+    paddingHorizontal: 8,
   },
   viewAllText: {
     fontSize: 14,
-    color: '#FFFFFF',
-    fontWeight: '600',
+    color: '#3B82F6', // 蓝色字体
+    fontWeight: '500',
   },
   badgesContainer: {
     flexDirection: 'row',

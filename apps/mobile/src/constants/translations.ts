@@ -32,6 +32,8 @@ export type TranslationKey =
   | 'random'
   | 'shuffle'
   | 'view_all'
+  | 'my_badges'
+  | 'locked'
   | 'words_count'
   
   // Home页面
@@ -518,6 +520,8 @@ export const translations: Record<AppLanguage, Record<TranslationKey, string>> =
     random: '随机',
     shuffle: 'Shuffle',
     view_all: 'View all',
+    my_badges: '我的徽章',
+    locked: '未解锁',
     words_count: '{count} 词',
     
     // Home页面
@@ -1000,6 +1004,8 @@ export const translations: Record<AppLanguage, Record<TranslationKey, string>> =
     random: 'Random',
     shuffle: 'Shuffle',
     view_all: 'View all',
+    my_badges: 'My Badges',
+    locked: 'Locked',
     words_count: '{count} words',
     
     // Home页面
