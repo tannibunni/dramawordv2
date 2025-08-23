@@ -31,7 +31,7 @@ import paymentRoutes from './routes/payment';
 import recommendationRoutes from './routes/recommendations';
 import iapRoutes from './routes/iap';
 import emailAuthRoutes from './routes/emailAuth';
-import showWordRoutes from './routes/showWordRoutes';
+import showWordRoutes from './routes/showWordRoutes.js';
 import { logger } from './utils/logger';
 import { OpenAI } from 'openai';
 
