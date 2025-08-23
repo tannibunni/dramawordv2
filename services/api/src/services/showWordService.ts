@@ -10,17 +10,22 @@ export class ShowWordService {
    */
   static async getShowsWithWordCount() {
     try {
-      // 聚合查询，统计每个剧集的单词数量
+      console.log('[ShowWordService] 开始获取剧集单词统计');
+      
+      // 聚合查询：按剧集名称分组，统计单词数量
+      // 注意：单词的剧集信息存储在 sourceShow 对象中
       const showsWithWordCount = await CloudWord.aggregate([
         {
           $match: {
-            showName: { $exists: true, $ne: null, $nin: ['', null] }
+            'sourceShow.type': 'show', // 只查询类型为show的剧集
+            'sourceShow.id': { $exists: true, $ne: null }
           }
         },
         {
           $group: {
-            _id: '$showName',
-            showId: { $first: '$showId' },
+            _id: '$sourceShow.id',
+            showId: { $first: '$sourceShow.id' },
+            showName: { $first: '$sourceShow.name' },
             language: { $first: '$language' },
             wordCount: { $sum: 1 },
             // 获取一些示例单词用于展示
@@ -29,8 +34,8 @@ export class ShowWordService {
         },
         {
           $project: {
-            showName: '$_id',
             showId: 1,
+            showName: 1,
             language: 1,
             wordCount: 1,
             sampleWords: { $slice: ['$sampleWords', 3] } // 只取前3个单词作为示例
@@ -41,6 +46,7 @@ export class ShowWordService {
         }
       ]);
 
+      console.log('[ShowWordService] 查询结果:', showsWithWordCount);
       return showsWithWordCount;
     } catch (error) {
       console.error('[ShowWordService] 获取剧集单词统计失败:', error);
@@ -53,11 +59,15 @@ export class ShowWordService {
    */
   static async getShowWords(showId: string) {
     try {
+      console.log(`[ShowWordService] 开始获取剧集 ${showId} 的单词`);
+      
       // 查询指定剧集的所有单词
+      // 注意：单词的剧集ID存储在 sourceShow.id 中
       const words = await CloudWord.find({
-        showId: showId
+        'sourceShow.id': showId
       }).select('word definitions phonetic difficulty tags');
       
+      console.log(`[ShowWordService] 剧集 ${showId} 找到 ${words.length} 个单词`);
       return words;
     } catch (error) {
       console.error('[ShowWordService] 获取剧集单词失败:', error);
