@@ -1470,6 +1470,38 @@ const ShowsScreen: React.FC = () => {
         />
       )}
 
+      {/* 推荐TAB功能入口区域 */}
+      {filter === 'recommendations' && searchResults.length === 0 && searchText.length === 0 && (
+        <View style={styles.recommendationsHeader}>
+          {/* 剧集单词预览功能入口 */}
+          <View style={styles.featureEntrySection}>
+            <View style={styles.featureEntryHeader}>
+              <Ionicons name="book-outline" size={24} color={colors.primary[500]} />
+              <Text style={styles.featureEntryTitle}>剧集单词预览</Text>
+            </View>
+            <Text style={styles.featureEntryDescription}>
+              浏览剧集下的单词，了解学习内容，一键保存到词库
+            </Text>
+            
+            <View style={styles.featureEntryButtons}>
+              <TouchableOpacity
+                style={styles.featureEntryButton}
+                onPress={() => navigate('showWordPreview')}
+                activeOpacity={0.8}
+              >
+                <LinearGradient
+                  colors={[colors.primary[500], colors.primary[600]]}
+                  style={styles.featureButtonGradient}
+                >
+                  <Ionicons name="book-outline" size={20} color="#fff" />
+                  <Text style={styles.featureButtonText}>查看剧集单词</Text>
+                </LinearGradient>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      )}
+
       {/* 推荐内容瀑布流 */}
       {filter === 'recommendations' && searchResults.length === 0 && searchText.length === 0 && (
         <ScrollView 
@@ -2408,6 +2440,95 @@ const styles = StyleSheet.create({
     color: colors.neutral[500],
     marginBottom: 4,
   },
+  // 推荐TAB功能入口样式
+  recommendationsHeader: {
+    paddingHorizontal: 16,
+    paddingVertical: 20,
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
+  },
+  featureEntrySection: {
+    backgroundColor: '#F8F9FA',
+    borderRadius: 16,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: '#E9ECEF',
+  },
+  featureEntryHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  featureEntryTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1A1A1A',
+    marginLeft: 8,
+  },
+  featureEntryDescription: {
+    fontSize: 14,
+    color: '#666666',
+    lineHeight: 20,
+    marginBottom: 20,
+  },
+  featureEntryButtons: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  featureEntryButton: {
+    flex: 1,
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  featureButtonGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+  },
+  featureButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#fff',
+    marginLeft: 6,
+  },
+  featureEntryButtonSecondary: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.primary[500],
+  },
+  featureButtonTextSecondary: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.primary[500],
+    marginLeft: 6,
+  },
+  featureHighlights: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginBottom: 20,
+    paddingHorizontal: 8,
+  },
+  featureHighlight: {
+    alignItems: 'center',
+    flex: 1,
+  },
+  featureHighlightText: {
+    fontSize: 12,
+    color: '#666666',
+    marginTop: 4,
+    textAlign: 'center',
+  },
+
   // 推荐卡片样式 - 小红书紧凑风格
   recommendationCard: {
     backgroundColor: '#fff',

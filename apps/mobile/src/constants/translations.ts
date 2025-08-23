@@ -36,6 +36,21 @@ export type TranslationKey =
   | 'locked'
   | 'words_count'
   
+  // 剧集单词预览
+  | 'show_word_preview'
+  | 'show_word_preview_description'
+  | 'browse_popular_shows'
+  | 'my_show_words'
+  | 'word_statistics'
+  | 'word_package_download'
+  | 'popular_shows'
+  | 'show_words'
+  | 'back_to_list'
+  | 'save_to_vocabulary'
+  | 'saving'
+  | 'total_words_count'
+  | 'no_show_data'
+  
   // Home页面
   | 'recent_searches'
   | 'loading'
@@ -524,6 +539,21 @@ export const translations: Record<AppLanguage, Record<TranslationKey, string>> =
     locked: '未解锁',
     words_count: '{count} 词',
     
+    // 剧集单词预览
+    show_word_preview: '剧集单词预览',
+    show_word_preview_description: '预览剧集下的热门单词，下载单词包进行学习。通过单词预览了解剧集的学习价值，帮助选择适合的剧集观看。',
+    browse_popular_shows: '浏览热门剧集',
+    my_show_words: '我的剧集单词',
+    word_statistics: '单词统计',
+    word_package_download: '单词包下载',
+    popular_shows: '热门剧集',
+    show_words: '剧集单词',
+    back_to_list: '返回剧集列表',
+    save_to_vocabulary: '保存到我的词库',
+    saving: '保存中...',
+    total_words_count: '共 {count} 个单词',
+    no_show_data: '暂无剧集数据',
+    
     // Home页面
     recent_searches: '最近查词',
     loading: '加载中...',
@@ -1007,6 +1037,21 @@ export const translations: Record<AppLanguage, Record<TranslationKey, string>> =
     my_badges: 'My Badges',
     locked: 'Locked',
     words_count: '{count} words',
+    
+    // 剧集单词预览
+    show_word_preview: 'Show Word Preview',
+    show_word_preview_description: 'Preview popular words from shows, download word packages for learning. Understand the learning value of shows through word previews to help choose suitable shows to watch.',
+    browse_popular_shows: 'Browse Popular Shows',
+    my_show_words: 'My Show Words',
+    word_statistics: 'Word Statistics',
+    word_package_download: 'Word Package Download',
+    popular_shows: 'Popular Shows',
+    show_words: 'Show Words',
+    back_to_list: 'Back to List',
+    save_to_vocabulary: 'Save to My Vocabulary',
+    saving: 'Saving...',
+    total_words_count: '{count} words total',
+    no_show_data: 'No show data available',
     
     // Home页面
     recent_searches: 'Recent',
