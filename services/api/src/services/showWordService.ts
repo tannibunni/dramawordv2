@@ -1,7 +1,7 @@
 import { ShowWordPreview, IShowWordPreview } from '../models/ShowWordPreview';
 import { ShowWordPackage, IShowWordPackage } from '../models/ShowWordPackage';
 import { CloudWord } from '../models/CloudWord';
-import { UserShowList } from '../models/UserShowList';
+import UserShowList from '../models/UserShowList';
 
 export class ShowWordService {
   
@@ -14,7 +14,7 @@ export class ShowWordService {
       const showsWithWordCount = await CloudWord.aggregate([
         {
           $match: {
-            showName: { $exists: true, $ne: null, $ne: '' }
+            showName: { $exists: true, $ne: null, $nin: ['', null] }
           }
         },
         {
@@ -97,19 +97,19 @@ export class ShowWordService {
       // 4. 创建预览文档
       const previewData = {
         showId,
-        showName: show.title,
-        originalTitle: show.originalTitle,
-        language: show.language,
-        genre: show.genre || [],
-        year: show.year,
+        showName: show.name,
+        originalTitle: show.original_name || show.name,
+        language: 'en', // 默认英语，因为UserShowList中没有language字段
+        genre: show.genres || [],
+        year: new Date().getFullYear(), // 暂时使用当前年份
         wordStats,
         popularWords,
         showInfo: {
-          posterUrl: show.posterUrl,
-          description: show.description,
-          totalEpisodes: show.totalEpisodes,
+          posterUrl: show.poster_path || '',
+          description: '', // UserShowList中没有description字段
+          totalEpisodes: 0, // UserShowList中没有totalEpisodes字段
           averageEpisodeLength: 22,
-          rating: show.rating
+          rating: show.vote_average || 0
         },
         lastWordAdded: new Date()
       };
