@@ -102,6 +102,22 @@ export class ShowWordService {
       ]);
 
       console.log('[ShowWordService] 聚合查询结果:', showsWithWordCount);
+      
+      // 如果聚合查询返回空结果，尝试最简单的查询
+      if (showsWithWordCount.length === 0) {
+        console.log('[ShowWordService] 聚合查询返回空结果，尝试简单查询...');
+        
+        // 尝试查询所有有sourceShow字段的单词
+        const allWordsWithSourceShow = await CloudWord.find({
+          'sourceShow': { $exists: true }
+        }).limit(5).select('word sourceShow');
+        
+        console.log('[ShowWordService] 简单查询结果:', allWordsWithSourceShow.map(w => ({
+          word: w.word,
+          sourceShow: (w as any).sourceShow
+        })));
+      }
+      
       return showsWithWordCount;
     } catch (error) {
       console.error('[ShowWordService] 获取剧集单词统计失败:', error);

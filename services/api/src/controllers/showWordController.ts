@@ -231,11 +231,18 @@ export class ShowWordController {
    */
   static async getShowsWithWordCount(req: Request, res: Response) {
     try {
+      console.log('[ShowWordController] 开始获取剧集单词统计');
+      
       const shows = await ShowWordService.getShowsWithWordCount();
+      console.log('[ShowWordController] 查询结果:', shows);
       
       res.json({
         success: true,
-        data: shows
+        data: shows,
+        debug: {
+          timestamp: new Date().toISOString(),
+          resultCount: shows.length
+        }
       });
     } catch (error) {
       console.error('[ShowWordController] 获取剧集单词统计失败:', error);
