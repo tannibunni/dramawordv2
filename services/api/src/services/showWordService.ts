@@ -12,13 +12,45 @@ export class ShowWordService {
     try {
       console.log('[ShowWordService] 开始获取剧集单词统计');
       
+      // 首先检查数据库中的单词数量
+      const totalWords = await CloudWord.countDocuments();
+      console.log('[ShowWordService] 数据库总单词数量:', totalWords);
+      
+      // 检查有sourceShow字段的单词数量
+      const wordsWithSourceShow = await CloudWord.countDocuments({
+        'sourceShow': { $exists: true }
+      });
+      console.log('[ShowWordService] 有sourceShow字段的单词数量:', wordsWithSourceShow);
+      
+      // 检查sourceShow.type为'show'的单词数量
+      const wordsWithShowType = await CloudWord.countDocuments({
+        'sourceShow.type': 'show'
+      });
+      console.log('[ShowWordService] sourceShow.type为show的单词数量:', wordsWithShowType);
+      
+      // 检查sourceShow.id存在的单词数量
+      const wordsWithSourceShowId = await CloudWord.countDocuments({
+        'sourceShow.id': { $exists: true }
+      });
+      console.log('[ShowWordService] sourceShow.id存在的单词数量:', wordsWithSourceShowId);
+      
+      // 查看几个示例单词
+      const sampleWords = await CloudWord.find({
+        'sourceShow.type': 'show'
+      }).limit(2).select('word sourceShow');
+      
+      console.log('[ShowWordService] 示例单词:', sampleWords.map(w => ({
+        word: w.word,
+        sourceShow: (w as any).sourceShow
+      })));
+      
       // 聚合查询：按剧集名称分组，统计单词数量
       // 注意：单词的剧集信息存储在 sourceShow 对象中
       const showsWithWordCount = await CloudWord.aggregate([
         {
           $match: {
             'sourceShow.type': 'show', // 只查询类型为show的剧集
-            'sourceShow.id': { $exists: true, $ne: null }
+            'sourceShow.id': { $exists: true, $ne: null, $nin: ['', null] }
           }
         },
         {
@@ -46,7 +78,7 @@ export class ShowWordService {
         }
       ]);
 
-      console.log('[ShowWordService] 查询结果:', showsWithWordCount);
+      console.log('[ShowWordService] 聚合查询结果:', showsWithWordCount);
       return showsWithWordCount;
     } catch (error) {
       console.error('[ShowWordService] 获取剧集单词统计失败:', error);
