@@ -44,7 +44,30 @@ export class ShowWordService {
         sourceShow: (w as any).sourceShow
       })));
       
-      // 聚合查询：按剧集名称分组，统计单词数量
+      // 尝试最简单的查询：只检查sourceShow字段存在
+      console.log('[ShowWordService] 尝试简单查询...');
+      
+      // 方式1: 最简单的查询
+      const simpleQuery = await CloudWord.find({
+        'sourceShow': { $exists: true }
+      }).limit(3).select('word sourceShow');
+      
+      console.log('[ShowWordService] 简单查询结果:', simpleQuery.map(w => ({
+        word: w.word,
+        sourceShow: (w as any).sourceShow
+      })));
+      
+      // 方式2: 检查sourceShow.type
+      const typeQuery = await CloudWord.find({
+        'sourceShow.type': { $exists: true }
+      }).limit(3).select('word sourceShow');
+      
+      console.log('[ShowWordService] 类型查询结果:', typeQuery.map(w => ({
+        word: w.word,
+        sourceShow: (w as any).sourceShow
+      })));
+      
+      // 方式3: 聚合查询：按剧集名称分组，统计单词数量
       // 注意：单词的剧集信息存储在 sourceShow 对象中
       const showsWithWordCount = await CloudWord.aggregate([
         {
