@@ -388,7 +388,88 @@ class IAPService {
     if (!this.isInitialized) {
       await this.initialize();
     }
+    
+    // 尝试从后端同步最新的订阅状态
+    try {
+      await this.syncSubscriptionStatusFromBackend();
+    } catch (error) {
+      console.warn('[IAPService] 从后端同步订阅状态失败，使用本地状态:', error);
+    }
+    
     return this.subscriptionStatus;
+  }
+
+  /**
+   * 从后端同步订阅状态
+   */
+  private async syncSubscriptionStatusFromBackend(): Promise<void> {
+    try {
+      const response = await fetch('https://dramawordv2.onrender.com/api/iap/subscription-status', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${await this.getAuthToken()}`
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && data.subscription) {
+          const backendStatus = data.subscription;
+          
+          // 更新本地订阅状态
+          this.subscriptionStatus = {
+            isActive: backendStatus.isActive,
+            isTrial: backendStatus.isTrial,
+            expiresAt: backendStatus.expiresAt ? new Date(backendStatus.expiresAt) : undefined,
+            trialEndsAt: backendStatus.trialEndsAt ? new Date(backendStatus.trialEndsAt) : undefined,
+            productId: backendStatus.subscriptionType ? this.mapSubscriptionTypeToProductId(backendStatus.subscriptionType) : undefined
+          };
+
+          // 保存到本地存储
+          await this.saveSubscriptionStatus(this.subscriptionStatus);
+          
+          console.log('[IAPService] 从后端同步订阅状态成功:', this.subscriptionStatus);
+        }
+      } else {
+        console.warn('[IAPService] 后端订阅状态查询失败:', response.status);
+      }
+    } catch (error) {
+      console.error('[IAPService] 从后端同步订阅状态异常:', error);
+    }
+  }
+
+  /**
+   * 获取认证token
+   */
+  private async getAuthToken(): Promise<string> {
+    try {
+      const userInfo = await AsyncStorage.getItem('userInfo');
+      if (userInfo) {
+        const parsed = JSON.parse(userInfo);
+        return parsed.token || '';
+      }
+      return '';
+    } catch (error) {
+      console.error('[IAPService] 获取认证token失败:', error);
+      return '';
+    }
+  }
+
+  /**
+   * 将订阅类型映射到产品ID
+   */
+  private mapSubscriptionTypeToProductId(subscriptionType: string): ProductId | undefined {
+    switch (subscriptionType) {
+      case 'monthly':
+        return 'com.tannibunni.dramawordmobile.premium_monthly';
+      case 'yearly':
+        return 'com.tannibunni.dramawordmobile.premium_yearly';
+      case 'quarterly':
+        return 'com.tannibunni.dramawordmobile.premium_quarterly';
+      default:
+        return undefined;
+    }
   }
 
   /**
@@ -666,17 +747,28 @@ class IAPService {
     try {
       console.log('[IAPService] ⚙️ 处理购买:', purchase.productId);
       
-      // 更新订阅状态
-      this.subscriptionStatus = {
-        isActive: true,
-        productId: purchase.productId as ProductId,
-        isTrial: false, // 根据实际情况判断
-      };
-      
-      // 保存到本地存储
-      await this.saveSubscriptionStatus(this.subscriptionStatus);
-      
-      console.log('[IAPService] ✅ 订阅状态已更新');
+      // 验证收据并更新后端订阅状态
+      const isValid = await this.validatePurchaseReceipt(purchase);
+      if (isValid) {
+        console.log('[IAPService] ✅ 收据验证成功，从后端同步订阅状态');
+        
+        // 从后端同步最新的订阅状态
+        await this.syncSubscriptionStatusFromBackend();
+        
+        console.log('[IAPService] ✅ 订阅状态已从后端同步');
+      } else {
+        console.warn('[IAPService] ⚠️ 收据验证失败，使用本地状态');
+        
+        // 如果验证失败，仍然更新本地状态（开发环境）
+        this.subscriptionStatus = {
+          isActive: true,
+          productId: purchase.productId as ProductId,
+          isTrial: false,
+        };
+        
+        // 保存到本地存储
+        await this.saveSubscriptionStatus(this.subscriptionStatus);
+      }
       
     } catch (error) {
       console.error('[IAPService] ❌ 处理购买失败:', error);

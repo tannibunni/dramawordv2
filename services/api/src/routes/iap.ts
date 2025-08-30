@@ -3,6 +3,7 @@ import { Request, Response } from 'express';
 import { authenticateToken } from '../middleware/auth';
 import { logger } from '../utils/logger';
 import axios from 'axios';
+import { User } from '../models/User';
 
 const router = express.Router();
 
@@ -86,17 +87,70 @@ router.post('/validate-receipt', authenticateToken, async (req: Request, res: Re
     const subscriptionInfo = parseSubscriptionInfo(appleResponse);
     
     if (subscriptionInfo) {
-      // TODO: 更新用户订阅状态到数据库
-      logger.info('[IAP] 验证成功，更新用户订阅状态', { 
-        userId, 
-        productId: subscriptionInfo.productId,
-        expiresAt: subscriptionInfo.expiresAt
-      });
-      
-      res.json({
-        success: true,
-        subscription: subscriptionInfo
-      });
+      // 更新用户订阅状态到数据库
+      try {
+        const user = await User.findById(userId);
+        if (!user) {
+          logger.error(`[IAP] 用户不存在: userId=${userId}`);
+          return res.status(404).json({
+            success: false,
+            error: '用户不存在'
+          });
+        }
+
+        // 根据产品ID确定订阅类型
+        let subscriptionType: 'monthly' | 'yearly' | 'lifetime' = 'monthly';
+        if (subscriptionInfo.productId.includes('yearly') || subscriptionInfo.productId.includes('annual')) {
+          subscriptionType = 'yearly';
+        } else if (subscriptionInfo.productId.includes('lifetime')) {
+          subscriptionType = 'lifetime';
+        }
+
+        // 计算过期时间
+        const now = new Date();
+        let expiryDate: Date;
+        
+        if (subscriptionType === 'lifetime') {
+          // 终身订阅设置为100年后过期
+          expiryDate = new Date(now.getTime() + 100 * 365 * 24 * 60 * 60 * 1000);
+        } else {
+          // 使用苹果返回的过期时间
+          expiryDate = subscriptionInfo.expiresAt || new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+        }
+
+        // 更新用户订阅信息
+        user.subscription = {
+          type: subscriptionType,
+          isActive: true,
+          startDate: now,
+          expiryDate: expiryDate,
+          autoRenew: subscriptionType !== 'lifetime'
+        };
+
+        await user.save();
+        
+        logger.info('[IAP] 用户订阅状态更新成功', { 
+          userId, 
+          productId: subscriptionInfo.productId,
+          subscriptionType,
+          expiresAt: expiryDate
+        });
+        
+        res.json({
+          success: true,
+          subscription: {
+            ...subscriptionInfo,
+            subscriptionType,
+            isActive: true
+          }
+        });
+      } catch (error) {
+        logger.error('[IAP] 更新用户订阅状态失败:', error);
+        res.status(500).json({
+          success: false,
+          error: '更新订阅状态失败'
+        });
+      }
     } else {
       res.status(400).json({
         success: false,
@@ -185,16 +239,44 @@ router.get('/subscription-status', authenticateToken, async (req: Request, res: 
   try {
     const userId = req.user?.id;
 
-    // TODO: 从数据库查询用户订阅状态
-    // const subscription = await getUserSubscription(userId);
+    // 从数据库查询用户订阅状态
+    const user = await User.findById(userId);
+    if (!user) {
+      logger.error(`[IAP] 用户不存在: userId=${userId}`);
+      return res.status(404).json({
+        success: false,
+        error: '用户不存在'
+      });
+    }
 
-    // 临时返回模拟数据
+    const now = new Date();
+    const subscription = user.subscription;
+    
+    // 检查订阅是否过期
+    const isExpired = subscription.expiryDate && subscription.expiryDate < now;
+    const isActive = subscription.isActive && !isExpired;
+    
+    // 检查是否在试用期（新用户默认有14天试用期）
+    const isTrial = !isActive && !subscription.isActive;
+    const trialEndsAt = isTrial ? new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000) : undefined;
+
+    logger.info('[IAP] 查询用户订阅状态', { 
+      userId, 
+      isActive, 
+      isTrial, 
+      subscriptionType: subscription.type,
+      expiryDate: subscription.expiryDate
+    });
+
     res.json({
       success: true,
       subscription: {
-        isActive: false,
-        isTrial: true,
-        trialEndsAt: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000)
+        isActive,
+        isTrial,
+        subscriptionType: subscription.type,
+        expiresAt: subscription.expiryDate,
+        trialEndsAt,
+        autoRenew: subscription.autoRenew
       }
     });
 
