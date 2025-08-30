@@ -2,69 +2,71 @@ import { BadgeDefinition, UserBadgeProgress } from '../types/badge';
 import { BadgeRuleEngine, UserBehaviorData } from './badgeRuleEngine';
 import { BadgeEventService } from './badgeEventService';
 import { BadgeDataService } from './badgeDataService';
+import { t } from '../../../constants/translations';
+import { AppLanguage } from '../../../constants/translations';
 
-// 模拟徽章数据（实际应该从服务端获取）
-const BADGE_DEFINITIONS: BadgeDefinition[] = [
+// 获取徽章定义（支持多语言）
+const getBadgeDefinitions = (appLanguage: AppLanguage): BadgeDefinition[] => [
   {
     id: 'collector_10',
-    name: '初级收藏家',
-    description: '收集10个单词',
+    name: t('badge_collector_10', appLanguage),
+    description: t('badge_collect_words', appLanguage, { count: 10 }),
     icon: 'badge_collect_10.png',
     metric: 'words_collected_total',
     target: 10
   },
   {
     id: 'collector_50',
-    name: '中级收藏家',
-    description: '收集50个单词',
+    name: t('badge_collector_50', appLanguage),
+    description: t('badge_collect_words', appLanguage, { count: 50 }),
     icon: 'badge_collect_50.png',
     metric: 'words_collected_total',
     target: 50
   },
   {
     id: 'collector_100',
-    name: '高级收藏家',
-    description: '收集100个单词',
+    name: t('badge_collector_100', appLanguage),
+    description: t('badge_collect_words', appLanguage, { count: 100 }),
     icon: 'badge_collect_100.png',
     metric: 'words_collected_total',
     target: 100
   },
   {
     id: 'reviewer_10',
-    name: '复习达人',
-    description: '完成10次复习',
+    name: t('badge_reviewer_10', appLanguage),
+    description: t('badge_complete_reviews', appLanguage, { count: 10 }),
     icon: 'badge_review_10.png',
     metric: 'review_sessions_completed',
     target: 10
   },
   {
     id: 'streak_7',
-    name: '坚持一周',
-    description: '连续学习7天',
+    name: t('badge_streak_7', appLanguage),
+    description: t('badge_streak_days', appLanguage, { count: 7 }),
     icon: 'badge_streak_7.png',
     metric: 'daily_checkin_streak',
     target: 7
   },
   {
     id: 'streak_30',
-    name: '月度达人',
-    description: '连续学习30天',
+    name: t('badge_streak_30', appLanguage),
+    description: t('badge_streak_days', appLanguage, { count: 30 }),
     icon: 'badge_streak_30.png',
     metric: 'daily_checkin_streak',
     target: 30
   },
   {
     id: 'contributor_5',
-    name: '贡献者',
-    description: '贡献5个词条',
+    name: t('badge_contributor_5', appLanguage),
+    description: t('badge_contribute_words', appLanguage, { count: 5 }),
     icon: 'badge_contributor_5.png',
     metric: 'words_contributed',
     target: 5
   },
   {
     id: 'showlist_3',
-    name: '剧集收藏家',
-    description: '创建3个剧单',
+    name: t('badge_showlist_3', appLanguage),
+    description: t('badge_create_showlists', appLanguage, { count: 3 }),
     icon: 'badge_showlist_3.png',
     metric: 'showlist_created',
     target: 3
@@ -83,22 +85,18 @@ export class BadgeService {
   }
 
   // 获取所有徽章定义
-  async getBadgeDefinitions(): Promise<BadgeDefinition[]> {
+  async getBadgeDefinitions(appLanguage: AppLanguage = 'zh-CN'): Promise<BadgeDefinition[]> {
     try {
-      // 首先尝试从本地存储获取
-      let definitions = await this.badgeDataService.getBadgeDefinitions();
+      // 每次都根据当前语言重新生成徽章定义，确保翻译正确
+      const definitions = getBadgeDefinitions(appLanguage);
       
-      if (definitions.length === 0) {
-        // 如果本地没有，使用默认定义
-        definitions = BADGE_DEFINITIONS;
-        // 保存到本地存储
-        await this.badgeDataService.saveBadgeDefinitions(definitions);
-      }
+      // 保存到本地存储（用于其他用途，但不会影响翻译）
+      await this.badgeDataService.saveBadgeDefinitions(definitions);
       
       return definitions;
     } catch (error) {
       console.error('[BadgeService] 获取徽章定义失败:', error);
-      return BADGE_DEFINITIONS;
+      return getBadgeDefinitions(appLanguage);
     }
   }
 
@@ -112,27 +110,24 @@ export class BadgeService {
       let userBehavior = await this.badgeDataService.getUserBehavior(userId);
       
       if (!userBehavior) {
-        // 如果用户行为数据不存在，创建默认数据
-        userBehavior = {
-          userId,
-          wordsCollected: 0,
-          reviewSessionsCompleted: 0,
-          dailyCheckinStreak: 0,
-          wordsContributed: 0,
-          learningTimeHours: 0,
-          showlistCreated: 0,
-          lastActivityDate: new Date(),
-          dailyStats: [],
-          streakData: []
-        };
-        await this.badgeDataService.saveUserBehavior(userId, userBehavior);
+        // 如果用户行为数据不存在，从实际数据源计算
+        const badgeEventService = (await import('./badgeEventService')).default;
+        userBehavior = await (badgeEventService as any).calculateUserBehaviorFromActualData(userId);
+        if (userBehavior) {
+          await this.badgeDataService.saveUserBehavior(userId, userBehavior);
+          console.log(`[BadgeService] 初始化用户行为数据: ${userId}`, {
+            wordsCollected: userBehavior.wordsCollected,
+            reviewSessionsCompleted: userBehavior.reviewSessionsCompleted
+          });
+        }
       }
       
       // 使用规则引擎评估徽章状态
-      const unlockResults = await this.badgeRuleEngine.evaluateUserBadges(userId, userBehavior);
+      if (userBehavior) {
+        const unlockResults = await this.badgeRuleEngine.evaluateUserBadges(userId, userBehavior);
       
-      // 确保所有徽章都有进度记录，未解锁的显示为锁定状态
-      const progress: UserBadgeProgress[] = badgeDefinitions.map(badge => {
+        // 确保所有徽章都有进度记录，未解锁的显示为锁定状态
+        const progress: UserBadgeProgress[] = badgeDefinitions.map(badge => {
         const existingProgress = unlockResults.find(result => result.badgeId === badge.id);
         
         if (existingProgress) {
@@ -155,12 +150,23 @@ export class BadgeService {
             unlockedAt: undefined
           };
         }
-      });
-      
-      // 保存进度到本地存储
-      await this.badgeDataService.batchUpdateBadgeProgress(userId, unlockResults);
-      
-      return progress;
+        });
+        
+        // 保存进度到本地存储
+        await this.badgeDataService.batchUpdateBadgeProgress(userId, unlockResults);
+        
+        return progress;
+      } else {
+        // 如果无法获取用户行为数据，返回默认的锁定状态
+        return badgeDefinitions.map(badge => ({
+          userId,
+          badgeId: badge.id,
+          unlocked: false,
+          progress: 0,
+          target: badge.target,
+          unlockedAt: undefined
+        }));
+      }
     } catch (error) {
       console.error('[BadgeService] 获取用户徽章进度失败:', error);
       // 返回空数组作为fallback

@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { BadgeDefinition, UserBadgeProgress } from '../types/badge';
+import { getBadgeImageSource } from '../utils/badgeImageUtils';
 
 const { width: screenWidth } = Dimensions.get('window');
 const cardSize = (screenWidth - 48) / 3; // 3列布局，左右各24px边距
@@ -28,10 +29,11 @@ export const BadgeCard: React.FC<BadgeCardProps> = ({
 
   const getBadgeIcon = () => {
     if (isUnlocked) {
-      // 已解锁：显示彩色图标（这里使用占位符，实际应该显示真实徽章图片）
+      // 已解锁：显示真实徽章图片
+      const imageSource = getBadgeImageSource(badge.id);
       return (
         <View style={[styles.badgeIcon, styles.unlockedIcon]}>
-          <Ionicons name="trophy" size={32} color="#FFD700" />
+          <Image source={imageSource} style={styles.badgeImage} resizeMode="contain" />
         </View>
       );
     } else {
@@ -43,6 +45,8 @@ export const BadgeCard: React.FC<BadgeCardProps> = ({
       );
     }
   };
+
+
 
   return (
     <TouchableOpacity
@@ -78,21 +82,19 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   badgeIcon: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
+    width: 100,
+    height: 100,
+    borderRadius: 50,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 8,
+    marginBottom: 15,
   },
   unlockedIcon: {
-    backgroundColor: '#F0F8FF',
-    borderWidth: 2,
-    borderColor: '#FFD700',
+    // 移除背景颜色和边框
   },
   lockedIcon: {
     backgroundColor: '#F5F5F5',
-    borderWidth: 2,
+    borderWidth: 1,
     borderColor: '#E0E0E0',
   },
   badgeName: {
@@ -112,5 +114,9 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 255, 255, 0.9)',
     borderRadius: 10,
     padding: 4,
+  },
+  badgeImage: {
+    width: 140,
+    height: 140,
   },
 });

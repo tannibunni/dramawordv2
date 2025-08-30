@@ -302,8 +302,10 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
   // 测试登录功能 - 从 ProfileScreen 同步过来
   // 生成简洁的游客ID
   const generateGuestId = () => {
-    const guestNumber = Math.floor(Math.random() * 999) + 1;
-    return `Guest${guestNumber}`;
+    // 使用时间戳 + 随机数确保唯一性
+    const timestamp = Date.now().toString().slice(-6); // 取时间戳后6位
+    const randomNum = Math.floor(Math.random() * 999) + 1;
+    return `Guest${timestamp}${randomNum}`;
   };
 
   const generatePrettyGuestNickname = (idSeed: string) => {
@@ -360,7 +362,21 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
       if (!response.ok) {
         const errorText = await response.text();
         console.error('❌ 注册失败:', response.status, errorText);
-        throw new Error(`注册失败: ${response.status} - ${errorText}`);
+        
+        // 如果是用户名已存在的错误，尝试登录
+        if (response.status === 400 && errorText.includes('用户名已存在')) {
+          console.log('🔄 用户名已存在，尝试登录现有用户');
+          if (loginType === 'guest') {
+            // 对于游客，直接尝试登录
+            await testLoginWithExistingId(loginType, shortId);
+            return;
+          } else {
+            // 对于其他类型，显示错误信息
+            throw new Error(`注册失败: ${response.status} - ${errorText}`);
+          }
+        } else {
+          throw new Error(`注册失败: ${response.status} - ${errorText}`);
+        }
       }
       
       const result = await response.json();

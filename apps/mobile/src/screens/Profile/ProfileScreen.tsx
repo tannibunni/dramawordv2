@@ -127,7 +127,9 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
     console.log('🔍 getUserAvatar 调试信息:', {
       user: user,
       loginType: loginType,
-      isAuthenticated: isAuthenticated
+      isAuthenticated: isAuthenticated,
+      hasUserAvatar: !!(user?.avatar && user.avatar !== ''),
+      userAvatarUrl: user?.avatar
     });
 
     // 如果用户有自定义头像，优先使用
@@ -139,7 +141,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
 
     if (!user || !loginType) {
       // 返回本地默认游客头像
-      console.log('🔍 使用默认游客头像');
+      console.log('🔍 使用默认游客头像 - 原因: 无用户或无登录类型');
       return require('../../../assets/images/guest-avatar.png');
     }
 
@@ -157,7 +159,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
       case 'guest':
       default:
         // 返回本地默认游客头像
-        console.log('🔍 使用游客头像');
+        console.log('🔍 使用游客头像 - 原因: 登录类型为', loginType);
         return require('../../../assets/images/guest-avatar.png');
     }
   };
@@ -392,8 +394,8 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
             {isGuest && (
               <Text style={styles.guestReminder}>
                 {appLanguage === 'zh-CN' 
-                  ? '注册账号可保存词汇数据、同步学习进度、获得更多功能' 
-                  : 'Register to save vocabulary data, sync learning progress, and unlock more features'
+                  ? '注册即可同步进度，解锁更多功能' 
+                  : 'Sign up to sync progress & unlock features'
                 }
               </Text>
             )}
@@ -416,11 +418,12 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                </TouchableOpacity>
               ) : (
               <TouchableOpacity 
-                style={[styles.userActionButton, styles.logoutButton]} 
+                style={styles.loginButton} 
                 onPress={authLogout}
+                activeOpacity={0.8}
               >
-                <Ionicons name="log-out-outline" size={18} color={colors.text.inverse} />
-                <Text style={styles.userActionButtonText}>{t('logout', appLanguage)}</Text>
+                <Ionicons name="log-out-outline" size={16} color={colors.primary[600]} />
+                <Text style={styles.loginButtonText}>{t('logout', appLanguage)}</Text>
               </TouchableOpacity>
             )}
           </View>

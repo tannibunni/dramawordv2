@@ -104,6 +104,13 @@ const MainContent: React.FC<MainLayoutProps> = ({ initialTab = 'search' }) => {
 
   const handleLoginSuccess = async (userData: any) => {
     try {
+      // 确保 loginType 存在且正确
+      if (!userData.loginType) {
+        console.error('❌ 用户数据中缺少 loginType:', userData);
+        throw new Error('用户数据中缺少登录类型信息');
+      }
+      
+      console.log('🔐 使用登录类型:', userData.loginType);
       // 调用AuthContext的login方法更新认证状态
       await login(userData, userData.loginType);
       console.log('✅ AuthContext登录状态已更新');

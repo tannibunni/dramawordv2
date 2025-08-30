@@ -81,7 +81,7 @@ const WordList: React.FC<WordListProps> = ({
         onPress={() => onWordPress?.(item)}
       >
         <View style={styles.wordCardHeader}>
-          <Text style={styles.wordText}>{item.word}</Text>
+          <Text style={styles.wordText}>{item.correctedWord || item.word}</Text>
           {item.phonetic && <Text style={styles.phoneticText}>{item.phonetic}</Text>}
         </View>
         <Text style={styles.wordTranslation}>

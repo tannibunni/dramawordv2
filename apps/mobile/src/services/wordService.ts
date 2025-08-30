@@ -223,8 +223,13 @@ export class WordService {
   // 获取最近查词记录（支持本地/云端）
   async getRecentWords(): Promise<RecentWord[]> {
     const token = await getUserToken();
-    if (!token) {
-      // 游客：本地获取
+    const userInfo = await AsyncStorage.getItem('userInfo');
+    
+    // 检查是否为游客模式（有token但没有userInfo）
+    const isGuestMode = token && !userInfo;
+    
+    if (!token || isGuestMode) {
+      // 游客或无token：本地获取
       try {
         const local = await AsyncStorage.getItem(SEARCH_HISTORY_KEY);
         if (local) {
@@ -242,13 +247,28 @@ export class WordService {
         return [];
       }
     }
-    // 登录用户：云端
+    
+    // 登录用户：云端获取
     try {
-      const response = await fetch(`${API_BASE_URL}/words/recent-searches`, {
+      // 确保有用户ID
+      if (!userInfo) {
+        throw new Error('No user info available');
+      }
+      
+      const parsedUserInfo = JSON.parse(userInfo);
+      const userId = parsedUserInfo.id;
+      
+      if (!userId) {
+        throw new Error('No user ID available');
+      }
+      
+      const response = await fetch(`${API_BASE_URL}/words/recent-searches?userId=${userId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
+      
       if (!response.ok) throw new WordServiceError(`获取最近查词失败: ${response.status}`, response.status);
       const result = await response.json();
+      
       if (result.success && result.data) {
         return result.data.map((word: any, index: number) => ({
           id: `recent-${index}`,

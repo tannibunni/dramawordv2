@@ -82,7 +82,7 @@ export class BadgeDataService {
           ...behavior,
           lastActivityDate: new Date(behavior.lastActivityDate),
           dailyStats: behavior.dailyStats || [],
-          streakData: behavior.streakData.map((item: any) => ({
+          streakData: (behavior.streakData || []).map((item: any) => ({
             ...item,
             lastBreakDate: new Date(item.lastBreakDate)
           }))

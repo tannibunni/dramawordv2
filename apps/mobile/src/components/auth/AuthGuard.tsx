@@ -95,7 +95,15 @@ export const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
   const handleLoginSuccess = async (userData: any) => {
     try {
       console.log('🔐 AuthGuard 处理登录成功:', userData);
-      await login(userData, userData.loginType || 'apple');
+      
+      // 确保 loginType 存在且正确
+      if (!userData.loginType) {
+        console.error('❌ 用户数据中缺少 loginType:', userData);
+        throw new Error('用户数据中缺少登录类型信息');
+      }
+      
+      console.log('🔐 使用登录类型:', userData.loginType);
+      await login(userData, userData.loginType);
       setShowLogin(false);
       setHasValidToken(true);
       

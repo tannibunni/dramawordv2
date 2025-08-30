@@ -36,6 +36,42 @@ export type TranslationKey =
   | 'locked'
   | 'words_count'
   
+  // 徽章系统
+  | 'badge_loading'
+  | 'badge_unlocked_count'
+  | 'badge_unlocked'
+  | 'badge_locked'
+  | 'badge_unlock_message'
+  | 'badge_collector_10'
+  | 'badge_collector_50'
+  | 'badge_collector_100'
+  | 'badge_reviewer_10'
+  | 'badge_streak_7'
+  | 'badge_streak_30'
+  | 'badge_contributor_5'
+  | 'badge_showlist_3'
+  | 'badge_collect_words'
+  | 'badge_complete_reviews'
+  | 'badge_streak_days'
+  | 'badge_contribute_words'
+  | 'badge_create_showlists'
+  | 'badge_dev_unlock_all'
+  | 'badge_dev_reset'
+  | 'badge_dev_confirm_unlock'
+  | 'badge_dev_confirm_reset'
+  | 'badge_dev_success_unlock'
+  | 'badge_dev_success_reset'
+  | 'badge_dev_error'
+  
+  // 推荐标签
+  | 'tag_drama'
+  | 'tag_suspense'
+  | 'tag_mystery'
+  | 'tag_easy'
+  | 'tag_beginner'
+  | 'tag_complex'
+  | 'tag_mind_bending'
+  
   // 剧集单词预览
   | 'show_word_preview'
   | 'show_word_preview_description'
@@ -539,6 +575,41 @@ export const translations: Record<AppLanguage, Record<TranslationKey, string>> =
     locked: '未解锁',
     words_count: '{count} 词',
     
+    // 徽章系统
+    badge_loading: '加载徽章中...',
+    badge_unlocked_count: '已解锁 {unlocked} / {total}',
+    badge_unlocked: '已解锁',
+    badge_locked: '未解锁',
+    badge_collector_10: '初级收藏家',
+    badge_collector_50: '中级收藏家',
+    badge_collector_100: '高级收藏家',
+    badge_reviewer_10: '复习达人',
+    badge_streak_7: '坚持一周',
+    badge_streak_30: '月度达人',
+    badge_contributor_5: '贡献者',
+    badge_showlist_3: '剧集收藏家',
+    badge_collect_words: '收集{count}个单词',
+    badge_complete_reviews: '完成{count}次复习',
+    badge_streak_days: '连续学习{count}天',
+    badge_contribute_words: '贡献{count}个词条',
+    badge_create_showlists: '创建{count}个剧单',
+    badge_dev_unlock_all: '解锁所有徽章',
+    badge_dev_reset: '重置徽章',
+    badge_dev_confirm_unlock: '确定要解锁所有徽章进行测试吗？',
+    badge_dev_confirm_reset: '确定要重置所有徽章吗？',
+    badge_dev_success_unlock: '所有徽章已解锁！',
+    badge_dev_success_reset: '所有徽章已重置！',
+    badge_dev_error: '操作失败',
+    
+    // 推荐标签
+    tag_drama: '剧情',
+    tag_suspense: '悬疑',
+    tag_mystery: '推理',
+    tag_easy: '轻松',
+    tag_beginner: '入门',
+    tag_complex: '复杂',
+    tag_mind_bending: '烧脑',
+    
     // 剧集单词预览
     show_word_preview: '剧集单词预览',
     show_word_preview_description: '预览剧集下的热门单词，下载单词包进行学习。通过单词预览了解剧集的学习价值，帮助选择适合的剧集观看。',
@@ -808,7 +879,7 @@ export const translations: Record<AppLanguage, Record<TranslationKey, string>> =
     keep_current_language: '保持当前语言',
     target_language: '目标语言',
     chinese_to_target: '中文转{target}',
-    badge_unlocked: '恭喜解锁 {count} 个单词徽章！',
+    badge_unlock_message: '恭喜解锁 {count} 个单词徽章！',
     show_answer: '显示答案',
     examples: '例句：',
     learning_record: '学习记录',
@@ -1037,6 +1108,41 @@ export const translations: Record<AppLanguage, Record<TranslationKey, string>> =
     my_badges: 'My Badges',
     locked: 'Locked',
     words_count: '{count} words',
+    
+    // 徽章系统
+    badge_loading: 'Loading badges...',
+    badge_unlocked_count: 'Unlocked {unlocked} / {total}',
+    badge_unlocked: 'Unlocked',
+    badge_locked: 'Locked',
+    badge_collector_10: 'Junior Collector',
+    badge_collector_50: 'Intermediate Collector',
+    badge_collector_100: 'Senior Collector',
+    badge_reviewer_10: 'Review Master',
+    badge_streak_7: '7-Day Streak',
+    badge_streak_30: 'Monthly Master',
+    badge_contributor_5: 'Contributor',
+    badge_showlist_3: 'Show List Collector',
+    badge_collect_words: 'Collect {count} words',
+    badge_complete_reviews: 'Complete {count} reviews',
+    badge_streak_days: 'Learn for {count} consecutive days',
+    badge_contribute_words: 'Contribute {count} entries',
+    badge_create_showlists: 'Create {count} show lists',
+    badge_dev_unlock_all: 'Unlock All Badges',
+    badge_dev_reset: 'Reset Badges',
+    badge_dev_confirm_unlock: 'Are you sure you want to unlock all badges for testing?',
+    badge_dev_confirm_reset: 'Are you sure you want to reset all badges?',
+    badge_dev_success_unlock: 'All badges unlocked!',
+    badge_dev_success_reset: 'All badges reset!',
+    badge_dev_error: 'Operation failed',
+    
+    // 推荐标签
+    tag_drama: 'Drama',
+    tag_suspense: 'Suspense',
+    tag_mystery: 'Mystery',
+    tag_easy: 'Easy',
+    tag_beginner: 'Beginner',
+    tag_complex: 'Complex',
+    tag_mind_bending: 'Mind-bending',
     
     // 剧集单词预览
     show_word_preview: 'Show Word Preview',
@@ -1307,7 +1413,7 @@ export const translations: Record<AppLanguage, Record<TranslationKey, string>> =
     keep_current_language: 'Keep Current',
     target_language: 'Target Language',
     chinese_to_target: 'Chinese to {target}',
-    badge_unlocked: 'Congratulations! Unlocked {count} word badge!',
+    badge_unlock_message: 'Congratulations! Unlocked {count} word badge!',
     show_answer: 'Show Answer',
     examples: 'Examples:',
     learning_record: 'Learning Record',

@@ -5,11 +5,13 @@ import {
   StyleSheet,
   TouchableOpacity,
   Dimensions,
+  Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { BadgeDefinition, UserBadgeProgress } from '../types/badge';
 import { useAppLanguage } from '../../../context/AppLanguageContext';
 import { t } from '../../../constants/translations';
+import { getBadgeImageSource } from '../utils/badgeImageUtils';
 
 const { width: screenWidth } = Dimensions.get('window');
 const badgeSize = (screenWidth - 72) / 3; // 3列布局，左右各24px边距，中间16px间距
@@ -57,9 +59,11 @@ export const BadgeEntrySection: React.FC<BadgeEntrySectionProps> = ({
 
   const renderBadgeIcon = (badge: BadgeDefinition, progress: UserBadgeProgress) => {
     if (progress.unlocked) {
+      // 已解锁：显示真实徽章图片
+      const imageSource = getBadgeImageSource(badge.id);
       return (
         <View style={styles.badgeIcon}>
-          <Ionicons name="trophy" size={24} color="#FFD700" />
+          <Image source={imageSource} style={styles.badgeImage} resizeMode="contain" />
         </View>
       );
     } else {
@@ -151,12 +155,9 @@ const styles = StyleSheet.create({
     width: badgeSize,
   },
   badgeIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: '#F0F8FF',
-    borderWidth: 2,
-    borderColor: '#FFD700',
+    width: 60,
+    height: 60,
+    borderRadius: 30,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 8,
@@ -184,5 +185,9 @@ const styles = StyleSheet.create({
     color: '#999',
     textAlign: 'center',
     lineHeight: 16,
+  },
+  badgeImage: {
+    width: 56,
+    height: 56,
   },
 });

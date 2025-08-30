@@ -257,6 +257,23 @@ export const VocabularyProvider = ({ children }: { children: ReactNode }) => {
       //   console.log(`[VocabularyContext] 收藏单词后更新统计信息: ${newVocabularyLength}`);
       // }, 100); // 延迟100ms确保状态更新完成
 
+      // 触发徽章事件
+      (async () => {
+        const userId = await getUserId();
+        if (userId) {
+          try {
+            const badgeService = (await import('../features/badges/services/badgeService')).default;
+            await badgeService.triggerBadgeEvent('word_collected', userId, {
+              word: word.word,
+              sourceShow: sourceShow?.name || '默认词库'
+            });
+            console.log(`[VocabularyContext] 触发徽章事件: word_collected for ${word.word}`);
+          } catch (error) {
+            console.error('[VocabularyContext] 触发徽章事件失败:', error);
+          }
+        }
+      })();
+
       // vocabularyLogger.info(`添加新单词: ${newWord.word}, 来源剧集: ${sourceShow?.name}, 来源ID: ${sourceShow?.id}`); // Removed as per new_code
       // vocabularyLogger.info('新单词完整数据', newWord); // Removed as per new_code
       return [...prev, newWord];

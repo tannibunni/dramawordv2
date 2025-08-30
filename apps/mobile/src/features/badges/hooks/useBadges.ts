@@ -1,16 +1,18 @@
 import { useState, useEffect } from 'react';
 import { BadgeDefinition, UserBadgeProgress } from '../types/badge';
 import badgeService from '../services/badgeService';
+import { useAppLanguage } from '../../../context/AppLanguageContext';
 
 export const useBadges = (userId: string = 'user123') => {
   const [badges, setBadges] = useState<BadgeDefinition[]>([]);
   const [userProgress, setUserProgress] = useState<UserBadgeProgress[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { appLanguage } = useAppLanguage();
 
   useEffect(() => {
     loadBadgeData();
-  }, [userId]);
+  }, [userId, appLanguage]);
 
   const loadBadgeData = async () => {
     try {
@@ -18,7 +20,7 @@ export const useBadges = (userId: string = 'user123') => {
       setError(null);
       
       const [badgeDefinitions, progressData] = await Promise.all([
-        badgeService.getBadgeDefinitions(),
+        badgeService.getBadgeDefinitions(appLanguage),
         badgeService.getUserBadgeProgress(userId),
       ]);
       

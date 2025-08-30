@@ -493,10 +493,23 @@ export const getPopularWords = async (req: Request, res: Response) => {
 // 获取最近搜索 - 从搜索历史表获取
 export const getRecentSearches = async (req: Request, res: Response) => {
   try {
-    logger.info('📝 Getting recent searches from search history');
+    const userId = req.user?.id || req.query.userId;
+    
+    if (!userId) {
+      // 如果没有用户ID，返回空数组
+      logger.info('📝 No user ID provided, returning empty recent searches');
+      return res.json({
+        success: true,
+        data: []
+      });
+    }
+    
+    logger.info(`📝 Getting recent searches for user: ${userId}`);
     
     // 使用聚合管道进行去重，每个单词只保留最新的一条记录
     const recentSearches = await SearchHistory.aggregate([
+      // 首先按用户ID过滤
+      { $match: { userId: userId } },
       // 按单词分组，获取每个单词的最新记录
       {
         $sort: { timestamp: -1 }
@@ -542,6 +555,7 @@ export const getRecentSearches = async (req: Request, res: Response) => {
 export const saveSearchHistory = async (req: Request, res: Response): Promise<void> => {
   try {
     const { word, definition, timestamp } = req.body;
+    const userId = req.user?.id || req.body.userId;
     
     if (!word) {
       res.status(400).json({
@@ -550,15 +564,24 @@ export const saveSearchHistory = async (req: Request, res: Response): Promise<vo
       });
       return;
     }
+    
+    if (!userId) {
+      res.status(400).json({
+        success: false,
+        error: 'User ID is required'
+      });
+      return;
+    }
 
     const searchHistory = new SearchHistory({
       word: word.toLowerCase().trim(),
       definition: definition || '暂无释义',
-      timestamp: timestamp || Date.now()
+      timestamp: timestamp || Date.now(),
+      userId: userId // 添加用户ID
     });
     
     await searchHistory.save();
-    logger.info(`💾 Saved search history: ${word}`);
+    logger.info(`💾 Saved search history: ${word} for user: ${userId}`);
     
     res.json({
       success: true,

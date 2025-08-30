@@ -102,6 +102,36 @@ const VocabularyScreen: React.FC = () => {
     };
   }, []);
 
+  // 数据一致性验证
+  useEffect(() => {
+    if (selectedWord && selectedWordDetail) {
+      // 验证数据一致性
+      const isConsistent = selectedWord.word === selectedWordDetail.word;
+      if (!isConsistent) {
+        console.warn('⚠️ 数据不一致警告:', {
+          selectedWord: selectedWord.word,
+          selectedWordDetail: selectedWordDetail.word
+        });
+      } else {
+        console.log('✅ 数据一致性验证通过:', selectedWord.word);
+      }
+      
+      // 添加更详细的调试信息
+      console.log('🔍 数据一致性详情:', {
+        selectedWord: {
+          word: selectedWord.word,
+          definitions: selectedWord.definitions?.length || 0,
+          sourceShow: selectedWord.sourceShow
+        },
+        selectedWordDetail: {
+          word: selectedWordDetail.word,
+          definitions: selectedWordDetail.definitions?.length || 0,
+          sourceShow: selectedWordDetail.sourceShow
+        }
+      });
+    }
+  }, [selectedWord, selectedWordDetail]);
+
   // 新增：加载徽章数据
   useEffect(() => {
     loadBadgesFromStorage();
@@ -171,7 +201,10 @@ const VocabularyScreen: React.FC = () => {
         return acc;
       }, []);
       
-      const preview = uniqueWords.filter(w => (w.word || '').trim().toLowerCase().includes(searchKey));
+      const preview = uniqueWords.filter(w => 
+        (w.word || '').trim().toLowerCase().includes(searchKey) ||
+        (w.correctedWord || '').trim().toLowerCase().includes(searchKey)
+      );
       setPreviewList(preview.slice(0, 5));
     } else {
       setPreviewList([]);
@@ -180,12 +213,30 @@ const VocabularyScreen: React.FC = () => {
 
   // 搜索和过滤时也统一小写和trim
   const filterWords = () => {
-    // 去重处理：按单词文本去重，保留第一个出现的实例
+    // 改进的去重逻辑：只对完全相同的单词进行去重，避免错误合并包含关系的单词
     const uniqueWords = vocabulary.reduce((acc: any[], current) => {
       const normalizedCurrentWord = (current.word || '').trim().toLowerCase();
-      const exists = acc.find(item => (item.word || '').trim().toLowerCase() === normalizedCurrentWord);
-      if (!exists) {
+      
+      // 检查是否已存在完全相同的单词（精确匹配）
+      const existingIndex = acc.findIndex(item => {
+        const existingWord = (item.word || '').trim().toLowerCase();
+        return existingWord === normalizedCurrentWord;
+      });
+      
+      if (existingIndex === -1) {
+        // 新单词，直接添加
         acc.push(current);
+      } else {
+        // 已存在完全相同的单词，比较信息完整性，保留更完整的
+        const existing = acc[existingIndex];
+        const currentScore = getWordCompletenessScore(current);
+        const existingScore = getWordCompletenessScore(existing);
+        
+        if (currentScore > existingScore) {
+          // 当前单词信息更完整，替换
+          acc[existingIndex] = current;
+          console.log(`🔄 替换单词 "${existing.word}" 为 "${current.word}" (信息更完整)`);
+        }
       }
       return acc;
     }, []);
@@ -233,10 +284,14 @@ const VocabularyScreen: React.FC = () => {
       const searchKey = (searchText || '').trim().toLowerCase();
       filtered = filtered.filter(word =>
         (word.word || '').trim().toLowerCase().includes(searchKey) ||
+        (word.correctedWord || '').trim().toLowerCase().includes(searchKey) ||
         (word.definitions?.[0]?.definition || '').toLowerCase().includes(searchKey)
       );
     }
 
+    console.log(`🔍 去重后单词数量: ${uniqueWords.length}`);
+    console.log(`🔍 去重后的单词列表:`, uniqueWords.map(w => w.word));
+    
     setFilteredWords(filtered);
   };
 
@@ -288,6 +343,24 @@ const VocabularyScreen: React.FC = () => {
       .filter(Boolean);
   };
 
+  // 计算单词信息完整性的辅助函数
+  const getWordCompletenessScore = (word: any): number => {
+    let score = 0;
+    
+    // 基础信息
+    if (word.word) score += 10;
+    if (word.definitions && Array.isArray(word.definitions)) score += word.definitions.length * 5;
+    if (word.phonetic) score += 3;
+    if (word.language) score += 2;
+    if (word.sourceShow) score += 3;
+    if (word.mastery !== undefined) score += 2;
+    if (word.reviewCount !== undefined) score += 2;
+    if (word.notes) score += 1;
+    if (word.tags && Array.isArray(word.tags)) score += word.tags.length;
+    
+    return score;
+  };
+
   // 获取用户ID
   const getUserId = async (): Promise<string | null> => {
     try {
@@ -305,31 +378,61 @@ const VocabularyScreen: React.FC = () => {
 
   // 1. 点击单词卡后，优先显示本地内容，若无释义则查云词库
   const handleWordPress = async (word: any) => {
-    setSelectedWord(word);
-    console.log('🔍 点击单词:', word.word);
+    // 确保使用列表中的完整单词对象
+    const selectedWordFromList = word;
+    setSelectedWord(selectedWordFromList);
+    
+    console.log('🔍 点击单词:', selectedWordFromList.word);
+    console.log('🔍 单词完整对象:', selectedWordFromList);
     console.log('🔍 单词数据结构:', {
-      hasDefinitions: !!word.definitions,
-      isArray: Array.isArray(word.definitions),
-      length: word.definitions?.length,
-      definitions: word.definitions
+      hasDefinitions: !!selectedWordFromList.definitions,
+      isArray: Array.isArray(selectedWordFromList.definitions),
+      length: selectedWordFromList.definitions?.length,
+      definitions: selectedWordFromList.definitions
     });
     
-    if (word.definitions && Array.isArray(word.definitions) && word.definitions.length > 0) {
+    if (selectedWordFromList.definitions && 
+        Array.isArray(selectedWordFromList.definitions) && 
+        selectedWordFromList.definitions.length > 0) {
       console.log('✅ 使用本地释义数据');
-      setSelectedWordDetail(word);
+      // 直接使用列表中的单词对象，确保数据一致
+      setSelectedWordDetail(selectedWordFromList);
       setIsLoadingWordDetail(false);
     } else {
       console.log('🔄 本地无释义数据，查询云词库');
       setIsLoadingWordDetail(true);
+      
       try {
-        const result = await wordService.searchWord(word.word, 'en', appLanguage);
+        const result = await wordService.searchWord(selectedWordFromList.word, 'en', appLanguage);
         console.log('🌐 云词库查询结果:', result);
-        setSelectedWordDetail(result.success ? result.data : null);
+        
+        if (result.success && result.data) {
+          // 将云词库数据与本地单词对象合并，而不是完全替换
+          const mergedWordData = {
+            ...selectedWordFromList, // 保留本地所有信息
+            ...result.data, // 云词库数据覆盖本地数据
+            // 确保关键字段不被覆盖
+            sourceShow: selectedWordFromList.sourceShow,
+            language: selectedWordFromList.language || result.data.language,
+            mastery: selectedWordFromList.mastery,
+            reviewCount: selectedWordFromList.reviewCount,
+            notes: selectedWordFromList.notes,
+            // tags: selectedWordFromList.tags || result.data.tags // 暂时移除，WordData接口中没有tags属性
+          };
+          
+          console.log('🔗 合并后的单词数据:', mergedWordData);
+          setSelectedWordDetail(mergedWordData);
+        } else {
+          // 云词库查询失败，仍然使用本地数据
+          setSelectedWordDetail(selectedWordFromList);
+        }
       } catch (e) {
         console.error('❌ 云词库查询失败:', e);
-        setSelectedWordDetail(null);
+        // 查询失败时使用本地数据
+        setSelectedWordDetail(selectedWordFromList);
+      } finally {
+        setIsLoadingWordDetail(false);
       }
-      setIsLoadingWordDetail(false);
     }
   };
 
@@ -337,9 +440,16 @@ const VocabularyScreen: React.FC = () => {
   const handleSearchSubmit = () => {
     setIsEditing(false);
     const searchKey = (searchText || '').trim().toLowerCase();
-    const found = vocabulary.find(w => (w.word || '').trim().toLowerCase() === searchKey);
+    // 使用 filteredWords 而不是 vocabulary，确保与列表显示一致
+    const found = filteredWords.find(w => 
+      (w.word || '').trim().toLowerCase() === searchKey ||
+      (w.correctedWord || '').trim().toLowerCase() === searchKey
+    );
     if (found) {
-      setSelectedWord(found);
+      // 直接调用 handleWordPress 确保数据一致性
+      handleWordPress(found);
+      // 设置搜索文本为 correctedWord，确保显示一致性
+      setSearchText(found.correctedWord || found.word);
     } else {
       Alert.alert(t('word_not_found', appLanguage), t('check_spelling_or_search', appLanguage));
     }
@@ -585,9 +695,14 @@ const VocabularyScreen: React.FC = () => {
                 <TouchableOpacity
                   key={item.word}
                   style={styles.previewItem}
-                  onPress={() => { setSelectedWord(item); setSearchText(item.word); setIsEditing(false); }}
+                              onPress={() => { 
+              // 直接调用 handleWordPress 确保数据一致性
+              handleWordPress(item); 
+              setSearchText(item.correctedWord || item.word); 
+              setIsEditing(false); 
+            }}
                 >
-                  <Text style={styles.previewWord}>{item.word}</Text>
+                  <Text style={styles.previewWord}>{item.correctedWord || item.word}</Text>
                   <Text style={styles.previewTranslation}>{item.definitions?.[0]?.definition || t('no_definition', appLanguage)}</Text>
                 </TouchableOpacity>
               ))}
@@ -601,7 +716,13 @@ const VocabularyScreen: React.FC = () => {
               ) : selectedWordDetail ? (
                 <WordCardContent 
                   wordData={selectedWordDetail} 
-                  onProgressUpdate={(progressData) => handleUpdateWordProgress(selectedWord, progressData)}
+                  onProgressUpdate={(progressData) => {
+                    // 确保使用正确的单词对象进行进度更新
+                    const wordToUpdate = selectedWord || selectedWordDetail;
+                    if (wordToUpdate) {
+                      handleUpdateWordProgress(wordToUpdate, progressData);
+                    }
+                  }}
                 />
               ) : (
                 <View style={{padding:32}}>

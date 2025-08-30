@@ -215,24 +215,83 @@ export class BadgeEventService {
       return this.userBehaviorCache.get(userId)!;
     }
 
-    // 从数据库或本地存储获取用户行为数据
-    // 这里应该实现真实的数据获取逻辑
-    const behavior: UserBehaviorData = {
-      userId,
-      wordsCollected: 0,
-      reviewSessionsCompleted: 0,
-      dailyCheckinStreak: 0,
-      wordsContributed: 0,
-      learningTimeHours: 0,
-      showlistCreated: 0,
-      lastActivityDate: new Date(),
-      dailyStats: [],
-      streakData: []
-    };
+    // 从BadgeDataService获取用户行为数据
+    const badgeDataService = (await import('./badgeDataService')).default;
+    let behavior = await badgeDataService.getUserBehavior(userId);
+    
+    if (!behavior) {
+      // 如果用户行为数据不存在，从实际数据源计算
+      behavior = await this.calculateUserBehaviorFromActualData(userId);
+      // 保存计算出的行为数据
+      await badgeDataService.saveUserBehavior(userId, behavior);
+    }
 
     // 缓存数据
     this.userBehaviorCache.set(userId, behavior);
     return behavior;
+  }
+
+  // 从实际数据源计算用户行为数据
+  private async calculateUserBehaviorFromActualData(userId: string): Promise<UserBehaviorData> {
+    const AsyncStorage = (await import('@react-native-async-storage/async-storage')).default;
+    
+    try {
+      // 从词汇表数据计算收藏的单词数量
+      const vocabularyData = await AsyncStorage.getItem('user_vocabulary');
+      let wordsCollected = 0;
+      
+      if (vocabularyData) {
+        const vocabulary = JSON.parse(vocabularyData);
+        wordsCollected = vocabulary.length;
+      }
+
+      // 从学习数据计算复习次数
+      const learningData = await AsyncStorage.getItem('learning_records');
+      let reviewSessionsCompleted = 0;
+      
+      if (learningData) {
+        const records = JSON.parse(learningData);
+        // 计算不同日期的复习会话数
+        const uniqueDates = new Set(records.map((r: any) => r.date));
+        reviewSessionsCompleted = uniqueDates.size;
+      }
+
+      const behavior: UserBehaviorData = {
+        userId,
+        wordsCollected,
+        reviewSessionsCompleted,
+        dailyCheckinStreak: 0, // 需要从签到数据计算
+        wordsContributed: 0, // 需要从贡献数据计算
+        learningTimeHours: 0, // 需要从学习时间数据计算
+        showlistCreated: 0, // 需要从剧单数据计算
+        lastActivityDate: new Date(),
+        dailyStats: [],
+        streakData: []
+      };
+
+      console.log(`[BadgeEventService] 计算用户行为数据: ${userId}`, {
+        wordsCollected,
+        reviewSessionsCompleted
+      });
+
+      return behavior;
+    } catch (error) {
+      console.error(`[BadgeEventService] 计算用户行为数据失败:`, error);
+      
+      // 返回默认数据
+      return {
+        userId,
+        wordsCollected: 0,
+        reviewSessionsCompleted: 0,
+        dailyCheckinStreak: 0,
+        wordsContributed: 0,
+        learningTimeHours: 0,
+        showlistCreated: 0,
+        lastActivityDate: new Date(),
+        dailyStats: [],
+        streakData: []
+      };
+    }
   }
 
   // 更新每日统计
@@ -353,9 +412,13 @@ export class BadgeEventService {
 
   // 保存用户行为数据
   private async saveUserBehavior(userId: string, behavior: UserBehaviorData) {
-    // 这里应该实现数据保存逻辑
-    // 保存到数据库或本地存储
-    console.log(`💾 [BadgeEventService] 保存用户行为数据:`, { userId, behavior });
+    try {
+      const badgeDataService = (await import('./badgeDataService')).default;
+      await badgeDataService.saveUserBehavior(userId, behavior);
+      console.log(`💾 [BadgeEventService] 保存用户行为数据成功:`, { userId, wordsCollected: behavior.wordsCollected });
+    } catch (error) {
+      console.error(`💾 [BadgeEventService] 保存用户行为数据失败:`, error);
+    }
   }
 
   // 手动触发徽章检查（用于测试或手动同步）

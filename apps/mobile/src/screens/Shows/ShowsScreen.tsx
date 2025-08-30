@@ -1219,14 +1219,14 @@ const ShowsScreen: React.FC = () => {
   const renderRecommendationCard = ({ item }: { item: RecommendationCard }) => {
     // 根据难度生成类型标签
     const getTags = (difficulty: string) => {
-      const baseTags = ['剧情'];
+      const baseTags = [t('tag_drama', appLanguage)];
       switch (difficulty) {
         case 'easy':
-          return [...baseTags, '轻松', '入门'];
+          return [...baseTags, t('tag_easy', appLanguage), t('tag_beginner', appLanguage)];
         case 'medium':
-          return [...baseTags, '悬疑', '推理'];
+          return [...baseTags, t('tag_suspense', appLanguage), t('tag_mystery', appLanguage)];
         case 'hard':
-          return [...baseTags, '复杂', '烧脑'];
+          return [...baseTags, t('tag_complex', appLanguage), t('tag_mind_bending', appLanguage)];
         default:
           return baseTags;
       }
@@ -1471,7 +1471,8 @@ const ShowsScreen: React.FC = () => {
       )}
 
       {/* 推荐TAB功能入口区域 */}
-      {filter === 'recommendations' && searchResults.length === 0 && searchText.length === 0 && (
+      {/* 剧集单词预览功能入口 - 暂时隐藏，后期开发 */}
+      {false && filter === 'recommendations' && searchResults.length === 0 && searchText.length === 0 && (
         <View style={styles.recommendationsHeader}>
           {/* 剧集单词预览功能入口 */}
           <View style={styles.featureEntrySection}>
@@ -1633,17 +1634,17 @@ const ShowsScreen: React.FC = () => {
               {/* 类型标签 */}
               <View style={styles.recommendationDetailTags}>
                 {(() => {
-                  const baseTags = ['剧情'];
+                  const baseTags = [t('tag_drama', appLanguage)];
                   let tags = baseTags;
                   switch (selectedRecommendation.recommendation.difficulty) {
                     case 'easy':
-                      tags = [...baseTags, '轻松', '入门'];
+                      tags = [...baseTags, t('tag_easy', appLanguage), t('tag_beginner', appLanguage)];
                       break;
                     case 'medium':
-                      tags = [...baseTags, '悬疑', '推理'];
+                      tags = [...baseTags, t('tag_suspense', appLanguage), t('tag_mystery', appLanguage)];
                       break;
                     case 'hard':
-                      tags = [...baseTags, '复杂', '烧脑'];
+                      tags = [...baseTags, t('tag_complex', appLanguage), t('tag_mind_bending', appLanguage)];
                       break;
                   }
                   return tags.map((tag, index) => (

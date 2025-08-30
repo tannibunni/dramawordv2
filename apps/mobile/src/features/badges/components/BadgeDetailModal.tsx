@@ -7,9 +7,13 @@ import {
   TouchableOpacity,
   Dimensions,
   SafeAreaView,
+  Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { BadgeDetailModalProps } from '../types/badge';
+import { getBadgeImageSource } from '../utils/badgeImageUtils';
+import { useAppLanguage } from '../../../context/AppLanguageContext';
+import { t } from '../../../constants/translations';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
@@ -22,6 +26,17 @@ export const BadgeDetailModal: React.FC<BadgeDetailModalProps> = ({
   if (!badge) return null;
 
   const isUnlocked = userProgress?.unlocked || false;
+  const { appLanguage } = useAppLanguage();
+
+  // 获取徽章图片
+  const getBadgeImage = () => {
+    const imageSource = getBadgeImageSource(badge.id);
+    return (
+      <Image source={imageSource} style={styles.badgeDetailImage} resizeMode="contain" />
+    );
+  };
+
+
 
   return (
     <Modal
@@ -41,7 +56,7 @@ export const BadgeDetailModal: React.FC<BadgeDetailModalProps> = ({
           <View style={styles.badgeImageContainer}>
             {isUnlocked ? (
               <View style={[styles.badgeImage, styles.unlockedBadgeImage]}>
-                <Ionicons name="trophy" size={80} color="#FFD700" />
+                {getBadgeImage()}
               </View>
             ) : (
               <View style={[styles.badgeImage, styles.lockedBadgeImage]}>
@@ -65,12 +80,12 @@ export const BadgeDetailModal: React.FC<BadgeDetailModalProps> = ({
             {isUnlocked ? (
               <View style={styles.unlockedStatus}>
                 <Ionicons name="checkmark-circle" size={20} color="#4CAF50" />
-                <Text style={styles.unlockedText}>已解锁</Text>
+                <Text style={styles.unlockedText}>{t('badge_unlocked', appLanguage)}</Text>
               </View>
             ) : (
               <View style={styles.lockedStatus}>
                 <Ionicons name="lock-closed" size={20} color="#999" />
-                <Text style={styles.lockedText}>未解锁</Text>
+                <Text style={styles.lockedText}>{t('badge_locked', appLanguage)}</Text>
               </View>
             )}
           </View>
@@ -108,24 +123,25 @@ const styles = StyleSheet.create({
     zIndex: 1,
   },
   badgeImageContainer: {
-    marginBottom: 24,
+    marginBottom: 110,
     marginTop: 16,
   },
   badgeImage: {
     width: 120,
     height: 120,
-    borderRadius: 60,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 4,
   },
   unlockedBadgeImage: {
-    backgroundColor: '#F0F8FF',
-    borderColor: '#FFD700',
+    // 移除背景颜色和边框
   },
   lockedBadgeImage: {
     backgroundColor: '#F5F5F5',
     borderColor: '#E0E0E0',
+  },
+  badgeDetailImage: {
+    width: 400,
+    height: 400,
   },
   badgeTitle: {
     fontSize: 24,
