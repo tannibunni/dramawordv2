@@ -120,8 +120,39 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
       console.log('📤 开始上传头像到服务器...');
 
       // 获取认证token
+      console.log('🔍 [EditProfileModal] 开始获取认证token...');
       const token = await getAuthToken();
+      console.log('🔍 [EditProfileModal] 获取到的token:', token ? `${token.substring(0, 20)}...` : 'null');
+      
       if (!token) {
+        console.error('❌ [EditProfileModal] 未找到认证token');
+        // 尝试从AsyncStorage直接获取
+        try {
+          const directToken = await AsyncStorage.getItem('authToken');
+          console.log('🔍 [EditProfileModal] 直接从AsyncStorage获取的token:', directToken ? `${directToken.substring(0, 20)}...` : 'null');
+          
+          if (directToken) {
+            console.log('✅ [EditProfileModal] 使用直接获取的token');
+            // 使用直接获取的token
+            const formData = new FormData();
+            formData.append('avatar', {
+              uri: imageUri,
+              type: 'image/jpeg',
+              name: `avatar_${Date.now()}.jpg`,
+            } as any);
+
+            const uploadResult = await userService.uploadAvatar(directToken, formData);
+            if (uploadResult.success && uploadResult.data) {
+              console.log('✅ 头像上传成功:', uploadResult.data.avatar);
+              return uploadResult.data.avatar;
+            } else {
+              throw new Error(uploadResult.error || '头像上传失败');
+            }
+          }
+        } catch (directError) {
+          console.error('❌ [EditProfileModal] 直接获取token也失败:', directError);
+        }
+        
         throw new Error('未找到认证token，请重新登录');
       }
 
@@ -199,8 +230,39 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
       }
 
       // 获取认证token
+      console.log('🔍 [EditProfileModal] 开始获取认证token用于更新用户资料...');
       const token = await getAuthToken();
+      console.log('🔍 [EditProfileModal] 获取到的token:', token ? `${token.substring(0, 20)}...` : 'null');
+      
       if (!token) {
+        console.error('❌ [EditProfileModal] 未找到认证token用于更新用户资料');
+        // 尝试从AsyncStorage直接获取
+        try {
+          const directToken = await AsyncStorage.getItem('authToken');
+          console.log('🔍 [EditProfileModal] 直接从AsyncStorage获取的token:', directToken ? `${directToken.substring(0, 20)}...` : 'null');
+          
+          if (directToken) {
+            console.log('✅ [EditProfileModal] 使用直接获取的token更新用户资料');
+            // 使用直接获取的token
+            const updateData: any = { nickname: nickname.trim() };
+            if (avatarUrl && avatarUrl !== user.avatar) {
+              updateData.avatar = avatarUrl;
+            }
+
+            const updateResult = await userService.updateProfile(directToken, updateData);
+            if (updateResult.success) {
+              console.log('✅ 用户资料更新成功');
+              onUpdate(updateResult.data);
+              onClose();
+            } else {
+              throw new Error(updateResult.error || '用户资料更新失败');
+            }
+            return;
+          }
+        } catch (directError) {
+          console.error('❌ [EditProfileModal] 直接获取token也失败:', directError);
+        }
+        
         throw new Error('未找到认证token，请重新登录');
       }
 

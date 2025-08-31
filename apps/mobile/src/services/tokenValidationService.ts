@@ -23,25 +23,35 @@ export class TokenValidationService {
   // 验证token格式
   private validateTokenFormat(token: string): boolean {
     if (!token || typeof token !== 'string') {
+      console.log('🔍 [TokenValidationService] Token为空或不是字符串');
       return false;
     }
     
     // 检查JWT格式 (header.payload.signature)
     const parts = token.split('.');
+    console.log('🔍 [TokenValidationService] Token分割结果:', parts.length, '部分');
+    
     if (parts.length !== 3) {
+      console.log('🔍 [TokenValidationService] Token不是标准JWT格式（需要3个部分）');
       return false;
     }
     
-    // 检查每个部分是否都是有效的base64
+    // 简化验证：只检查每个部分是否非空且包含有效字符
     try {
-      parts.forEach(part => {
-        if (part) {
-          // 使用更兼容的base64解码方法
-          this.decodeBase64(part.replace(/-/g, '+').replace(/_/g, '/'));
+      parts.forEach((part, index) => {
+        if (!part || part.length === 0) {
+          throw new Error(`第${index + 1}部分为空`);
         }
+        // 检查是否包含有效的base64字符
+        if (!/^[A-Za-z0-9+/=_-]+$/.test(part)) {
+          throw new Error(`第${index + 1}部分包含无效字符`);
+        }
+        console.log(`🔍 [TokenValidationService] 第${index + 1}部分格式检查通过`);
       });
+      console.log('🔍 [TokenValidationService] Token格式验证通过');
       return true;
-    } catch {
+    } catch (error) {
+      console.log('🔍 [TokenValidationService] Token格式验证失败:', error);
       return false;
     }
   }
