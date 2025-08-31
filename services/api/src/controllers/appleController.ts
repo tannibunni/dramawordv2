@@ -98,6 +98,14 @@ export class AppleController {
           updateData.email = normalizedEmail;
           logger.info(`🍎 绑定邮箱为Apple邮箱: ${normalizedEmail}`);
         }
+
+        // 重要：保护用户已上传的头像，不要被重置
+        // 苹果登录时不提供头像，如果用户之前上传过头像，应该保留
+        if (user.avatar) {
+          logger.info(`🍎 保留用户已上传的头像: ${user.avatar}`);
+        } else {
+          logger.info(`🍎 用户暂无头像，保持为null`);
+        }
         
         user = await User.findByIdAndUpdate(
           user._id,
