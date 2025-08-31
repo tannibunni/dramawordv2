@@ -404,16 +404,28 @@ class IAPService {
    */
   private async syncSubscriptionStatusFromBackend(): Promise<void> {
     try {
+      const token = await this.getAuthToken();
+      console.log('[IAPService] 获取到的token:', token ? `${token.substring(0, 20)}...` : 'null');
+      
+      if (!token) {
+        console.warn('[IAPService] 没有认证token，跳过后端同步');
+        return;
+      }
+
       const response = await fetch('https://dramawordv2.onrender.com/api/iap/subscription-status', {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${await this.getAuthToken()}`
+          'Authorization': `Bearer ${token}`
         }
       });
 
+      console.log('[IAPService] 后端响应状态:', response.status);
+
       if (response.ok) {
         const data = await response.json();
+        console.log('[IAPService] 后端返回数据:', data);
+        
         if (data.success && data.subscription) {
           const backendStatus = data.subscription;
           
@@ -429,10 +441,13 @@ class IAPService {
           // 保存到本地存储
           await this.saveSubscriptionStatus(this.subscriptionStatus);
           
-          console.log('[IAPService] 从后端同步订阅状态成功:', this.subscriptionStatus);
+          console.log('[IAPService] ✅ 从后端同步订阅状态成功:', this.subscriptionStatus);
+        } else {
+          console.warn('[IAPService] 后端返回数据格式不正确:', data);
         }
       } else {
-        console.warn('[IAPService] 后端订阅状态查询失败:', response.status);
+        const errorText = await response.text();
+        console.warn('[IAPService] 后端订阅状态查询失败:', response.status, errorText);
       }
     } catch (error) {
       console.error('[IAPService] 从后端同步订阅状态异常:', error);
@@ -772,6 +787,24 @@ class IAPService {
       
     } catch (error) {
       console.error('[IAPService] ❌ 处理购买失败:', error);
+    }
+  }
+
+  /**
+   * 强制刷新订阅状态（用于支付成功后）
+   */
+  public async forceRefreshSubscriptionStatus(): Promise<SubscriptionStatus> {
+    try {
+      console.log('[IAPService] 🔄 强制刷新订阅状态...');
+      
+      // 从后端同步最新的订阅状态
+      await this.syncSubscriptionStatusFromBackend();
+      
+      console.log('[IAPService] ✅ 强制刷新完成:', this.subscriptionStatus);
+      return this.subscriptionStatus;
+    } catch (error) {
+      console.error('[IAPService] ❌ 强制刷新订阅状态失败:', error);
+      return this.subscriptionStatus;
     }
   }
 

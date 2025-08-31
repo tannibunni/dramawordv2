@@ -75,8 +75,10 @@ class SubscriptionService {
       const result = await iapService.purchaseProduct(productId);
       
       if (result.success) {
-        // 更新本地状态
-        this.currentStatus = await iapService.checkSubscriptionStatus();
+        console.log('[SubscriptionService] 购买成功，强制刷新订阅状态...');
+        
+        // 强制刷新订阅状态以确保获取最新的后端状态
+        this.currentStatus = await iapService.forceRefreshSubscriptionStatus();
         
         // 通知所有回调
         this.notifyStateChange(this.currentStatus);
@@ -84,7 +86,7 @@ class SubscriptionService {
         // 保存订阅记录
         await this.saveSubscriptionRecord(result);
         
-        console.log('[SubscriptionService] 订阅成功:', result);
+        console.log('[SubscriptionService] ✅ 订阅成功，状态已更新:', this.currentStatus);
       }
 
       return result;

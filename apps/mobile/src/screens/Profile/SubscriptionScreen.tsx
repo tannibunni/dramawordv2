@@ -491,16 +491,24 @@ const SubscriptionScreen = () => {
       const result = await subscriptionService.subscribeToPlan(selectedPlanFromTabs.id);
       
       if (result.success) {
+        // 支付成功后，强制刷新订阅状态
+        console.log('[SubscriptionScreen] 支付成功，刷新订阅状态...');
+        const updatedStatus = await subscriptionService.checkSubscriptionStatus();
+        setSubscriptionStatus(updatedStatus);
+        
         Alert.alert(
           t('subscription_success', appLanguage).split('！')[0] + '！',
           t('subscription_success', appLanguage),
           [
             { 
               text: t('ok', appLanguage), 
-            onPress: () => navigate('main', { tab: 'profile' })
-          }
-        ]
-      );
+              onPress: () => {
+                console.log('[SubscriptionScreen] 返回Profile页面，当前状态:', updatedStatus);
+                navigate('main', { tab: 'profile' });
+              }
+            }
+          ]
+        );
       } else {
         Alert.alert(
           t('subscription_failed', appLanguage).split('，')[0],
@@ -509,6 +517,7 @@ const SubscriptionScreen = () => {
         );
       }
     } catch (error) {
+      console.error('[SubscriptionScreen] 订阅失败:', error);
       Alert.alert(
         t('subscription_failed', appLanguage).split('，')[0],
         t('subscription_failed', appLanguage),
