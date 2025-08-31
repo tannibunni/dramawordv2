@@ -639,7 +639,7 @@ export class UserController {
     }
   }
 
-  // 上传头像
+  // 上传头像 - 改进版本
   static async uploadAvatar(req: Request, res: Response) {
     try {
       const userId = (req as any).user.id;
@@ -651,6 +651,19 @@ export class UserController {
           message: '请选择要上传的头像文件'
         });
       }
+
+      // 获取用户当前头像信息
+      const currentUser = await User.findById(userId);
+      if (!currentUser) {
+        return res.status(404).json({
+          success: false,
+          message: '用户不存在'
+        });
+      }
+
+      // 处理头像文件
+      const { processAvatarFile, cleanupOldAvatar } = await import('../middleware/avatarUpload');
+      await processAvatarFile(file.path);
 
       // 生成头像URL - 使用工具函数获取正确的base URL
       const baseUrl = getApiBaseUrl();
@@ -670,7 +683,14 @@ export class UserController {
         });
       }
 
-      logger.info(`用户头像上传成功: ${user.username}`);
+      // 清理旧头像文件（异步执行，不阻塞响应）
+      if (currentUser.avatar && currentUser.avatar !== avatarUrl) {
+        cleanupOldAvatar(currentUser.avatar).catch(err => 
+          logger.warn('清理旧头像文件失败:', err)
+        );
+      }
+
+      logger.info(`用户头像上传成功: ${user.username}, 文件大小: ${(file.size / 1024).toFixed(2)}KB`);
 
       // 确保返回的头像URL使用正确的生产环境地址
       const normalizedAvatarUrl = normalizeAvatarUrl(user.avatar);

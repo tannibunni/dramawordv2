@@ -2,7 +2,7 @@ import express from 'express';
 import { UserController } from '../controllers/userController';
 import { authenticateToken } from '../middleware/auth';
 import { validateRequest } from '../middleware/validateRequest';
-import { uploadAvatar } from '../middleware/upload';
+import { uploadAvatar } from '../middleware/avatarUpload';
 import { UserShowListController } from '../controllers/userShowListController';
 import { SyncController } from '../controllers/syncController';
 
