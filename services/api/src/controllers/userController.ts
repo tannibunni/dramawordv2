@@ -1,4 +1,6 @@
 import { Request, Response } from 'express';
+import path from 'path';
+import fs from 'fs';
 import { User, IUser } from '../models/User';
 import { UserLearningRecord } from '../models/UserLearningRecord';
 import UserVocabulary from '../models/UserVocabulary';
@@ -661,13 +663,15 @@ export class UserController {
         });
       }
 
-      // 处理头像文件
+      // 处理头像文件（压缩和优化）
       const { processAvatarFile, cleanupOldAvatar } = await import('../middleware/avatarUpload');
-      await processAvatarFile(file.path);
+      const processedFilePath = await processAvatarFile(file.path);
 
       // 生成头像URL - 使用工具函数获取正确的base URL
       const baseUrl = getApiBaseUrl();
-      const avatarUrl = `${baseUrl}/uploads/avatars/${file.filename}`;
+      // 注意：压缩后的文件扩展名会变成.webp
+      const processedFilename = path.basename(processedFilePath);
+      const avatarUrl = `${baseUrl}/uploads/avatars/${processedFilename}`;
 
       // 更新用户头像
       const user = await User.findByIdAndUpdate(
@@ -690,7 +694,13 @@ export class UserController {
         );
       }
 
-      logger.info(`用户头像上传成功: ${user.username}, 文件大小: ${(file.size / 1024).toFixed(2)}KB`);
+      // 获取压缩后的文件大小
+      const processedStats = fs.statSync(processedFilePath);
+      const originalSizeKB = (file.size / 1024).toFixed(2);
+      const compressedSizeKB = (processedStats.size / 1024).toFixed(2);
+      const compressionRatio = ((file.size - processedStats.size) / file.size * 100).toFixed(1);
+      
+      logger.info(`用户头像上传成功: ${user.username}, 原始大小: ${originalSizeKB}KB, 压缩后: ${compressedSizeKB}KB, 压缩率: ${compressionRatio}%`);
 
       // 确保返回的头像URL使用正确的生产环境地址
       const normalizedAvatarUrl = normalizeAvatarUrl(user.avatar);

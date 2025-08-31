@@ -2,6 +2,8 @@ import multer from 'multer';
 import path from 'path';
 import { Request } from 'express';
 import fs from 'fs';
+import sharp from 'sharp';
+import { logger } from '../utils/logger';
 
 // 配置存储 - 改进版本
 const storage = multer.diskStorage({
@@ -23,7 +25,7 @@ const storage = multer.diskStorage({
     // 只允许图片扩展名
     const allowedExts = ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
     if (!allowedExts.includes(ext)) {
-      return cb(new Error('不支持的文件格式'), '');
+      return cb(new Error('不支持的文件格式，请上传 JPG、PNG、GIF 或 WebP 格式的图片'), '');
     }
     
     cb(null, `avatar-${userId}-${timestamp}-${random}${ext}`);
@@ -59,7 +61,7 @@ export const uploadAvatar = multer({
   }
 });
 
-// 头像处理工具函数
+// 头像处理工具函数 - 带图片压缩
 export const processAvatarFile = async (filePath: string): Promise<string> => {
   try {
     // 检查文件是否存在
@@ -67,21 +69,75 @@ export const processAvatarFile = async (filePath: string): Promise<string> => {
       throw new Error('头像文件不存在');
     }
     
-    // 获取文件信息
-    const stats = fs.statSync(filePath);
-    const fileSizeInMB = stats.size / (1024 * 1024);
+    // 获取原始文件信息
+    const originalStats = fs.statSync(filePath);
+    const originalSizeInMB = originalStats.size / (1024 * 1024);
     
-    // 如果文件超过1MB，记录警告
-    if (fileSizeInMB > 1) {
-      console.warn(`⚠️ 头像文件较大: ${fileSizeInMB.toFixed(2)}MB`);
-    }
+    logger.info(`[AvatarUpload] 开始处理头像文件: ${filePath}, 原始大小: ${originalSizeInMB.toFixed(2)}MB`);
     
-    // 这里可以添加图片压缩逻辑
-    // 目前先返回原文件路径
-    return filePath;
+    // 使用Sharp处理图片
+    const processedImage = sharp(filePath);
+    
+    // 获取图片元数据
+    const metadata = await processedImage.metadata();
+    logger.info(`[AvatarUpload] 图片元数据: ${metadata.width}x${metadata.height}, 格式: ${metadata.format}`);
+    
+    // 图片压缩和优化配置
+    const compressionConfig = {
+      // 调整尺寸：最大200x200像素
+      width: Math.min(metadata.width || 200, 200),
+      height: Math.min(metadata.height || 200, 200),
+      // 保持宽高比
+      fit: 'cover' as const,
+      // 居中裁剪
+      position: 'center' as const,
+      // 输出格式：WebP（更好的压缩率）
+      format: 'webp' as const,
+      // 质量设置
+      quality: 85,
+      // 优化选项
+      options: {
+        effort: 6, // 压缩努力程度 (0-6, 6为最高质量)
+        lossless: false, // 允许有损压缩以获得更好的压缩率
+      }
+    };
+    
+    // 生成压缩后的文件路径
+    const compressedFilePath = filePath.replace(/\.[^/.]+$/, '_compressed.webp');
+    
+    // 执行图片压缩
+    await processedImage
+      .resize(compressionConfig.width, compressionConfig.height, {
+        fit: compressionConfig.fit,
+        position: compressionConfig.position
+      })
+      .webp({
+        quality: compressionConfig.quality,
+        effort: compressionConfig.options.effort,
+        lossless: compressionConfig.options.lossless
+      })
+      .toFile(compressedFilePath);
+    
+    // 获取压缩后的文件信息
+    const compressedStats = fs.statSync(compressedFilePath);
+    const compressedSizeInMB = compressedStats.size / (1024 * 1024);
+    const compressionRatio = ((originalStats.size - compressedStats.size) / originalStats.size * 100).toFixed(1);
+    
+    logger.info(`[AvatarUpload] 图片压缩完成: ${compressedSizeInMB.toFixed(2)}MB, 压缩率: ${compressionRatio}%`);
+    
+    // 删除原始文件，保留压缩后的文件
+    fs.unlinkSync(filePath);
+    
+    // 重命名压缩后的文件为原文件名（但保持.webp扩展名）
+    const finalFilePath = filePath.replace(/\.[^/.]+$/, '.webp');
+    fs.renameSync(compressedFilePath, finalFilePath);
+    
+    logger.info(`[AvatarUpload] 头像文件处理完成: ${finalFilePath}`);
+    
+    return finalFilePath;
     
   } catch (error) {
-    console.error('头像文件处理失败:', error);
+    logger.error('[AvatarUpload] 头像文件处理失败:', error);
     throw error;
   }
 };
@@ -98,10 +154,12 @@ export const cleanupOldAvatar = async (oldAvatarUrl: string): Promise<void> => {
     // 删除旧文件
     if (fs.existsSync(filePath)) {
       fs.unlinkSync(filePath);
-      console.log(`🗑️ 已删除旧头像文件: ${filename}`);
+      logger.info(`[AvatarUpload] 已删除旧头像文件: ${filename}`);
+    } else {
+      logger.warn(`[AvatarUpload] 旧头像文件不存在: ${filename}`);
     }
   } catch (error) {
-    console.error('清理旧头像文件失败:', error);
+    logger.error('[AvatarUpload] 清理旧头像文件失败:', error);
     // 不抛出错误，避免影响主流程
   }
 };
