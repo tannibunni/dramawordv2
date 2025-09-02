@@ -48,6 +48,7 @@ import { BadgeEntrySection, useBadges } from '../../features/badges';
 import FeatureAccessService from '../../services/featureAccessService';
 import { UpgradeModal } from '../../components/common/UpgradeModal';
 import { AppleCrossDeviceSyncService } from '../../services/appleCrossDeviceSyncService';
+import { NewDeviceSyncModal } from '../../components/profile/NewDeviceSyncModal';
 
 
 
@@ -85,6 +86,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   const [upgradeModalVisible, setUpgradeModalVisible] = useState(false);
   const [lockedFeature, setLockedFeature] = useState<string | null>(null);
   const [crossDeviceSyncStatus, setCrossDeviceSyncStatus] = useState<any>(null);
+  const [newDeviceSyncModalVisible, setNewDeviceSyncModalVisible] = useState(false);
 
 
   const { vocabulary, clearVocabulary } = useVocabulary();
@@ -1079,23 +1081,30 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
     try {
       console.log('🍎 用户点击跨设备同步...');
       
-      const crossDeviceService = AppleCrossDeviceSyncService.getInstance();
-      const success = await crossDeviceService.manualSync();
-      
-      if (success) {
-        // 更新同步状态
-        setCrossDeviceSyncStatus(crossDeviceService.getSyncStatus());
-        Alert.alert(
-          '同步成功',
-          '您的数据已成功同步到云端，其他设备可以获取最新数据。',
-          [{ text: '好的' }]
-        );
+      // 检查用户是否是Apple登录
+      if (loginType === 'apple') {
+        // 显示新设备同步模态框
+        setNewDeviceSyncModalVisible(true);
       } else {
-        Alert.alert(
-          '同步失败',
-          '跨设备同步失败，请检查网络连接后重试。',
-          [{ text: '重试', onPress: handleCrossDeviceSync }, { text: '取消' }]
-        );
+        // 如果没有Apple ID，使用原有的跨设备同步逻辑
+        const crossDeviceService = AppleCrossDeviceSyncService.getInstance();
+        const success = await crossDeviceService.manualSync();
+        
+        if (success) {
+          // 更新同步状态
+          setCrossDeviceSyncStatus(crossDeviceService.getSyncStatus());
+          Alert.alert(
+            '同步成功',
+            '您的数据已成功同步到云端，其他设备可以获取最新数据。',
+            [{ text: '好的' }]
+          );
+        } else {
+          Alert.alert(
+            '同步失败',
+            '跨设备同步失败，请检查网络连接后重试。',
+            [{ text: '重试', onPress: handleCrossDeviceSync }, { text: '取消' }]
+          );
+        }
       }
     } catch (error) {
       console.error('❌ 跨设备同步失败:', error);
@@ -1408,6 +1417,13 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
       <FeedbackModal
         visible={feedbackModalVisible}
         onClose={() => setFeedbackModalVisible(false)}
+      />
+        
+      {/* 新设备同步模态框 */}
+      <NewDeviceSyncModal
+        visible={newDeviceSyncModalVisible}
+        onClose={() => setNewDeviceSyncModalVisible(false)}
+        appleId={user?.email || ''}
       />
 
       {/* 注销账户模态框 */}
