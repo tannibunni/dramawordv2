@@ -111,7 +111,7 @@ export class CloudDataDownloadService {
       console.log('📡 正在获取云端数据...');
       this.downloadProgress = 20;
 
-      const response = await fetch(`${API_BASE_URL}/sync/apple/${appleId}`, {
+      const response = await fetch(`https://dramawordv2.onrender.com/api/sync/apple/${appleId}`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -271,7 +271,7 @@ export class CloudDataDownloadService {
         return null;
       }
 
-      const response = await fetch(`${API_BASE_URL}/sync/apple/${appleId}/overview`, {
+      const response = await fetch(`https://dramawordv2.onrender.com/api/sync/apple/${appleId}/overview`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,

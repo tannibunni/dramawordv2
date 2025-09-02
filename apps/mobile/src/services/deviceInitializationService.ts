@@ -155,7 +155,7 @@ export class DeviceInitializationService {
       };
 
       // 发送设备注册请求
-      const response = await fetch(`${API_BASE_URL}/sync/apple/${deviceInfo.appleId}/devices`, {
+      const response = await fetch(`https://dramawordv2.onrender.com/api/sync/apple/${deviceInfo.appleId}/devices`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
