@@ -20,6 +20,8 @@ import { guestModeService } from './services/guestModeService';
 import { tokenValidationService } from './services/tokenValidationService';
 import { guestIdService } from './services/guestIdService';
 import { subscriptionService } from './services/subscriptionService';
+import { DeepLinkService } from './services/deepLinkService';
+import { AppleCrossDeviceSyncService } from './services/appleCrossDeviceSyncService';
 
 // 内部组件：移除自动通知初始化
 const AppContent = () => {
@@ -46,6 +48,9 @@ const AppContent = () => {
       
       // 5. 初始化订阅服务
       await initializeSubscriptionService();
+      
+      // 6. 初始化深度链接服务
+      await initializeDeepLinkService();
       
       console.log('✅ 应用初始化完成');
     } catch (error) {
@@ -83,6 +88,31 @@ const AppContent = () => {
       console.log('✅ 订阅服务初始化完成');
     } catch (error) {
       console.error('❌ 订阅服务初始化失败:', error);
+    }
+  };
+
+  const initializeDeepLinkService = async () => {
+    try {
+      console.log('🔗 初始化深度链接服务...');
+      
+      await DeepLinkService.getInstance().initialize();
+      
+      console.log('✅ 深度链接服务初始化完成');
+    } catch (error) {
+      console.error('❌ 深度链接服务初始化失败:', error);
+    }
+  };
+
+  const initializeCrossDeviceSyncService = async () => {
+    try {
+      console.log('🍎 初始化跨设备同步服务...');
+      
+      // 服务会自动初始化
+      await AppleCrossDeviceSyncService.getInstance();
+      
+      console.log('✅ 跨设备同步服务初始化完成');
+    } catch (error) {
+      console.error('❌ 跨设备同步服务初始化失败:', error);
     }
   };
 

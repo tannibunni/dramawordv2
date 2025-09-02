@@ -8,6 +8,54 @@
     "newArchEnabled": true,
     "scheme": "dramaword",
     "icon": "./assets/images/icon.png",
+    "plugins": [
+      "expo-localization",
+      "expo-audio"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.tannibunni.dramawordmobile",
+      "buildNumber": "34",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false,
+        "UIFileSharingEnabled": false,
+        "LSSupportsOpeningDocumentsInPlace": false,
+        "CFBundleURLTypes": [
+          {
+            "CFBundleURLName": "com.tannibunni.dramawordmobile",
+            "CFBundleURLSchemes": ["dramaword"]
+          }
+        ]
+      },
+      "associatedDomains": [
+        "applinks:dramaword.com",
+        "applinks:www.dramaword.com"
+      ]
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#ffffff"
+      },
+      "edgeToEdgeEnabled": true,
+      "package": "com.tannibunni.dramawordmobile",
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "https",
+              "host": "dramaword.com"
+            },
+            {
+              "scheme": "https", 
+              "host": "www.dramaword.com"
+            }
+          ],
+          "category": ["BROWSABLE", "DEFAULT"]
+        }
+      ]
+    },
     "splash": {
       "image": "./assets/images/icon.png",
       "resizeMode": "contain",

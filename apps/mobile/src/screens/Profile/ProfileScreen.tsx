@@ -47,6 +47,7 @@ import { guestIdService } from '../../services/guestIdService';
 import { BadgeEntrySection, useBadges } from '../../features/badges';
 import FeatureAccessService from '../../services/featureAccessService';
 import { UpgradeModal } from '../../components/common/UpgradeModal';
+import { AppleCrossDeviceSyncService } from '../../services/appleCrossDeviceSyncService';
 
 
 
@@ -83,6 +84,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   const [subscriptionStatus, setSubscriptionStatus] = useState<any>(null);
   const [upgradeModalVisible, setUpgradeModalVisible] = useState(false);
   const [lockedFeature, setLockedFeature] = useState<string | null>(null);
+  const [crossDeviceSyncStatus, setCrossDeviceSyncStatus] = useState<any>(null);
 
 
   const { vocabulary, clearVocabulary } = useVocabulary();
@@ -101,6 +103,24 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
       setLanguageModalVisible(true);
     }
   }, [openLanguageSettings]);
+
+  // 加载跨设备同步状态
+  useEffect(() => {
+    if (loginType === 'apple') {
+      loadCrossDeviceSyncStatus();
+    }
+  }, [loginType]);
+
+  // 加载跨设备同步状态
+  const loadCrossDeviceSyncStatus = async () => {
+    try {
+      const crossDeviceService = AppleCrossDeviceSyncService.getInstance();
+      const status = crossDeviceService.getSyncStatus();
+      setCrossDeviceSyncStatus(status);
+    } catch (error) {
+      console.error('❌ 加载跨设备同步状态失败:', error);
+    }
+  };
 
   // 初始化订阅服务
   useEffect(() => {
@@ -475,6 +495,28 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
         </View>
         <Ionicons name="chevron-forward" size={20} color={colors.neutral[500]} />
       </TouchableOpacity>
+
+      {/* Apple ID跨设备同步 - 仅对Apple用户显示 */}
+      {loginType === 'apple' && (
+        <TouchableOpacity 
+          style={styles.settingItem}
+          onPress={() => handleCrossDeviceSync()}
+        >
+          <View style={styles.settingLeft}>
+            <Ionicons name="cloudy-outline" size={24} color={colors.primary[500]} />
+            <Text style={styles.settingLabel}>
+              {appLanguage === 'zh-CN' ? '跨设备同步' : 'Cross-Device Sync'}
+            </Text>
+          </View>
+          <View style={styles.settingLeft}>
+            {crossDeviceSyncStatus?.isSyncing ? (
+              <ActivityIndicator size="small" color={colors.primary[500]} />
+            ) : (
+              <Ionicons name="chevron-forward" size={20} color={colors.neutral[500]} />
+            )}
+          </View>
+        </TouchableOpacity>
+      )}
 
       {/* 订阅管理 - 仅对付费订阅会员显示 */}
       {subscriptionStatus?.isActive && (
@@ -1030,6 +1072,35 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
 
   const handleDeleteAccount = () => {
     setDeleteAccountModalVisible(true);
+  };
+
+  // 处理跨设备同步
+  const handleCrossDeviceSync = async () => {
+    try {
+      console.log('🍎 用户点击跨设备同步...');
+      
+      const crossDeviceService = AppleCrossDeviceSyncService.getInstance();
+      const success = await crossDeviceService.manualSync();
+      
+      if (success) {
+        // 更新同步状态
+        setCrossDeviceSyncStatus(crossDeviceService.getSyncStatus());
+        Alert.alert(
+          '同步成功',
+          '您的数据已成功同步到云端，其他设备可以获取最新数据。',
+          [{ text: '好的' }]
+        );
+      } else {
+        Alert.alert(
+          '同步失败',
+          '跨设备同步失败，请检查网络连接后重试。',
+          [{ text: '重试', onPress: handleCrossDeviceSync }, { text: '取消' }]
+        );
+      }
+    } catch (error) {
+      console.error('❌ 跨设备同步失败:', error);
+      Alert.alert('错误', '同步过程中发生错误，请重试');
+    }
   };
 
   // 新增：设置APP关闭时同步

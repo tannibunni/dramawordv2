@@ -10,12 +10,15 @@ export interface SyncData {
   data: any;
   timestamp: number;
   userId: string;
+  appleId?: string;        // Apple ID用于跨设备同步
+  deviceId?: string;       // 设备ID
   operation: 'create' | 'update' | 'delete';
   priority: 'high' | 'medium' | 'low';
   // 添加经验值相关字段以保持对齐
   xpGained?: number;
   leveledUp?: boolean;
   level?: number;
+  syncVersion?: number;    // 同步版本号
 }
 
 export interface SyncConfig {
@@ -27,6 +30,9 @@ export interface SyncConfig {
   enableIncrementalSync: boolean;
   enableOfflineFirst: boolean;
   enableRealTimeSync: boolean;
+  enableCrossDeviceSync: boolean;    // 启用跨设备同步
+  crossDeviceSyncInterval: number;   // 跨设备同步间隔
+  enableAppleIDSync: boolean;        // 启用Apple ID同步
 }
 
 export interface SyncStatus {
@@ -71,7 +77,10 @@ export class UnifiedSyncService {
     batchSize: 20,
     enableIncrementalSync: true,
     enableOfflineFirst: true,
-    enableRealTimeSync: true
+    enableRealTimeSync: true,
+    enableCrossDeviceSync: true,        // 启用跨设备同步
+    crossDeviceSyncInterval: 30 * 1000, // 30秒
+    enableAppleIDSync: true             // 启用Apple ID同步
   };
 
   private constructor() {
@@ -496,6 +505,422 @@ export class UnifiedSyncService {
     } catch (error) {
       console.warn('⚠️ 获取设备ID失败，使用默认值');
       return 'unknown_device';
+    }
+  }
+
+  // 获取Apple ID
+  private async getAppleId(): Promise<string | null> {
+    try {
+      const userData = await AsyncStorage.getItem('userData');
+      if (userData) {
+        const parsed = JSON.parse(userData);
+        return parsed.appleId || null;
+      }
+      return null;
+    } catch (error) {
+      console.warn('⚠️ 获取Apple ID失败:', error);
+      return null;
+    }
+  }
+
+  // Apple ID跨设备同步
+  public async performAppleCrossDeviceSync(): Promise<SyncResult> {
+    try {
+      console.log('🍎 开始Apple ID跨设备同步...');
+      
+      const appleId = await this.getAppleId();
+      if (!appleId) {
+        console.log('ℹ️ 跳过跨设备同步：用户未使用Apple ID登录');
+        return {
+          success: true,
+          message: '跳过跨设备同步：用户未使用Apple ID登录'
+        };
+      }
+
+      const deviceId = await this.getDeviceId();
+      console.log(`🔗 跨设备同步: Apple ID ${appleId}, 设备 ${deviceId}`);
+
+      // 1. 获取云端数据
+      const cloudData = await this.fetchCloudData(appleId);
+      
+      // 2. 获取本地数据
+      const localData = await this.getLocalDataForSync();
+      
+      // 3. 合并数据
+      const mergedData = await this.mergeLocalAndCloudData(localData, cloudData);
+      
+      // 4. 更新本地数据
+      await this.updateLocalDataFromMerged(mergedData);
+      
+      // 5. 上传合并后的数据到云端
+      await this.uploadMergedDataToCloud(mergedData, appleId, deviceId);
+      
+      console.log('✅ Apple ID跨设备同步完成');
+      
+      return {
+        success: true,
+        message: '跨设备同步完成',
+        data: mergedData
+      };
+      
+    } catch (error) {
+      console.error('❌ Apple ID跨设备同步失败:', error);
+      return {
+        success: false,
+        message: '跨设备同步失败',
+        errors: [error instanceof Error ? error.message : 'Unknown error']
+      };
+    }
+  }
+
+  // 获取云端数据
+  private async fetchCloudData(appleId: string): Promise<any> {
+    try {
+      const token = await this.getAuthToken();
+      if (!token) {
+        throw new Error('未找到认证token');
+      }
+
+      const response = await fetch(`${API_BASE_URL}/sync/apple/${appleId}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`获取云端数据失败: ${response.status}`);
+      }
+
+      const cloudData = await response.json();
+      console.log('☁️ 云端数据获取成功:', Object.keys(cloudData));
+      return cloudData;
+      
+    } catch (error) {
+      console.error('❌ 获取云端数据失败:', error);
+      // 返回空数据，使用本地数据
+      return {
+        vocabulary: [],
+        shows: [],
+        learningRecords: [],
+        experience: {},
+        badges: [],
+        userStats: {}
+      };
+    }
+  }
+
+  // 获取本地数据用于同步
+  private async getLocalDataForSync(): Promise<any> {
+    try {
+      const localData = {
+        vocabulary: await this.getLocalVocabulary(),
+        shows: await this.getLocalShows(),
+        learningRecords: await this.getLocalLearningRecords(),
+        experience: await this.getLocalExperience(),
+        badges: await this.getLocalBadges(),
+        userStats: await this.getLocalUserStats()
+      };
+      
+      console.log('📱 本地数据获取成功:', Object.keys(localData));
+      return localData;
+      
+    } catch (error) {
+      console.error('❌ 获取本地数据失败:', error);
+      return {};
+    }
+  }
+
+  // 合并本地和云端数据
+  private async mergeLocalAndCloudData(localData: any, cloudData: any): Promise<any> {
+    try {
+      console.log('🔄 开始合并本地和云端数据...');
+      
+      const mergedData = {
+        vocabulary: this.mergeVocabularyData(localData.vocabulary || [], cloudData.vocabulary || []),
+        shows: this.mergeShowsData(localData.shows || [], cloudData.shows || []),
+        learningRecords: this.mergeLearningRecordsData(localData.learningRecords || [], cloudData.learningRecords || []),
+        experience: this.mergeExperienceData(localData.experience || {}, cloudData.experience || {}),
+        badges: this.mergeBadgesData(localData.badges || [], cloudData.badges || []),
+        userStats: this.mergeUserStatsData(localData.userStats || {}, cloudData.userStats || {})
+      };
+      
+      console.log('✅ 数据合并完成');
+      return mergedData;
+      
+    } catch (error) {
+      console.error('❌ 数据合并失败:', error);
+      // 合并失败时，优先使用云端数据
+      return cloudData;
+    }
+  }
+
+  // 合并词汇数据
+  private mergeVocabularyData(local: any[], cloud: any[]): any[] {
+    const merged = new Map();
+    
+    // 添加云端数据
+    cloud.forEach(item => {
+      merged.set(item.word || item.id, item);
+    });
+    
+    // 添加本地数据（如果本地数据更新）
+    local.forEach(item => {
+      const key = item.word || item.id;
+      const existing = merged.get(key);
+      
+      if (!existing || (item.lastModified > existing.lastModified)) {
+        merged.set(key, item);
+      }
+    });
+    
+    return Array.from(merged.values());
+  }
+
+  // 合并剧单数据
+  private mergeShowsData(local: any[], cloud: any[]): any[] {
+    const merged = new Map();
+    
+    // 添加云端数据
+    cloud.forEach(item => {
+      merged.set(item.id, item);
+    });
+    
+    // 添加本地数据（如果本地数据更新）
+    local.forEach(item => {
+      const existing = merged.get(item.id);
+      
+      if (!existing || (item.lastModified > existing.lastModified)) {
+        merged.set(item.id, item);
+      }
+    });
+    
+    return Array.from(merged.values());
+  }
+
+  // 合并学习记录数据
+  private mergeLearningRecordsData(local: any[], cloud: any[]): any[] {
+    const merged = new Map();
+    
+    // 添加云端数据
+    cloud.forEach(item => {
+      const key = `${item.wordId}_${item.sessionId}`;
+      merged.set(key, item);
+    });
+    
+    // 添加本地数据（如果本地数据更新）
+    local.forEach(item => {
+      const key = `${item.wordId}_${item.sessionId}`;
+      const existing = merged.get(key);
+      
+      if (!existing || (item.timestamp > existing.timestamp)) {
+        merged.set(key, item);
+      }
+    });
+    
+    return Array.from(merged.values());
+  }
+
+  // 合并经验值数据
+  private mergeExperienceData(local: any, cloud: any): any {
+    // 取最高经验值和等级
+    return {
+      experience: Math.max(local.experience || 0, cloud.experience || 0),
+      level: Math.max(local.level || 1, cloud.level || 1),
+      totalExperience: Math.max(local.totalExperience || 0, cloud.totalExperience || 0),
+      lastLevelUp: local.lastLevelUp > cloud.lastLevelUp ? local.lastLevelUp : cloud.lastLevelUp
+    };
+  }
+
+  // 合并徽章数据
+  private mergeBadgesData(local: any[], cloud: any[]): any[] {
+    const merged = new Map();
+    
+    // 添加云端数据
+    cloud.forEach(item => {
+      merged.set(item.id, item);
+    });
+    
+    // 添加本地数据（如果本地数据更新）
+    local.forEach(item => {
+      const existing = merged.get(item.id);
+      
+      if (!existing || (item.unlockedAt > existing.unlockedAt)) {
+        merged.set(item.id, item);
+      }
+    });
+    
+    return Array.from(merged.values());
+  }
+
+  // 合并用户统计数据
+  private mergeUserStatsData(local: any, cloud: any): any {
+    return {
+      totalWords: Math.max(local.totalWords || 0, cloud.totalWords || 0),
+      masteredWords: Math.max(local.masteredWords || 0, cloud.masteredWords || 0),
+      learningDays: Math.max(local.learningDays || 0, cloud.learningDays || 0),
+      currentStreak: Math.max(local.currentStreak || 0, cloud.currentStreak || 0),
+      totalReviews: Math.max(local.totalReviews || 0, cloud.totalReviews || 0),
+      accuracy: Math.max(local.accuracy || 0, cloud.accuracy || 0)
+    };
+  }
+
+  // 获取本地词汇数据
+  private async getLocalVocabulary(): Promise<any[]> {
+    try {
+      const vocabulary = await AsyncStorage.getItem('user_vocabulary');
+      return vocabulary ? JSON.parse(vocabulary) : [];
+    } catch (error) {
+      console.error('❌ 获取本地词汇数据失败:', error);
+      return [];
+    }
+  }
+
+  // 获取本地剧单数据
+  private async getLocalShows(): Promise<any[]> {
+    try {
+      const shows = await AsyncStorage.getItem('user_shows');
+      return shows ? JSON.parse(shows) : [];
+    } catch (error) {
+      console.error('❌ 获取本地剧单数据失败:', error);
+      return [];
+    }
+  }
+
+  // 获取本地学习记录数据
+  private async getLocalLearningRecords(): Promise<any[]> {
+    try {
+      const records = await AsyncStorage.getItem('learning_records');
+      return records ? JSON.parse(records) : [];
+    } catch (error) {
+      console.error('❌ 获取本地学习记录失败:', error);
+      return [];
+    }
+  }
+
+  // 获取本地经验值数据
+  private async getLocalExperience(): Promise<any> {
+    try {
+      const experience = await AsyncStorage.getItem('user_experience');
+      return experience ? JSON.parse(experience) : {};
+    } catch (error) {
+      console.error('❌ 获取本地经验值数据失败:', error);
+      return {};
+    }
+  }
+
+  // 获取本地徽章数据
+  private async getLocalBadges(): Promise<any[]> {
+    try {
+      const badges = await AsyncStorage.getItem('userBadgeProgress');
+      return badges ? JSON.parse(badges) : [];
+    } catch (error) {
+      console.error('❌ 获取本地徽章数据失败:', error);
+      return [];
+    }
+  }
+
+  // 获取本地用户统计数据
+  private async getLocalUserStats(): Promise<any> {
+    try {
+      const stats = await AsyncStorage.getItem('user_stats');
+      return stats ? JSON.parse(stats) : {};
+    } catch (error) {
+      console.error('❌ 获取本地用户统计数据失败:', error);
+      return {};
+    }
+  }
+
+  // 从合并数据更新本地数据
+  private async updateLocalDataFromMerged(mergedData: any): Promise<void> {
+    try {
+      console.log('📱 开始更新本地数据...');
+      
+      // 更新词汇数据
+      if (mergedData.vocabulary) {
+        await AsyncStorage.setItem('user_vocabulary', JSON.stringify(mergedData.vocabulary));
+      }
+      
+      // 更新剧单数据
+      if (mergedData.shows) {
+        await AsyncStorage.setItem('user_shows', JSON.stringify(mergedData.shows));
+      }
+      
+      // 更新学习记录
+      if (mergedData.learningRecords) {
+        await AsyncStorage.setItem('learning_records', JSON.stringify(mergedData.learningRecords));
+      }
+      
+      // 更新经验值数据
+      if (mergedData.experience) {
+        await AsyncStorage.setItem('user_experience', JSON.stringify(mergedData.experience));
+      }
+      
+      // 更新徽章数据
+      if (mergedData.badges) {
+        await AsyncStorage.setItem('userBadgeProgress', JSON.stringify(mergedData.badges));
+      }
+      
+      // 更新用户统计数据
+      if (mergedData.userStats) {
+        await AsyncStorage.setItem('user_stats', JSON.stringify(mergedData.userStats));
+      }
+      
+      console.log('✅ 本地数据更新完成');
+      
+    } catch (error) {
+      console.error('❌ 更新本地数据失败:', error);
+      throw error;
+    }
+  }
+
+  // 上传合并后的数据到云端
+  private async uploadMergedDataToCloud(mergedData: any, appleId: string, deviceId: string): Promise<void> {
+    try {
+      console.log('☁️ 开始上传合并数据到云端...');
+      
+      const token = await this.getAuthToken();
+      if (!token) {
+        throw new Error('未找到认证token');
+      }
+
+      const response = await fetch(`${API_BASE_URL}/sync/apple/${appleId}/upload`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          data: mergedData,
+          deviceId,
+          timestamp: Date.now(),
+          syncVersion: await this.getNextSyncVersion()
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`上传云端数据失败: ${response.status}`);
+      }
+
+      console.log('✅ 云端数据上传完成');
+      
+    } catch (error) {
+      console.error('❌ 上传云端数据失败:', error);
+      // 不抛出错误，避免影响同步流程
+    }
+  }
+
+  // 获取下一个同步版本号
+  private async getNextSyncVersion(): Promise<number> {
+    try {
+      const currentVersion = await AsyncStorage.getItem('syncVersion');
+      const nextVersion = (parseInt(currentVersion || '0') + 1);
+      await AsyncStorage.setItem('syncVersion', nextVersion.toString());
+      return nextVersion;
+    } catch (error) {
+      console.error('❌ 获取同步版本号失败:', error);
+      return Date.now();
     }
   }
 

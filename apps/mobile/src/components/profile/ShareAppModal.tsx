@@ -15,6 +15,7 @@ import { colors } from '../../constants/colors';
 import { useAppLanguage } from '../../context/AppLanguageContext';
 import { t } from '../../constants/translations';
 import * as Clipboard from 'expo-clipboard';
+import { DeepLinkService } from '../../services/deepLinkService';
 
 interface ShareAppModalProps {
   visible: boolean;
@@ -59,7 +60,8 @@ export const ShareAppModal: React.FC<ShareAppModalProps> = ({
 
   const shareApp = async () => {
     try {
-      const shareMessage = `${t('share_app_message', appLanguage)}\n\n${t('invite_code', appLanguage)}: ${inviteCode}\n\nApp Store: https://apps.apple.com/app/dramaword`;
+      const inviteLink = DeepLinkService.getInstance().generateInviteLink(inviteCode);
+      const shareMessage = `${t('share_app_message', appLanguage)}\n\n${t('invite_code', appLanguage)}: ${inviteCode}\n\n邀请链接: ${inviteLink}`;
       
       const result = await Share.share({
         message: shareMessage,
@@ -92,10 +94,11 @@ export const ShareAppModal: React.FC<ShareAppModalProps> = ({
       icon: 'copy-outline',
       action: async () => {
         try {
-          await Clipboard.setStringAsync('https://apps.apple.com/app/dramaword');
-          Alert.alert('成功', 'App Store链接已复制');
+          const inviteLink = DeepLinkService.getInstance().generateInviteLink(inviteCode);
+          await Clipboard.setStringAsync(inviteLink);
+          Alert.alert('成功', '邀请链接已复制');
         } catch (error) {
-          console.error('❌ 复制链接失败:', error);
+          console.error('❌ 复制邀请链接失败:', error);
           Alert.alert('错误', '复制失败，请重试');
         }
       },
@@ -174,6 +177,22 @@ export const ShareAppModal: React.FC<ShareAppModalProps> = ({
                 {t('share_app', appLanguage)}
               </Text>
             </TouchableOpacity>
+
+            {/* 开发模式：深度链接测试 */}
+            {__DEV__ && (
+              <TouchableOpacity 
+                style={[styles.shareButton, styles.testButton]} 
+                onPress={() => {
+                  const testUrl = `https://dramaword.com/invite/${inviteCode}`;
+                  DeepLinkService.getInstance().testDeepLink(testUrl);
+                }}
+              >
+                <Ionicons name="bug-outline" size={24} color="white" />
+                <Text style={styles.shareButtonText}>
+                  测试深度链接
+                </Text>
+              </TouchableOpacity>
+            )}
           </ScrollView>
         </View>
       </View>
@@ -303,5 +322,9 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
     marginLeft: 8,
+  },
+  testButton: {
+    backgroundColor: colors.neutral[600],
+    marginTop: 10,
   },
 });
