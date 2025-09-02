@@ -33,6 +33,9 @@ import iapRoutes from './routes/iap';
 import emailAuthRoutes from './routes/emailAuth';
 import showWordRoutes from './routes/showWordRoutes.js';
 import appleSyncRoutes from './routes/appleSync';
+import deviceRoutes from './routes/device';
+import dataVersionRoutes from './routes/dataVersion';
+import networkRoutes from './routes/network';
 import { logger } from './utils/logger';
 import { OpenAI } from 'openai';
 
@@ -73,6 +76,9 @@ app.use('/api/iap', iapRoutes);
 app.use('/api/email-auth', emailAuthRoutes);
 app.use('/api/show-words', showWordRoutes);
 app.use('/api/sync/apple', appleSyncRoutes);
+app.use('/api/device', deviceRoutes);
+app.use('/api/data-version', dataVersionRoutes);
+app.use('/api/network', networkRoutes);
 
 // 健康检查端点
 app.get('/health', (req, res) => {
