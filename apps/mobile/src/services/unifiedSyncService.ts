@@ -13,7 +13,7 @@ export interface SyncData {
   appleId?: string;        // Apple ID用于跨设备同步
   deviceId?: string;       // 设备ID
   operation: 'create' | 'update' | 'delete';
-  priority: 'high' | 'medium' | 'low';
+  priority?: 'high' | 'medium' | 'low';  // 数据优先级
   // 添加经验值相关字段以保持对齐
   xpGained?: number;
   leveledUp?: boolean;
@@ -33,6 +33,13 @@ export interface SyncConfig {
   enableCrossDeviceSync: boolean;    // 启用跨设备同步
   crossDeviceSyncInterval: number;   // 跨设备同步间隔
   enableAppleIDSync: boolean;        // 启用Apple ID同步
+  
+  // 智能延迟同步配置
+  enableSmartDelaySync: boolean;     // 启用智能延迟同步
+  highPriorityDelay: number;         // 高优先级延迟（毫秒）
+  mediumPriorityDelay: number;       // 中优先级延迟（毫秒）
+  lowPriorityDelay: number;          // 低优先级延迟（毫秒）
+  maxBatchDelay: number;             // 最大批量延迟（毫秒）
 }
 
 export interface SyncStatus {
@@ -80,7 +87,14 @@ export class UnifiedSyncService {
     enableRealTimeSync: true,
     enableCrossDeviceSync: true,        // 启用跨设备同步
     crossDeviceSyncInterval: 30 * 1000, // 30秒
-    enableAppleIDSync: true             // 启用Apple ID同步
+    enableAppleIDSync: true,            // 启用Apple ID同步
+    
+    // 智能延迟同步配置
+    enableSmartDelaySync: true,         // 启用智能延迟同步
+    highPriorityDelay: 0,               // 高优先级：立即同步
+    mediumPriorityDelay: 10 * 1000,    // 中优先级：10秒延迟
+    lowPriorityDelay: 60 * 1000,       // 低优先级：1分钟延迟
+    maxBatchDelay: 5 * 60 * 1000       // 最大批量延迟：5分钟
   };
 
   private constructor() {
@@ -162,7 +176,7 @@ export class UnifiedSyncService {
     }
   }
 
-  // 添加数据到同步队列
+  // 添加数据到同步队列（智能延迟）
   public async addToSyncQueue(data: Omit<SyncData, 'timestamp'>): Promise<void> {
     // 检查是否为游客模式
     const isGuestMode = await guestModeService.isGuestMode();
@@ -171,27 +185,85 @@ export class UnifiedSyncService {
       return;
     }
 
+    // 获取数据优先级
+    const priority = this.getDataPriority(data.type);
+    const delayTime = this.getDelayTime(priority);
+    
+    console.log(`📊 数据优先级: ${priority}, 延迟时间: ${delayTime}ms`);
+
     const syncData: SyncData = {
       ...data,
-      timestamp: Date.now()
+      timestamp: Date.now(),
+      priority: priority
     };
 
-    this.syncQueue.push(syncData);
-    this.pendingOperations.add(`${data.type}-${data.operation}-${Date.now()}`);
-    this.persistSyncQueue();
-
-    if (this.isImportantOperation(data.type)) {
-      this.syncPendingData();
+    if (delayTime === 0) {
+      // 高优先级：立即同步
+      console.log('⚡ 高优先级数据，立即同步');
+      this.syncQueue.push(syncData);
+      this.pendingOperations.add(`${data.type}-${data.operation}-${Date.now()}`);
+      this.persistSyncQueue();
+      await this.syncPendingData();
+    } else {
+      // 中低优先级：延迟同步
+      console.log(`⏰ 中低优先级数据，延迟同步: ${delayTime}ms`);
+      this.syncQueue.push(syncData);
+      this.pendingOperations.add(`${data.type}-${data.operation}-${Date.now()}`);
+      this.persistSyncQueue();
+      
+      // 设置延迟同步定时器
+      this.scheduleDelayedSync(delayTime);
     }
 
-    console.log(`📝 添加同步数据: ${data.type} (${data.operation})`);
+    console.log(`📝 添加同步数据: ${data.type} (${data.operation}), 优先级: ${priority}`);
   }
 
-  // 判断是否为重要操作
+  // 判断是否为重要操作（已废弃，使用优先级系统）
   private isImportantOperation(type: string): boolean {
     // 重要操作类型，需要立即同步
     const importantTypes = ['experience', 'userStats', 'vocabulary', 'wordbooks', 'shows'];
     return importantTypes.includes(type);
+  }
+
+  // 设置延迟同步定时器
+  private scheduleDelayedSync(delayTime: number): void {
+    if (this.syncTimer) {
+      clearTimeout(this.syncTimer);
+    }
+    
+    this.syncTimer = setTimeout(() => {
+      this.performDelayedSync();
+    }, delayTime);
+    
+    console.log(`⏰ 延迟同步定时器已设置: ${delayTime}ms后执行`);
+  }
+
+  // 执行延迟同步
+  private async performDelayedSync(): Promise<void> {
+    try {
+      console.log('⏰ 执行延迟同步...');
+      
+      if (this.syncQueue.length === 0) {
+        console.log('ℹ️ 延迟同步队列为空');
+        return;
+      }
+
+      // 按优先级排序
+      this.syncQueue.sort((a, b) => {
+        const priorityOrder = { high: 3, medium: 2, low: 1 };
+        const aPriority = a.priority || this.getDataPriority(a.type);
+        const bPriority = b.priority || this.getDataPriority(b.type);
+        return priorityOrder[bPriority] - priorityOrder[aPriority];
+      });
+
+      console.log(`🔄 延迟同步队列排序完成，共 ${this.syncQueue.length} 条数据`);
+      
+      // 执行同步
+      await this.syncPendingData();
+      
+    } catch (error) {
+      console.error('❌ 延迟同步执行失败:', error);
+    }
   }
 
   // 同步待同步数据
@@ -508,6 +580,44 @@ export class UnifiedSyncService {
     }
   }
 
+  // 获取数据优先级
+  private getDataPriority(dataType: string): 'high' | 'medium' | 'low' {
+    switch (dataType) {
+      case 'subscription':
+      case 'payment':
+      case 'userSettings':
+        return 'high';
+      case 'experience':
+      case 'badges':
+      case 'progress':
+      case 'vocabulary':
+      case 'shows':
+        return 'medium';
+      case 'searchHistory':
+      case 'learningRecords':
+      case 'userStats':
+      case 'wordbooks':
+      case 'achievements':
+        return 'low';
+      default:
+        return 'medium';
+    }
+  }
+
+  // 获取延迟时间
+  private getDelayTime(priority: 'high' | 'medium' | 'low'): number {
+    switch (priority) {
+      case 'high':
+        return this.config.highPriorityDelay;
+      case 'medium':
+        return this.config.mediumPriorityDelay;
+      case 'low':
+        return this.config.lowPriorityDelay;
+      default:
+        return this.config.mediumPriorityDelay;
+    }
+  }
+
   // 获取Apple ID
   private async getAppleId(): Promise<string | null> {
     try {
@@ -523,7 +633,22 @@ export class UnifiedSyncService {
     }
   }
 
-  // Apple ID跨设备同步
+  // 获取用户ID
+  private async getUserId(): Promise<string> {
+    try {
+      const userData = await AsyncStorage.getItem('userData');
+      if (userData) {
+        const parsed = JSON.parse(userData);
+        return parsed.userId || parsed.id || 'unknown';
+      }
+      return 'unknown';
+    } catch (error) {
+      console.warn('⚠️ 获取用户ID失败:', error);
+      return 'unknown';
+    }
+  }
+
+  // Apple ID跨设备同步（使用智能延迟）
   public async performAppleCrossDeviceSync(): Promise<SyncResult> {
     try {
       console.log('🍎 开始Apple ID跨设备同步...');
@@ -552,8 +677,8 @@ export class UnifiedSyncService {
       // 4. 更新本地数据
       await this.updateLocalDataFromMerged(mergedData);
       
-      // 5. 上传合并后的数据到云端
-      await this.uploadMergedDataToCloud(mergedData, appleId, deviceId);
+      // 5. 使用智能延迟上传合并后的数据到云端
+      await this.smartUploadToCloud(mergedData, appleId, deviceId);
       
       console.log('✅ Apple ID跨设备同步完成');
       
@@ -570,6 +695,38 @@ export class UnifiedSyncService {
         message: '跨设备同步失败',
         errors: [error instanceof Error ? error.message : 'Unknown error']
       };
+    }
+  }
+
+  // 智能上传到云端（使用优先级策略）
+  private async smartUploadToCloud(mergedData: any, appleId: string, deviceId: string): Promise<void> {
+    try {
+      console.log('☁️ 开始智能上传到云端...');
+      
+      // 将合并数据按类型分组，使用智能延迟同步
+      const dataTypes = Object.keys(mergedData);
+      
+      for (const dataType of dataTypes) {
+        if (mergedData[dataType] && Array.isArray(mergedData[dataType])) {
+          // 批量添加数据到同步队列，使用智能延迟
+          for (const item of mergedData[dataType]) {
+            await this.addToSyncQueue({
+              type: dataType as any,
+              data: item,
+              userId: await this.getUserId(),
+              operation: 'update',
+              appleId: appleId,
+              deviceId: deviceId
+            });
+          }
+        }
+      }
+      
+      console.log('✅ 智能上传队列设置完成');
+      
+    } catch (error) {
+      console.error('❌ 智能上传设置失败:', error);
+      throw error;
     }
   }
 
