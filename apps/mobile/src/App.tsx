@@ -22,6 +22,7 @@ import { guestIdService } from './services/guestIdService';
 import { subscriptionService } from './services/subscriptionService';
 import { DeepLinkService } from './services/deepLinkService';
 import { AppleCrossDeviceSyncService } from './services/appleCrossDeviceSyncService';
+import { NewDeviceDataDownloadService } from './services/newDeviceDataDownloadService';
 
 // 内部组件：移除自动通知初始化
 const AppContent = () => {
@@ -51,6 +52,12 @@ const AppContent = () => {
       
       // 6. 初始化深度链接服务
       await initializeDeepLinkService();
+      
+      // 7. 初始化跨设备同步服务
+      await initializeCrossDeviceSyncService();
+      
+      // 8. 初始化新设备数据下载服务
+      await initializeNewDeviceDataDownloadService();
       
       console.log('✅ 应用初始化完成');
     } catch (error) {
@@ -113,6 +120,19 @@ const AppContent = () => {
       console.log('✅ 跨设备同步服务初始化完成');
     } catch (error) {
       console.error('❌ 跨设备同步服务初始化失败:', error);
+    }
+  };
+
+  const initializeNewDeviceDataDownloadService = async () => {
+    try {
+      console.log('📱 初始化新设备数据下载服务...');
+      
+      // 服务会自动初始化
+      await NewDeviceDataDownloadService.getInstance();
+      
+      console.log('✅ 新设备数据下载服务初始化完成');
+    } catch (error) {
+      console.error('❌ 新设备数据下载服务初始化失败:', error);
     }
   };
 
