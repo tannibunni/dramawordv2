@@ -1,6 +1,7 @@
 import NetInfo, { NetInfoState, NetInfoSubscription } from '@react-native-community/netinfo';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { unifiedSyncService } from './unifiedSyncService';
+import { API_BASE_URL } from '../constants/config';
 
 export interface NetworkState {
   isConnected: boolean;
@@ -334,7 +335,18 @@ export class NetworkStateManagementService {
   }
 
   // 获取网络质量评估
-  public getNetworkQuality(): NetworkQuality {
+  public async getNetworkQuality(): Promise<NetworkQuality> {
+    try {
+      // 尝试使用后端API进行网络质量评估
+      const backendQuality = await this.getBackendNetworkQuality();
+      if (backendQuality) {
+        return backendQuality;
+      }
+    } catch (error) {
+      console.warn('⚠️ 后端网络质量评估失败，使用本地评估:', error);
+    }
+    
+    // 回退到本地评估
     const quality = this.assessNetworkQuality();
     return quality;
   }
@@ -541,7 +553,7 @@ export class NetworkStateManagementService {
   }
 
   // 记录网络请求
-  public recordNetworkRequest(success: boolean, responseTime: number): void {
+  public async recordNetworkRequest(success: boolean, responseTime: number): Promise<void> {
     try {
       this.metrics.totalRequests++;
       
@@ -556,7 +568,7 @@ export class NetworkStateManagementService {
       this.metrics.averageResponseTime = totalTime / this.metrics.totalRequests;
       
       // 添加网络质量历史
-      const quality = this.getNetworkQuality();
+      const quality = await this.getNetworkQuality();
       this.metrics.networkQualityHistory.push(quality);
       
       // 只保留最近100条记录
@@ -635,6 +647,67 @@ export class NetworkStateManagementService {
   // 检查是否正在初始化
   public isServiceInitialized(): boolean {
     return this.isInitialized;
+  }
+
+  // 使用后端API获取网络质量评估
+  private async getBackendNetworkQuality(): Promise<NetworkQuality | null> {
+    try {
+      const token = await AsyncStorage.getItem('authToken');
+      if (!token) {
+        return null;
+      }
+
+      const deviceId = await this.getDeviceId();
+      if (!deviceId) {
+        return null;
+      }
+
+      const response = await fetch(`${API_BASE_URL}/network/quality`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          networkType: this.networkState.type,
+          signalStrength: this.networkState.strength,
+          cellularGeneration: this.networkState.details?.cellularGeneration,
+          ssid: this.networkState.details?.ssid,
+          carrier: this.networkState.details?.carrier,
+          deviceId: deviceId
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`网络质量评估失败: ${response.status}`);
+      }
+
+      const result = await response.json();
+      if (result.success && result.data) {
+        console.log('✅ 后端网络质量评估成功:', result.data);
+        return result.data;
+      }
+
+      return null;
+    } catch (error) {
+      console.error('❌ 后端网络质量评估失败:', error);
+      return null;
+    }
+  }
+
+  // 获取设备ID
+  private async getDeviceId(): Promise<string | null> {
+    try {
+      const deviceInfo = await AsyncStorage.getItem('deviceInfo');
+      if (deviceInfo) {
+        const parsed = JSON.parse(deviceInfo);
+        return parsed.deviceId || null;
+      }
+      return null;
+    } catch (error) {
+      console.error('❌ 获取设备ID失败:', error);
+      return null;
+    }
   }
 
   // 销毁服务

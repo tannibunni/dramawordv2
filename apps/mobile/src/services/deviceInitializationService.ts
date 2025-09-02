@@ -140,22 +140,26 @@ export class DeviceInitializationService {
       console.log('📡 正在注册设备到云端...');
 
       // 准备设备注册数据
-      const registrationData: DeviceRegistrationData = {
+      const registrationData = {
         deviceId: deviceInfo.deviceId,
         deviceName: deviceInfo.deviceName,
-        deviceType: deviceInfo.deviceType,
-        appleId: deviceInfo.appleId,
+        deviceType: deviceInfo.deviceType.toLowerCase() as 'ios' | 'android' | 'web' | 'unknown',
         osVersion: await this.getOSVersion(),
         appVersion: await this.getAppVersion(),
-        isActive: true,
-        isInitialized: true,
-        lastSyncTime: Date.now(),
-        dataTypes: this.getDataTypesFromCloudData(cloudData),
-        totalDataSize: this.calculateTotalDataSize(cloudData)
+        deviceFingerprint: deviceInfo.deviceFingerprint,
+        metadata: {
+          manufacturer: deviceInfo.deviceType === 'iOS' ? 'Apple' : 'Unknown',
+          model: deviceInfo.deviceName,
+          screenResolution: 'unknown',
+          totalStorage: 0,
+          availableStorage: 0,
+          batteryLevel: 0,
+          isCharging: false
+        }
       };
 
       // 发送设备注册请求
-      const response = await fetch(`https://dramawordv2.onrender.com/api/sync/apple/${deviceInfo.appleId}/devices`, {
+      const response = await fetch(`${API_BASE_URL}/device/register`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -175,6 +179,10 @@ export class DeviceInitializationService {
       }
 
       console.log('✅ 设备已成功注册到云端');
+
+      // 标记设备为已初始化
+      await this.markDeviceAsInitialized(deviceInfo.deviceId);
+
       return result;
 
     } catch (error) {
@@ -383,6 +391,38 @@ export class DeviceInitializationService {
 
     } catch (error) {
       console.error('❌ 重置设备初始化状态失败:', error);
+      throw error;
+    }
+  }
+
+  // 标记设备为已初始化
+  private async markDeviceAsInitialized(deviceId: string): Promise<void> {
+    try {
+      const token = await this.getAuthToken();
+      if (!token) {
+        throw new Error('未找到认证token');
+      }
+
+      const response = await fetch(`${API_BASE_URL}/device/${deviceId}/init`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`设备初始化标记失败: ${response.status}`);
+      }
+
+      const result = await response.json();
+      if (!result.success) {
+        throw new Error(result.message || '设备初始化标记失败');
+      }
+
+      console.log('✅ 设备已标记为已初始化');
+    } catch (error) {
+      console.error('❌ 标记设备初始化状态失败:', error);
       throw error;
     }
   }

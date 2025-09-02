@@ -108,15 +108,28 @@ export class CloudDataDownloadService {
         throw new Error('未找到认证token');
       }
 
+      // 获取设备信息
+      const deviceInfo = await this.getDeviceInfo();
+      if (!deviceInfo) {
+        throw new Error('无法获取设备信息');
+      }
+
       console.log('📡 正在获取云端数据...');
       this.downloadProgress = 20;
 
-      const response = await fetch(`https://dramawordv2.onrender.com/api/sync/apple/${appleId}`, {
-        method: 'GET',
+      // 使用新的数据版本管理API获取云端数据
+      const response = await fetch(`${API_BASE_URL}/data-version/${deviceInfo.deviceId}/incremental`, {
+        method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
-        }
+        },
+        body: JSON.stringify({
+          dataType: 'all', // 获取所有数据类型
+          lastSyncTime: 0, // 首次同步，从0开始
+          localVersion: 'v1.0.0',
+          deviceId: deviceInfo.deviceId
+        })
       });
 
       if (!response.ok) {
@@ -247,6 +260,18 @@ export class CloudDataDownloadService {
     }
   }
 
+  // 获取设备信息
+  private async getDeviceInfo(): Promise<DeviceInfo | null> {
+    try {
+      const detectionService = NewDeviceDetectionService.getInstance();
+      const deviceInfo = await detectionService.getLocalDeviceInfo('current_user');
+      return deviceInfo;
+    } catch (error) {
+      console.error('❌ 获取设备信息失败:', error);
+      return null;
+    }
+  }
+
   // 获取下载进度
   public getDownloadProgress(): number {
     return this.downloadProgress;
@@ -271,7 +296,13 @@ export class CloudDataDownloadService {
         return null;
       }
 
-      const response = await fetch(`https://dramawordv2.onrender.com/api/sync/apple/${appleId}/overview`, {
+      // 获取设备信息
+      const deviceInfo = await this.getDeviceInfo();
+      if (!deviceInfo) {
+        return null;
+      }
+
+      const response = await fetch(`${API_BASE_URL}/data-version/vocabulary/history?limit=1`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,

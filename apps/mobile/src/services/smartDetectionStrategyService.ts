@@ -2,6 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
 import * as Device from 'expo-device';
 import * as Application from 'expo-application';
+import { API_BASE_URL } from '../constants/config';
 
 export interface DetectionStrategy {
   name: string;
@@ -325,7 +326,7 @@ export class SmartDetectionStrategyService {
         return false;
       }
 
-      const response = await fetch(`https://dramawordv2.onrender.com/api/sync/apple/${appleId}/devices`, {
+      const response = await fetch(`${API_BASE_URL}/device/user/devices`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -341,8 +342,8 @@ export class SmartDetectionStrategyService {
         throw new Error(`检查云端设备失败: ${response.status}`);
       }
 
-      const devices = await response.json();
-      const hasDevice = devices.devices?.some((device: any) => device.deviceId === deviceId);
+      const result = await response.json();
+      const hasDevice = result.data?.devices?.some((device: any) => device.deviceId === deviceId);
       
       console.log(`🔍 云端设备检查结果: ${hasDevice ? '找到设备' : '未找到设备'}`);
       return hasDevice;

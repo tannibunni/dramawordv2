@@ -270,7 +270,7 @@ export class NewDeviceDetectionService {
 
       console.log('📡 正在检查云端设备状态...');
 
-      const response = await fetch(`https://dramawordv2.onrender.com/api/sync/apple/${appleId}/devices`, {
+      const response = await fetch(`${API_BASE_URL}/device/user/devices`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -287,11 +287,11 @@ export class NewDeviceDetectionService {
         throw new Error(`获取云端设备状态失败: ${response.status}`);
       }
 
-      const devices = await response.json();
-      console.log('📱 云端设备列表:', devices);
+      const result = await response.json();
+      console.log('📱 云端设备列表:', result);
       
       // 查找当前设备
-      const currentDevice = devices.devices?.find((device: any) => device.deviceId === deviceId);
+      const currentDevice = result.data?.devices?.find((device: any) => device.deviceId === deviceId);
       
       if (currentDevice) {
         console.log('✅ 找到云端设备记录:', currentDevice);

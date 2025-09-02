@@ -1,5 +1,6 @@
 import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { API_BASE_URL } from '../constants/config';
 import { 
   initConnection,
   endConnection,
@@ -412,7 +413,7 @@ class IAPService {
         return;
       }
 
-      const response = await fetch('https://dramawordv2.onrender.com/api/iap/subscription-status', {
+      const response = await fetch(`${API_BASE_URL}/iap/subscription-status`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -714,7 +715,7 @@ class IAPService {
       
       if (Platform.OS === 'ios') {
         // iOS收据验证 - 先发送到我们的后端验证
-        const response = await fetch('https://dramawordv2.onrender.com/api/iap/validate-receipt', {
+        const response = await fetch(`${API_BASE_URL}/iap/validate-receipt`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
