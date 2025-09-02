@@ -59,6 +59,7 @@ export interface IUserAuth {
     familyName?: string;
   };
   guestId?: string;
+  deviceId?: string;
   // 邮箱认证字段
   emailVerified?: boolean;
   emailVerificationToken?: string;
@@ -208,6 +209,11 @@ const UserSchema = new Schema<IUser>({
       required: false,
       unique: true,
       sparse: true
+    },
+    deviceId: {
+      type: String,
+      required: false,
+      index: true
     },
     // 邮箱认证字段
     emailVerified: {

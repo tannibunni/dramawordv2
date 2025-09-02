@@ -308,31 +308,79 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
     }
   };
 
-  // 测试登录功能 - 从 ProfileScreen 同步过来
-  // 生成简洁的游客ID
-  const generateGuestId = () => {
-    // 使用时间戳 + 随机数确保唯一性
-    const timestamp = Date.now().toString().slice(-6); // 取时间戳后6位
-    const randomNum = Math.floor(Math.random() * 999) + 1;
-    return `Guest${timestamp}${randomNum}`;
+  // 获取或创建游客用户ID
+  const getOrCreateGuestId = async (): Promise<string> => {
+    try {
+      // 1. 检查本地是否已有游客用户
+      const existingUserData = await AsyncStorage.getItem('userData');
+      if (existingUserData) {
+        const userData = JSON.parse(existingUserData);
+        if (userData.loginType === 'guest' && userData.guestId) {
+          console.log('🔄 找到现有游客用户:', userData.guestId);
+          return userData.guestId;
+        }
+      }
+
+      // 2. 生成设备ID
+      const deviceId = await getDeviceId();
+      
+      // 3. 生成新的游客ID（基于设备ID确保唯一性）
+      const timestamp = Date.now().toString().slice(-6);
+      const deviceHash = deviceId.slice(-4); // 使用设备ID后4位
+      const guestId = `guest_${deviceHash}_${timestamp}`;
+      
+      console.log('🆕 生成新游客ID:', guestId);
+      return guestId;
+    } catch (error) {
+      console.error('❌ 获取游客ID失败:', error);
+      // 回退到随机生成
+      const timestamp = Date.now().toString().slice(-6);
+      const randomNum = Math.floor(Math.random() * 999) + 1;
+      return `guest_${timestamp}${randomNum}`;
+    }
   };
 
-  const generatePrettyGuestNickname = (idSeed: string) => {
-    // 使用简洁的游客ID格式
-    const guestNumber = Math.floor(Math.random() * 999) + 1;
-    return `Guest${guestNumber}`;
+  // 获取设备ID
+  const getDeviceId = async (): Promise<string> => {
+    try {
+      // 尝试从本地存储获取设备ID
+      let deviceId = await AsyncStorage.getItem('deviceId');
+      if (!deviceId) {
+        // 生成新的设备ID
+        const timestamp = Date.now().toString();
+        const randomStr = Math.random().toString(36).substring(2, 8);
+        deviceId = `device_${timestamp}_${randomStr}`;
+        await AsyncStorage.setItem('deviceId', deviceId);
+        console.log('🆕 生成新设备ID:', deviceId);
+      }
+      return deviceId;
+    } catch (error) {
+      console.error('❌ 获取设备ID失败:', error);
+      return `device_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
+    }
   };
 
   const testLogin = async (loginType: 'wechat' | 'apple' | 'phone' | 'guest', forcedGuestId?: string) => {
     try {
       setLoading(true);
       
-      // 生成唯一的测试ID - 增强唯一性
-      const shortId = forcedGuestId || generateGuestId();
-      const username = `t_${loginType}_${shortId}`.slice(0, 20);
-      const nickname = loginType === 'guest'
-        ? generatePrettyGuestNickname(shortId)
-        : `${loginType === 'wechat' ? '微信' : loginType === 'apple' ? 'Apple' : loginType === 'phone' ? '手机' : '游客'}用户`;
+      let shortId: string;
+      let username: string;
+      let nickname: string;
+      
+      if (loginType === 'guest') {
+        // 游客用户：使用持久化ID
+        shortId = forcedGuestId || await getOrCreateGuestId();
+        username = `guest_${shortId.split('_')[1]}_${shortId.split('_')[2]}`.slice(0, 20);
+        nickname = `Guest${shortId.split('_')[2].slice(-3)}`; // 使用时间戳后3位
+      } else {
+        // 其他登录类型：生成新的ID
+        const timestamp = Date.now().toString().slice(-6);
+        const randomNum = Math.floor(Math.random() * 999) + 1;
+        shortId = `${loginType}_${timestamp}${randomNum}`;
+        username = `t_${loginType}_${shortId}`.slice(0, 20);
+        nickname = `${loginType === 'wechat' ? '微信' : loginType === 'apple' ? 'Apple' : '手机'}用户`;
+      }
       
       // 准备注册数据
       const registerData: any = {
@@ -354,6 +402,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
           break;
         case 'guest':
           registerData.guestId = shortId;
+          registerData.deviceId = await getDeviceId(); // 添加设备ID
           break;
       }
       
@@ -741,7 +790,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
       }
     } catch {}
     // 无本地ID则生成新ID并注册
-    const newGuestId = generateGuestId();
+    const newGuestId = await getOrCreateGuestId();
     console.log('[LoginScreen handleGuestLogin] 生成新 guestId:', newGuestId);
     testLogin('guest', newGuestId);
   };

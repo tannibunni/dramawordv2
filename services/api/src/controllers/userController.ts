@@ -15,7 +15,7 @@ export class UserController {
   // 用户注册
   static async register(req: Request, res: Response) {
     try {
-      const { username, nickname, loginType, phoneNumber, wechatId, appleId, guestId } = req.body;
+      const { username, nickname, loginType, phoneNumber, wechatId, appleId, guestId, deviceId } = req.body;
 
       // 验证必填字段
       if (!username || !nickname || !loginType) {
@@ -25,17 +25,10 @@ export class UserController {
         });
       }
 
-      // 检查用户名是否已存在
-      const existingUser = await User.findOne({ username });
-      if (existingUser) {
-        return res.status(400).json({
-          success: false,
-          message: '用户名已存在'
-        });
-      }
-
       // 根据登录类型验证唯一标识
       let authQuery = {};
+      let existingUser = null;
+      
       switch (loginType) {
         case 'phone':
           if (!phoneNumber) {
@@ -71,7 +64,12 @@ export class UserController {
               message: '游客登录需要提供游客ID'
             });
           }
-          authQuery = { 'auth.guestId': guestId };
+          // 游客用户：优先检查设备ID，再检查游客ID
+          if (deviceId) {
+            authQuery = { 'auth.deviceId': deviceId, 'auth.loginType': 'guest' };
+          } else {
+            authQuery = { 'auth.guestId': guestId };
+          }
           break;
         default:
           return res.status(400).json({
@@ -81,8 +79,35 @@ export class UserController {
       }
 
       // 检查登录标识是否已存在
-      const existingAuthUser = await User.findOne(authQuery);
-      if (existingAuthUser) {
+      existingUser = await User.findOne(authQuery);
+      if (existingUser) {
+        // 如果是游客用户且已存在，返回现有用户信息
+        if (loginType === 'guest') {
+          logger.info(`🔄 游客用户已存在，返回现有用户: ${existingUser._id}`);
+          
+          // 更新最后登录时间
+          existingUser.auth.lastLoginAt = new Date();
+          await existingUser.save();
+          
+          // 生成JWT token
+          const token = generateToken(String(existingUser._id));
+          
+          return res.json({
+            success: true,
+            message: '游客登录成功',
+            user: {
+              id: existingUser._id,
+              username: existingUser.username,
+              nickname: existingUser.nickname,
+              avatar: normalizeAvatarUrl(existingUser.avatar),
+              loginType: existingUser.auth.loginType,
+              guestId: existingUser.auth.guestId,
+              deviceId: existingUser.auth.deviceId
+            },
+            token
+          });
+        }
+        
         return res.status(400).json({
           success: false,
           message: '该账号已存在'
@@ -121,6 +146,7 @@ export class UserController {
           break;
         case 'guest':
           userData.auth.guestId = guestId;
+          userData.auth.deviceId = deviceId; // 添加设备ID
           break;
       }
 
