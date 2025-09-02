@@ -22,6 +22,14 @@ export type TranslationKey =
   | 'all_data_cleared'
   | 'clear_failed'
   | 'clear_error'
+  | 'share_app'
+  | 'share_app_title'
+  | 'share_app_message'
+  | 'share_app_reward'
+  | 'invite_code'
+  | 'copy_invite_code'
+  | 'copy_success'
+  | 'share_via'
   
   // Review页面
   | 'ready_to_challenge'
@@ -561,6 +569,14 @@ export const translations: Record<AppLanguage, Record<TranslationKey, string>> =
     all_data_cleared: '所有数据已清除',
     clear_failed: '清除失败',
     clear_error: '清除数据时发生错误',
+    share_app: '分享应用',
+    share_app_title: '分享DramaWord',
+    share_app_message: '邀请朋友一起学习，你们都获得第一个月免费！',
+    share_app_reward: '分享奖励：第一个月免费',
+    invite_code: '邀请码',
+    copy_invite_code: '复制邀请码',
+    copy_success: '邀请码已复制',
+    share_via: '分享方式',
     
     // Review页面
     ready_to_challenge: '准备好挑战今天的词卡了吗？',
@@ -1095,6 +1111,14 @@ export const translations: Record<AppLanguage, Record<TranslationKey, string>> =
     all_data_cleared: 'All data cleared',
     clear_failed: 'Clear Failed',
     clear_error: 'Error occurred while clearing data',
+    share_app: 'Share App',
+    share_app_title: 'Share DramaWord',
+    share_app_message: 'Invite friends to learn together, both of you get the first month free!',
+    share_app_reward: 'Share Reward: First Month Free',
+    invite_code: 'Invite Code',
+    copy_invite_code: 'Copy Invite Code',
+    copy_success: 'Invite code copied',
+    share_via: 'Share via',
     
     // Review页面
     ready_to_challenge: 'Ready to challenge today\'s flashcards?',

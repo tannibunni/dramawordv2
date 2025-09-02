@@ -14,12 +14,13 @@
       "backgroundColor": "#ffffff"
     },
     "plugins": [
-      "expo-localization"
+      "expo-localization",
+      "expo-audio"
     ],
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.tannibunni.dramawordmobile",
-      "buildNumber": "33",
+      "buildNumber": "34",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
         "UIFileSharingEnabled": false,

@@ -19,6 +19,7 @@ import { EditProfileModal } from '../../components/profile/EditProfileModal';
 import AppLanguageSelector from '../../components/profile/AppLanguageSelector';
 import { FeedbackModal } from '../../components/profile/FeedbackModal';
 import { DeleteAccountModal } from '../../components/profile/DeleteAccountModal';
+import { ShareAppModal } from '../../components/profile/ShareAppModal';
 
 import { UserService } from '../../services/userService';
 import { useVocabulary } from '../../context/VocabularyContext';
@@ -78,6 +79,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   const [aboutModalVisible, setAboutModalVisible] = useState(false);
   const [feedbackModalVisible, setFeedbackModalVisible] = useState(false);
   const [deleteAccountModalVisible, setDeleteAccountModalVisible] = useState(false);
+  const [shareAppModalVisible, setShareAppModalVisible] = useState(false);
   const [subscriptionStatus, setSubscriptionStatus] = useState<any>(null);
   const [upgradeModalVisible, setUpgradeModalVisible] = useState(false);
   const [lockedFeature, setLockedFeature] = useState<string | null>(null);
@@ -458,6 +460,18 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
         <View style={styles.settingLeft}>
           <Ionicons name="language-outline" size={24} color={colors.primary[500]} />
           <Text style={styles.settingLabel}>{t('language_settings', appLanguage)}</Text>
+        </View>
+        <Ionicons name="chevron-forward" size={20} color={colors.neutral[500]} />
+      </TouchableOpacity>
+
+      {/* 分享应用 */}
+      <TouchableOpacity 
+        style={styles.settingItem}
+        onPress={() => setShareAppModalVisible(true)}
+      >
+        <View style={styles.settingLeft}>
+          <Ionicons name="share-social-outline" size={24} color={colors.primary[500]} />
+          <Text style={styles.settingLabel}>{t('share_app', appLanguage)}</Text>
         </View>
         <Ionicons name="chevron-forward" size={20} color={colors.neutral[500]} />
       </TouchableOpacity>
@@ -1345,6 +1359,12 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
           setUpgradeModalVisible(false);
           navigate('Subscription');
         }}
+      />
+
+      {/* 分享应用弹窗 */}
+      <ShareAppModal
+        visible={shareAppModalVisible}
+        onClose={() => setShareAppModalVisible(false)}
       />
 
       {/* 关于我们弹窗 */}
