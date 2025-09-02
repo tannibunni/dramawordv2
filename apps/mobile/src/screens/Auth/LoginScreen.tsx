@@ -29,6 +29,9 @@ import { unifiedSyncService } from '../../services/unifiedSyncService';
 import { userAgreementText } from '../../constants/legal/userAgreement';
 import { privacyPolicyText } from '../../constants/legal/privacyPolicy';
 import { API_BASE_URL } from '../../constants/config';
+import { AppleLoginAutoDetectionService } from '../../services/appleLoginAutoDetectionService';
+import { LoginSyncStatusIndicator } from '../../components/auth/LoginSyncStatusIndicator';
+import { NewUserSyncGuide } from '../../components/auth/NewUserSyncGuide';
 
 interface LoginScreenProps {
   onLoginSuccess: (userData: any) => void;
@@ -52,6 +55,12 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
   const [loading, setLoading] = useState(false);
   const [privacyVisible, setPrivacyVisible] = useState(false);
   const [termsVisible, setTermsVisible] = useState(false);
+  
+  // Apple登录自动检测相关状态
+  const [showSyncStatus, setShowSyncStatus] = useState(false);
+  const [syncStatus, setSyncStatus] = useState<any>(null);
+  const [showSyncGuide, setShowSyncGuide] = useState(false);
+  const [currentAppleId, setCurrentAppleId] = useState<string>('');
   
   // 检查是否从游客升级
   const isUpgradeFromGuest = route?.params?.upgradeFromGuest || false;
@@ -627,6 +636,66 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
         if (isUpgradeFromGuest) {
           await migrateGuestDataToApple(userData);
         }
+
+        // 新增：Apple登录成功后自动检测设备状态
+        if (userData.email) {
+          console.log('🍎 开始Apple登录后的自动检测...');
+          setCurrentAppleId(userData.email);
+          
+          try {
+            const autoDetectionService = AppleLoginAutoDetectionService.getInstance();
+            
+            // 检查是否应该跳过检测
+            const shouldSkip = await autoDetectionService.shouldSkipDetection(userData.email);
+            if (shouldSkip) {
+              console.log('⏰ 跳过检测，距离上次检测不到1小时');
+              setShowSyncStatus(false);
+            } else {
+              // 显示检测状态
+              setShowSyncStatus(true);
+              setSyncStatus({
+                stage: 'detecting',
+                message: '正在检测设备状态...',
+                progress: 10,
+                showSyncModal: false
+              });
+
+              // 执行自动检测
+              const detectionResult = await autoDetectionService.autoDetectAfterLogin(userData.email);
+              
+              // 记录检测结果
+              await autoDetectionService.recordDetectionResult(userData.email, detectionResult);
+              await autoDetectionService.recordDetectionTime(userData.email);
+              
+              // 更新状态
+              setSyncStatus(autoDetectionService.getCurrentState());
+              
+              // 如果检测到需要同步，显示引导
+              if (detectionResult.shouldShowSync) {
+                console.log('📱 检测到需要同步，显示用户引导');
+                setShowSyncGuide(true);
+              } else {
+                console.log('✅ 设备状态正常，无需同步');
+                // 3秒后隐藏状态指示器
+                setTimeout(() => {
+                  setShowSyncStatus(false);
+                }, 3000);
+              }
+            }
+          } catch (error) {
+            console.error('❌ Apple登录自动检测失败:', error);
+            setSyncStatus({
+              stage: 'failed',
+              message: '检测失败，请手动检查',
+              progress: 0,
+              showSyncModal: false
+            });
+            // 5秒后隐藏状态指示器
+            setTimeout(() => {
+              setShowSyncStatus(false);
+            }, 5000);
+          }
+        }
         
         // 检查是否需要跳转到购买页面
         const shouldRedirectToPurchase = route?.params?.redirectToPurchase || false;
@@ -1014,6 +1083,27 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
           </ScrollView>
         </SafeAreaView>
       </Modal>
+
+      {/* Apple登录同步状态指示器 */}
+      <LoginSyncStatusIndicator
+        visible={showSyncStatus}
+        state={syncStatus}
+        onShowSyncModal={() => setShowSyncGuide(true)}
+        onDismiss={() => setShowSyncStatus(false)}
+      />
+
+      {/* 新用户同步引导 */}
+      <NewUserSyncGuide
+        visible={showSyncGuide}
+        onClose={() => setShowSyncGuide(false)}
+        onStartSync={() => {
+          // 这里可以触发实际的同步流程
+          console.log('🚀 用户选择开始同步');
+          setShowSyncGuide(false);
+          // 可以在这里调用NewDeviceDataDownloadService开始同步
+        }}
+        appleId={currentAppleId}
+      />
     </SafeAreaView>
   );
 };
