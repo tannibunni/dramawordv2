@@ -146,6 +146,31 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
     initializeSubscription();
   }, []);
 
+  // 获取默认头像
+  const getDefaultAvatar = () => {
+    if (!user || !loginType) {
+      // 返回本地默认游客头像
+      console.log('🔍 使用默认游客头像 - 原因: 无用户或无登录类型');
+      return require('../../../assets/images/guest-avatar.png');
+    }
+
+    // 根据登录类型返回对应的默认头像
+    switch (loginType) {
+      case 'apple':
+        console.log('🔍 使用Apple默认头像');
+        return require('../../../assets/images/apple-avatar.png');
+      case 'phone':
+        console.log('🔍 使用手机默认头像');
+        return require('../../../assets/images/phone-avatar.png');
+      case 'wechat':
+        console.log('🔍 使用微信默认头像');
+        return require('../../../assets/images/wechat-avatar.png');
+      default:
+        console.log('🔍 使用通用默认头像');
+        return require('../../../assets/images/guest-avatar.png');
+    }
+  };
+
   // 获取用户头像
   const getUserAvatar = () => {
     console.log('🔍 getUserAvatar 调试信息:', {
@@ -161,11 +186,18 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
       const normalizedAvatarUrl = normalizeImageUrl(user.avatar);
       console.log('🔍 使用用户自定义头像:', normalizedAvatarUrl);
       
+      // 检查是否是已知的无效头像URL
+      if (user.avatar.includes('avatar-68978aba968929e7a6d03f10-1756606302684-957780915')) {
+        console.warn('⚠️ 检测到已知无效头像URL，使用默认头像:', normalizedAvatarUrl);
+        return getDefaultAvatar();
+      }
+      
       // 检查头像URL是否有效（简单检查）
       if (isValidImageUrl(normalizedAvatarUrl)) {
         return { uri: normalizedAvatarUrl };
       } else {
         console.warn('⚠️ 头像URL无效，使用默认头像:', normalizedAvatarUrl);
+        return getDefaultAvatar();
       }
     }
 
@@ -386,7 +418,26 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
             source={getUserAvatar()}
             style={styles.avatar}
             onLoad={() => console.log('✅ 头像加载成功:', getUserAvatar())}
-            onError={(error) => console.error('❌ 头像加载失败:', error.nativeEvent.error, getUserAvatar())}
+            onError={async (error) => {
+              console.error('❌ 头像加载失败:', error.nativeEvent.error, getUserAvatar());
+              
+              // 如果头像加载失败，尝试清除无效的头像URL
+              if (user?.avatar && user.avatar.includes('avatar-68978aba968929e7a6d03f10-1756606302684-957780915')) {
+                console.log('🔧 检测到无效头像URL，尝试清除...');
+                try {
+                  const userService = UserService.getInstance();
+                  const token = await userService.getAuthToken();
+                  if (token) {
+                    await userService.updateProfile(token, { avatar: null });
+                    console.log('✅ 已清除无效头像URL');
+                    // 触发重新渲染
+                    setUser(prev => prev ? { ...prev, avatar: undefined } : prev);
+                  }
+                } catch (updateError) {
+                  console.error('❌ 清除头像URL失败:', updateError);
+                }
+              }
+            }}
             onLoadStart={() => console.log('🔄 开始加载头像:', getUserAvatar())}
             onLoadEnd={() => console.log('🏁 头像加载结束:', getUserAvatar())}
           />
