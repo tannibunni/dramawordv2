@@ -39,7 +39,7 @@ import { LearningStatsService } from '../../services/learningStatsService';
 import { unifiedSyncService } from '../../services/unifiedSyncService';
 import { cacheService, CACHE_KEYS } from '../../services/cacheService';
 import { getAboutUsContent } from '../../utils/aboutUsContent';
-import { normalizeImageUrl } from '../../utils/imageUrlHelper';
+import { normalizeImageUrl, isValidImageUrl } from '../../utils/imageUrlHelper';
 import DataSyncIndicator from '../../components/common/DataSyncIndicator';
 import { clearDataService } from '../../services/clearDataService';
 import { subscriptionService } from '../../services/subscriptionService';
@@ -160,7 +160,13 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
     if (user?.avatar && user.avatar !== '') {
       const normalizedAvatarUrl = normalizeImageUrl(user.avatar);
       console.log('🔍 使用用户自定义头像:', normalizedAvatarUrl);
-      return { uri: normalizedAvatarUrl };
+      
+      // 检查头像URL是否有效（简单检查）
+      if (isValidImageUrl(normalizedAvatarUrl)) {
+        return { uri: normalizedAvatarUrl };
+      } else {
+        console.warn('⚠️ 头像URL无效，使用默认头像:', normalizedAvatarUrl);
+      }
     }
 
     if (!user || !loginType) {
@@ -379,6 +385,10 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
             key={`avatar-${loginType}-${isAuthenticated}`}
             source={getUserAvatar()}
             style={styles.avatar}
+            onLoad={() => console.log('✅ 头像加载成功:', getUserAvatar())}
+            onError={(error) => console.error('❌ 头像加载失败:', error.nativeEvent.error, getUserAvatar())}
+            onLoadStart={() => console.log('🔄 开始加载头像:', getUserAvatar())}
+            onLoadEnd={() => console.log('🏁 头像加载结束:', getUserAvatar())}
           />
           <View style={styles.userDetails}>
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>

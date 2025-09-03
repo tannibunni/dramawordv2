@@ -705,6 +705,8 @@ export class UserController {
       // 注意：压缩后的文件扩展名会变成.webp
       const processedFilename = path.basename(processedFilePath);
       const avatarUrl = `${baseUrl}/uploads/avatars/${processedFilename}`;
+      
+      logger.info(`[UserController] 头像处理完成: ${processedFilePath} -> ${avatarUrl}`);
 
       // 更新用户头像
       const user = await User.findByIdAndUpdate(
