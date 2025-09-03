@@ -867,7 +867,11 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
         
         await AsyncStorage.setItem('userData', JSON.stringify(userData));
         await AsyncStorage.setItem('loginType', JSON.stringify(loginType));
-        await AsyncStorage.setItem('guestId', result.data.user.guestId);
+        
+        // 只有当guestId存在时才保存
+        if (result.data.user.guestId) {
+          await AsyncStorage.setItem('guestId', result.data.user.guestId);
+        }
         
         console.log('✅ 用户数据已保存到本地存储');
         

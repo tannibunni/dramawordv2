@@ -304,7 +304,10 @@ export class UserController {
             experience: user.learningStats.experience,
             experienceToNextLevel: (user as any).experienceToNextLevel,
             learningStats: user.learningStats,
-            settings: user.settings
+            settings: user.settings,
+            loginType: user.auth.loginType,
+            guestId: user.auth.guestId,
+            deviceId: user.auth.deviceId
           },
           token
         }
