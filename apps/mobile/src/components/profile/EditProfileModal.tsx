@@ -40,8 +40,27 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
   const [avatar, setAvatar] = useState(user.avatar);
   const [loading, setLoading] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
-  const { user: authUser, getAuthToken } = useAuth();
+  const { user: authUser, getAuthToken, loginType } = useAuth();
   const userService = UserService.getInstance();
+
+  // 获取默认头像
+  const getDefaultAvatar = () => {
+    if (!loginType) {
+      return require('../../../assets/images/guest-avatar.png');
+    }
+
+    // 根据登录类型返回对应的默认头像
+    switch (loginType) {
+      case 'apple':
+        return require('../../../assets/images/apple-avatar.png');
+      case 'phone':
+        return require('../../../assets/images/phone-avatar.png');
+      case 'wechat':
+        return require('../../../assets/images/wechat-avatar.png');
+      default:
+        return require('../../../assets/images/guest-avatar.png');
+    }
+  };
 
   // 当用户数据更新时，同步更新表单
   useEffect(() => {
@@ -336,11 +355,19 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
               disabled={uploadingAvatar}
             >
               {avatar ? (
-                <Image source={{ uri: avatar }} style={styles.avatar} />
+                <Image 
+                  source={{ uri: avatar }} 
+                  style={styles.avatar}
+                  onError={() => {
+                    console.log('⚠️ 头像加载失败，使用默认头像');
+                    setAvatar(undefined);
+                  }}
+                />
               ) : (
-                <View style={styles.avatarPlaceholder}>
-                  <Ionicons name="person" size={40} color={colors.neutral[500]} />
-                </View>
+                <Image 
+                  source={getDefaultAvatar()} 
+                  style={styles.avatar}
+                />
               )}
               <View style={styles.avatarEditIcon}>
                 {uploadingAvatar ? (
