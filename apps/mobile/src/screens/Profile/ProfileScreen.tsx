@@ -403,6 +403,36 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
     }
   };
 
+  // 调试函数：检查用户登录状态
+  const debugUserStatus = async () => {
+    try {
+      console.log('🔍 [ProfileScreen] 开始调试用户状态...');
+      
+      // 检查AsyncStorage中的各种数据
+      const authToken = await AsyncStorage.getItem('authToken');
+      const userData = await AsyncStorage.getItem('userData');
+      const loginType = await AsyncStorage.getItem('loginType');
+      
+      console.log('🔍 [ProfileScreen] AsyncStorage数据:');
+      console.log('  - authToken:', authToken ? `${authToken.substring(0, 20)}...` : 'null');
+      console.log('  - userData:', userData ? '存在' : 'null');
+      console.log('  - loginType:', loginType);
+      
+      // 检查当前状态
+      console.log('🔍 [ProfileScreen] 当前状态:');
+      console.log('  - isAuthenticated:', isAuthenticated);
+      console.log('  - loginType:', loginType);
+      console.log('  - user:', user);
+      
+      // 尝试获取token
+      const token = await getAuthToken();
+      console.log('🔍 [ProfileScreen] getAuthToken结果:', token ? `${token.substring(0, 20)}...` : 'null');
+      
+    } catch (error) {
+      console.error('❌ [ProfileScreen] 调试用户状态失败:', error);
+    }
+  };
+
 
 
   const renderUserInfo = () => {
@@ -460,6 +490,13 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
               </View>
               <TouchableOpacity style={styles.editButtonInline} onPress={handleEditProfile}>
                 <Ionicons name="pencil" size={16} color={colors.primary[500]} />
+              </TouchableOpacity>
+              {/* 临时调试按钮 */}
+              <TouchableOpacity 
+                style={[styles.editButtonInline, { backgroundColor: '#ff6b6b' }]} 
+                onPress={debugUserStatus}
+              >
+                <Ionicons name="bug-outline" size={16} color="white" />
               </TouchableOpacity>
             </View>
 
