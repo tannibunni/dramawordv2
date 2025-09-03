@@ -81,6 +81,7 @@ app.use('/api/device', deviceRoutes);
 app.use('/api/data-version', dataVersionRoutes);
 app.use('/api/network', networkRoutes);
 app.use('/api/user-stats', userStatsRoutes);
+app.use('/api/debug', debugRoutes);
 
 // 健康检查端点
 app.get('/health', (req, res) => {
