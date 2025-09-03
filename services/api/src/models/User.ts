@@ -220,6 +220,8 @@ const UserSchema = new Schema<IUser>({
     deviceId: {
       type: String,
       required: false,
+      unique: true,
+      sparse: true,
       index: true
     },
     // 用户升级状态

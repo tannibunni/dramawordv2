@@ -830,11 +830,14 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
     try {
       setLoading(true);
       
+      // 获取设备ID
+      const deviceId = await getDeviceId();
+      
       // 直接调用后端登录API而非注册API
       const response = await fetch('https://dramawordv2.onrender.com/api/users/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ loginType, guestId: existingGuestId })
+        body: JSON.stringify({ loginType, guestId: existingGuestId, deviceId })
       });
       
       if (!response.ok) {

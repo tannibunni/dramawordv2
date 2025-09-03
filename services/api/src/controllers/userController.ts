@@ -202,7 +202,7 @@ export class UserController {
   // 用户登录
   static async login(req: Request, res: Response) {
     try {
-      const { loginType, phoneNumber, wechatId, appleId, guestId } = req.body;
+      const { loginType, phoneNumber, wechatId, appleId, guestId, deviceId } = req.body;
 
       if (!loginType) {
         return res.status(400).json({
@@ -248,7 +248,12 @@ export class UserController {
               message: '游客登录需要提供游客ID'
             });
           }
-          user = await User.findOne({ 'auth.guestId': guestId });
+          // 游客用户：优先检查设备ID，再检查游客ID
+          if (deviceId) {
+            user = await User.findOne({ 'auth.deviceId': deviceId, 'auth.loginType': 'guest' });
+          } else {
+            user = await User.findOne({ 'auth.guestId': guestId });
+          }
           break;
         default:
           return res.status(400).json({
