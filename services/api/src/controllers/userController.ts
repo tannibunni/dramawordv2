@@ -242,17 +242,16 @@ export class UserController {
           user = await User.findOne({ 'auth.appleId': appleId });
           break;
         case 'guest':
-          if (!guestId) {
-            return res.status(400).json({
-              success: false,
-              message: '游客登录需要提供游客ID'
-            });
-          }
           // 游客用户：优先检查设备ID，再检查游客ID
           if (deviceId) {
             user = await User.findOne({ 'auth.deviceId': deviceId, 'auth.loginType': 'guest' });
-          } else {
+          } else if (guestId) {
             user = await User.findOne({ 'auth.guestId': guestId });
+          } else {
+            return res.status(400).json({
+              success: false,
+              message: '游客登录需要提供设备ID或游客ID'
+            });
           }
           break;
         default:

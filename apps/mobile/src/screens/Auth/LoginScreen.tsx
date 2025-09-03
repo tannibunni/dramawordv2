@@ -813,17 +813,75 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
 
   const handleGuestLogin = async () => {
     try {
-      const existingGuestId = await AsyncStorage.getItem('guestId');
-      if (existingGuestId) {
-        console.log('[LoginScreen handleGuestLogin] 复用本地 guestId:', existingGuestId);
-        await testLoginWithExistingId('guest', existingGuestId);
+      // 获取设备ID
+      const deviceId = await getDeviceId();
+      console.log('[LoginScreen handleGuestLogin] 设备ID:', deviceId);
+      
+      // 先尝试用设备ID查找现有用户
+      try {
+        console.log('[LoginScreen handleGuestLogin] 尝试用设备ID查找现有用户...');
+        await testLoginWithDeviceId('guest', deviceId);
         return;
+      } catch (error) {
+        console.log('[LoginScreen handleGuestLogin] 设备ID查找失败，将创建新用户');
       }
-    } catch {}
-    // 无本地ID则生成新ID并注册
-    const newGuestId = await getOrCreateGuestId();
-    console.log('[LoginScreen handleGuestLogin] 生成新 guestId:', newGuestId);
-    testLogin('guest', newGuestId);
+      
+      // 创建新用户
+      const newGuestId = await getOrCreateGuestId();
+      console.log('[LoginScreen handleGuestLogin] 生成新 guestId:', newGuestId);
+      testLogin('guest', newGuestId);
+    } catch (error) {
+      console.error('[LoginScreen handleGuestLogin] 游客登录失败:', error);
+    }
+  };
+
+  const testLoginWithDeviceId = async (loginType: 'guest', deviceId: string) => {
+    try {
+      setLoading(true);
+      
+      // 直接调用后端登录API，使用设备ID查找用户
+      const response = await fetch('https://dramawordv2.onrender.com/api/users/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ loginType, deviceId })
+      });
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ 设备ID登录失败:', response.status, errorText);
+        throw new Error(`设备ID登录失败: ${response.status} - ${errorText}`);
+      }
+      
+      const result = await response.json();
+      console.log('✅ 设备ID登录成功:', result);
+      
+      if (result.success && result.data) {
+        // 保存用户信息到本地存储
+        const userData = {
+          id: result.data.user.id,
+          nickname: result.data.user.nickname,
+          avatar: result.data.user.avatar,
+          loginType: loginType,
+          token: result.data.token,
+        };
+        
+        await AsyncStorage.setItem('userData', JSON.stringify(userData));
+        await AsyncStorage.setItem('loginType', JSON.stringify(loginType));
+        await AsyncStorage.setItem('guestId', result.data.user.guestId);
+        
+        console.log('✅ 用户数据已保存到本地存储');
+        
+        // 调用登录成功回调
+        onLoginSuccess(userData);
+      } else {
+        throw new Error(result.message || '设备ID登录失败');
+      }
+    } catch (error) {
+      console.error('❌ 设备ID登录失败:', error);
+      throw error;
+    } finally {
+      setLoading(false);
+    }
   };
 
   const testLoginWithExistingId = async (loginType: 'guest', existingGuestId: string) => {
