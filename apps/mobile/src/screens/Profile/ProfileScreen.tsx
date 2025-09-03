@@ -456,12 +456,15 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                 console.log('🔧 检测到无效头像URL，尝试清除...');
                 try {
                   const userService = UserService.getInstance();
-                  const token = await userService.getAuthToken();
+                  // 使用getAuthToken函数获取token
+                  const token = await getAuthToken();
                   if (token) {
                     await userService.updateProfile(token, { avatar: undefined });
                     console.log('✅ 已清除无效头像URL');
                     // 触发重新渲染
                     updateUser({ avatar: undefined });
+                  } else {
+                    console.warn('⚠️ 无法获取token，跳过头像URL清除');
                   }
                 } catch (updateError) {
                   console.error('❌ 清除头像URL失败:', updateError);

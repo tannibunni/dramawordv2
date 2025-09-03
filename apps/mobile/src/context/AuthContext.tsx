@@ -159,8 +159,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const getAuthToken = async (): Promise<string | null> => {
     try {
       console.log('🔍 [AuthContext] getAuthToken 开始调用...');
+      
+      // 首先检查当前用户对象中的token
+      if (user?.token) {
+        console.log('🔍 [AuthContext] 从当前用户对象获取token:', user.token.substring(0, 20) + '...');
+        return user.token;
+      }
+      
+      // 然后尝试从userService获取
       const token = await userService.getAuthToken();
-      console.log('🔍 [AuthContext] getAuthToken 结果:', token ? `${token.substring(0, 20)}...` : 'null');
+      console.log('🔍 [AuthContext] userService.getAuthToken 结果:', token ? `${token.substring(0, 20)}...` : 'null');
       
       // 如果userService获取失败，尝试直接从AsyncStorage获取
       if (!token) {
