@@ -92,7 +92,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   const { vocabulary, clearVocabulary } = useVocabulary();
   const { shows, clearShows } = useShowList();
   const { navigate } = useNavigation();
-  const { user, loginType, isAuthenticated, logout: authLogout, login, updateUser } = useAuth();
+  const { user, loginType, isAuthenticated, logout: authLogout, login, updateUser, getAuthToken } = useAuth();
   const { appLanguage } = useAppLanguage();
   const userService = UserService.getInstance();
   
@@ -458,10 +458,10 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                   const userService = UserService.getInstance();
                   const token = await userService.getAuthToken();
                   if (token) {
-                    await userService.updateProfile(token, { avatar: null });
+                    await userService.updateProfile(token, { avatar: undefined });
                     console.log('✅ 已清除无效头像URL');
                     // 触发重新渲染
-                    setUser(prev => prev ? { ...prev, avatar: undefined } : prev);
+                    updateUser({ avatar: undefined });
                   }
                 } catch (updateError) {
                   console.error('❌ 清除头像URL失败:', updateError);
