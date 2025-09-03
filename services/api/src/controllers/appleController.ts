@@ -10,7 +10,7 @@ const JWT_SECRET = process.env.JWT_SECRET || 'dramaword_jwt_secret';
 export class AppleController {
   static async login(req: Request, res: Response) {
     try {
-      const { idToken, email, fullName } = req.body;
+      const { idToken, email, fullName, guestUserId, deviceId } = req.body;
       if (!idToken) {
         return res.status(400).json({ success: false, message: '缺少idToken' });
       }
@@ -42,12 +42,30 @@ export class AppleController {
         logger.info(`🍎 使用邮箱前缀作为昵称: ${nickname}`);
       }
 
-      // 查找或创建用户：优先按 appleId，其次按 email 合并，避免 email 唯一索引冲突
+      let user: any = null;
+      let isUpgrade = false;
       const normalizedEmail = appleEmail ? String(appleEmail).toLowerCase().trim() : undefined;
-      const orConds: any[] = [{ 'auth.appleId': appleId }];
-      if (normalizedEmail) orConds.push({ email: normalizedEmail });
 
-      let user = await User.findOne({ $or: orConds });
+      // 检查是否为游客用户升级
+      if (guestUserId) {
+        user = await User.findById(guestUserId);
+        if (user && user.auth.loginType === 'guest') {
+          isUpgrade = true;
+          logger.info(`🍎 游客用户升级: ${guestUserId} -> Apple登录`);
+        } else {
+          return res.status(400).json({
+            success: false,
+            message: '无效的游客用户ID'
+          });
+        }
+      } else {
+        // 查找或创建用户：优先按 appleId，其次按 email 合并，避免 email 唯一索引冲突
+        const orConds: any[] = [{ 'auth.appleId': appleId }];
+        if (normalizedEmail) orConds.push({ email: normalizedEmail });
+
+        user = await User.findOne({ $or: orConds });
+      }
+
       if (!user) {
         // 创建新用户 - 使用Apple ID的真实信息
         const userData = {
@@ -74,6 +92,30 @@ export class AppleController {
         user = new User(userData);
         await user.save();
         logger.info(`🍎 创建新Apple用户: appleId=${appleId}, nickname=${nickname}, email=${appleEmail}`);
+      } else if (isUpgrade) {
+        // 升级现有游客用户
+        const originalGuestId = user.auth.guestId;
+        
+        // 更新用户信息
+        user.nickname = nickname;
+        user.email = normalizedEmail;
+        user.auth.loginType = 'apple';
+        user.auth.appleId = appleId;
+        user.auth.appleEmail = normalizedEmail;
+        user.auth.appleFullName = appleFullName;
+        user.auth.lastLoginAt = new Date();
+        user.auth.isActive = true;
+        
+        // 设置升级状态
+        user.upgradeStatus = {
+          isUpgraded: true,
+          originalGuestId: originalGuestId,
+          upgradeDate: new Date(),
+          upgradeType: 'apple'
+        };
+        
+        await user.save();
+        logger.info(`🍎 游客用户升级成功: ${user._id}, 原游客ID: ${originalGuestId}`);
       } else {
         // 更新现有用户信息 - 合并 appleId / email / 姓名
         const updateData: any = {
@@ -132,7 +174,7 @@ export class AppleController {
 
       return res.json({
         success: true,
-        message: 'Apple登录成功',
+        message: isUpgrade ? '游客用户升级成功' : 'Apple登录成功',
         data: {
           token,
           user: {
@@ -144,6 +186,8 @@ export class AppleController {
             loginType: user.auth.loginType,
             learningStats: user.learningStats,
             settings: user.settings,
+            isUpgraded: isUpgrade,
+            originalGuestId: isUpgrade ? user.upgradeStatus?.originalGuestId : undefined,
           },
         },
       });

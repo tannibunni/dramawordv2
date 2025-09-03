@@ -11,7 +11,7 @@ const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 // 邮箱注册
 export const registerWithEmail = async (req: Request, res: Response) => {
   try {
-    const { email, password, nickname } = req.body;
+    const { email, password, nickname, guestUserId, deviceId } = req.body;
 
     // 验证输入
     if (!email || !password || !nickname) {
@@ -38,22 +38,39 @@ export const registerWithEmail = async (req: Request, res: Response) => {
       });
     }
 
-    // 检查邮箱是否已存在
-    const existingUser = await User.findOne({ email: email.toLowerCase() });
-    if (existingUser) {
-      return res.status(400).json({
-        success: false,
-        error: '该邮箱已被注册'
-      });
-    }
+    let user: any = null;
+    let isUpgrade = false;
 
-    // 检查昵称是否已存在
-    const existingNickname = await User.findOne({ nickname });
-    if (existingNickname) {
-      return res.status(400).json({
-        success: false,
-        error: '该昵称已被使用'
-      });
+    // 检查是否为游客用户升级
+    if (guestUserId) {
+      user = await User.findById(guestUserId);
+      if (user && user.auth.loginType === 'guest') {
+        isUpgrade = true;
+        logger.info(`[EmailAuth] 游客用户升级: ${guestUserId} -> 邮箱注册`);
+      } else {
+        return res.status(400).json({
+          success: false,
+          error: '无效的游客用户ID'
+        });
+      }
+    } else {
+      // 检查邮箱是否已存在
+      const existingUser = await User.findOne({ email: email.toLowerCase() });
+      if (existingUser) {
+        return res.status(400).json({
+          success: false,
+          error: '该邮箱已被注册'
+        });
+      }
+
+      // 检查昵称是否已存在
+      const existingNickname = await User.findOne({ nickname });
+      if (existingNickname) {
+        return res.status(400).json({
+          success: false,
+          error: '该昵称已被使用'
+        });
+      }
     }
 
     // 加密密码
@@ -63,55 +80,82 @@ export const registerWithEmail = async (req: Request, res: Response) => {
     const verificationToken = crypto.randomBytes(32).toString('hex');
     const verificationExpiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24小时后过期
 
-    // 生成用户名 - 确保不超过50字符限制
-    const timestamp = Date.now();
-    const randomSuffix = Math.random().toString(36).substr(2, 3); // 减少随机后缀长度
-    let username = `user_${timestamp}_${randomSuffix}`;
-    
-    // 验证用户名长度，如果超长则使用更短的格式
-    if (username.length > 50) {
-      username = `u_${timestamp}_${randomSuffix}`;
+    if (isUpgrade) {
+      // 升级现有游客用户
+      const originalGuestId = user.auth.guestId;
+      
+      // 更新用户信息
+      user.nickname = nickname;
+      user.email = email.toLowerCase();
+      user.auth.loginType = 'email';
+      user.auth.passwordHash = passwordHash;
+      user.auth.emailVerified = false;
+      user.auth.emailVerificationToken = verificationToken;
+      user.auth.emailVerificationExpiresAt = verificationExpiresAt;
+      user.auth.lastLoginAt = new Date();
+      user.auth.isActive = true;
+      
+      // 设置升级状态
+      user.upgradeStatus = {
+        isUpgraded: true,
+        originalGuestId: originalGuestId,
+        upgradeDate: new Date(),
+        upgradeType: 'email'
+      };
+      
+      await user.save();
+      logger.info(`[EmailAuth] 游客用户升级成功: ${user._id}, 原游客ID: ${originalGuestId}`);
+    } else {
+      // 创建新用户
+      const timestamp = Date.now();
+      const randomSuffix = Math.random().toString(36).substr(2, 3);
+      let username = `user_${timestamp}_${randomSuffix}`;
+      
+      // 验证用户名长度，如果超长则使用更短的格式
       if (username.length > 50) {
-        username = `u_${timestamp}`;
+        username = `u_${timestamp}_${randomSuffix}`;
         if (username.length > 50) {
-          throw new Error('无法生成有效的用户名，时间戳过长');
+          username = `u_${timestamp}`;
+          if (username.length > 50) {
+            throw new Error('无法生成有效的用户名，时间戳过长');
+          }
         }
       }
+
+      // 创建用户
+      user = new User({
+        username,
+        nickname,
+        email: email.toLowerCase(),
+        auth: {
+          loginType: 'email',
+          passwordHash,
+          emailVerified: false,
+          emailVerificationToken: verificationToken,
+          emailVerificationExpiresAt: verificationExpiresAt,
+          lastLoginAt: new Date(),
+          isActive: true
+        },
+        learningStats: {
+          totalWordsLearned: 0,
+          totalReviews: 0,
+          currentStreak: 0,
+          longestStreak: 0,
+          averageAccuracy: 0,
+          totalStudyTime: 0,
+          lastStudyDate: null,
+          level: 1,
+          experience: 0,
+          dailyReviewXP: 0,
+          dailyStudyTimeXP: 0,
+          lastDailyReset: new Date(),
+          completedDailyCards: false,
+          lastDailyCardsDate: null
+        }
+      });
+
+      await user.save();
     }
-
-    // 创建用户
-    const user = new User({
-      username,
-      nickname,
-      email: email.toLowerCase(),
-      auth: {
-        loginType: 'email',
-        passwordHash,
-        emailVerified: false,
-        emailVerificationToken: verificationToken,
-        emailVerificationExpiresAt: verificationExpiresAt,
-        lastLoginAt: new Date(),
-        isActive: true
-      },
-      learningStats: {
-        totalWordsLearned: 0,
-        totalReviews: 0,
-        currentStreak: 0,
-        longestStreak: 0,
-        averageAccuracy: 0,
-        totalStudyTime: 0,
-        lastStudyDate: null,
-        level: 1,
-        experience: 0,
-        dailyReviewXP: 0,
-        dailyStudyTimeXP: 0,
-        lastDailyReset: new Date(),
-        completedDailyCards: false,
-        lastDailyCardsDate: null
-      }
-    });
-
-    await user.save();
 
     // 发送验证邮件
     try {
@@ -133,14 +177,16 @@ export const registerWithEmail = async (req: Request, res: Response) => {
 
     res.status(201).json({
       success: true,
-      message: '注册成功！请检查邮箱验证邮件',
+      message: isUpgrade ? '游客用户升级成功！请检查邮箱验证邮件' : '注册成功！请检查邮箱验证邮件',
       user: {
         id: user._id,
         username: user.username,
         nickname: user.nickname,
         email: user.email,
         emailVerified: user.auth.emailVerified,
-        loginType: user.auth.loginType
+        loginType: user.auth.loginType,
+        isUpgraded: isUpgrade,
+        originalGuestId: isUpgrade ? user.upgradeStatus?.originalGuestId : undefined
       },
       token
     });

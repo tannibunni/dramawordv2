@@ -60,6 +60,13 @@ export interface IUserAuth {
   };
   guestId?: string;
   deviceId?: string;
+  // 用户升级状态
+  upgradeStatus?: {
+    isUpgraded: boolean;
+    originalGuestId?: string;
+    upgradeDate?: Date;
+    upgradeType?: 'email' | 'apple' | 'phone' | 'wechat';
+  };
   // 邮箱认证字段
   emailVerified?: boolean;
   emailVerificationToken?: string;
@@ -214,6 +221,26 @@ const UserSchema = new Schema<IUser>({
       type: String,
       required: false,
       index: true
+    },
+    // 用户升级状态
+    upgradeStatus: {
+      isUpgraded: {
+        type: Boolean,
+        default: false
+      },
+      originalGuestId: {
+        type: String,
+        required: false
+      },
+      upgradeDate: {
+        type: Date,
+        required: false
+      },
+      upgradeType: {
+        type: String,
+        enum: ['email', 'apple', 'phone', 'wechat'],
+        required: false
+      }
     },
     // 邮箱认证字段
     emailVerified: {

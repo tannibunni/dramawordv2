@@ -7,6 +7,7 @@ export interface AppleLoginData {
     givenName?: string;
     familyName?: string;
   };
+  guestUserId?: string;
 }
 
 export class AppleService {

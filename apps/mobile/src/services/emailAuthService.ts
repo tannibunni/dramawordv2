@@ -8,6 +8,8 @@ export interface EmailAuthUser {
   email: string;
   emailVerified: boolean;
   loginType: 'email';
+  isUpgraded?: boolean;
+  originalGuestId?: string;
 }
 
 export interface EmailAuthResult {
@@ -31,7 +33,7 @@ class EmailAuthService {
   /**
    * 邮箱注册
    */
-  public async register(email: string, password: string, nickname: string): Promise<EmailAuthResult> {
+  public async register(email: string, password: string, nickname: string, guestUserId?: string): Promise<EmailAuthResult> {
     try {
       console.log('[EmailAuthService] 🚀 开始邮箱注册:', { email, nickname });
 
@@ -44,6 +46,7 @@ class EmailAuthService {
           email: email.toLowerCase().trim(),
           password,
           nickname: nickname.trim(),
+          guestUserId,
         }),
       });
 
@@ -59,6 +62,8 @@ class EmailAuthService {
           email: result.user.email,
           loginType: 'email',
           token: result.token,
+          isUpgraded: result.user.isUpgraded || false,
+          originalGuestId: result.user.originalGuestId,
         };
 
         await AsyncStorage.setItem('userData', JSON.stringify(userData));

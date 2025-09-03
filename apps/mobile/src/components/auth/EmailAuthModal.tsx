@@ -15,6 +15,7 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { emailAuthService, EmailAuthResult } from '../../services/emailAuthService';
+import { guestUpgradeService } from '../../services/guestUpgradeService';
 import { colors } from '../../constants/colors';
 import { t } from '../../constants/translations';
 import { useAppLanguage } from '../../context/AppLanguageContext';
@@ -129,15 +130,39 @@ export const EmailAuthModal: React.FC<EmailAuthModalProps> = ({
     setLoading(true);
     try {
       console.log('[EmailAuthModal] 开始注册流程');
-      const result = await emailAuthService.register(email, password, nickname);
+      
+      // 如果是游客升级，获取当前游客用户ID
+      let guestUserId = undefined;
+      if (isUpgradeFromGuest) {
+        try {
+          const userData = await AsyncStorage.getItem('userData');
+          if (userData) {
+            const parsed = JSON.parse(userData);
+            guestUserId = parsed.id;
+            console.log('[EmailAuthModal] 获取到游客用户ID:', guestUserId);
+          }
+        } catch (error) {
+          console.error('[EmailAuthModal] 获取游客用户ID失败:', error);
+        }
+      }
+      
+      const result = await emailAuthService.register(email, password, nickname, guestUserId);
 
       if (result.success && result.user && result.token) {
         // 如果是游客升级，需要迁移数据
         if (isUpgradeFromGuest) {
           try {
             console.log('[EmailAuthModal] 开始游客数据迁移...');
-            await migrateGuestData(result.user!.id);
-            console.log('[EmailAuthModal] 游客数据迁移完成');
+            const migrationResult = await guestUpgradeService.migrateGuestDataToRegistered(
+              result.user!.id, 
+              result.token!
+            );
+            
+            if (migrationResult.success) {
+              console.log('[EmailAuthModal] 游客数据迁移完成:', migrationResult.migratedDataTypes);
+            } else {
+              console.error('[EmailAuthModal] 游客数据迁移失败:', migrationResult.error);
+            }
           } catch (migrationError) {
             console.error('[EmailAuthModal] 游客数据迁移失败:', migrationError);
             // 迁移失败不影响注册成功，但记录错误

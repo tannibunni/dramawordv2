@@ -26,6 +26,7 @@ import { t } from '../../constants/translations';
 import { useAppLanguage } from '../../context/AppLanguageContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { unifiedSyncService } from '../../services/unifiedSyncService';
+import { guestUpgradeService } from '../../services/guestUpgradeService';
 import { userAgreementText } from '../../constants/legal/userAgreement';
 import { privacyPolicyText } from '../../constants/legal/privacyPolicy';
 import { API_BASE_URL } from '../../constants/config';
@@ -639,6 +640,21 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
         throw new Error('未获取到身份令牌');
       }
 
+      // 如果是游客升级，获取当前游客用户ID
+      let guestUserId = undefined;
+      if (isUpgradeFromGuest) {
+        try {
+          const userData = await AsyncStorage.getItem('userData');
+          if (userData) {
+            const parsed = JSON.parse(userData);
+            guestUserId = parsed.id;
+            console.log('🍎 获取到游客用户ID:', guestUserId);
+          }
+        } catch (error) {
+          console.error('🍎 获取游客用户ID失败:', error);
+        }
+      }
+
       // 调用后端登录API，传递完整的用户信息
       const loginData = {
         idToken: credential.identityToken,
@@ -647,6 +663,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
           givenName: credential.fullName.givenName || undefined,
           familyName: credential.fullName.familyName || undefined,
         } : undefined,
+        guestUserId,
       };
       const result = await AppleService.login(loginData);
       
@@ -683,7 +700,21 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
         
         // 游客升级：迁移本地数据到新账户
         if (isUpgradeFromGuest) {
-          await migrateGuestDataToApple(userData);
+          try {
+            console.log('🍎 开始游客数据迁移...');
+            const migrationResult = await guestUpgradeService.migrateGuestDataToRegistered(
+              userData.id, 
+              userData.token
+            );
+            
+            if (migrationResult.success) {
+              console.log('🍎 游客数据迁移完成:', migrationResult.migratedDataTypes);
+            } else {
+              console.error('🍎 游客数据迁移失败:', migrationResult.error);
+            }
+          } catch (migrationError) {
+            console.error('🍎 游客数据迁移失败:', migrationError);
+          }
         }
 
         // 新增：Apple登录成功后自动检测设备状态
