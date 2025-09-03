@@ -245,12 +245,26 @@ class ErrorTrackingService {
       }
     };
 
-    // 未捕获的Promise拒绝
-    if (typeof window !== 'undefined') {
-      window.addEventListener('unhandledrejection', (event) => {
-        const error = event.reason instanceof Error ? event.reason : new Error(String(event.reason));
-        this.recordError(error, 'Unhandled Promise Rejection');
-      });
+    // React Native环境下的未捕获Promise拒绝处理
+    // 注意：在React Native中，我们使用不同的方式处理未捕获的Promise拒绝
+    if (typeof global !== 'undefined' && global.HermesInternal) {
+      // 在Hermes引擎中处理未捕获的Promise拒绝
+      const originalUnhandledRejection = global.HermesInternal?.enablePromiseRejectionTracker;
+      if (originalUnhandledRejection) {
+        global.HermesInternal.enablePromiseRejectionTracker = (tracker: any) => {
+          const result = originalUnhandledRejection(tracker);
+          if (tracker && tracker.onUnhandled) {
+            const originalOnUnhandled = tracker.onUnhandled;
+            tracker.onUnhandled = (id: number, error: any) => {
+              this.recordError(new Error(String(error)), 'Unhandled Promise Rejection');
+              if (originalOnUnhandled) {
+                originalOnUnhandled(id, error);
+              }
+            };
+          }
+          return result;
+        };
+      }
     }
   }
 
