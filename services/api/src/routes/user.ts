@@ -115,4 +115,59 @@ router.put('/showlist', authenticateToken, UserShowListController.updateShow);
 // 批量数据同步 API
 router.post('/batch-sync', authenticateToken, SyncController.uploadData);
 
+// 用户扩展信息 API
+// 更新用户地理位置信息
+router.put('/:userId/location', 
+  authenticateToken,
+  validateRequest({
+    body: {
+      country: { type: 'string', required: false },
+      region: { type: 'string', required: false },
+      city: { type: 'string', required: false },
+      timezone: { type: 'string', required: false },
+      systemLanguage: { type: 'string', required: false }
+    }
+  }),
+  UserController.updateLocation
+);
+
+// 更新用户错误追踪信息
+router.post('/:userId/error-tracking',
+  authenticateToken,
+  validateRequest({
+    body: {
+      errorReports: { type: 'array', required: true }
+    }
+  }),
+  UserController.updateErrorTracking
+);
+
+// 更新用户性能追踪信息
+router.post('/:userId/performance-tracking',
+  authenticateToken,
+  validateRequest({
+    body: {
+      performanceReports: { type: 'array', required: true }
+    }
+  }),
+  UserController.updatePerformanceTracking
+);
+
+// 更新用户分享行为信息
+router.post('/:userId/sharing-behavior',
+  authenticateToken,
+  validateRequest({
+    body: {
+      shareRecords: { type: 'array', required: true }
+    }
+  }),
+  UserController.updateSharingBehavior
+);
+
+// 获取用户扩展信息
+router.get('/:userId/extended-info',
+  authenticateToken,
+  UserController.getUserExtendedInfo
+);
+
 export default router; 

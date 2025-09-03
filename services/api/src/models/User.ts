@@ -87,6 +87,71 @@ export interface IUserSubscription {
   autoRenew: boolean;
 }
 
+// 地理位置信息接口
+export interface IUserLocation {
+  country?: string;
+  region?: string;
+  city?: string;
+  timezone?: string;
+  systemLanguage?: string;
+  lastUpdated?: Date;
+}
+
+// 崩溃和性能问题接口
+export interface IUserErrorTracking {
+  totalCrashes: number;
+  totalErrors: number;
+  performanceIssues: number;
+  lastCrashDate?: Date;
+  lastErrorDate?: Date;
+  crashReports: {
+    date: Date;
+    errorType: string;
+    errorMessage: string;
+    stackTrace?: string;
+    deviceInfo: string;
+  }[];
+  performanceReports: {
+    date: Date;
+    issueType: 'slow_load' | 'memory_high' | 'battery_drain' | 'network_slow';
+    severity: 'low' | 'medium' | 'high';
+    details: string;
+    metrics: {
+      loadTime?: number;
+      memoryUsage?: number;
+      batteryLevel?: number;
+      networkSpeed?: number;
+    };
+  }[];
+}
+
+// 分享行为接口
+export interface IUserSharingBehavior {
+  totalShares: number;
+  shareTypes: {
+    vocabulary: number;
+    progress: number;
+    achievements: number;
+    shows: number;
+    wordbook: number;
+  };
+  shareChannels: {
+    wechat: number;
+    weibo: number;
+    qq: number;
+    copyLink: number;
+    other: number;
+  };
+  lastShareDate?: Date;
+  shareHistory: {
+    date: Date;
+    type: 'vocabulary' | 'progress' | 'achievements' | 'shows' | 'wordbook';
+    channel: 'wechat' | 'weibo' | 'qq' | 'copyLink' | 'other';
+    content: string;
+    success: boolean;
+  }[];
+}
+
 // 用户文档接口
 export interface IUser extends Document {
   username: string;
@@ -98,6 +163,9 @@ export interface IUser extends Document {
   contributedWords: number;
   settings: IUserSettings;
   subscription: IUserSubscription;
+  location?: IUserLocation;
+  errorTracking?: IUserErrorTracking;
+  sharingBehavior?: IUserSharingBehavior;
   createdAt: Date;
   updatedAt: Date;
   // === 实例方法声明 ===
@@ -422,6 +490,192 @@ const UserSchema = new Schema<IUser>({
       type: Boolean,
       default: false
     }
+  },
+  location: {
+    country: {
+      type: String,
+      required: false
+    },
+    region: {
+      type: String,
+      required: false
+    },
+    city: {
+      type: String,
+      required: false
+    },
+    timezone: {
+      type: String,
+      required: false
+    },
+    systemLanguage: {
+      type: String,
+      required: false
+    },
+    lastUpdated: {
+      type: Date,
+      default: Date.now
+    }
+  },
+  errorTracking: {
+    totalCrashes: {
+      type: Number,
+      default: 0
+    },
+    totalErrors: {
+      type: Number,
+      default: 0
+    },
+    performanceIssues: {
+      type: Number,
+      default: 0
+    },
+    lastCrashDate: {
+      type: Date,
+      required: false
+    },
+    lastErrorDate: {
+      type: Date,
+      required: false
+    },
+    crashReports: [{
+      date: {
+        type: Date,
+        default: Date.now
+      },
+      errorType: {
+        type: String,
+        required: true
+      },
+      errorMessage: {
+        type: String,
+        required: true
+      },
+      stackTrace: {
+        type: String,
+        required: false
+      },
+      deviceInfo: {
+        type: String,
+        required: true
+      }
+    }],
+    performanceReports: [{
+      date: {
+        type: Date,
+        default: Date.now
+      },
+      issueType: {
+        type: String,
+        enum: ['slow_load', 'memory_high', 'battery_drain', 'network_slow'],
+        required: true
+      },
+      severity: {
+        type: String,
+        enum: ['low', 'medium', 'high'],
+        required: true
+      },
+      details: {
+        type: String,
+        required: true
+      },
+      metrics: {
+        loadTime: {
+          type: Number,
+          required: false
+        },
+        memoryUsage: {
+          type: Number,
+          required: false
+        },
+        batteryLevel: {
+          type: Number,
+          required: false
+        },
+        networkSpeed: {
+          type: Number,
+          required: false
+        }
+      }
+    }]
+  },
+  sharingBehavior: {
+    totalShares: {
+      type: Number,
+      default: 0
+    },
+    shareTypes: {
+      vocabulary: {
+        type: Number,
+        default: 0
+      },
+      progress: {
+        type: Number,
+        default: 0
+      },
+      achievements: {
+        type: Number,
+        default: 0
+      },
+      shows: {
+        type: Number,
+        default: 0
+      },
+      wordbook: {
+        type: Number,
+        default: 0
+      }
+    },
+    shareChannels: {
+      wechat: {
+        type: Number,
+        default: 0
+      },
+      weibo: {
+        type: Number,
+        default: 0
+      },
+      qq: {
+        type: Number,
+        default: 0
+      },
+      copyLink: {
+        type: Number,
+        default: 0
+      },
+      other: {
+        type: Number,
+        default: 0
+      }
+    },
+    lastShareDate: {
+      type: Date,
+      required: false
+    },
+    shareHistory: [{
+      date: {
+        type: Date,
+        default: Date.now
+      },
+      type: {
+        type: String,
+        enum: ['vocabulary', 'progress', 'achievements', 'shows', 'wordbook'],
+        required: true
+      },
+      channel: {
+        type: String,
+        enum: ['wechat', 'weibo', 'qq', 'copyLink', 'other'],
+        required: true
+      },
+      content: {
+        type: String,
+        required: true
+      },
+      success: {
+        type: Boolean,
+        required: true
+      }
+    }]
   }
 }, {
   timestamps: true

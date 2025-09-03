@@ -822,4 +822,301 @@ export class UserController {
       });
     }
   }
+
+  // 更新用户地理位置信息
+  static async updateLocation(req: Request, res: Response) {
+    try {
+      const userId = req.params.userId;
+      const { country, region, city, timezone, systemLanguage } = req.body;
+
+      const user = await User.findById(userId);
+      if (!user) {
+        return res.status(404).json({
+          success: false,
+          message: '用户不存在'
+        });
+      }
+
+      // 更新地理位置信息
+      user.location = {
+        country,
+        region,
+        city,
+        timezone,
+        systemLanguage,
+        lastUpdated: new Date()
+      };
+
+      await user.save();
+
+      logger.info(`✅ 用户地理位置信息已更新: ${userId}`);
+
+      res.json({
+        success: true,
+        message: '地理位置信息更新成功',
+        data: {
+          userId: userId,
+          location: user.location
+        }
+      });
+    } catch (error) {
+      logger.error('❌ 更新用户地理位置信息失败:', error);
+      res.status(500).json({
+        success: false,
+        message: '更新地理位置信息失败'
+      });
+    }
+  }
+
+  // 更新用户错误追踪信息
+  static async updateErrorTracking(req: Request, res: Response) {
+    try {
+      const userId = req.params.userId;
+      const { errorReports } = req.body;
+
+      const user = await User.findById(userId);
+      if (!user) {
+        return res.status(404).json({
+          success: false,
+          message: '用户不存在'
+        });
+      }
+
+      // 初始化错误追踪信息（如果不存在）
+      if (!user.errorTracking) {
+        user.errorTracking = {
+          totalCrashes: 0,
+          totalErrors: 0,
+          performanceIssues: 0,
+          crashReports: [],
+          performanceReports: []
+        };
+      }
+
+      // 添加新的错误报告
+      if (errorReports && Array.isArray(errorReports)) {
+        errorReports.forEach((report: any) => {
+          user.errorTracking!.crashReports.push({
+            date: new Date(report.date),
+            errorType: report.errorType,
+            errorMessage: report.errorMessage,
+            stackTrace: report.stackTrace,
+            deviceInfo: report.deviceInfo
+          });
+        });
+
+        // 更新统计信息
+        user.errorTracking.totalErrors += errorReports.length;
+        user.errorTracking.lastErrorDate = new Date();
+
+        // 限制报告数量（保留最近100条）
+        if (user.errorTracking.crashReports.length > 100) {
+          user.errorTracking.crashReports = user.errorTracking.crashReports.slice(-100);
+        }
+      }
+
+      await user.save();
+
+      logger.info(`✅ 用户错误追踪信息已更新: ${userId}, 新增 ${errorReports?.length || 0} 条错误报告`);
+
+      res.json({
+        success: true,
+        message: '错误追踪信息更新成功',
+        data: {
+          userId: userId,
+          totalErrors: user.errorTracking.totalErrors,
+          totalCrashes: user.errorTracking.totalCrashes
+        }
+      });
+    } catch (error) {
+      logger.error('❌ 更新用户错误追踪信息失败:', error);
+      res.status(500).json({
+        success: false,
+        message: '更新错误追踪信息失败'
+      });
+    }
+  }
+
+  // 更新用户性能追踪信息
+  static async updatePerformanceTracking(req: Request, res: Response) {
+    try {
+      const userId = req.params.userId;
+      const { performanceReports } = req.body;
+
+      const user = await User.findById(userId);
+      if (!user) {
+        return res.status(404).json({
+          success: false,
+          message: '用户不存在'
+        });
+      }
+
+      // 初始化错误追踪信息（如果不存在）
+      if (!user.errorTracking) {
+        user.errorTracking = {
+          totalCrashes: 0,
+          totalErrors: 0,
+          performanceIssues: 0,
+          crashReports: [],
+          performanceReports: []
+        };
+      }
+
+      // 添加新的性能报告
+      if (performanceReports && Array.isArray(performanceReports)) {
+        performanceReports.forEach((report: any) => {
+          user.errorTracking!.performanceReports.push({
+            date: new Date(report.date),
+            issueType: report.issueType,
+            severity: report.severity,
+            details: report.details,
+            metrics: report.metrics
+          });
+        });
+
+        // 更新统计信息
+        user.errorTracking.performanceIssues += performanceReports.length;
+
+        // 限制报告数量（保留最近100条）
+        if (user.errorTracking.performanceReports.length > 100) {
+          user.errorTracking.performanceReports = user.errorTracking.performanceReports.slice(-100);
+        }
+      }
+
+      await user.save();
+
+      logger.info(`✅ 用户性能追踪信息已更新: ${userId}, 新增 ${performanceReports?.length || 0} 条性能报告`);
+
+      res.json({
+        success: true,
+        message: '性能追踪信息更新成功',
+        data: {
+          userId: userId,
+          performanceIssues: user.errorTracking.performanceIssues
+        }
+      });
+    } catch (error) {
+      logger.error('❌ 更新用户性能追踪信息失败:', error);
+      res.status(500).json({
+        success: false,
+        message: '更新性能追踪信息失败'
+      });
+    }
+  }
+
+  // 更新用户分享行为信息
+  static async updateSharingBehavior(req: Request, res: Response) {
+    try {
+      const userId = req.params.userId;
+      const { shareRecords } = req.body;
+
+      const user = await User.findById(userId);
+      if (!user) {
+        return res.status(404).json({
+          success: false,
+          message: '用户不存在'
+        });
+      }
+
+      // 初始化分享行为信息（如果不存在）
+      if (!user.sharingBehavior) {
+        user.sharingBehavior = {
+          totalShares: 0,
+          shareTypes: {
+            vocabulary: 0,
+            progress: 0,
+            achievements: 0,
+            shows: 0,
+            wordbook: 0
+          },
+          shareChannels: {
+            wechat: 0,
+            weibo: 0,
+            qq: 0,
+            copyLink: 0,
+            other: 0
+          },
+          shareHistory: []
+        };
+      }
+
+      // 添加新的分享记录
+      if (shareRecords && Array.isArray(shareRecords)) {
+        shareRecords.forEach((record: any) => {
+          user.sharingBehavior!.shareHistory.push({
+            date: new Date(record.date),
+            type: record.type,
+            channel: record.channel,
+            content: record.content,
+            success: record.success
+          });
+
+          // 更新统计信息
+          if (record.success) {
+            user.sharingBehavior!.totalShares++;
+            user.sharingBehavior!.shareTypes[record.type as keyof typeof user.sharingBehavior.shareTypes]++;
+            user.sharingBehavior!.shareChannels[record.channel as keyof typeof user.sharingBehavior.shareChannels]++;
+            user.sharingBehavior!.lastShareDate = new Date();
+          }
+        });
+
+        // 限制历史记录数量（保留最近100条）
+        if (user.sharingBehavior.shareHistory.length > 100) {
+          user.sharingBehavior.shareHistory = user.sharingBehavior.shareHistory.slice(-100);
+        }
+      }
+
+      await user.save();
+
+      logger.info(`✅ 用户分享行为信息已更新: ${userId}, 新增 ${shareRecords?.length || 0} 条分享记录`);
+
+      res.json({
+        success: true,
+        message: '分享行为信息更新成功',
+        data: {
+          userId: userId,
+          totalShares: user.sharingBehavior.totalShares,
+          lastShareDate: user.sharingBehavior.lastShareDate
+        }
+      });
+    } catch (error) {
+      logger.error('❌ 更新用户分享行为信息失败:', error);
+      res.status(500).json({
+        success: false,
+        message: '更新分享行为信息失败'
+      });
+    }
+  }
+
+  // 获取用户扩展信息（地理位置、错误追踪、分享行为）
+  static async getUserExtendedInfo(req: Request, res: Response) {
+    try {
+      const userId = req.params.userId;
+
+      const user = await User.findById(userId).select('location errorTracking sharingBehavior');
+      if (!user) {
+        return res.status(404).json({
+          success: false,
+          message: '用户不存在'
+        });
+      }
+
+      res.json({
+        success: true,
+        message: '获取用户扩展信息成功',
+        data: {
+          userId: userId,
+          location: user.location,
+          errorTracking: user.errorTracking,
+          sharingBehavior: user.sharingBehavior
+        }
+      });
+    } catch (error) {
+      logger.error('❌ 获取用户扩展信息失败:', error);
+      res.status(500).json({
+        success: false,
+        message: '获取用户扩展信息失败'
+      });
+    }
+  }
 } 

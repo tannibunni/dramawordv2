@@ -24,6 +24,7 @@ import { DeepLinkService } from './services/deepLinkService';
 import { AppleCrossDeviceSyncService } from './services/appleCrossDeviceSyncService';
 import { NewDeviceDataDownloadService } from './services/newDeviceDataDownloadService';
 import { AppleLoginAutoDetectionService } from './services/appleLoginAutoDetectionService';
+import { userDataExtensionService } from './services/userDataExtensionService';
 
 // 内部组件：移除自动通知初始化
 const AppContent = () => {
@@ -62,6 +63,9 @@ const AppContent = () => {
 
            // 9. 初始化Apple登录自动检测服务
            await initializeAppleLoginAutoDetectionService();
+
+           // 10. 初始化用户数据扩展服务
+           await initializeUserDataExtensionService();
       
       console.log('✅ 应用初始化完成');
     } catch (error) {
@@ -150,6 +154,19 @@ const AppContent = () => {
       console.log('✅ Apple登录自动检测服务初始化完成');
     } catch (error) {
       console.error('❌ Apple登录自动检测服务初始化失败:', error);
+    }
+  };
+
+  const initializeUserDataExtensionService = async () => {
+    try {
+      console.log('📊 初始化用户数据扩展服务...');
+      
+      // 初始化用户数据扩展服务
+      await userDataExtensionService.initialize();
+      
+      console.log('✅ 用户数据扩展服务初始化完成');
+    } catch (error) {
+      console.error('❌ 用户数据扩展服务初始化失败:', error);
     }
   };
 
