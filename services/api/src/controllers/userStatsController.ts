@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { User } from '../models/User';
-import { UserVocabulary } from '../models/UserVocabulary';
+import UserVocabulary from '../models/UserVocabulary';
 import { logger } from '../utils/logger';
 
 export class UserStatsController {
@@ -46,7 +46,7 @@ export class UserStatsController {
             username: user.username,
             nickname: user.nickname,
             email: user.email,
-            loginType: user.loginType,
+            loginType: (user as any).loginType,
             hasAvatar: !!user.avatar
           });
         }
@@ -109,7 +109,7 @@ export class UserStatsController {
             username: user.username,
             nickname: user.nickname,
             email: user.email,
-            loginType: user.loginType,
+            loginType: (user as any).loginType,
             hasAvatar: !!user.avatar
           }
         }
