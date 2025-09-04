@@ -75,22 +75,22 @@ export class UnifiedSyncService {
   private pendingOperations: Set<string> = new Set();
   private syncProgress: number = 0;
 
-  // 统一配置
+  // 统一配置 - 优先多邻国同步方案
   private config: SyncConfig = {
     wifiSyncInterval: 2 * 60 * 1000, // 2分钟
     mobileSyncInterval: 5 * 60 * 1000, // 5分钟
     offlineSyncInterval: 10 * 60 * 1000, // 10分钟
     maxRetryAttempts: 5,
     batchSize: 20,
-    enableIncrementalSync: true,
+    enableIncrementalSync: false,      // ❌ 禁用增量同步（与多邻国方案冲突）
     enableOfflineFirst: true,
-    enableRealTimeSync: true,
-    enableCrossDeviceSync: true,        // 启用跨设备同步
+    enableRealTimeSync: false,         // ❌ 禁用实时同步（与多邻国方案冲突）
+    enableCrossDeviceSync: false,      // ❌ 禁用跨设备同步（与多邻国方案冲突）
     crossDeviceSyncInterval: 30 * 1000, // 30秒
-    enableAppleIDSync: true,            // 启用Apple ID同步
+    enableAppleIDSync: false,          // ❌ 禁用Apple ID同步（与多邻国方案冲突）
     
-    // 智能延迟同步配置
-    enableSmartDelaySync: true,         // 启用智能延迟同步
+    // 智能延迟同步配置 - 多邻国方案兼容
+    enableSmartDelaySync: true,         // ✅ 启用智能延迟同步（多邻国方案兼容）
     highPriorityDelay: 0,               // 高优先级：立即同步
     mediumPriorityDelay: 10 * 1000,    // 中优先级：10秒延迟
     lowPriorityDelay: 60 * 1000,       // 低优先级：1分钟延迟
@@ -392,8 +392,8 @@ export class UnifiedSyncService {
     console.log(`🔄 同步数据类型: ${dataType} (${dataItems.length} 个变更) - 仅上传模式`);
     
     try {
-      // 直接上传，无需冲突检测
-      await this.syncDataWithoutConflicts(dataItems, token);
+      // 强制使用多邻国同步策略
+      await this.forceDuolingoSync(dataItems, token);
       console.log(`✅ 数据类型 ${dataType} 同步完成（仅上传）`);
       return { conflicts: [], errors: [] };
     } catch (error) {
@@ -405,6 +405,68 @@ export class UnifiedSyncService {
   }
 
 
+
+  // 强制使用多邻国同步策略
+  public async forceDuolingoSync(dataItems: SyncData[], token: string): Promise<void> {
+    try {
+      console.log('🦉 强制使用多邻国同步策略...');
+      
+      // 添加数据完整性检查
+      const validatedData = dataItems.filter(item => this.validateSyncData(item));
+      
+      if (validatedData.length === 0) {
+        console.log('⚠️ 没有有效数据需要同步');
+        return;
+      }
+
+      console.log(`📤 准备使用多邻国策略同步 ${validatedData.length} 条数据`);
+
+      const response = await fetch(`${API_BASE_URL}/users/batch-sync`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          data: validatedData,
+          timestamp: Date.now(),
+          // 强制使用多邻国策略
+          syncStrategy: 'duolingo-local-first',
+          deviceId: await this.getDeviceId(),
+          forceUpload: true  // 强制上传，忽略其他同步策略
+        }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        
+        // 处理401未授权错误
+        if (response.status === 401) {
+          console.warn('⚠️ Token验证失败，清除无效token并触发重新认证');
+          await tokenValidationService.clearInvalidToken();
+          tokenValidationService.triggerReauth();
+          throw new Error('Token验证失败，请重新登录');
+        }
+        
+        throw new Error(`多邻国同步失败: ${response.status} - ${errorText}`);
+      }
+
+      const result = await response.json();
+      if (!result.success) {
+        throw new Error(result.message || '多邻国同步失败');
+      }
+
+      // 严格遵循多邻国原则：只上传，不更新本地版本号
+      console.log(`✅ 多邻国策略同步完成（仅上传，不更新版本号）`);
+      
+      // 记录同步成功的数据
+      this.logSyncSuccess(validatedData);
+      
+    } catch (error) {
+      console.error(`❌ 多邻国同步失败: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw error;
+    }
+  }
 
   // 无冲突同步 - 遵循多邻国原则：只上传，不更新本地版本号
   private async syncDataWithoutConflicts(dataItems: SyncData[], token: string): Promise<void> {
