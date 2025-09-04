@@ -37,6 +37,7 @@ import deviceRoutes from './routes/device';
 import dataVersionRoutes from './routes/dataVersion';
 import networkRoutes from './routes/network';
 import userStatsRoutes from './routes/userStats';
+import userSearchRoutes from './routes/userSearch';
 import { logger } from './utils/logger';
 import { OpenAI } from 'openai';
 
@@ -81,7 +82,7 @@ app.use('/api/device', deviceRoutes);
 app.use('/api/data-version', dataVersionRoutes);
 app.use('/api/network', networkRoutes);
 app.use('/api/user-stats', userStatsRoutes);
-app.use('/api/debug', debugRoutes);
+app.use('/api/user-search', userSearchRoutes);
 
 // 健康检查端点
 app.get('/health', (req, res) => {
