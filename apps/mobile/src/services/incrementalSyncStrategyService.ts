@@ -1,3 +1,26 @@
+/**
+ * ========================================
+ * 🔄 [SYNC SERVICE] 数据同步服务
+ * ========================================
+ * 
+ * 服务类型: 数据同步相关服务
+ * 功能描述: 增量同步策略服务 - 增量同步管理
+ * 维护状态: 活跃维护中
+ * 
+ * 相关服务:
+ * - 统一同步: unifiedSyncService.ts
+ * - 数据下载: newDeviceDataDownloadService.ts
+ * - 上传策略: smartUploadStrategy.ts
+ * - 冲突解决: dataConflictResolutionService.ts
+ * - 网络管理: networkStateManagementService.ts
+ * 
+ * 注意事项:
+ * - 此服务属于数据同步核心模块
+ * - 修改前请确保了解同步机制
+ * - 建议在测试环境充分验证
+ * ========================================
+ */
+
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { DataConflictResolutionService } from './dataConflictResolutionService';
 import { DataVersionManagementService, IncrementalSyncData } from './dataVersionManagementService';

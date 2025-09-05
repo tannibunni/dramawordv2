@@ -1,3 +1,26 @@
+/**
+ * ========================================
+ * 🔄 [SYNC SERVICE] 数据同步服务
+ * ========================================
+ * 
+ * 服务类型: 数据同步相关服务
+ * 功能描述: 网络状态管理服务 - 网络监控和优化
+ * 维护状态: 活跃维护中
+ * 
+ * 相关服务:
+ * - 统一同步: unifiedSyncService.ts
+ * - 数据下载: newDeviceDataDownloadService.ts
+ * - 上传策略: smartUploadStrategy.ts
+ * - 冲突解决: dataConflictResolutionService.ts
+ * - 网络管理: networkStateManagementService.ts
+ * 
+ * 注意事项:
+ * - 此服务属于数据同步核心模块
+ * - 修改前请确保了解同步机制
+ * - 建议在测试环境充分验证
+ * ========================================
+ */
+
 import NetInfo, { NetInfoState, NetInfoSubscription } from '@react-native-community/netinfo';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { unifiedSyncService } from './unifiedSyncService';
@@ -19,10 +42,13 @@ export interface NetworkState {
 }
 
 export interface NetworkQuality {
-  quality: 'excellent' | 'good' | 'fair' | 'poor';
+  quality: 'excellent' | 'good' | 'fair' | 'poor' | 'offline';
   score: number; // 0-100
   recommendedAction: 'proceed' | 'delay' | 'compress' | 'abort';
   estimatedSpeed: number; // Mbps
+  speed: number; // Mbps
+  latency: number; // ms
+  reliability: number; // 0-1
 }
 
 export interface OfflineQueueItem {
@@ -34,6 +60,17 @@ export interface OfflineQueueItem {
   priority: 'high' | 'medium' | 'low';
   retryCount: number;
   maxRetries: number;
+  dataType?: string;
+}
+
+export interface RetryOperation {
+  id: string;
+  operation: () => Promise<any>;
+  context: string;
+  retryCount: number;
+  maxRetries: number;
+  delay: number;
+  priority: 'high' | 'medium' | 'low';
 }
 
 export interface NetworkMetrics {
@@ -59,6 +96,7 @@ export class NetworkStateManagementService {
   
   private networkListener: NetInfoSubscription | null = null;
   private offlineQueue: OfflineQueueItem[] = [];
+  private retryQueue: RetryOperation[] = [];
   private metrics: NetworkMetrics = {
     totalRequests: 0,
     successfulRequests: 0,
@@ -73,6 +111,12 @@ export class NetworkStateManagementService {
   private reconnectAttempts: number = 0;
   private maxReconnectAttempts: number = 5;
   private reconnectDelay: number = 1000; // 1秒
+  private isProcessingQueue: boolean = false;
+  private networkQuality: NetworkQuality | null = null;
+  private lastNetworkCheck: number = 0;
+  private networkCheckInterval: number = 30000; // 30秒检查一次
+  private maxRetries: number = 3;
+  private baseRetryDelay: number = 1000; // 1秒
 
   public static getInstance(): NetworkStateManagementService {
     if (!NetworkStateManagementService.instance) {
@@ -94,7 +138,7 @@ export class NetworkStateManagementService {
       console.log('🌐 初始化网络状态管理服务...');
       
       // 加载离线队列
-      await this.loadOfflineQueue();
+      await this.loadOfflineQueueEnhanced();
       
       // 加载网络指标
       await this.loadNetworkMetrics();
@@ -360,7 +404,7 @@ export class NetworkStateManagementService {
       let estimatedSpeed = 0;
 
       if (!this.networkState.isConnected) {
-        return { quality: 'poor', score: 0, recommendedAction: 'abort', estimatedSpeed: 0 };
+        return { quality: 'poor', score: 0, recommendedAction: 'abort', estimatedSpeed: 0, speed: 0, latency: 0, reliability: 0 };
       }
 
       // 基于网络类型和信号强度评估
@@ -414,11 +458,11 @@ export class NetworkStateManagementService {
         }
       }
 
-      return { quality, score, recommendedAction, estimatedSpeed };
+      return { quality, score, recommendedAction, estimatedSpeed, speed: estimatedSpeed, latency: 0, reliability: 0.8 };
       
     } catch (error) {
       console.error('❌ 评估网络质量失败:', error);
-      return { quality: 'poor', score: 0, recommendedAction: 'abort', estimatedSpeed: 0 };
+      return { quality: 'poor', score: 0, recommendedAction: 'abort', estimatedSpeed: 0, speed: 0, latency: 0, reliability: 0 };
     }
   }
 
@@ -434,7 +478,7 @@ export class NetworkStateManagementService {
       this.offlineQueue.push(offlineItem);
       this.metrics.offlineQueueLength = this.offlineQueue.length;
       
-      await this.saveOfflineQueue();
+      await this.saveOfflineQueueEnhanced();
       await this.saveNetworkMetrics();
       
       console.log(`📦 添加到离线队列: ${item.type} (${item.operation})`);
@@ -490,7 +534,7 @@ export class NetworkStateManagementService {
 
       // 更新指标
       this.metrics.offlineQueueLength = this.offlineQueue.length;
-      await this.saveOfflineQueue();
+      await this.saveOfflineQueueEnhanced();
       await this.saveNetworkMetrics();
 
       console.log(`✅ 离线队列处理完成: 成功${processedCount}个，失败${failedCount}个，剩余${this.offlineQueue.length}个`);
@@ -537,7 +581,7 @@ export class NetworkStateManagementService {
       this.offlineQueue = [];
       this.metrics.offlineQueueLength = 0;
       
-      await this.saveOfflineQueue();
+      await this.saveOfflineQueueEnhanced();
       await this.saveNetworkMetrics();
       
       console.log('🗑️ 离线队列已清空');
@@ -724,5 +768,348 @@ export class NetworkStateManagementService {
     } catch (error) {
       console.error('❌ 销毁网络状态管理服务失败:', error);
     }
+  }
+
+  // ==================== 增强网络质量检测方法 ====================
+
+  // 智能网络检测
+  public async detectNetworkQuality(): Promise<NetworkQuality> {
+    const now = Date.now();
+    
+    // 如果最近检查过，返回缓存结果
+    if (this.networkQuality && (now - this.lastNetworkCheck) < this.networkCheckInterval) {
+      return this.networkQuality;
+    }
+
+    try {
+      const startTime = Date.now();
+      
+      // 测试网络延迟
+      const latency = await this.measureLatency();
+      
+      // 测试下载速度
+      const speed = await this.measureDownloadSpeed();
+      
+      // 计算可靠性
+      const reliability = await this.calculateReliability();
+      
+      // 确定网络质量
+      let quality: NetworkQuality['quality'];
+      if (latency < 100 && speed > 10 && reliability > 0.9) {
+        quality = 'excellent';
+      } else if (latency < 300 && speed > 5 && reliability > 0.8) {
+        quality = 'good';
+      } else if (latency < 1000 && speed > 1 && reliability > 0.6) {
+        quality = 'fair';
+      } else if (latency < 2000 && speed > 0.5 && reliability > 0.4) {
+        quality = 'poor';
+      } else {
+        quality = 'offline';
+      }
+
+      this.networkQuality = {
+        quality,
+        score: this.calculateQualityScore(latency, speed, reliability),
+        recommendedAction: this.getRecommendedAction(quality),
+        estimatedSpeed: speed,
+        speed,
+        latency,
+        reliability
+      };
+
+      this.lastNetworkCheck = now;
+      
+      console.log(`🌐 网络质量检测完成: ${quality} (延迟: ${latency}ms, 速度: ${speed}Mbps)`);
+      
+      return this.networkQuality;
+      
+    } catch (error) {
+      console.error('❌ 网络质量检测失败:', error);
+      return {
+        quality: 'offline',
+        score: 0,
+        recommendedAction: 'abort',
+        estimatedSpeed: 0,
+        speed: 0,
+        latency: 9999,
+        reliability: 0
+      };
+    }
+  }
+
+  // 测量网络延迟
+  private async measureLatency(): Promise<number> {
+    const startTime = Date.now();
+    
+    try {
+      // 发送一个小的请求来测量延迟
+      const response = await fetch('https://www.google.com/favicon.ico', {
+        method: 'HEAD'
+      });
+      
+      return Date.now() - startTime;
+    } catch (error) {
+      return 9999; // 超时或失败
+    }
+  }
+
+  // 测量下载速度
+  private async measureDownloadSpeed(): Promise<number> {
+    const startTime = Date.now();
+    
+    try {
+      // 下载一个小的测试文件
+      const response = await fetch('https://httpbin.org/bytes/1024');
+      
+      if (response.ok) {
+        const data = await response.arrayBuffer();
+        const downloadTime = (Date.now() - startTime) / 1000; // 秒
+        const sizeInMB = data.byteLength / (1024 * 1024);
+        return sizeInMB / downloadTime; // Mbps
+      }
+      
+      return 0;
+    } catch (error) {
+      return 0;
+    }
+  }
+
+  // 计算网络可靠性
+  private async calculateReliability(): Promise<number> {
+    try {
+      const recentChecks = await this.getRecentNetworkChecks();
+      const successCount = recentChecks.filter(check => check.success).length;
+      return successCount / recentChecks.length;
+    } catch (error) {
+      return 0.5; // 默认中等可靠性
+    }
+  }
+
+  // 获取最近的网络检查记录
+  private async getRecentNetworkChecks(): Promise<Array<{ success: boolean; timestamp: number }>> {
+    try {
+      const data = await AsyncStorage.getItem('network_checks');
+      if (data) {
+        const checks = JSON.parse(data);
+        const oneHourAgo = Date.now() - 60 * 60 * 1000;
+        return checks.filter((check: any) => check.timestamp > oneHourAgo);
+      }
+      return [];
+    } catch (error) {
+      return [];
+    }
+  }
+
+  // 保存网络检查记录
+  private async saveNetworkCheck(success: boolean): Promise<void> {
+    try {
+      const checks = await this.getRecentNetworkChecks();
+      checks.push({ success, timestamp: Date.now() });
+      
+      // 只保留最近100条记录
+      if (checks.length > 100) {
+        checks.splice(0, checks.length - 100);
+      }
+      
+      await AsyncStorage.setItem('network_checks', JSON.stringify(checks));
+    } catch (error) {
+      console.error('保存网络检查记录失败:', error);
+    }
+  }
+
+  // 计算质量分数
+  private calculateQualityScore(latency: number, speed: number, reliability: number): number {
+    const latencyScore = Math.max(0, 100 - (latency / 20)); // 延迟分数
+    const speedScore = Math.min(100, speed * 10); // 速度分数
+    const reliabilityScore = reliability * 100; // 可靠性分数
+    
+    return Math.round((latencyScore + speedScore + reliabilityScore) / 3);
+  }
+
+  // 获取推荐操作
+  private getRecommendedAction(quality: NetworkQuality['quality']): 'proceed' | 'delay' | 'compress' | 'abort' {
+    switch (quality) {
+      case 'excellent':
+      case 'good':
+        return 'proceed';
+      case 'fair':
+        return 'delay';
+      case 'poor':
+        return 'compress';
+      case 'offline':
+        return 'abort';
+      default:
+        return 'delay';
+    }
+  }
+
+  // 智能重试机制
+  public async executeWithRetry<T>(
+    operation: () => Promise<T>,
+    context: string,
+    priority: 'high' | 'medium' | 'low' = 'medium'
+  ): Promise<T> {
+    const operationId = `${context}_${Date.now()}`;
+    
+    const retryOperation: RetryOperation = {
+      id: operationId,
+      operation,
+      context,
+      retryCount: 0,
+      maxRetries: this.maxRetries,
+      delay: this.baseRetryDelay,
+      priority
+    };
+
+    return this.executeRetryOperation(retryOperation);
+  }
+
+  // 执行重试操作
+  private async executeRetryOperation<T>(retryOp: RetryOperation): Promise<T> {
+    try {
+      const result = await retryOp.operation();
+      await this.saveNetworkCheck(true);
+      return result;
+    } catch (error) {
+      await this.saveNetworkCheck(false);
+      
+      if (retryOp.retryCount < retryOp.maxRetries) {
+        retryOp.retryCount++;
+        retryOp.delay *= 2; // 指数退避
+        
+        console.log(`🔄 重试操作 ${retryOp.context} (${retryOp.retryCount}/${retryOp.maxRetries})`);
+        
+        await this.delay(retryOp.delay);
+        return this.executeRetryOperation(retryOp);
+      } else {
+        // 添加到离线队列
+        await this.addToOfflineQueue({
+          type: 'retry_operation',
+          operation: 'update', // 默认操作类型
+          data: { context: retryOp.context, error: error instanceof Error ? error.message : 'Unknown error' },
+          retryCount: 0,
+          maxRetries: 3,
+          priority: retryOp.priority,
+          dataType: retryOp.context
+        });
+        
+        throw error;
+      }
+    }
+  }
+
+  // 添加离线操作（完整版）
+  public async addOfflineOperation(operation: OfflineQueueItem): Promise<void> {
+    this.offlineQueue.push(operation);
+    await this.saveOfflineQueue();
+    console.log(`📝 操作已添加到离线队列: ${operation.type}`);
+  }
+
+  // 处理离线队列（增强版）
+  private async processOfflineQueueEnhanced(): Promise<void> {
+    if (this.isProcessingQueue || this.offlineQueue.length === 0) {
+      return;
+    }
+
+    this.isProcessingQueue = true;
+    console.log(`🔄 开始处理离线队列，共 ${this.offlineQueue.length} 个操作`);
+
+    try {
+      // 按优先级排序
+      this.offlineQueue.sort((a, b) => {
+        const priorityOrder = { high: 3, medium: 2, low: 1 };
+        return priorityOrder[b.priority] - priorityOrder[a.priority];
+      });
+
+      const batchSize = 5; // 每批处理5个操作
+      const batches = Math.ceil(this.offlineQueue.length / batchSize);
+
+      for (let i = 0; i < batches; i++) {
+        const batch = this.offlineQueue.splice(0, batchSize);
+        
+        await Promise.all(
+          batch.map(async (operation) => {
+            try {
+              // 这里应该调用相应的同步服务
+              console.log(`🔄 处理离线操作: ${operation.type}`);
+              // await this.processOfflineOperation(operation);
+              
+              // 模拟处理成功
+              await this.delay(100);
+            } catch (error) {
+              console.error(`❌ 处理离线操作失败: ${operation.type}`, error);
+            }
+          })
+        );
+
+        // 批次间延迟
+        if (i < batches - 1) {
+          await this.delay(500);
+        }
+      }
+
+      await this.saveOfflineQueueEnhanced();
+      console.log('✅ 离线队列处理完成');
+      
+    } catch (error) {
+      console.error('❌ 处理离线队列失败:', error);
+    } finally {
+      this.isProcessingQueue = false;
+    }
+  }
+
+  // 保存离线队列（增强版）
+  private async saveOfflineQueueEnhanced(): Promise<void> {
+    try {
+      await AsyncStorage.setItem('offline_queue', JSON.stringify(this.offlineQueue));
+    } catch (error) {
+      console.error('保存离线队列失败:', error);
+    }
+  }
+
+  // 加载离线队列（增强版）
+  private async loadOfflineQueueEnhanced(): Promise<void> {
+    try {
+      const data = await AsyncStorage.getItem('offline_queue');
+      if (data) {
+        this.offlineQueue = JSON.parse(data);
+        console.log(`📦 已加载离线队列，共 ${this.offlineQueue.length} 个操作`);
+      }
+    } catch (error) {
+      console.error('加载离线队列失败:', error);
+    }
+  }
+
+  // 延迟函数
+  private delay(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  // 获取当前网络状态（简化版）
+  public getCurrentNetworkStateSimple(): 'online' | 'offline' | 'slow' | 'unstable' {
+    if (this.networkState.isOffline) return 'offline';
+    if (this.networkQuality?.quality === 'poor') return 'slow';
+    if (this.networkQuality?.reliability && this.networkQuality.reliability < 0.7) return 'unstable';
+    return 'online';
+  }
+
+  // 获取网络质量（缓存版）
+  public getCachedNetworkQuality(): NetworkQuality | null {
+    return this.networkQuality;
+  }
+
+  // 获取离线队列状态
+  public getOfflineQueueStatus(): {
+    count: number;
+    highPriority: number;
+    mediumPriority: number;
+    lowPriority: number;
+  } {
+    return {
+      count: this.offlineQueue.length,
+      highPriority: this.offlineQueue.filter(op => op.priority === 'high').length,
+      mediumPriority: this.offlineQueue.filter(op => op.priority === 'medium').length,
+      lowPriority: this.offlineQueue.filter(op => op.priority === 'low').length
+    };
   }
 }

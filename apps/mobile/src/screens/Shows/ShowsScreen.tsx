@@ -1033,28 +1033,28 @@ const ShowsScreen: React.FC = () => {
     );
   };
 
-  // 新的iOS风格分段控制器
+  // 改进的一级导航分段控制器 - 更突出的视觉设计
   const renderSegmentedControl = () => {
     const isShowsActive = filter === 'shows';
     const isWordbooksActive = filter === 'wordbooks';
     const isRecommendationsActive = filter === 'recommendations';
 
     return (
-      <View style={styles.segmentedControlContainer}>
-        <View style={styles.segmentedControlBackground}>
+      <View style={styles.primaryNavigationContainer}>
+        <View style={styles.primaryNavigationBackground}>
           <TouchableOpacity
             style={[
-              styles.segmentedControlButton,
-              isShowsActive && styles.segmentedControlButtonActive
+              styles.primaryNavigationButton,
+              isShowsActive && styles.primaryNavigationButtonActive
             ]}
             onPress={() => {
               setFilter('shows');
             }}
-            activeOpacity={0.8}
+            activeOpacity={0.7}
           >
             <Text style={[
-              styles.segmentedControlText,
-              isShowsActive && styles.segmentedControlTextActive
+              styles.primaryNavigationText,
+              isShowsActive && styles.primaryNavigationTextActive
             ]}>
               {t('shows_tab', appLanguage)}
             </Text>
@@ -1062,18 +1062,18 @@ const ShowsScreen: React.FC = () => {
           
           <TouchableOpacity
             style={[
-              styles.segmentedControlButton,
-              isWordbooksActive && styles.segmentedControlButtonActive
+              styles.primaryNavigationButton,
+              isWordbooksActive && styles.primaryNavigationButtonActive
             ]}
             onPress={() => {
               setFilter('wordbooks');
               setShowStatusFilter('all');
             }}
-            activeOpacity={0.8}
+            activeOpacity={0.7}
           >
             <Text style={[
-              styles.segmentedControlText,
-              isWordbooksActive && styles.segmentedControlTextActive
+              styles.primaryNavigationText,
+              isWordbooksActive && styles.primaryNavigationTextActive
             ]}>
               {t('wordbooks_tab', appLanguage)}
             </Text>
@@ -1081,17 +1081,17 @@ const ShowsScreen: React.FC = () => {
           
           <TouchableOpacity
             style={[
-              styles.segmentedControlButton,
-              isRecommendationsActive && styles.segmentedControlButtonActive
+              styles.primaryNavigationButton,
+              isRecommendationsActive && styles.primaryNavigationButtonActive
             ]}
             onPress={() => {
               setFilter('recommendations');
             }}
-            activeOpacity={0.8}
+            activeOpacity={0.7}
           >
             <Text style={[
-              styles.segmentedControlText,
-              isRecommendationsActive && styles.segmentedControlTextActive
+              styles.primaryNavigationText,
+              isRecommendationsActive && styles.primaryNavigationTextActive
             ]}>
               {t('recommendations_tab', appLanguage)}
             </Text>
@@ -1127,26 +1127,26 @@ const ShowsScreen: React.FC = () => {
     </TouchableOpacity>
   );
 
-  // 新的iOS风格二级分段控制器
+  // 改进的二级筛选控制器 - 胶囊按钮样式，更轻量化
   const renderSecondarySegmentedControl = () => {
     const isAllActive = showStatusFilter === 'all';
     const isNotCompletedActive = showStatusFilter === 'not_completed';
     const isCompletedActive = showStatusFilter === 'completed';
 
     return (
-      <View style={styles.secondarySegmentedControlContainer}>
-        <View style={styles.secondarySegmentedControlBackground}>
+      <View style={styles.secondaryFilterContainer}>
+        <View style={styles.secondaryFilterButtonsContainer}>
           <TouchableOpacity
             style={[
-              styles.secondarySegmentedControlButton,
-              isAllActive && styles.secondarySegmentedControlButtonActive
+              styles.capsuleButton,
+              isAllActive && styles.capsuleButtonActive
             ]}
             onPress={() => setShowStatusFilter('all')}
-            activeOpacity={0.8}
+            activeOpacity={0.7}
           >
             <Text style={[
-              styles.secondarySegmentedControlText,
-              isAllActive && styles.secondarySegmentedControlTextActive
+              styles.capsuleButtonText,
+              isAllActive && styles.capsuleButtonTextActive
             ]}>
               {t('all', appLanguage)}
             </Text>
@@ -1154,31 +1154,31 @@ const ShowsScreen: React.FC = () => {
           
           <TouchableOpacity
             style={[
-              styles.secondarySegmentedControlButton,
-              isNotCompletedActive && styles.secondarySegmentedControlButtonActive
+              styles.capsuleButton,
+              isNotCompletedActive && styles.capsuleButtonActive
             ]}
             onPress={() => setShowStatusFilter('not_completed')}
-            activeOpacity={0.8}
+            activeOpacity={0.7}
           >
             <Text style={[
-              styles.secondarySegmentedControlText,
-              isNotCompletedActive && styles.secondarySegmentedControlTextActive
+              styles.capsuleButtonText,
+              isNotCompletedActive && styles.capsuleButtonTextActive
             ]}>
               {t('not_completed', appLanguage)}
             </Text>
           </TouchableOpacity>
-
+          
           <TouchableOpacity
             style={[
-              styles.secondarySegmentedControlButton,
-              isCompletedActive && styles.secondarySegmentedControlButtonActive
+              styles.capsuleButton,
+              isCompletedActive && styles.capsuleButtonActive
             ]}
             onPress={() => setShowStatusFilter('completed')}
-            activeOpacity={0.8}
+            activeOpacity={0.7}
           >
             <Text style={[
-              styles.secondarySegmentedControlText,
-              isCompletedActive && styles.secondarySegmentedControlTextActive
+              styles.capsuleButtonText,
+              isCompletedActive && styles.capsuleButtonTextActive
             ]}>
               {t('completed', appLanguage)}
             </Text>
@@ -2770,15 +2770,6 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     maxHeight: 120,
   },
-  secondaryFilterContainer: {
-    flexDirection: 'row',
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    backgroundColor: colors.background.primary,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border.light,
-    justifyContent: 'space-around',
-  },
   secondaryFilterButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -2853,79 +2844,85 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     marginLeft: 8,
   },
-  segmentedControlContainer: {
+  // 一级导航样式 - 更突出的视觉设计
+  primaryNavigationContainer: {
     paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingVertical: 20,
     backgroundColor: colors.background.primary,
-    minHeight: 60, // 确保有足够的高度
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border.light,
   },
-  segmentedControlBackground: {
+  primaryNavigationBackground: {
     flexDirection: 'row',
-    backgroundColor: colors.neutral[200], // 增加对比度
-    borderRadius: 8,
-    padding: 2,
-    minHeight: 40, // 确保按钮有足够的高度
+    backgroundColor: colors.neutral[100],
+    borderRadius: 12,
+    padding: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
   },
-  segmentedControlButton: {
+  primaryNavigationButton: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 10,
+    paddingVertical: 12,
     paddingHorizontal: 16,
-    borderRadius: 6,
-    minHeight: 36, // 确保按钮有足够的高度
+    borderRadius: 8,
+    minHeight: 44,
   },
-  segmentedControlButtonActive: {
-    backgroundColor: colors.background.primary,
-    shadowColor: '#000',
+  primaryNavigationButtonActive: {
+    backgroundColor: colors.primary[500],
+    shadowColor: colors.primary[500],
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
+    shadowOpacity: 0.3,
     shadowRadius: 4,
-    elevation: 2,
+    elevation: 4,
   },
-  segmentedControlText: {
-    fontSize: 15,
+  primaryNavigationText: {
+    fontSize: 16,
     fontWeight: '600',
     color: colors.text.secondary,
     textAlign: 'center',
   },
-  segmentedControlTextActive: {
-    color: colors.text.primary,
+  primaryNavigationTextActive: {
+    color: colors.background.primary,
     fontWeight: '700',
   },
-  secondarySegmentedControlContainer: {
+  // 二级筛选样式 - 胶囊按钮设计，更轻量化
+  secondaryFilterContainer: {
     paddingHorizontal: 20,
     paddingVertical: 12,
     backgroundColor: colors.background.primary,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border.light,
   },
-  secondarySegmentedControlBackground: {
+  secondaryFilterButtonsContainer: {
     flexDirection: 'row',
-    backgroundColor: colors.neutral[100],
-    borderRadius: 8,
-    padding: 2,
+    gap: 8,
+    justifyContent: 'center',
   },
-  secondarySegmentedControlButton: {
-    flex: 1,
-    alignItems: 'center',
+  capsuleButton: {
     paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 6,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    backgroundColor: colors.neutral[100],
+    borderWidth: 1,
+    borderColor: colors.border.light,
   },
-  secondarySegmentedControlButtonActive: {
-    backgroundColor: colors.background.primary,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 1,
+  capsuleButtonActive: {
+    backgroundColor: colors.primary[50],
+    borderColor: colors.primary[300],
   },
-  secondarySegmentedControlText: {
+  capsuleButtonText: {
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: '500',
     color: colors.text.secondary,
   },
-  secondarySegmentedControlTextActive: {
-    color: colors.text.primary,
+  capsuleButtonTextActive: {
+    color: colors.primary[600],
+    fontWeight: '600',
   },
   headerContainer: {
     backgroundColor: colors.background.primary,

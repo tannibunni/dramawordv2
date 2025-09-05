@@ -350,6 +350,43 @@ export class GuestDataAdapterImpl implements GuestDataAdapter {
       throw error;
     }
   }
+
+  /**
+   * 清理游客数据
+   */
+  public async clearGuestData(): Promise<void> {
+    try {
+      console.log('[GuestDataAdapter] 🧹 开始清理游客数据...');
+      
+      // 清理所有游客相关的存储键
+      const keys = [
+        'learningRecords',
+        'vocabulary', 
+        'user_shows',
+        'userSettings',
+        'userStats',
+        'wrongWords',
+        'userExperience',
+        'userBadges',
+        'guestData',
+        'guestMode'
+      ];
+
+      for (const key of keys) {
+        try {
+          await AsyncStorage.removeItem(key);
+          console.log(`[GuestDataAdapter] ✅ 已清理存储键: ${key}`);
+        } catch (error) {
+          console.error(`[GuestDataAdapter] ❌ 清理存储键失败: ${key}`, error);
+        }
+      }
+
+      console.log('[GuestDataAdapter] ✅ 游客数据清理完成');
+    } catch (error) {
+      console.error('[GuestDataAdapter] ❌ 清理游客数据失败:', error);
+      throw error;
+    }
+  }
 }
 
 export const guestDataAdapter = GuestDataAdapterImpl.getInstance(); 

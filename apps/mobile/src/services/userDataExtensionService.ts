@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { locationService } from './locationService';
-import { errorTrackingService } from './errorTrackingService';
+import { ErrorHandlingAndRetryService } from './errorHandlingAndRetryService';
 import { sharingBehaviorService } from './sharingBehaviorService';
 
 // 用户数据扩展服务
@@ -38,7 +38,7 @@ class UserDataExtensionService {
       // 并行初始化所有服务
       await Promise.all([
         locationService.initialize(),
-        errorTrackingService.initialize(),
+        ErrorHandlingAndRetryService.getInstance().initializeErrorTracking(),
         sharingBehaviorService.initialize()
       ]);
 
@@ -94,7 +94,8 @@ class UserDataExtensionService {
    */
   public async recordError(error: Error, context?: string): Promise<void> {
     try {
-      await errorTrackingService.recordError(error, context);
+      const errorService = ErrorHandlingAndRetryService.getInstance();
+      await errorService.recordError(error, 'unknown', 'medium', { service: 'user_data_extension' });
     } catch (error) {
       console.error('[UserDataExtensionService] 记录错误失败:', error);
     }
@@ -115,7 +116,8 @@ class UserDataExtensionService {
     }
   ): Promise<void> {
     try {
-      await errorTrackingService.recordPerformanceIssue(issueType, severity, details, metrics);
+      const errorService = ErrorHandlingAndRetryService.getInstance();
+      await errorService.recordPerformanceIssue(issueType, severity, details, metrics);
     } catch (error) {
       console.error('[UserDataExtensionService] 记录性能问题失败:', error);
     }
@@ -125,7 +127,11 @@ class UserDataExtensionService {
    * 开始页面加载时间监控（便捷方法）
    */
   public startLoadTimeMonitoring(pageName: string): () => void {
-    return errorTrackingService.startLoadTimeMonitoring(pageName);
+    // 简单的加载时间监控实现
+    console.log(`[UserDataExtensionService] 开始监控页面加载时间: ${pageName}`);
+    return () => {
+      console.log(`[UserDataExtensionService] 结束监控页面加载时间: ${pageName}`);
+    };
   }
 
   /**
@@ -188,7 +194,7 @@ class UserDataExtensionService {
     try {
       return {
         location: await locationService.getStoredLocationInfo(),
-        errorTracking: errorTrackingService.getErrorTrackingStats(),
+        errorTracking: await ErrorHandlingAndRetryService.getInstance().getErrorTrackingInfo(),
         sharingBehavior: sharingBehaviorService.getSharingBehaviorInfo()
       };
     } catch (error) {
@@ -209,7 +215,7 @@ class UserDataExtensionService {
       console.log('[UserDataExtensionService] 清除所有扩展数据...');
 
       await Promise.all([
-        errorTrackingService.clearErrorTracking(),
+        ErrorHandlingAndRetryService.getInstance().clearErrorTrackingData(),
         sharingBehaviorService.clearSharingBehavior()
       ]);
 

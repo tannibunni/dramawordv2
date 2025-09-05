@@ -1,6 +1,30 @@
+/**
+ * ========================================
+ * 🔄 [SYNC SERVICE] 数据同步服务
+ * ========================================
+ * 
+ * 服务类型: 数据同步相关服务
+ * 功能描述: 性能优化服务 - 同步性能优化
+ * 维护状态: 活跃维护中
+ * 
+ * 相关服务:
+ * - 统一同步: unifiedSyncService.ts
+ * - 数据下载: newDeviceDataDownloadService.ts
+ * - 上传策略: smartUploadStrategy.ts
+ * - 冲突解决: dataConflictResolutionService.ts
+ * - 网络管理: networkStateManagementService.ts
+ * 
+ * 注意事项:
+ * - 此服务属于数据同步核心模块
+ * - 修改前请确保了解同步机制
+ * - 建议在测试环境充分验证
+ * ========================================
+ */
+
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { NetworkStateManagementService } from './networkStateManagementService';
 import { unifiedSyncService } from './unifiedSyncService';
+import { ErrorHandlingAndRetryService } from './errorHandlingAndRetryService';
 
 export interface PerformanceMetrics {
   memoryUsage: number; // MB
@@ -55,6 +79,10 @@ export class PerformanceOptimizationService {
     lastOptimization: 0,
     totalRequests: 0
   };
+
+  // 添加缺失的属性
+  private syncQueue: any[] = [];
+  private batchProcessingQueue: any[] = [];
   
   private batchConfig: BatchProcessingConfig = {
     maxBatchSize: 1000,
@@ -285,24 +313,37 @@ export class PerformanceOptimizationService {
     try {
       console.log('🧹 开始内存优化...');
       
-      // 清理过期缓存
+      const beforeMemory = await this.getCurrentMemoryUsage();
+      
+      // 1. 清理过期缓存
       await this.cleanupExpiredCache();
       
-      // 清理大对象
+      // 2. 清理大对象
       await this.cleanupLargeObjects();
       
-      // 强制垃圾回收（如果启用）
+      // 3. 清理同步队列
+      await this.cleanupSyncQueue();
+      
+      // 4. 清理批处理队列
+      await this.cleanupBatchQueue();
+      
+      // 5. 清理临时数据
+      await this.cleanupTemporaryData();
+      
+      // 6. 强制垃圾回收（如果启用）
       if (this.memoryConfig.enableGarbageCollection) {
         this.forceGarbageCollection();
       }
       
-      // 更新性能指标
+      // 7. 更新性能指标
+      const afterMemory = await this.getCurrentMemoryUsage();
       this.updatePerformanceMetrics({
-        memoryUsage: await this.getCurrentMemoryUsage(),
+        memoryUsage: afterMemory,
         lastOptimization: Date.now()
       });
       
-      console.log('✅ 内存优化完成');
+      const memorySaved = beforeMemory - afterMemory;
+      console.log(`✅ 内存优化完成，释放内存: ${memorySaved.toFixed(1)}%`);
       
     } catch (error) {
       console.error('❌ 内存优化失败:', error);
@@ -530,11 +571,73 @@ export class PerformanceOptimizationService {
   // 获取当前内存使用
   private async getCurrentMemoryUsage(): Promise<number> {
     try {
-      // 这里应该调用实际的内存API
-      // 目前返回模拟值
-      return Math.random() * 100 + 50; // 50-150MB
+      // 使用真实的内存监控
+      if (typeof performance !== 'undefined' && (performance as any).memory) {
+        // 浏览器环境
+        const memory = (performance as any).memory;
+        const usedMB = memory.usedJSHeapSize / (1024 * 1024);
+        const totalMB = memory.totalJSHeapSize / (1024 * 1024);
+        const usagePercentage = (usedMB / totalMB) * 100;
+        
+        // 记录性能问题
+        if (usagePercentage > 80) {
+          const errorService = ErrorHandlingAndRetryService.getInstance();
+          await errorService.recordPerformanceIssue(
+            'memory_high',
+            usagePercentage > 90 ? 'high' : 'medium',
+            `内存使用率过高: ${usagePercentage.toFixed(1)}%`,
+            { memoryUsage: usagePercentage }
+          );
+        }
+        
+        return usagePercentage;
+      } else {
+        // React Native 环境 - 使用估算方法
+        const estimatedMemory = await this.estimateMemoryUsage();
+        return estimatedMemory;
+      }
     } catch (error) {
       console.error('❌ 获取内存使用失败:', error);
+      return 0;
+    }
+  }
+
+  // 估算内存使用（React Native环境）
+  private async estimateMemoryUsage(): Promise<number> {
+    try {
+      // 基于缓存大小和数据量估算
+      let totalMemory = 0;
+      
+      // 计算缓存占用
+      totalMemory += this.dataCache.size * 0.1; // 每个缓存项约0.1MB
+      
+      // 计算同步队列占用
+      totalMemory += this.syncQueue.length * 0.05; // 每个同步项约0.05MB
+      
+      // 计算批处理数据占用
+      totalMemory += this.batchProcessingQueue.length * 0.2; // 每个批处理约0.2MB
+      
+      // 基础内存占用
+      totalMemory += 20; // 基础内存20MB
+      
+      // 转换为百分比（假设总内存为200MB）
+      const totalAvailableMemory = 200;
+      const usagePercentage = (totalMemory / totalAvailableMemory) * 100;
+      
+      // 记录性能问题
+      if (usagePercentage > 80) {
+        const errorService = ErrorHandlingAndRetryService.getInstance();
+        await errorService.recordPerformanceIssue(
+          'memory_high',
+          usagePercentage > 90 ? 'high' : 'medium',
+          `内存使用率过高: ${usagePercentage.toFixed(1)}%`,
+          { memoryUsage: usagePercentage }
+        );
+      }
+      
+      return Math.min(usagePercentage, 100);
+    } catch (error) {
+      console.error('❌ 估算内存使用失败:', error);
       return 0;
     }
   }
@@ -682,6 +785,71 @@ export class PerformanceOptimizationService {
       
     } catch (error) {
       console.error('❌ 销毁性能优化服务失败:', error);
+    }
+  }
+
+  // 清理同步队列
+  private async cleanupSyncQueue(): Promise<void> {
+    try {
+      const maxQueueSize = 100;
+      const oldQueueSize = this.syncQueue.length;
+      
+      if (this.syncQueue.length > maxQueueSize) {
+        // 保留最新的项目，删除旧的
+        this.syncQueue = this.syncQueue.slice(-maxQueueSize);
+        console.log(`🗑️ 清理同步队列: ${oldQueueSize} → ${this.syncQueue.length}`);
+      }
+      
+    } catch (error) {
+      console.error('❌ 清理同步队列失败:', error);
+    }
+  }
+
+  // 清理批处理队列
+  private async cleanupBatchQueue(): Promise<void> {
+    try {
+      const maxBatchSize = 50;
+      const oldBatchSize = this.batchProcessingQueue.length;
+      
+      if (this.batchProcessingQueue.length > maxBatchSize) {
+        // 保留最新的批处理，删除旧的
+        this.batchProcessingQueue = this.batchProcessingQueue.slice(-maxBatchSize);
+        console.log(`🗑️ 清理批处理队列: ${oldBatchSize} → ${this.batchProcessingQueue.length}`);
+      }
+      
+    } catch (error) {
+      console.error('❌ 清理批处理队列失败:', error);
+    }
+  }
+
+  // 清理临时数据
+  private async cleanupTemporaryData(): Promise<void> {
+    try {
+      // 清理AsyncStorage中的临时数据
+      const tempKeys = [
+        'temp_sync_data',
+        'temp_batch_data',
+        'temp_cache_data',
+        'temp_upload_data',
+        'temp_download_data'
+      ];
+      
+      let cleanedCount = 0;
+      for (const key of tempKeys) {
+        try {
+          await AsyncStorage.removeItem(key);
+          cleanedCount++;
+        } catch (error) {
+          // 忽略不存在的键
+        }
+      }
+      
+      if (cleanedCount > 0) {
+        console.log(`🗑️ 清理了 ${cleanedCount} 个临时数据键`);
+      }
+      
+    } catch (error) {
+      console.error('❌ 清理临时数据失败:', error);
     }
   }
 }

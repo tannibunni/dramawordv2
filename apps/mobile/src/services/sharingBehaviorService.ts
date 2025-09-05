@@ -252,13 +252,13 @@ class SharingBehaviorService {
 
     // 找出最常用的分享渠道
     const mostUsedChannel = Object.entries(shareChannels).reduce((max, [channel, count]) => 
-      count > shareChannels[max as ShareChannel] ? channel as ShareChannel : max as ShareChannel
-    ) as ShareChannel;
+      count > shareChannels[max as ShareChannel] ? channel : max
+    , Object.keys(shareChannels)[0]) as ShareChannel;
 
     // 找出最常分享的类型
     const mostSharedType = Object.entries(shareTypes).reduce((max, [type, count]) => 
-      count > shareTypes[max as ShareType] ? type as ShareType : max as ShareType
-    ) as ShareType;
+      count > shareTypes[max as ShareType] ? type : max
+    , Object.keys(shareTypes)[0]) as ShareType;
 
     // 获取最近的分享记录（最近10条）
     const recentShares = shareHistory.slice(-10).reverse();

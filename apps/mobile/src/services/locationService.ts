@@ -135,8 +135,7 @@ class LocationService {
     try {
       // 方法1: 使用公共IP地理位置API
       const response = await fetch('https://ipapi.co/json/', {
-        method: 'GET',
-        timeout: 5000
+        method: 'GET'
       });
 
       if (response.ok) {
@@ -154,8 +153,7 @@ class LocationService {
     try {
       // 方法2: 备用API
       const response = await fetch('https://ipinfo.io/json', {
-        method: 'GET',
-        timeout: 5000
+        method: 'GET'
       });
 
       if (response.ok) {

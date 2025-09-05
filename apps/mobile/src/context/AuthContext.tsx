@@ -14,6 +14,7 @@ interface UserInfo {
   email?: string;
   avatar?: string;
   loginType?: 'wechat' | 'apple' | 'phone' | 'guest';
+  token?: string;
   createdAt?: string;
   updatedAt?: string;
   learningStats?: {

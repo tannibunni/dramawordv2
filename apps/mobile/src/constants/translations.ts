@@ -400,6 +400,7 @@ export type TranslationKey =
   | 'shows_tab'
   | 'wordbooks_tab'
   | 'not_completed'
+  | 'filter_by_status'
   | 'edit_wordbook'
   | 'name'
   | 'description'
@@ -935,6 +936,7 @@ export const translations: Record<AppLanguage, Record<TranslationKey, string>> =
     shows_tab: '剧单',
     wordbooks_tab: '单词本',
     not_completed: '未看',
+    filter_by_status: '按状态筛选',
     edit_wordbook: '编辑单词本',
     name: '名称',
     description: '描述',
@@ -1477,6 +1479,7 @@ export const translations: Record<AppLanguage, Record<TranslationKey, string>> =
     shows_tab: 'Shows',
     wordbooks_tab: 'Wordbooks',
     not_completed: 'Not Watched',
+    filter_by_status: 'Filter by Status',
     edit_wordbook: 'Edit Wordbook',
     name: 'Name',
     description: 'Description',

@@ -1,6 +1,31 @@
+/**
+ * ========================================
+ * 🔄 [SYNC SERVICE] 数据同步服务
+ * ========================================
+ * 
+ * 服务类型: 数据同步相关服务
+ * 功能描述: 错误处理和重试服务 - 错误管理
+ * 维护状态: 活跃维护中
+ * 
+ * 相关服务:
+ * - 统一同步: unifiedSyncService.ts
+ * - 数据下载: newDeviceDataDownloadService.ts
+ * - 上传策略: smartUploadStrategy.ts
+ * - 冲突解决: dataConflictResolutionService.ts
+ * - 网络管理: networkStateManagementService.ts
+ * 
+ * 注意事项:
+ * - 此服务属于数据同步核心模块
+ * - 修改前请确保了解同步机制
+ * - 建议在测试环境充分验证
+ * ========================================
+ */
+
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Platform } from 'react-native';
 import { NetworkStateManagementService } from './networkStateManagementService';
 import { PerformanceOptimizationService } from './performanceOptimizationService';
+import { API_BASE_URL } from '../constants/config';
 
 export interface ErrorInfo {
   id: string;
@@ -54,6 +79,37 @@ export interface ErrorMetrics {
   unresolvedErrors: number;
 }
 
+export interface ErrorTrackingInfo {
+  totalCrashes: number;
+  totalErrors: number;
+  performanceIssues: number;
+  lastCrashDate?: Date;
+  lastErrorDate?: Date;
+  crashReports: CrashReport[];
+  performanceReports: PerformanceReport[];
+}
+
+export interface CrashReport {
+  date: Date;
+  errorType: string;
+  errorMessage: string;
+  stackTrace?: string;
+  deviceInfo: string;
+}
+
+export interface PerformanceReport {
+  date: Date;
+  issueType: 'slow_load' | 'memory_high' | 'battery_drain' | 'network_slow';
+  severity: 'low' | 'medium' | 'high';
+  details: string;
+  metrics: {
+    loadTime?: number;
+    memoryUsage?: number;
+    batteryLevel?: number;
+    networkSpeed?: number;
+  };
+}
+
 export class ErrorHandlingAndRetryService {
   private static instance: ErrorHandlingAndRetryService;
   private networkService: NetworkStateManagementService;
@@ -70,6 +126,12 @@ export class ErrorHandlingAndRetryService {
     lastErrorTime: 0,
     unresolvedErrors: 0
   };
+  
+  // 错误追踪相关属性
+  private errorTrackingInfo: ErrorTrackingInfo | null = null;
+  private performanceMetrics: Map<string, number> = new Map();
+  private errorQueue: CrashReport[] = [];
+  private performanceQueue: PerformanceReport[] = [];
   
   private isInitialized: boolean = false;
   private errorCleanupTimer: number | null = null;
@@ -787,5 +849,249 @@ export class ErrorHandlingAndRetryService {
     } catch (err) {
       console.error('❌ 销毁错误处理和重试服务失败:', err);
     }
+  }
+
+  // ==================== 错误追踪方法 ====================
+
+  // 初始化错误追踪
+  public async initializeErrorTracking(): Promise<void> {
+    try {
+      await this.loadErrorTrackingInfo();
+      console.log('📊 错误追踪服务已初始化');
+    } catch (error) {
+      console.error('❌ 错误追踪初始化失败:', error);
+    }
+  }
+
+  // 记录崩溃报告
+  public async recordCrash(error: Error, context?: any): Promise<void> {
+    try {
+      const crashReport: CrashReport = {
+        date: new Date(),
+        errorType: error.name || 'Unknown',
+        errorMessage: error.message,
+        stackTrace: error.stack,
+        deviceInfo: await this.getDeviceInfo()
+      };
+
+      this.errorQueue.push(crashReport);
+      await this.saveErrorTrackingInfo();
+
+      console.log('💥 崩溃报告已记录:', crashReport.errorType);
+    } catch (err) {
+      console.error('❌ 记录崩溃报告失败:', err);
+    }
+  }
+
+  // 记录性能问题
+  public async recordPerformanceIssue(
+    issueType: PerformanceReport['issueType'],
+    severity: PerformanceReport['severity'],
+    details: string,
+    metrics: PerformanceReport['metrics']
+  ): Promise<void> {
+    try {
+      const performanceReport: PerformanceReport = {
+        date: new Date(),
+        issueType,
+        severity,
+        details,
+        metrics
+      };
+
+      this.performanceQueue.push(performanceReport);
+      await this.saveErrorTrackingInfo();
+
+      console.log('⚡ 性能问题已记录:', issueType, severity);
+    } catch (error) {
+      console.error('❌ 记录性能问题失败:', error);
+    }
+  }
+
+  // 获取错误追踪信息
+  public async getErrorTrackingInfo(): Promise<ErrorTrackingInfo> {
+    if (!this.errorTrackingInfo) {
+      await this.loadErrorTrackingInfo();
+    }
+    return this.errorTrackingInfo || {
+      totalCrashes: 0,
+      totalErrors: 0,
+      performanceIssues: 0,
+      crashReports: [],
+      performanceReports: []
+    };
+  }
+
+  // 获取崩溃报告
+  public getCrashReports(): CrashReport[] {
+    return this.errorQueue;
+  }
+
+  // 获取性能报告
+  public getPerformanceReports(): PerformanceReport[] {
+    return this.performanceQueue;
+  }
+
+  // 清除错误追踪数据
+  public async clearErrorTrackingData(): Promise<void> {
+    try {
+      this.errorQueue = [];
+      this.performanceQueue = [];
+      this.errorTrackingInfo = {
+        totalCrashes: 0,
+        totalErrors: 0,
+        performanceIssues: 0,
+        crashReports: [],
+        performanceReports: []
+      };
+      
+      await this.saveErrorTrackingInfo();
+      console.log('🧹 错误追踪数据已清除');
+    } catch (error) {
+      console.error('❌ 清除错误追踪数据失败:', error);
+    }
+  }
+
+  // 上传错误报告到服务器
+  public async uploadErrorReports(): Promise<boolean> {
+    try {
+      if (this.errorQueue.length === 0 && this.performanceQueue.length === 0) {
+        return true;
+      }
+
+      const token = await this.getAuthToken();
+      if (!token) {
+        console.warn('⚠️ 未找到认证token，跳过错误报告上传');
+        return false;
+      }
+
+      const reports = {
+        crashes: this.errorQueue,
+        performance: this.performanceQueue,
+        timestamp: Date.now()
+      };
+
+      const response = await fetch(`${API_BASE_URL}/error-reports`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(reports)
+      });
+
+      if (response.ok) {
+        // 上传成功后清空队列
+        this.errorQueue = [];
+        this.performanceQueue = [];
+        await this.saveErrorTrackingInfo();
+        
+        console.log('✅ 错误报告上传成功');
+        return true;
+      } else {
+        console.error('❌ 错误报告上传失败:', response.status);
+        return false;
+      }
+    } catch (error) {
+      console.error('❌ 上传错误报告失败:', error);
+      return false;
+    }
+  }
+
+  // 加载错误追踪信息
+  private async loadErrorTrackingInfo(): Promise<void> {
+    try {
+      const data = await AsyncStorage.getItem('errorTrackingInfo');
+      if (data) {
+        this.errorTrackingInfo = JSON.parse(data);
+      } else {
+        this.errorTrackingInfo = {
+          totalCrashes: 0,
+          totalErrors: 0,
+          performanceIssues: 0,
+          crashReports: [],
+          performanceReports: []
+        };
+      }
+
+      // 加载错误队列
+      const errorQueueData = await AsyncStorage.getItem('errorQueue');
+      if (errorQueueData) {
+        this.errorQueue = JSON.parse(errorQueueData);
+      }
+
+      // 加载性能队列
+      const performanceQueueData = await AsyncStorage.getItem('performanceQueue');
+      if (performanceQueueData) {
+        this.performanceQueue = JSON.parse(performanceQueueData);
+      }
+    } catch (error) {
+      console.error('❌ 加载错误追踪信息失败:', error);
+    }
+  }
+
+  // 保存错误追踪信息
+  private async saveErrorTrackingInfo(): Promise<void> {
+    try {
+      if (this.errorTrackingInfo) {
+        this.errorTrackingInfo.totalCrashes = this.errorQueue.length;
+        this.errorTrackingInfo.totalErrors = this.errors.length;
+        this.errorTrackingInfo.performanceIssues = this.performanceQueue.length;
+        this.errorTrackingInfo.crashReports = this.errorQueue;
+        this.errorTrackingInfo.performanceReports = this.performanceQueue;
+        this.errorTrackingInfo.lastCrashDate = this.errorQueue.length > 0 ? this.errorQueue[this.errorQueue.length - 1].date : undefined;
+        this.errorTrackingInfo.lastErrorDate = this.errors.length > 0 ? new Date(this.errors[this.errors.length - 1].timestamp) : undefined;
+
+        await AsyncStorage.setItem('errorTrackingInfo', JSON.stringify(this.errorTrackingInfo));
+      }
+
+      await AsyncStorage.setItem('errorQueue', JSON.stringify(this.errorQueue));
+      await AsyncStorage.setItem('performanceQueue', JSON.stringify(this.performanceQueue));
+    } catch (error) {
+      console.error('❌ 保存错误追踪信息失败:', error);
+    }
+  }
+
+  // 获取设备信息
+  private async getDeviceInfo(): Promise<string> {
+    try {
+      const deviceInfo = {
+        platform: Platform.OS,
+        version: Platform.Version,
+        timestamp: Date.now()
+      };
+      return JSON.stringify(deviceInfo);
+    } catch (error) {
+      return 'Unknown Device';
+    }
+  }
+
+  // 获取认证token
+  private async getAuthToken(): Promise<string | null> {
+    try {
+      return await AsyncStorage.getItem('authToken');
+    } catch (error) {
+      return null;
+    }
+  }
+
+  // 设置性能指标
+  public setPerformanceMetric(key: string, value: number): void {
+    this.performanceMetrics.set(key, value);
+  }
+
+  // 获取性能指标
+  public getPerformanceMetric(key: string): number | undefined {
+    return this.performanceMetrics.get(key);
+  }
+
+  // 获取所有性能指标
+  public getAllPerformanceMetrics(): Map<string, number> {
+    return new Map(this.performanceMetrics);
+  }
+
+  // 清除性能指标
+  public clearPerformanceMetrics(): void {
+    this.performanceMetrics.clear();
   }
 }
