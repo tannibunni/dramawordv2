@@ -2,35 +2,49 @@ import { Router } from 'express';
 import { ExperienceService } from '../services/experienceService';
 import { authenticateToken } from '../middleware/auth';
 import { logger } from '../utils/logger';
+import { 
+  experienceCacheMiddleware, 
+  experienceCacheSetMiddleware,
+  cacheStatsMiddleware,
+  createCacheClearMiddleware
+} from '../middleware/cacheMiddleware';
 
 const router = Router();
 
-// 获取用户经验值信息
-router.get('/info', authenticateToken, async (req, res) => {
-  try {
-    const userId = (req as any).user.id;
-    const experienceInfo = await ExperienceService.getUserExperienceInfo(userId);
-    
-    if (!experienceInfo) {
-      return res.status(404).json({
+// 添加缓存统计中间件
+router.use(cacheStatsMiddleware);
+
+// 获取用户经验值信息 - 添加缓存
+router.get('/info', 
+  authenticateToken, 
+  experienceCacheMiddleware, 
+  async (req, res) => {
+    try {
+      const userId = (req as any).user.id;
+      const experienceInfo = await ExperienceService.getUserExperienceInfo(userId);
+      
+      if (!experienceInfo) {
+        return res.status(404).json({
+          success: false,
+          message: '用户不存在'
+        });
+      }
+
+      res.json({
+        success: true,
+        data: experienceInfo
+      });
+    } catch (error) {
+      logger.error('获取经验值信息失败:', error);
+      res.status(500).json({
         success: false,
-        message: '用户不存在'
+        message: '获取经验值信息失败',
+        error: error instanceof Error ? error.message : 'Unknown error'
       });
     }
-
-    res.json({
-      success: true,
-      data: experienceInfo
-    });
-  } catch (error) {
-    logger.error('获取经验值信息失败:', error);
-    res.status(500).json({
-      success: false,
-      message: '获取经验值信息失败',
-      error: error instanceof Error ? error.message : 'Unknown error'
-    });
-  }
-});
+  },
+  experienceCacheSetMiddleware
+);
 
 // 获取经验值获取方式说明
 router.get('/ways', authenticateToken, async (req, res) => {
@@ -78,8 +92,11 @@ router.post('/review', authenticateToken, async (req, res) => {
   }
 });
 
-// 智能挑战获得经验值
-router.post('/smart-challenge', authenticateToken, async (req, res) => {
+// 智能挑战获得经验值 - 添加缓存清理
+router.post('/smart-challenge', 
+  authenticateToken, 
+  createCacheClearMiddleware(['experience']),
+  async (req, res) => {
   try {
     const userId = (req as any).user.id;
     const result = await ExperienceService.addExperienceForSmartChallenge(userId);
@@ -103,8 +120,11 @@ router.post('/smart-challenge', authenticateToken, async (req, res) => {
   }
 });
 
-// 错词挑战获得经验值
-router.post('/wrong-word-challenge', authenticateToken, async (req, res) => {
+// 错词挑战获得经验值 - 添加缓存清理
+router.post('/wrong-word-challenge', 
+  authenticateToken, 
+  createCacheClearMiddleware(['experience']),
+  async (req, res) => {
   try {
     const userId = (req as any).user.id;
     const result = await ExperienceService.addExperienceForWrongWordChallenge(userId);
@@ -128,8 +148,11 @@ router.post('/wrong-word-challenge', authenticateToken, async (req, res) => {
   }
 });
 
-// 收集新单词获得经验值
-router.post('/new-word', authenticateToken, async (req, res) => {
+// 收集新单词获得经验值 - 添加缓存清理
+router.post('/new-word', 
+  authenticateToken, 
+  createCacheClearMiddleware(['experience']),
+  async (req, res) => {
   try {
     const userId = (req as any).user.id;
     const result = await ExperienceService.addExperienceForNewWord(userId);

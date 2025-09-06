@@ -38,6 +38,9 @@ import dataVersionRoutes from './routes/dataVersion';
 import networkRoutes from './routes/network';
 import userStatsRoutes from './routes/userStats';
 import userSearchRoutes from './routes/userSearch';
+import badgeRoutes from './routes/badgeRoutes';
+import cacheMonitoringRoutes from './routes/cacheMonitoringRoutes';
+import CacheMonitoringService from './services/cacheMonitoringService';
 import { logger } from './utils/logger';
 import { OpenAI } from 'openai';
 
@@ -83,6 +86,8 @@ app.use('/api/data-version', dataVersionRoutes);
 app.use('/api/network', networkRoutes);
 app.use('/api/user-stats', userStatsRoutes);
 app.use('/api/user-search', userSearchRoutes);
+app.use('/api/badges', badgeRoutes);
+app.use('/api/cache-monitoring', cacheMonitoringRoutes);
 
 // 健康检查端点
 app.get('/health', (req, res) => {
@@ -175,14 +180,25 @@ const startServer = async () => {
     // 连接数据库
     await connectDatabase();
     
+    // 启动缓存监控服务
+    const cacheMonitoringService = CacheMonitoringService.getInstance();
+    cacheMonitoringService.startMonitoring();
+    logger.info('📊 缓存监控服务已启动');
+    
     // 启动服务器
     app.listen(PORT, () => {
+      const baseUrl = process.env.NODE_ENV === 'production' 
+        ? 'https://dramawordv2.onrender.com' 
+        : `http://localhost:${PORT}`;
+      
       logger.info(`🚀 API Server running on port ${PORT}`);
-      logger.info(`📡 Health check: http://localhost:${PORT}/health`);
-      logger.info(`👥 User API: http://localhost:${PORT}/api/users`);
-      logger.info(`🔄 Sync API: http://localhost:${PORT}/api/sync`);
-      logger.info(`💬 WeChat API: http://localhost:${PORT}/api/wechat`);
-      logger.info(`🎬 TMDB API: http://localhost:${PORT}/api/tmdb`);
+      logger.info(`📡 Health check: ${baseUrl}/health`);
+      logger.info(`👥 User API: ${baseUrl}/api/users`);
+      logger.info(`🔄 Sync API: ${baseUrl}/api/sync`);
+      logger.info(`💬 WeChat API: ${baseUrl}/api/wechat`);
+      logger.info(`🎬 TMDB API: ${baseUrl}/api/tmdb`);
+      logger.info(`🏆 Badge API: ${baseUrl}/api/badges`);
+      logger.info(`📊 Cache Monitoring: ${baseUrl}/api/cache-monitoring`);
     });
   } catch (error) {
     logger.error('❌ Failed to start server:', error);

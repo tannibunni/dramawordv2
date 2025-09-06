@@ -20,18 +20,49 @@ import {
   getRateLimitStatus, // 新增
   getCloudWord // 新增：云词库获取
 } from '../controllers/wordController';
+import { 
+  wordCacheMiddleware, 
+  wordCacheSetMiddleware,
+  cacheStatsMiddleware,
+  createCacheClearMiddleware
+} from '../middleware/cacheMiddleware';
 
 const router = Router();
 
-// 单词搜索路由 - 使用可选认证，支持游客和登录用户
-router.post('/search', optionalAuth, searchWord);
-router.post('/translate', translateChineseToEnglish); // 新增
-router.get('/popular', getPopularWords);
-router.get('/recent-searches', getRecentSearches);
-router.post('/history', saveSearchHistory);
+// 添加缓存统计中间件
+router.use(cacheStatsMiddleware);
 
-// 云词库路由 - 从云词库获取单词数据
-router.get('/cloud/:word', getCloudWord);
+// 单词搜索路由 - 使用可选认证，支持游客和登录用户，添加缓存
+router.post('/search', 
+  optionalAuth, 
+  wordCacheMiddleware, 
+  searchWord, 
+  wordCacheSetMiddleware
+);
+router.post('/translate', translateChineseToEnglish); // 新增
+router.get('/popular', 
+  wordCacheMiddleware, 
+  getPopularWords, 
+  wordCacheSetMiddleware
+);
+router.get('/recent-searches', 
+  optionalAuth,
+  wordCacheMiddleware, 
+  getRecentSearches, 
+  wordCacheSetMiddleware
+);
+router.post('/history', 
+  optionalAuth,
+  createCacheClearMiddleware(['word']),
+  saveSearchHistory
+);
+
+// 云词库路由 - 从云词库获取单词数据，添加缓存
+router.get('/cloud/:word', 
+  wordCacheMiddleware, 
+  getCloudWord, 
+  wordCacheSetMiddleware
+);
 
 // 清空所有数据（管理员功能）
 router.delete('/clear-all', clearAllData);

@@ -69,25 +69,25 @@ export interface UploadStats {
 export class SmartUploadStrategy {
   private static instance: SmartUploadStrategy;
   private uploadIntervals: Record<string, number> = {
-    'vocabulary': 30 * 1000,      // 30秒
-    'learningRecords': 10 * 1000, // 10秒
-    'userStats': 60 * 1000,       // 1分钟
-    'shows': 2 * 60 * 1000,       // 2分钟
-    'experience': 5 * 1000,       // 5秒
-    'badges': 5 * 60 * 1000,      // 5分钟
-    'searchHistory': 5 * 60 * 1000, // 5分钟
-    'userSettings': 10 * 60 * 1000  // 10分钟
+    'vocabulary': 2 * 60 * 1000,      // 2分钟 (原30秒) - 减少80%访问
+    'learningRecords': 30 * 1000,     // 30秒 (原10秒) - 减少67%访问
+    'userStats': 5 * 60 * 1000,       // 5分钟 (原1分钟) - 减少80%访问
+    'shows': 10 * 60 * 1000,          // 10分钟 (原2分钟) - 减少80%访问
+    'experience': 10 * 1000,          // 10秒 (原5秒) - 减少50%访问
+    'badges': 15 * 60 * 1000,         // 15分钟 (原5分钟) - 减少67%访问
+    'searchHistory': 30 * 60 * 1000,  // 30分钟 (原5分钟) - 减少83%访问
+    'userSettings': 60 * 60 * 1000    // 1小时 (原10分钟) - 减少83%访问
   };
   
   private changeThresholds: Record<string, number> = {
-    'vocabulary': 1,        // 1个词汇变化
-    'learningRecords': 1,   // 1条学习记录
-    'userStats': 0.1,       // 10%变化
-    'shows': 1,             // 1个剧单
-    'experience': 1,        // 1点经验
-    'badges': 1,            // 1个徽章
-    'searchHistory': 5,     // 5条搜索历史
-    'userSettings': 0.01    // 1%设置变化
+    'vocabulary': 3,        // 3个词汇变化 (原1个) - 减少67%上传
+    'learningRecords': 2,   // 2条学习记录 (原1条) - 减少50%上传
+    'userStats': 0.2,       // 20%变化 (原10%) - 减少50%上传
+    'shows': 1,             // 1个剧单 (保持不变)
+    'experience': 5,        // 5点经验 (原1点) - 减少80%上传
+    'badges': 1,            // 1个徽章 (保持不变)
+    'searchHistory': 10,    // 10条搜索历史 (原5条) - 减少50%上传
+    'userSettings': 0.05    // 5%设置变化 (原1%) - 减少80%上传
   };
 
   private isUserActive = false;

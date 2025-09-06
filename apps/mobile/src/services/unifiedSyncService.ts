@@ -98,26 +98,26 @@ export class UnifiedSyncService {
   private pendingOperations: Set<string> = new Set();
   private syncProgress: number = 0;
 
-  // 统一配置 - 优先多邻国同步方案
+  // 统一配置 - 优化数据库性能
   private config: SyncConfig = {
-    wifiSyncInterval: 2 * 60 * 1000, // 2分钟
-    mobileSyncInterval: 5 * 60 * 1000, // 5分钟
-    offlineSyncInterval: 10 * 60 * 1000, // 10分钟
-    maxRetryAttempts: 5,
-    batchSize: 20,
+    wifiSyncInterval: 5 * 60 * 1000,   // 5分钟 (原2分钟) - 减少60%访问
+    mobileSyncInterval: 10 * 60 * 1000, // 10分钟 (原5分钟) - 减少50%访问
+    offlineSyncInterval: 15 * 60 * 1000, // 15分钟 (原10分钟) - 减少33%访问
+    maxRetryAttempts: 3,               // 减少重试次数 (原5次) - 减少40%重试
+    batchSize: 50,                     // 增加批量大小 (原20) - 减少60%请求
     enableIncrementalSync: false,      // ❌ 禁用增量同步（与多邻国方案冲突）
     enableOfflineFirst: true,
     enableRealTimeSync: false,         // ❌ 禁用实时同步（与多邻国方案冲突）
     enableCrossDeviceSync: false,      // ❌ 禁用跨设备同步（与多邻国方案冲突）
-    crossDeviceSyncInterval: 30 * 1000, // 30秒
+    crossDeviceSyncInterval: 60 * 1000, // 1分钟 (原30秒) - 减少50%访问
     enableAppleIDSync: false,          // ❌ 禁用Apple ID同步（与多邻国方案冲突）
     
-    // 智能延迟同步配置 - 多邻国方案兼容
-    enableSmartDelaySync: true,         // ✅ 启用智能延迟同步（多邻国方案兼容）
-    highPriorityDelay: 0,               // 高优先级：立即同步
-    mediumPriorityDelay: 10 * 1000,    // 中优先级：10秒延迟
-    lowPriorityDelay: 60 * 1000,       // 低优先级：1分钟延迟
-    maxBatchDelay: 5 * 60 * 1000       // 最大批量延迟：5分钟
+    // 智能延迟同步配置 - 数据库性能优化
+    enableSmartDelaySync: true,         // ✅ 启用智能延迟同步
+    highPriorityDelay: 5 * 1000,       // 高优先级：5秒延迟 (原立即)
+    mediumPriorityDelay: 30 * 1000,    // 中优先级：30秒延迟 (原10秒)
+    lowPriorityDelay: 2 * 60 * 1000,   // 低优先级：2分钟延迟 (原1分钟)
+    maxBatchDelay: 10 * 60 * 1000      // 最大批量延迟：10分钟 (原5分钟)
   };
 
   private constructor() {

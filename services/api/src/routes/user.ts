@@ -5,8 +5,17 @@ import { validateRequest } from '../middleware/validateRequest';
 import { uploadAvatar } from '../middleware/avatarUpload';
 import { UserShowListController } from '../controllers/userShowListController';
 import { SyncController } from '../controllers/syncController';
+import { 
+  userCacheMiddleware, 
+  userCacheSetMiddleware,
+  cacheStatsMiddleware,
+  createCacheClearMiddleware
+} from '../middleware/cacheMiddleware';
 
 const router = express.Router();
+
+// 添加缓存统计中间件
+router.use(cacheStatsMiddleware);
 
 // 用户注册
 router.post('/register', 
@@ -38,13 +47,15 @@ router.post('/login',
   UserController.login
 );
 
-// 获取用户信息 (需要认证)
+// 获取用户信息 (需要认证) - 添加缓存
 router.get('/profile',
   authenticateToken,
-  UserController.getUserInfo
+  userCacheMiddleware,
+  UserController.getUserInfo,
+  userCacheSetMiddleware
 );
 
-// 更新用户信息 (需要认证)
+// 更新用户信息 (需要认证) - 添加缓存清理
 router.put('/profile',
   authenticateToken,
   validateRequest({
@@ -54,6 +65,7 @@ router.put('/profile',
       email: { type: 'string', required: false, format: 'email' }
     }
   }),
+  createCacheClearMiddleware(['user']),
   UserController.updateUserInfo
 );
 
@@ -68,10 +80,12 @@ router.put('/settings',
   UserController.updateUserSettings
 );
 
-// 获取用户学习统计 (需要认证)
+// 获取用户学习统计 (需要认证) - 添加缓存
 router.get('/stats',
   authenticateToken,
-  UserController.getUserStats
+  userCacheMiddleware,
+  UserController.getUserStats,
+  userCacheSetMiddleware
 );
 
 // 更新用户学习统计 (需要认证)
@@ -164,10 +178,12 @@ router.post('/:userId/sharing-behavior',
   UserController.updateSharingBehavior
 );
 
-// 获取用户扩展信息
+// 获取用户扩展信息 - 添加缓存
 router.get('/:userId/extended-info',
   authenticateToken,
-  UserController.getUserExtendedInfo
+  userCacheMiddleware,
+  UserController.getUserExtendedInfo,
+  userCacheSetMiddleware
 );
 
 export default router; 
