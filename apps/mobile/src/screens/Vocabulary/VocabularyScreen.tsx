@@ -36,6 +36,7 @@ interface Badge {
   id: number;
   count: number;
   unlocked: boolean;
+  celebrationShown?: boolean; // 新增：是否已显示过庆祝弹窗
 }
 
 const VocabularyScreen: React.FC = () => {
@@ -67,13 +68,13 @@ const VocabularyScreen: React.FC = () => {
 
   // 徽章配置 - 使用 state 来保持状态
   const [badges, setBadges] = useState<Badge[]>([
-    { id: 1, count: 10, unlocked: false },
-    { id: 2, count: 20, unlocked: false },
-    { id: 3, count: 50, unlocked: false },
-    { id: 4, count: 100, unlocked: false },
-    { id: 5, count: 200, unlocked: false },
-    { id: 6, count: 500, unlocked: false },
-    { id: 7, count: 1000, unlocked: false },
+    { id: 1, count: 10, unlocked: false, celebrationShown: false },
+    { id: 2, count: 20, unlocked: false, celebrationShown: false },
+    { id: 3, count: 50, unlocked: false, celebrationShown: false },
+    { id: 4, count: 100, unlocked: false, celebrationShown: false },
+    { id: 5, count: 200, unlocked: false, celebrationShown: false },
+    { id: 6, count: 500, unlocked: false, celebrationShown: false },
+    { id: 7, count: 1000, unlocked: false, celebrationShown: false },
   ]);
 
   // 检查单词储存限制
@@ -143,8 +144,13 @@ const VocabularyScreen: React.FC = () => {
       const storedBadges = await AsyncStorage.getItem('userBadges');
       if (storedBadges) {
         const parsedBadges = JSON.parse(storedBadges);
-        setBadges(parsedBadges);
-        console.log('📱 从本地存储加载徽章数据:', parsedBadges);
+        // 确保所有徽章都有 celebrationShown 字段
+        const badgesWithCelebration = parsedBadges.map((badge: any) => ({
+          ...badge,
+          celebrationShown: badge.celebrationShown !== undefined ? badge.celebrationShown : badge.unlocked
+        }));
+        setBadges(badgesWithCelebration);
+        console.log('📱 从本地存储加载徽章数据:', badgesWithCelebration);
       }
     } catch (error) {
       console.error('❌ 加载徽章数据失败:', error);
@@ -305,23 +311,26 @@ const VocabularyScreen: React.FC = () => {
         const wasUnlocked = badge.unlocked;
         const newUnlocked = wordCount >= badge.count;
         
-        if (!wasUnlocked && newUnlocked) {
+        // 只有真正新解锁且未显示过庆祝弹窗的徽章才触发庆祝
+        if (!wasUnlocked && newUnlocked && !badge.celebrationShown) {
           unlockedBadge = badge.count;
-          console.log(`🎉 解锁徽章: ${badge.count}个单词`);
+          console.log(`🎉 新解锁徽章: ${badge.count}个单词`);
         }
         
         return {
           ...badge,
-          unlocked: newUnlocked
+          unlocked: newUnlocked,
+          // 如果徽章已解锁，标记庆祝弹窗已显示
+          celebrationShown: newUnlocked ? true : badge.celebrationShown
         };
       });
       
-      console.log('📊 徽章状态:', newBadges.map(b => `${b.count}(${b.unlocked ? '已解锁' : '未解锁'})`));
+      console.log('📊 徽章状态:', newBadges.map(b => `${b.count}(${b.unlocked ? '已解锁' : '未解锁'})${b.celebrationShown ? '[已庆祝]' : ''}`));
       
       // 保存到本地存储
       saveBadgesToStorage(newBadges);
       
-      // 如果有新解锁的徽章，同步到服务器
+      // 如果有新解锁的徽章，显示庆祝弹窗
       if (unlockedBadge) {
         setCelebrateBadge(unlockedBadge);
         setShowBadgeCelebrate(true);

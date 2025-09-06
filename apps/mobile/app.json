@@ -15,60 +15,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.tannibunni.dramawordmobile",
-      "buildNumber": "34",
-      "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false,
-        "UIFileSharingEnabled": false,
-        "LSSupportsOpeningDocumentsInPlace": false,
-        "CFBundleURLTypes": [
-          {
-            "CFBundleURLName": "com.tannibunni.dramawordmobile",
-            "CFBundleURLSchemes": ["dramaword"]
-          }
-        ]
-      },
-      "associatedDomains": [
-        "applinks:dramaword.com",
-        "applinks:www.dramaword.com"
-      ]
-    },
-    "android": {
-      "adaptiveIcon": {
-        "backgroundColor": "#ffffff"
-      },
-      "edgeToEdgeEnabled": true,
-      "package": "com.tannibunni.dramawordmobile",
-      "intentFilters": [
-        {
-          "action": "VIEW",
-          "autoVerify": true,
-          "data": [
-            {
-              "scheme": "https",
-              "host": "dramaword.com"
-            },
-            {
-              "scheme": "https", 
-              "host": "www.dramaword.com"
-            }
-          ],
-          "category": ["BROWSABLE", "DEFAULT"]
-        }
-      ]
-    },
-    "splash": {
-      "image": "./assets/images/icon.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
-    },
-    "plugins": [
-      "expo-localization",
-      "expo-audio"
-    ],
-    "ios": {
-      "supportsTablet": true,
-      "bundleIdentifier": "com.tannibunni.dramawordmobile",
-      "buildNumber": "34",
+      "buildNumber": "37",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
         "UIFileSharingEnabled": false,
@@ -81,6 +28,11 @@
       },
       "edgeToEdgeEnabled": true,
       "package": "com.tannibunni.dramawordmobile"
+    },
+    "splash": {
+      "image": "./assets/images/icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
     },
     "web": {
       "bundler": "metro"

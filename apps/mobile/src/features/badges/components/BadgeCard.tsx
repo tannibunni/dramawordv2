@@ -26,6 +26,16 @@ export const BadgeCard: React.FC<BadgeCardProps> = ({
   onPress,
 }) => {
   const isUnlocked = userProgress.unlocked;
+  const isReadyToUnlock = userProgress.status === 'ready_to_unlock';
+  
+  // 调试日志
+  console.log('[BadgeCard] 渲染徽章:', {
+    badgeId: badge.id,
+    status: userProgress.status,
+    unlocked: userProgress.unlocked,
+    isReadyToUnlock: isReadyToUnlock,
+    progress: userProgress.progress
+  });
 
   const getBadgeIcon = () => {
     if (isUnlocked) {
@@ -34,6 +44,16 @@ export const BadgeCard: React.FC<BadgeCardProps> = ({
       return (
         <View style={[styles.badgeIcon, styles.unlockedIcon]}>
           <Image source={imageSource} style={styles.badgeImage} resizeMode="contain" />
+        </View>
+      );
+    } else if (isReadyToUnlock) {
+      // 准备解锁：显示宝箱图标
+      return (
+        <View style={[styles.badgeIcon, styles.chestIcon]}>
+          <Ionicons name="gift" size={40} color="#FF6B35" />
+          <View style={styles.glowEffect}>
+            <Ionicons name="gift" size={40} color="#FFD700" />
+          </View>
         </View>
       );
     } else {
@@ -50,19 +70,33 @@ export const BadgeCard: React.FC<BadgeCardProps> = ({
 
   return (
     <TouchableOpacity
-      style={[styles.badgeCard, !isUnlocked && styles.lockedBadge]}
+      style={[
+        styles.badgeCard, 
+        !isUnlocked && !isReadyToUnlock && styles.lockedBadge,
+        isReadyToUnlock && styles.chestBadge
+      ]}
       onPress={() => onPress(badge)}
       activeOpacity={0.7}
     >
       {getBadgeIcon()}
       
-      <Text style={[styles.badgeName, !isUnlocked && styles.lockedText]}>
+      <Text style={[
+        styles.badgeName, 
+        !isUnlocked && !isReadyToUnlock && styles.lockedText,
+        isReadyToUnlock && styles.chestText
+      ]}>
         {badge.name}
       </Text>
       
-      {!isUnlocked && (
+      {!isUnlocked && !isReadyToUnlock && (
         <View style={styles.lockOverlay}>
           <Ionicons name="lock-closed" size={16} color="#999" />
+        </View>
+      )}
+      
+      {isReadyToUnlock && (
+        <View style={styles.chestOverlay}>
+          <Ionicons name="gift" size={16} color="#FF6B35" />
         </View>
       )}
     </TouchableOpacity>
@@ -81,6 +115,9 @@ const styles = StyleSheet.create({
   lockedBadge: {
     opacity: 0.6,
   },
+  chestBadge: {
+    // 宝箱状态的特殊样式
+  },
   badgeIcon: {
     width: 100,
     height: 100,
@@ -88,6 +125,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 15,
+    position: 'relative',
   },
   unlockedIcon: {
     // 移除背景颜色和边框
@@ -96,6 +134,18 @@ const styles = StyleSheet.create({
     backgroundColor: '#F5F5F5',
     borderWidth: 1,
     borderColor: '#E0E0E0',
+  },
+  chestIcon: {
+    backgroundColor: '#FFF8E1',
+    borderWidth: 2,
+    borderColor: '#FFD700',
+    position: 'relative',
+  },
+  glowEffect: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    opacity: 0.3,
   },
   badgeName: {
     fontSize: 12,
@@ -107,11 +157,23 @@ const styles = StyleSheet.create({
   lockedText: {
     color: '#999',
   },
+  chestText: {
+    color: '#FF6B35',
+    fontWeight: '700',
+  },
   lockOverlay: {
     position: 'absolute',
     top: 8,
     right: 8,
     backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    borderRadius: 10,
+    padding: 4,
+  },
+  chestOverlay: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    backgroundColor: 'rgba(255, 107, 53, 0.9)',
     borderRadius: 10,
     padding: 4,
   },

@@ -106,6 +106,19 @@ export class BadgeService {
       // 获取所有徽章定义
       const badgeDefinitions = await this.getBadgeDefinitions();
       
+      // 首先检查是否有手动设置的调试状态
+      const debugProgress = await this.badgeDataService.getUserBadgeProgress(userId);
+      if (debugProgress && debugProgress.length > 0) {
+        console.log('[BadgeService] 使用调试状态数据，跳过规则引擎计算');
+        console.log('[BadgeService] 调试状态数据:', debugProgress.map(p => ({ 
+          badgeId: p.badgeId, 
+          status: p.status, 
+          unlocked: p.unlocked, 
+          progress: p.progress 
+        })));
+        return debugProgress;
+      }
+      
       // 获取用户行为数据
       let userBehavior = await this.badgeDataService.getUserBehavior(userId);
       
@@ -126,18 +139,25 @@ export class BadgeService {
       if (userBehavior) {
         const unlockResults = await this.badgeRuleEngine.evaluateUserBadges(userId, userBehavior);
       
-        // 确保所有徽章都有进度记录，未解锁的显示为锁定状态
+        // 确保所有徽章都有进度记录，支持中间态
         const progress: UserBadgeProgress[] = badgeDefinitions.map(badge => {
         const existingProgress = unlockResults.find(result => result.badgeId === badge.id);
         
         if (existingProgress) {
+          // 计算徽章状态
+          const isUnlocked = existingProgress.unlocked;
+          const isReadyToUnlock = !isUnlocked && existingProgress.progress >= existingProgress.target;
+          const status = isUnlocked ? 'unlocked' : (isReadyToUnlock ? 'ready_to_unlock' : 'locked');
+          
           return {
             userId,
             badgeId: existingProgress.badgeId,
             unlocked: existingProgress.unlocked,
             progress: existingProgress.progress,
             target: existingProgress.target,
-            unlockedAt: existingProgress.unlockDate
+            unlockedAt: existingProgress.unlockDate,
+            status,
+            hasBeenOpened: isUnlocked // 已解锁的徽章视为已打开过
           };
         } else {
           // 如果规则引擎没有返回这个徽章的结果，创建默认的锁定状态
@@ -147,7 +167,9 @@ export class BadgeService {
             unlocked: false,
             progress: 0,
             target: badge.target,
-            unlockedAt: undefined
+            unlockedAt: undefined,
+            status: 'locked' as const,
+            hasBeenOpened: false
           };
         }
         });
@@ -164,7 +186,9 @@ export class BadgeService {
           unlocked: false,
           progress: 0,
           target: badge.target,
-          unlockedAt: undefined
+          unlockedAt: undefined,
+          status: 'locked' as const,
+          hasBeenOpened: false
         }));
       }
     } catch (error) {
@@ -225,6 +249,36 @@ export class BadgeService {
         progressPercentage: 0,
         recentUnlocks: []
       };
+    }
+  }
+
+  // 打开宝箱（将 ready_to_unlock 状态改为 unlocked）
+  async openBadgeChest(userId: string, badgeId: string): Promise<boolean> {
+    try {
+      const progress = await this.getUserBadgeProgressById(userId, badgeId);
+      
+      if (!progress || progress.status !== 'ready_to_unlock') {
+        console.warn(`[BadgeService] 徽章 ${badgeId} 不处于可打开状态`);
+        return false;
+      }
+      
+      // 更新徽章状态为已解锁
+      const updatedProgress: UserBadgeProgress = {
+        ...progress,
+        unlocked: true,
+        status: 'unlocked',
+        hasBeenOpened: true,
+        unlockedAt: new Date()
+      };
+      
+      // 保存到本地存储
+      await this.badgeDataService.updateBadgeProgress(userId, badgeId, updatedProgress);
+      
+      console.log(`[BadgeService] 成功打开宝箱: ${badgeId}`);
+      return true;
+    } catch (error) {
+      console.error(`[BadgeService] 打开宝箱失败: ${badgeId}`, error);
+      return false;
     }
   }
 

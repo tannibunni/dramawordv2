@@ -195,7 +195,9 @@ export class BadgeDataService {
           unlocked: progress.unlocked || false,
           progress: progress.progress || 0,
           target: progress.target || 0,
-          unlockedAt: progress.unlockedAt
+          unlockedAt: progress.unlockedAt,
+          status: progress.status || 'locked',
+          hasBeenOpened: progress.hasBeenOpened || false
         };
         currentProgress.push(newProgress);
       }
@@ -231,7 +233,9 @@ export class BadgeDataService {
             unlocked: update.unlocked,
             progress: update.progress,
             target: update.target,
-            unlockedAt: update.unlockDate
+            unlockedAt: update.unlockDate,
+            status: update.unlocked ? 'unlocked' : 'locked',
+            hasBeenOpened: update.unlocked
           };
           currentProgress.push(newProgress);
         }

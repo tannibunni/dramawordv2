@@ -51,7 +51,9 @@ export const BadgeEntrySection: React.FC<BadgeEntrySectionProps> = ({
         unlocked: false,
         progress: 0,
         target: badge.target,
-        unlockedAt: undefined
+        unlockedAt: undefined,
+        status: 'locked' as const,
+        hasBeenOpened: false
       };
       return { badge, progress };
     });

@@ -27,6 +27,17 @@ export const BadgeDetailModal: React.FC<BadgeDetailModalProps> = ({
 
   const isUnlocked = userProgress?.unlocked || false;
   const { appLanguage } = useAppLanguage();
+  
+  // 调试日志
+  console.log('[BadgeDetailModal] 渲染详情弹窗:', {
+    badgeId: badge?.id,
+    isUnlocked,
+    userProgress: userProgress ? {
+      unlocked: userProgress.unlocked,
+      status: userProgress.status,
+      hasBeenOpened: userProgress.hasBeenOpened
+    } : null
+  });
 
   // 获取徽章图片
   const getBadgeImage = () => {

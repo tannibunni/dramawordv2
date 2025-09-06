@@ -17,6 +17,7 @@ import {
   Dimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { colors } from '../../constants/colors';
 import { wordService, RecentWord } from '../../services/wordService';
 import WordCard from '../../components/cards/WordCard';
@@ -66,6 +67,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   const [celebrateBadge, setCelebrateBadge] = useState<null | number>(null);
   const badgeTargets = [10, 20, 50, 100, 200, 500, 1000];
   const prevVocabCount = useRef(vocabulary.length);
+  const [celebratedBadges, setCelebratedBadges] = useState<Set<number>>(new Set());
   const [chToEnCandidates, setChToEnCandidates] = useState<string[]>([]); // 新增：中文查英文候选词
   const [chToEnQuery, setChToEnQuery] = useState<string>('');
   const { selectedLanguage, getCurrentLanguageConfig, setSelectedLanguage } = useLanguage();
@@ -151,18 +153,42 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     return () => clearInterval(cleanupInterval);
   }, []);
 
+  // 加载已庆祝的徽章记录
+  useEffect(() => {
+    const loadCelebratedBadges = async () => {
+      try {
+        const stored = await AsyncStorage.getItem('celebratedBadges');
+        if (stored) {
+          const celebratedArray = JSON.parse(stored);
+          setCelebratedBadges(new Set(celebratedArray));
+          console.log('📱 从本地存储加载已庆祝徽章:', celebratedArray);
+        }
+      } catch (error) {
+        console.error('❌ 加载已庆祝徽章失败:', error);
+      }
+    };
+    loadCelebratedBadges();
+  }, []);
+
   useEffect(() => {
     // 监听 vocabulary 数量变化
     if (vocabulary.length > prevVocabCount.current) {
-      const unlocked = badgeTargets.find(target => prevVocabCount.current < target && vocabulary.length >= target);
+      const unlocked = badgeTargets.find(target => 
+        prevVocabCount.current < target && 
+        vocabulary.length >= target && 
+        !celebratedBadges.has(target)
+      );
       if (unlocked) {
         setCelebrateBadge(unlocked);
         setShowBadgeCelebrate(true);
+        setCelebratedBadges(prev => new Set([...prev, unlocked]));
+        // 保存到本地存储
+        AsyncStorage.setItem('celebratedBadges', JSON.stringify([...celebratedBadges, unlocked]));
         setTimeout(() => setShowBadgeCelebrate(false), 1800);
       }
     }
     prevVocabCount.current = vocabulary.length;
-  }, [vocabulary.length]);
+  }, [vocabulary.length, celebratedBadges]);
 
   const loadRecentWords = async () => {
     try {

@@ -35,6 +35,8 @@ export interface ExperienceState {
     oldExperience: number;
     newExperience: number;
   } | null;
+  // 升级庆祝记录
+  celebratedLevels: Set<number>;
 }
 
 // 经验值状态更新回调
@@ -98,7 +100,8 @@ class ExperienceManager implements IExperienceManager {
     animatedCollectedWords: 0,
     animatedContributedWords: 0,
     showLevelUpModal: false,
-    levelUpInfo: null
+    levelUpInfo: null,
+    celebratedLevels: new Set()
   };
 
   private stateCallbacks: ExperienceStateCallback[] = [];
@@ -204,8 +207,8 @@ class ExperienceManager implements IExperienceManager {
   // 计算等级信息
   private calculateLevelInfo(experience: number): LevelInfo {
     const level = this.calculateLevel(experience);
-    // 修复：显示下一等级需要的总经验值，而不是当前等级需要的总经验值
-    const experienceToNextLevel = this.calculateLevelRequiredExp(level + 1);
+    // 修复：显示当前等级满级需要的总经验值
+    const experienceToNextLevel = this.calculateLevelRequiredExp(level);
     const progressPercentage = this.calculateProgressPercentage(experience);
     const currentLevelExp = this.getExperienceInCurrentLevel(experience);
     const previousLevelExp = level === 1 ? 0 : this.calculateLevelRequiredExp(level - 1);
@@ -249,8 +252,8 @@ class ExperienceManager implements IExperienceManager {
           if (parsedStats.experience > 0) {
             // 检查等级一致性并重新计算相关值
             const calculatedLevel = this.calculateLevel(parsedStats.experience);
-            // 修复：显示下一等级需要的总经验值，而不是当前等级需要的总经验值
-            const experienceToNextLevel = this.calculateLevelRequiredExp(calculatedLevel + 1);
+            // 修复：显示当前等级满级需要的总经验值
+            const experienceToNextLevel = this.calculateLevelRequiredExp(calculatedLevel);
             const progressPercentage = this.calculateProgressPercentage(parsedStats.experience);
             
             // 强制重新计算，确保数据一致性
@@ -277,7 +280,7 @@ class ExperienceManager implements IExperienceManager {
         const defaultExperienceInfo: UserExperienceInfo = {
           experience: 0,
           level: 1,
-          experienceToNextLevel: 75, // 修复：显示下一等级(2级)需要的总经验值
+          experienceToNextLevel: 50, // 修复：Level 1 满级需要 50 经验值
           progressPercentage: 0,
           totalExperience: 0,
           dailyReviewXP: 0,
@@ -303,8 +306,8 @@ class ExperienceManager implements IExperienceManager {
           if (parsedStats.experience > 0) {
             // 检查等级一致性并重新计算相关值
             const calculatedLevel = this.calculateLevel(parsedStats.experience);
-            // 修复：显示下一等级需要的总经验值，而不是当前等级需要的总经验值
-            const experienceToNextLevel = this.calculateLevelRequiredExp(calculatedLevel + 1);
+            // 修复：显示当前等级满级需要的总经验值
+            const experienceToNextLevel = this.calculateLevelRequiredExp(calculatedLevel);
             const progressPercentage = this.calculateProgressPercentage(parsedStats.experience);
             
             // 强制重新计算，确保数据一致性
@@ -332,7 +335,7 @@ class ExperienceManager implements IExperienceManager {
         const defaultExperienceInfo: UserExperienceInfo = {
           experience: 0,
           level: 1,
-          experienceToNextLevel: 75, // 修复：显示下一等级(2级)需要的总经验值
+          experienceToNextLevel: 50, // 修复：Level 1 满级需要 50 经验值
           progressPercentage: 0,
           totalExperience: 0,
           dailyReviewXP: 0,
@@ -445,8 +448,8 @@ class ExperienceManager implements IExperienceManager {
         ...currentInfo,
         experience: newExperience,
         level: newLevel,
-        // 修复：显示下一等级需要的总经验值，而不是当前等级需要的总经验值
-        experienceToNextLevel: this.calculateLevelRequiredExp(newLevel + 1),
+        // 修复：显示当前等级满级需要的总经验值
+        experienceToNextLevel: this.calculateLevelRequiredExp(newLevel),
         progressPercentage: this.calculateProgressPercentage(newExperience),
         totalExperience: currentInfo.totalExperience + xpToGain
       };
@@ -463,16 +466,30 @@ class ExperienceManager implements IExperienceManager {
       // 检查升级
       if (leveledUp) {
         console.log(`[experienceManager] 恭喜升级！等级 ${oldLevel} → ${newLevel}`);
-        this.updateState({
-          showLevelUpModal: true,
-          levelUpInfo: {
-            oldLevel,
-            newLevel,
-            levelsGained: newLevel - oldLevel,
-            oldExperience,
-            newExperience
-          }
-        });
+        
+        // 检查是否已经庆祝过这个等级
+        const currentCelebratedLevels = this.experienceState.celebratedLevels;
+        const needsCelebration = !currentCelebratedLevels.has(newLevel);
+        
+        if (needsCelebration) {
+          console.log(`[experienceManager] 新升级等级 ${newLevel}，显示庆祝弹窗`);
+          this.updateState({
+            showLevelUpModal: true,
+            levelUpInfo: {
+              oldLevel,
+              newLevel,
+              levelsGained: newLevel - oldLevel,
+              oldExperience,
+              newExperience
+            },
+            celebratedLevels: new Set([...currentCelebratedLevels, newLevel])
+          });
+          
+          // 保存庆祝记录到本地存储
+          this.saveCelebratedLevels(new Set([...currentCelebratedLevels, newLevel]));
+        } else {
+          console.log(`[experienceManager] 等级 ${newLevel} 已经庆祝过，跳过弹窗`);
+        }
       }
 
       // 自动触发进度条动画（对于daily rewards等直接添加的经验值）
@@ -981,6 +998,7 @@ class ExperienceManager implements IExperienceManager {
     try {
       console.log('[experienceManager] 开始加载用户经验值信息...');
       const experienceInfo = await this.getCurrentExperienceInfo();
+      const celebratedLevels = await this.loadCelebratedLevels();
       
       if (experienceInfo) {
         console.log('[experienceManager] 成功加载经验值信息:', experienceInfo);
@@ -992,7 +1010,8 @@ class ExperienceManager implements IExperienceManager {
           userExperienceInfo: experienceInfo,
           progressBarValue: progressValue * 100,
           isLoadingExperience: false,
-          hasCheckedExperience: true
+          hasCheckedExperience: true,
+          celebratedLevels
         });
         
         console.log('[experienceManager] 状态更新完成，进度条值:', progressValue);
@@ -1006,7 +1025,7 @@ class ExperienceManager implements IExperienceManager {
           userExperienceInfo: {
             experience: 0,
             level: 1,
-            experienceToNextLevel: 75, // 修复：显示下一等级(2级)需要的总经验值
+            experienceToNextLevel: 50, // 修复：Level 1 满级需要 50 经验值
             progressPercentage: 0,
             totalExperience: 0,
             dailyReviewXP: 0,
@@ -1017,7 +1036,8 @@ class ExperienceManager implements IExperienceManager {
           },
           progressBarValue: 0,
           isLoadingExperience: false,
-          hasCheckedExperience: true
+          hasCheckedExperience: true,
+          celebratedLevels
         });
       }
     } catch (error) {
@@ -1035,7 +1055,8 @@ class ExperienceManager implements IExperienceManager {
       hasCheckedExperience: false,
       isProgressBarAnimating: false,
       showLevelUpModal: false,
-      levelUpInfo: null
+      levelUpInfo: null,
+      celebratedLevels: new Set()
     });
   }
 
@@ -1045,6 +1066,33 @@ class ExperienceManager implements IExperienceManager {
       showLevelUpModal: false,
       levelUpInfo: null
     });
+  }
+
+  // 保存庆祝记录到本地存储
+  private async saveCelebratedLevels(celebratedLevels: Set<number>): Promise<void> {
+    try {
+      const celebratedArray = Array.from(celebratedLevels);
+      await AsyncStorage.setItem('celebratedLevels', JSON.stringify(celebratedArray));
+      console.log('[experienceManager] 升级庆祝记录已保存:', celebratedArray);
+    } catch (error) {
+      console.error('[experienceManager] 保存升级庆祝记录失败:', error);
+    }
+  }
+
+  // 从本地存储加载庆祝记录
+  private async loadCelebratedLevels(): Promise<Set<number>> {
+    try {
+      const stored = await AsyncStorage.getItem('celebratedLevels');
+      if (stored) {
+        const celebratedArray = JSON.parse(stored);
+        const celebratedSet = new Set<number>(celebratedArray);
+        console.log('[experienceManager] 从本地存储加载升级庆祝记录:', celebratedArray);
+        return celebratedSet;
+      }
+    } catch (error) {
+      console.error('[experienceManager] 加载升级庆祝记录失败:', error);
+    }
+    return new Set();
   }
 
   // ==================== 经验值进度条管理 ====================
@@ -1638,7 +1686,8 @@ class ExperienceManager implements IExperienceManager {
       animatedCollectedWords: 0,
       animatedContributedWords: 0,
       showLevelUpModal: false,
-      levelUpInfo: null
+      levelUpInfo: null,
+      celebratedLevels: new Set()
     };
     
     // 清理事件记录

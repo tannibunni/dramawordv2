@@ -13,6 +13,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { BadgeCard } from '../components/BadgeCard';
 import { BadgeDetailModal } from '../components/BadgeDetailModal';
+import { BadgeChestModal } from '../components/BadgeChestModal';
 import { BadgeDefinition, UserBadgeProgress } from '../types/badge';
 import badgeService from '../services/badgeService';
 import { useNavigation } from '../../../components/navigation/NavigationContext';
@@ -44,6 +45,7 @@ export const BadgeWallScreen: React.FC = () => {
   const [selectedBadge, setSelectedBadge] = useState<BadgeDefinition | null>(null);
   const [selectedProgress, setSelectedProgress] = useState<UserBadgeProgress | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
+  const [chestModalVisible, setChestModalVisible] = useState(false);
   const { goBack } = useNavigation();
   const { appLanguage } = useAppLanguage();
 
@@ -69,6 +71,13 @@ export const BadgeWallScreen: React.FC = () => {
         badgeService.getUserBadgeProgress(userId),
       ]);
       
+      console.log('[BadgeWallScreen] 加载的徽章进度:', progressData.map(p => ({
+        badgeId: p.badgeId,
+        status: p.status,
+        unlocked: p.unlocked,
+        progress: p.progress
+      })));
+      
       setBadges(badgeDefinitions);
       setUserProgress(progressData);
     } catch (error) {
@@ -82,13 +91,61 @@ export const BadgeWallScreen: React.FC = () => {
     const progress = userProgress.find(p => p.badgeId === badge.id);
     setSelectedBadge(badge);
     setSelectedProgress(progress || null);
-    setModalVisible(true);
+    
+    // 根据徽章状态决定显示哪个弹窗
+    if (progress?.status === 'ready_to_unlock') {
+      setChestModalVisible(true);
+    } else {
+      setModalVisible(true);
+    }
   };
 
   const closeModal = () => {
     setModalVisible(false);
     setSelectedBadge(null);
     setSelectedProgress(null);
+  };
+
+  const closeChestModal = () => {
+    setChestModalVisible(false);
+    setSelectedBadge(null);
+    setSelectedProgress(null);
+  };
+
+  const handleOpenChest = async () => {
+    if (!selectedBadge || !selectedProgress) return;
+    
+    try {
+      const userId = await getUserId();
+      if (!userId) {
+        console.warn('[BadgeWallScreen] 无法获取用户ID');
+        return;
+      }
+      
+      const success = await badgeService.openBadgeChest(userId, selectedBadge.id);
+      if (success) {
+        // 刷新徽章数据
+        await loadBadgeData();
+        
+        // 更新选中的进度数据为已解锁状态
+        const updatedProgress: UserBadgeProgress = {
+          ...selectedProgress,
+          unlocked: true,
+          status: 'unlocked',
+          hasBeenOpened: true,
+          unlockedAt: new Date()
+        };
+        setSelectedProgress(updatedProgress);
+        
+        console.log('[BadgeWallScreen] 宝箱打开成功，更新后的进度:', updatedProgress);
+        
+        // 关闭宝箱弹窗，显示详情弹窗
+        setChestModalVisible(false);
+        setModalVisible(true);
+      }
+    } catch (error) {
+      console.error('[BadgeWallScreen] 打开宝箱失败:', error);
+    }
   };
 
   const refreshBadgeData = async () => {
@@ -206,6 +263,128 @@ export const BadgeWallScreen: React.FC = () => {
     );
   };
 
+  // 开发模式：设置所有徽章为宝箱状态
+  const testSetAllBadgesToChest = async () => {
+    if (!__DEV__) return;
+    
+    Alert.alert(
+      '🧪 开发模式测试',
+      '确定要将所有徽章设置为宝箱状态吗？',
+      [
+        { text: '取消', style: 'cancel' },
+        {
+          text: '确定',
+          onPress: async () => {
+            try {
+              const userId = await getUserId();
+              if (!userId) {
+                Alert.alert('错误', '无法获取用户ID');
+                return;
+              }
+              
+              // 为所有徽章设置宝箱状态
+              const badgeDataService = (await import('../services/badgeDataService')).default;
+              const allProgress: UserBadgeProgress[] = [];
+              
+              for (const badge of badges) {
+                const mockProgress: UserBadgeProgress = {
+                  userId,
+                  badgeId: badge.id,
+                  unlocked: false,
+                  progress: badge.target, // 设置为达到目标
+                  target: badge.target,
+                  status: 'ready_to_unlock' as const,
+                  hasBeenOpened: false,
+                  unlockedAt: undefined
+                };
+                allProgress.push(mockProgress);
+              }
+              
+              // 批量保存到本地存储
+              try {
+                await badgeDataService.saveUserBadgeProgress(userId, allProgress);
+                console.log('[BadgeWallScreen] 宝箱状态设置完成，进度数据:', allProgress);
+              } catch (error) {
+                if (error instanceof Error && error.message.includes('No space left')) {
+                  Alert.alert('存储空间不足', '请清理设备存储空间后重试');
+                  return;
+                }
+                throw error;
+              }
+              
+              await loadBadgeData();
+              Alert.alert('成功', '所有徽章已设置为宝箱状态！');
+            } catch (error) {
+              console.error('设置宝箱状态失败:', error);
+              Alert.alert('错误', '设置宝箱状态失败');
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  // 开发模式：设置所有徽章为锁定状态
+  const testSetAllBadgesToLocked = async () => {
+    if (!__DEV__) return;
+    
+    Alert.alert(
+      '🧪 开发模式测试',
+      '确定要将所有徽章设置为锁定状态吗？',
+      [
+        { text: '取消', style: 'cancel' },
+        {
+          text: '确定',
+          onPress: async () => {
+            try {
+              const userId = await getUserId();
+              if (!userId) {
+                Alert.alert('错误', '无法获取用户ID');
+                return;
+              }
+              
+              // 为所有徽章设置锁定状态
+              const badgeDataService = (await import('../services/badgeDataService')).default;
+              const allProgress: UserBadgeProgress[] = [];
+              
+              for (const badge of badges) {
+                const mockProgress: UserBadgeProgress = {
+                  userId,
+                  badgeId: badge.id,
+                  unlocked: false,
+                  progress: Math.floor(badge.target * 0.5), // 设置为目标的一半
+                  target: badge.target,
+                  status: 'locked' as const,
+                  hasBeenOpened: false,
+                  unlockedAt: undefined
+                };
+                allProgress.push(mockProgress);
+              }
+              
+              // 批量保存到本地存储
+              try {
+                await badgeDataService.saveUserBadgeProgress(userId, allProgress);
+                console.log('[BadgeWallScreen] 锁定状态设置完成，进度数据:', allProgress);
+              } catch (error) {
+                if (error instanceof Error && error.message.includes('No space left')) {
+                  Alert.alert('存储空间不足', '请清理设备存储空间后重试');
+                  return;
+                }
+                throw error;
+              }
+              
+              await loadBadgeData();
+              Alert.alert('成功', '所有徽章已设置为锁定状态！');
+            } catch (error) {
+              console.error('设置锁定状态失败:', error);
+              Alert.alert('错误', '设置锁定状态失败');
+            }
+          }
+        }
+      ]
+    );
+  };
+
   const renderBadgeItem = ({ item }: { item: BadgeDefinition }) => {
     const progress = userProgress.find(p => p.badgeId === item.id);
     
@@ -216,7 +395,9 @@ export const BadgeWallScreen: React.FC = () => {
       unlocked: false,
       progress: 0,
       target: item.target,
-      unlockedAt: undefined
+      unlockedAt: undefined,
+      status: 'locked',
+      hasBeenOpened: false
     };
 
     return (
@@ -260,20 +441,38 @@ export const BadgeWallScreen: React.FC = () => {
         {/* 开发模式测试按钮 */}
         {__DEV__ && (
           <View style={styles.devTestSection}>
-            <TouchableOpacity 
-              style={[styles.devTestButton, styles.unlockButton]} 
-              onPress={testUnlockAllBadges}
-            >
-              <Ionicons name="trophy" size={16} color="#FFFFFF" />
-              <Text style={styles.devTestButtonText}>{t('badge_dev_unlock_all', appLanguage)}</Text>
-            </TouchableOpacity>
-            <TouchableOpacity 
-              style={[styles.devTestButton, styles.resetButton]} 
-              onPress={testResetAllBadges}
-            >
-              <Ionicons name="refresh-circle" size={16} color="#FFFFFF" />
-              <Text style={styles.devTestButtonText}>{t('badge_dev_reset', appLanguage)}</Text>
-            </TouchableOpacity>
+            <View style={styles.devTestRow}>
+              <TouchableOpacity 
+                style={[styles.devTestButton, styles.unlockButton]} 
+                onPress={testUnlockAllBadges}
+              >
+                <Ionicons name="trophy" size={16} color="#FFFFFF" />
+                <Text style={styles.devTestButtonText}>{t('badge_dev_unlock_all', appLanguage)}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.devTestButton, styles.resetButton]} 
+                onPress={testResetAllBadges}
+              >
+                <Ionicons name="refresh-circle" size={16} color="#FFFFFF" />
+                <Text style={styles.devTestButtonText}>{t('badge_dev_reset', appLanguage)}</Text>
+              </TouchableOpacity>
+            </View>
+            <View style={styles.devTestRow}>
+              <TouchableOpacity 
+                style={[styles.devTestButton, styles.chestButton]} 
+                onPress={testSetAllBadgesToChest}
+              >
+                <Ionicons name="gift" size={16} color="#FFFFFF" />
+                <Text style={styles.devTestButtonText}>宝箱状态</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.devTestButton, styles.lockedButton]} 
+                onPress={testSetAllBadgesToLocked}
+              >
+                <Ionicons name="lock-closed" size={16} color="#FFFFFF" />
+                <Text style={styles.devTestButtonText}>锁定状态</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         )}
       </View>
@@ -292,6 +491,15 @@ export const BadgeWallScreen: React.FC = () => {
       <BadgeDetailModal
         visible={modalVisible}
         onClose={closeModal}
+        badge={selectedBadge}
+        userProgress={selectedProgress}
+      />
+
+      {/* 宝箱打开弹窗 */}
+      <BadgeChestModal
+        visible={chestModalVisible}
+        onClose={closeChestModal}
+        onOpen={handleOpenChest}
         badge={selectedBadge}
         userProgress={selectedProgress}
       />
@@ -358,8 +566,11 @@ const styles = StyleSheet.create({
   },
   // 开发模式测试按钮样式
   devTestSection: {
-    flexDirection: 'row',
     marginTop: 12,
+    gap: 8,
+  },
+  devTestRow: {
+    flexDirection: 'row',
     gap: 8,
   },
   devTestButton: {
@@ -376,6 +587,12 @@ const styles = StyleSheet.create({
   },
   resetButton: {
     backgroundColor: '#EF4444', // 红色
+  },
+  chestButton: {
+    backgroundColor: '#FF6B35', // 橙色
+  },
+  lockedButton: {
+    backgroundColor: '#6B7280', // 灰色
   },
   devTestButtonText: {
     color: '#FFFFFF',
