@@ -10,7 +10,6 @@ export const connectDatabase = async (): Promise<void> => {
       maxPoolSize: 10,                    // 最大连接池大小
       serverSelectionTimeoutMS: 5000,     // 服务器选择超时
       socketTimeoutMS: 45000,             // Socket超时
-      bufferMaxEntries: 0,                // 禁用mongoose缓冲
       bufferCommands: false,              // 禁用命令缓冲
       maxIdleTimeMS: 30000,              // 最大空闲时间
       retryWrites: true,                 // 启用重试写入
