@@ -103,6 +103,12 @@ export function createCacheSetMiddleware(options: CacheMiddlewareOptions) {
 
     // 重写json方法以拦截响应数据
     res.json = function(data: any) {
+      // 检查响应是否已经发送
+      if (res.headersSent) {
+        logger.warn('📊 响应已发送，跳过缓存设置');
+        return originalJson.call(this, data);
+      }
+
       // 调用原始json方法
       const result = originalJson.call(this, data);
 
