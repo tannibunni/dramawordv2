@@ -24,7 +24,7 @@ export interface BatchConfig {
 export class BatchOperationService {
   private static instance: BatchOperationService;
   private batches: Map<string, BatchOperation[]> = new Map();
-  private timers: Map<string, NodeJS.Timeout> = new Map();
+  private timers: Map<string, number> = new Map();
   private configs: Map<string, BatchConfig> = new Map();
   private isProcessing: Map<string, boolean> = new Map();
 

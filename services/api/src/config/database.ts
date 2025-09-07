@@ -15,8 +15,8 @@ export const connectDatabase = async (): Promise<void> => {
       maxIdleTimeMS: 30000,              // 最大空闲时间
       retryWrites: true,                 // 启用重试写入
       retryReads: true,                  // 启用重试读取
-      compressors: ['zlib'],             // 启用压缩
-      zlibCompressionLevel: 6,           // 压缩级别
+      compressors: ['zlib'] as ('zlib' | 'none' | 'snappy' | 'zstd')[],    // 启用压缩
+      zlibCompressionLevel: 6 as 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9,           // 压缩级别
       heartbeatFrequencyMS: 10000,       // 心跳频率
       maxConnecting: 2,                  // 最大连接中数量
       minPoolSize: 2                     // 最小连接池大小
