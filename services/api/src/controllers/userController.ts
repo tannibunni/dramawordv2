@@ -125,10 +125,10 @@ export class UserController {
         },
         // 为新用户提供免费的默认订阅
         subscription: {
-          type: 'lifetime',
-          isActive: true,
+          type: 'free',
+          isActive: false,
           startDate: new Date(),
-          expiryDate: new Date(Date.now() + 100 * 365 * 24 * 60 * 60 * 1000), // 100年后过期
+          expiryDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // 1年后过期（免费用户）
           autoRenew: false
         }
       };
