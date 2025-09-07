@@ -5,12 +5,11 @@ const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/dramaw
 
 export const connectDatabase = async (): Promise<void> => {
   try {
-    // 优化连接配置
+    // 优化连接配置 - 使用mongoose 8.x兼容的选项
     const mongooseOptions = {
       maxPoolSize: 10,                    // 最大连接池大小
       serverSelectionTimeoutMS: 5000,     // 服务器选择超时
       socketTimeoutMS: 45000,             // Socket超时
-      bufferCommands: false,              // 禁用命令缓冲
       maxIdleTimeMS: 30000,              // 最大空闲时间
       retryWrites: true,                 // 启用重试写入
       retryReads: true,                  // 启用重试读取
