@@ -256,9 +256,10 @@ router.get('/subscription-status', authenticateToken, async (req: Request, res: 
     const isExpired = subscription.expiryDate && subscription.expiryDate < now;
     const isActive = subscription.isActive && !isExpired;
     
-    // 检查是否在试用期（新用户默认有14天试用期）
-    const isTrial = !isActive && !subscription.isActive;
-    const trialEndsAt = isTrial ? new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000) : undefined;
+    // 新用户默认为免费用户，没有试用期
+    // 只有通过IAP验证的用户才可能有试用期
+    const isTrial = false; // 暂时禁用试用期功能
+    const trialEndsAt = undefined;
 
     logger.info('[IAP] 查询用户订阅状态', { 
       userId, 
