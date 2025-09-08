@@ -335,16 +335,22 @@ export function createCacheClearMiddleware(strategies: string[]) {
 export function cacheStatsMiddleware(req: Request, res: Response, next: NextFunction) {
   const cacheService = RedisCacheService.getInstance();
   
-  // 在响应头中添加缓存统计信息
-  res.on('finish', () => {
-    const stats = cacheService.getStats();
-    res.set({
-      'X-Cache-Hits': stats.hits.toString(),
-      'X-Cache-Misses': stats.misses.toString(),
-      'X-Cache-Hit-Rate': (stats.hitRate * 100).toFixed(2) + '%',
-      'X-Cache-Total-Ops': stats.totalOperations.toString()
-    });
-  });
+  // 在响应开始时添加缓存统计信息
+  const originalJson = res.json;
+  res.json = function(data: any) {
+    // 检查响应是否已经发送
+    if (!res.headersSent) {
+      const stats = cacheService.getStats();
+      res.set({
+        'X-Cache-Hits': stats.hits.toString(),
+        'X-Cache-Misses': stats.misses.toString(),
+        'X-Cache-Hit-Rate': (stats.hitRate * 100).toFixed(2) + '%',
+        'X-Cache-Total-Ops': stats.totalOperations.toString()
+      });
+    }
+    
+    return originalJson.call(this, data);
+  };
 
   next();
 }
