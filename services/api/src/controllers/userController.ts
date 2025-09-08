@@ -6,6 +6,8 @@ import { UserLearningRecord } from '../models/UserLearningRecord';
 import UserVocabulary from '../models/UserVocabulary';
 import UserShowList from '../models/UserShowList';
 import { SearchHistory } from '../models/SearchHistory';
+import { AppleSyncData } from '../models/AppleSyncData';
+import { AppleDevice } from '../models/AppleDevice';
 import { generateToken } from '../middleware/auth';
 import { logger } from '../utils/logger';
 import { normalizeAvatarUrl, getApiBaseUrl } from '../utils/urlHelper';
@@ -649,7 +651,11 @@ export class UserController {
         // 删除用户词汇
         UserVocabulary.deleteMany({ userId }),
         // 删除用户剧集列表
-        UserShowList.deleteMany({ userId })
+        UserShowList.deleteMany({ userId }),
+        // 删除Apple同步数据
+        AppleSyncData.deleteMany({ userId }),
+        // 删除Apple设备记录
+        AppleDevice.deleteMany({ userId })
       ];
 
       await Promise.all(deletePromises);
