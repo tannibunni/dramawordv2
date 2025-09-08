@@ -90,10 +90,12 @@ class IAPService {
       const isDevelopment = __DEV__ || process.env.EXPO_PUBLIC_ENVIRONMENT === 'development';
       const useSandbox = process.env.EXPO_PUBLIC_IAP_SANDBOX === 'true';
       
-      if (isDevelopment && useSandbox) {
-        console.log('[IAPService] 🧪 开发环境 - 使用沙盒模式');
+      // 生产环境或开发环境都应该尝试真实IAP
+      if (!isDevelopment || (isDevelopment && useSandbox)) {
+        const environmentType = isDevelopment ? '开发环境' : '生产环境';
+        const modeType = useSandbox ? '沙盒模式' : '生产模式';
+        console.log(`[IAPService] 🚀 ${environmentType} - 使用真实IAP (${modeType})`);
         
-        // 开发环境：先尝试沙盒模式，失败后使用模拟模式
         try {
           // 初始化连接
           await initConnection();
@@ -112,28 +114,29 @@ class IAPService {
           await this.restorePurchasesPrivate();
           
           this.isInitialized = true;
-          console.log('[IAPService] ✅ 沙盒模式初始化成功');
+          console.log(`[IAPService] ✅ ${modeType}初始化成功`);
           return true;
-        } catch (sandboxError) {
-          console.log('[IAPService] ⚠️ 沙盒模式失败，切换到模拟模式:', sandboxError);
+        } catch (error) {
+          console.log(`[IAPService] ⚠️ ${modeType}失败，切换到模拟模式:`, error);
           // 继续执行下面的模拟模式逻辑
         }
-      } else if (isDevelopment) {
-        console.log('[IAPService] 🚀 开发环境 - 使用真实IAP');
-      } else {
-        console.log('[IAPService] 🚀 生产环境 - 使用真实IAP');
       }
 
-      // 如果沙盒模式失败或不是沙盒环境，使用模拟模式
-      console.log('[IAPService] 🎭 使用模拟模式进行测试');
-      
-      // 设置模拟产品
-      this.products = MOCK_PRODUCTS;
-      await this.loadSubscriptionStatus();
-      this.isInitialized = true;
-      
-      console.log('[IAPService] ✅ 模拟模式初始化完成');
-      return false; // 表示使用了模拟模式
+      // 如果真实IAP失败，使用模拟模式（仅开发环境）
+      if (isDevelopment) {
+        console.log('[IAPService] 🎭 使用模拟模式进行测试');
+        
+        // 设置模拟产品
+        this.products = MOCK_PRODUCTS;
+        await this.loadSubscriptionStatus();
+        this.isInitialized = true;
+        
+        console.log('[IAPService] ✅ 模拟模式初始化完成');
+        return false; // 表示使用了模拟模式
+      } else {
+        // 生产环境不应该使用模拟模式
+        throw new Error('生产环境IAP初始化失败，无法使用模拟模式');
+      }
     } catch (error) {
       console.error('[IAPService] ❌ 所有初始化方式都失败:', error);
       
