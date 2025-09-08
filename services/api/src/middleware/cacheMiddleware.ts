@@ -340,13 +340,18 @@ export function cacheStatsMiddleware(req: Request, res: Response, next: NextFunc
   res.json = function(data: any) {
     // 检查响应是否已经发送
     if (!res.headersSent) {
-      const stats = cacheService.getStats();
-      res.set({
-        'X-Cache-Hits': stats.hits.toString(),
-        'X-Cache-Misses': stats.misses.toString(),
-        'X-Cache-Hit-Rate': (stats.hitRate * 100).toFixed(2) + '%',
-        'X-Cache-Total-Ops': stats.totalOperations.toString()
-      });
+      try {
+        const stats = cacheService.getStats();
+        res.set({
+          'X-Cache-Hits': stats.hits.toString(),
+          'X-Cache-Misses': stats.misses.toString(),
+          'X-Cache-Hit-Rate': (stats.hitRate * 100).toFixed(2) + '%',
+          'X-Cache-Total-Ops': stats.totalOperations.toString()
+        });
+      } catch (error) {
+        // 如果设置头信息失败，记录警告但不中断响应
+        logger.warn('📊 设置缓存统计头信息失败:', error);
+      }
     }
     
     return originalJson.call(this, data);
