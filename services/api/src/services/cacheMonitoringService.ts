@@ -10,7 +10,7 @@ export interface CacheHealthMetrics {
   isConnected: boolean;
   hitRate: number;
   totalOperations: number;
-  errorRate: number;
+  cacheFailureRate: number;
   memoryUsage: number;
   connectionCount: number;
   lastCheckTime: number;
@@ -36,7 +36,7 @@ export class CacheMonitoringService {
   // 告警阈值
   private thresholds = {
     hitRate: 0.7,           // 命中率低于70%告警
-    errorRate: 0.05,        // 错误率高于5%告警
+    cacheFailureRate: 0.05,        // 缓存失败率高于5%告警
     memoryUsage: 0.8,       // 内存使用率高于80%告警
     connectionCount: 100,   // 连接数高于100告警
     maxAlerts: 100          // 最大告警数量
@@ -99,7 +99,7 @@ export class CacheMonitoringService {
         isConnected: healthCheck.isConnected,
         hitRate: stats.hitRate,
         totalOperations: stats.totalOperations,
-        errorRate: stats.errors / Math.max(stats.totalOperations, 1),
+        cacheFailureRate: stats.errors / Math.max(stats.totalOperations, 1),
         memoryUsage: 0, // 需要从Redis信息中获取
         connectionCount: 0, // 需要从Redis信息中获取
         lastCheckTime: Date.now()
@@ -143,7 +143,7 @@ export class CacheMonitoringService {
       logger.debug('📊 缓存健康检查完成:', {
         isHealthy: metrics.isHealthy,
         hitRate: (metrics.hitRate * 100).toFixed(2) + '%',
-        errorRate: (metrics.errorRate * 100).toFixed(2) + '%',
+        cacheFailureRate: (metrics.cacheFailureRate * 100).toFixed(2) + '%',
         totalOperations: metrics.totalOperations
       });
 
@@ -173,12 +173,12 @@ export class CacheMonitoringService {
       });
     }
 
-    // 检查错误率告警
-    if (metrics.errorRate > this.thresholds.errorRate) {
+    // 检查缓存失败率告警
+    if (metrics.cacheFailureRate > this.thresholds.cacheFailureRate) {
       alerts.push({
         type: 'error',
-        severity: metrics.errorRate > 0.1 ? 'critical' : 'high',
-        message: `缓存错误率过高: ${(metrics.errorRate * 100).toFixed(2)}%`,
+        severity: metrics.cacheFailureRate > 0.1 ? 'critical' : 'high',
+        message: `缓存失败率过高: ${(metrics.cacheFailureRate * 100).toFixed(2)}%`,
         timestamp: Date.now(),
         metrics,
         recommendations: [
@@ -271,7 +271,7 @@ export class CacheMonitoringService {
       if (currentMetrics.hitRate < 0.7) {
         recommendations.push('优化缓存策略，提高命中率');
       }
-      if (currentMetrics.errorRate > 0.05) {
+      if (currentMetrics.cacheFailureRate > 0.05) {
         recommendations.push('检查Redis连接稳定性');
       }
       if (currentMetrics.memoryUsage > 0.8) {
