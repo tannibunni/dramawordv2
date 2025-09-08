@@ -470,11 +470,11 @@ const UserSchema = new Schema<IUser>({
     type: {
       type: String,
       enum: ['free', 'monthly', 'yearly', 'lifetime'],
-      default: 'lifetime'
+      default: 'free'
     },
     isActive: {
       type: Boolean,
-      default: true
+      default: false
     },
     startDate: {
       type: Date,
