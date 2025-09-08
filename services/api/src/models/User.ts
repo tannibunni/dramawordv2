@@ -80,7 +80,7 @@ export interface IUserAuth {
 
 // 用户订阅信息接口
 export interface IUserSubscription {
-  type: 'monthly' | 'yearly' | 'lifetime';
+  type: 'free' | 'monthly' | 'yearly' | 'lifetime';
   isActive: boolean;
   startDate: Date;
   expiryDate: Date;
@@ -469,7 +469,7 @@ const UserSchema = new Schema<IUser>({
   subscription: {
     type: {
       type: String,
-      enum: ['monthly', 'yearly', 'lifetime'],
+      enum: ['free', 'monthly', 'yearly', 'lifetime'],
       default: 'lifetime'
     },
     isActive: {
