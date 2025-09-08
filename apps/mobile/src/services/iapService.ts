@@ -66,6 +66,7 @@ class IAPService {
   };
   private purchaseUpdateSubscription: any = null;
   private purchaseErrorSubscription: any = null;
+  private pendingPurchaseResolvers: Map<string, { resolve: (result: PurchaseResult) => void; reject: (error: Error) => void }> = new Map();
 
   private constructor() {}
 
@@ -162,17 +163,52 @@ class IAPService {
             console.log('[IAPService] ✅ 购买验证成功');
             await this.processPurchase(purchase);
             await finishTransaction({ purchase });
+            
+            // 解析待处理的购买Promise
+            const productId = purchase.productId;
+            const resolver = this.pendingPurchaseResolvers.get(productId);
+            if (resolver) {
+              resolver.resolve({
+                success: true,
+                productId: productId as ProductId,
+                transactionId: purchase.transactionId || '',
+                receipt: purchase.transactionReceipt || '',
+              });
+              this.pendingPurchaseResolvers.delete(productId);
+            }
           } else {
             console.error('[IAPService] ❌ 收据验证失败');
+            
+            // 解析待处理的购买Promise为失败
+            const productId = purchase.productId;
+            const resolver = this.pendingPurchaseResolvers.get(productId);
+            if (resolver) {
+              resolver.reject(new Error('收据验证失败'));
+              this.pendingPurchaseResolvers.delete(productId);
+            }
           }
         } catch (error) {
           console.error('[IAPService] ❌ 处理购买失败:', error);
+          
+          // 解析待处理的购买Promise为失败
+          const productId = purchase.productId;
+          const resolver = this.pendingPurchaseResolvers.get(productId);
+          if (resolver) {
+            resolver.reject(error instanceof Error ? error : new Error('处理购买失败'));
+            this.pendingPurchaseResolvers.delete(productId);
+          }
         }
       }
     });
 
     this.purchaseErrorSubscription = purchaseErrorListener((error) => {
       console.error('[IAPService] ❌ 购买错误:', error);
+      
+      // 解析所有待处理的购买Promise为失败
+      this.pendingPurchaseResolvers.forEach((resolver, productId) => {
+        resolver.reject(new Error(`购买错误: ${error.message || error}`));
+      });
+      this.pendingPurchaseResolvers.clear();
     });
   }
 
@@ -277,6 +313,19 @@ class IAPService {
 
       console.log(`[IAPService] 🛒 发起购买请求: ${product.title} (${product.price})`);
       
+      // 创建Promise来等待购买完成
+      const purchasePromise = new Promise<PurchaseResult>((resolve, reject) => {
+        this.pendingPurchaseResolvers.set(productId, { resolve, reject });
+        
+        // 设置超时，防止无限等待
+        setTimeout(() => {
+          if (this.pendingPurchaseResolvers.has(productId)) {
+            this.pendingPurchaseResolvers.delete(productId);
+            reject(new Error('购买超时'));
+          }
+        }, 60000); // 60秒超时
+      });
+      
       // 发起购买请求
       const purchase = await requestPurchase({
         sku: productId,
@@ -285,30 +334,18 @@ class IAPService {
         }),
       });
 
-      console.log('[IAPService] ✅ 购买请求成功:', purchase);
+      console.log('[IAPService] ✅ 购买请求成功，等待收据验证...');
       
-      // 处理购买结果
-      if (Array.isArray(purchase)) {
-        const firstPurchase = purchase[0];
-        return {
-          success: true,
-          productId,
-          transactionId: firstPurchase?.transactionId || '',
-          receipt: firstPurchase?.transactionReceipt || '',
-        };
-      } else if (purchase) {
-        return {
-          success: true,
-          productId,
-          transactionId: (purchase as any).transactionId || '',
-          receipt: (purchase as any).transactionReceipt || '',
-        };
-      } else {
-        throw new Error('购买请求失败');
-      }
+      // 等待购买监听器处理完成
+      const result = await purchasePromise;
+      console.log('[IAPService] ✅ 购买流程完成:', result);
+      return result;
 
     } catch (error) {
       console.error('[IAPService] ❌ 购买失败:', error);
+      
+      // 清理待处理的购买
+      this.pendingPurchaseResolvers.delete(productId);
       
       // 判断错误类型
       let errorMessage = '购买失败';
