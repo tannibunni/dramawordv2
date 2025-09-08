@@ -92,6 +92,7 @@ export class AppleController {
         user = new User(userData);
         await user.save();
         logger.info(`🍎 创建新Apple用户: appleId=${appleId}, nickname=${nickname}, email=${appleEmail}`);
+        logger.info(`🍎 新用户订阅状态: type=${user.subscription.type}, isActive=${user.subscription.isActive}`);
       } else if (isUpgrade) {
         // 升级现有游客用户
         const originalGuestId = user.auth.guestId;
