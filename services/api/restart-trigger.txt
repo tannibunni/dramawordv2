@@ -1,0 +1,9 @@
+# Restart trigger file
+# This file is used to trigger a restart of the Render service
+# to clear Mongoose model cache after schema changes
+
+Timestamp: 2025-09-08T20:25:00Z
+Reason: Clear Mongoose cache after User model subscription defaults change
+Changes: 
+- subscription.type default: 'lifetime' -> 'free'
+- subscription.isActive default: true -> false
