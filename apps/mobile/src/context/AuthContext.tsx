@@ -126,6 +126,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setIsAuthenticated(true);
       
       logger.log('状态更新完成', 'login');
+      
       // 新增：登录后同步本地历史到云端
       await unifiedSyncService.addToSyncQueue({
         type: 'searchHistory',
@@ -134,6 +135,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         operation: 'update',
         priority: 'high'
       });
+      
+      // 新增：登录后强制刷新订阅状态
+      try {
+        const { subscriptionService } = await import('../services/subscriptionService');
+        await subscriptionService.checkSubscriptionStatus();
+        logger.log('订阅状态已刷新', 'login');
+      } catch (error) {
+        logger.error('刷新订阅状态失败', 'login');
+      }
     } catch (error) {
       logger.error('login 失败', 'login');
       throw error;
