@@ -1356,16 +1356,35 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
     }
   };
 
-  const handleAccountDeleted = () => {
-    // 清除所有本地数据
-    clearVocabulary();
-    clearShows();
-    
-    // 退出登录
-    authLogout();
-    
-    // 显示成功消息
-    Alert.alert('账户已注销', '您的账户已成功删除，感谢您使用剧词记！');
+  const handleAccountDeleted = async () => {
+    try {
+      console.log('🗑️ 开始清除所有本地数据...');
+      
+      // 清除所有本地数据
+      clearVocabulary();
+      clearShows();
+      
+      // 清除所有本地存储数据
+      await AsyncStorage.clear();
+      console.log('✅ 已清除所有本地存储数据');
+      
+      // 清除缓存
+      await cacheService.clearAll();
+      console.log('✅ 已清除所有缓存数据');
+      
+      // 清除学习数据
+      await learningDataService.clearAll();
+      console.log('✅ 已清除所有学习数据');
+      
+      // 退出登录
+      authLogout();
+      
+      console.log('✅ 账户注销完成，所有数据已清除');
+    } catch (error) {
+      console.error('❌ 清除本地数据时出错:', error);
+      // 即使清除数据失败，也要退出登录
+      authLogout();
+    }
   };
 
   const handleViewAllBadges = async () => {

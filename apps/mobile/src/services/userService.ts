@@ -233,6 +233,8 @@ export class UserService {
   async deleteAccount(token: string, confirmText: string): Promise<{ success: boolean; data?: any; error?: string }> {
     try {
       console.log('🗑️ 开始注销账户...');
+      console.log('🗑️ API URL:', `${API_BASE_URL}/users/account`);
+      console.log('🗑️ 确认文本:', confirmText);
       
       const response = await axios.delete(`${API_BASE_URL}/users/account`, {
         headers: {
@@ -243,6 +245,8 @@ export class UserService {
           confirmText
         }
       });
+
+      console.log('🗑️ 后端响应:', response.data);
 
       if (response.data.success) {
         console.log('✅ 账户注销成功');
@@ -255,6 +259,9 @@ export class UserService {
       }
     } catch (error) {
       console.error('❌ 注销账户失败:', error);
+      if (error && typeof error === 'object' && 'response' in error) {
+        console.error('❌ 错误详情:', (error as any).response?.data);
+      }
       const errorMessage = errorHandler.handleError(error, { confirmText }, {
         type: ErrorType.NETWORK,
         userMessage: '注销账户失败，请重试'
