@@ -8,6 +8,7 @@ import UserShowList from '../models/UserShowList';
 import { SearchHistory } from '../models/SearchHistory';
 import { AppleSyncData } from '../models/AppleSyncData';
 import { AppleDevice } from '../models/AppleDevice';
+import { Payment } from '../models/Payment';
 import { generateToken } from '../middleware/auth';
 import { logger } from '../utils/logger';
 import { normalizeAvatarUrl, getApiBaseUrl } from '../utils/urlHelper';
@@ -639,6 +640,7 @@ export class UserController {
       }
 
       logger.info(`🗑️ 开始删除用户账号: ${userId}, username: ${user.username}`);
+      logger.info(`🗑️ 用户订阅状态: type=${user.subscription.type}, isActive=${user.subscription.isActive}`);
 
       // 删除用户相关数据
       const deletePromises = [
@@ -655,7 +657,9 @@ export class UserController {
         // 删除Apple同步数据
         AppleSyncData.deleteMany({ userId }),
         // 删除Apple设备记录
-        AppleDevice.deleteMany({ userId })
+        AppleDevice.deleteMany({ userId }),
+        // 删除支付记录
+        Payment.deleteMany({ userId })
       ];
 
       await Promise.all(deletePromises);
