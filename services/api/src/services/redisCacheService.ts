@@ -84,13 +84,26 @@ export class RedisCacheService {
       logger.info('🔗 使用REDIS_URL连接Redis');
       logger.info('Redis URL:', process.env.REDIS_URL.replace(/:[^:]*@/, ':***@'));
       
-      this.redis = new Redis(process.env.REDIS_URL, {
+      // 解析Redis URL
+      const url = new URL(process.env.REDIS_URL);
+      const isSSL = url.protocol === 'rediss:';
+      
+      logger.info('协议:', url.protocol);
+      logger.info('主机:', url.hostname);
+      logger.info('端口:', url.port);
+      logger.info('SSL:', isSSL);
+      
+      this.redis = new Redis({
+        host: url.hostname,
+        port: parseInt(url.port),
+        password: url.password,
+        db: url.pathname ? parseInt(url.pathname.slice(1)) : 0,
         maxRetriesPerRequest: 3,
         lazyConnect: true,
         keepAlive: 30000,
         connectTimeout: 10000,
         commandTimeout: 5000,
-        tls: process.env.REDIS_URL.startsWith('rediss://') ? {} : undefined
+        tls: isSSL ? {} : undefined
       });
     } else {
       // 使用单独的Redis配置
