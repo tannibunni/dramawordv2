@@ -304,9 +304,10 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
         duration: `${daysLeft} ${appLanguage === 'zh-CN' ? '天' : 'days'}`,
         expiryDate: formattedDate
       };
+    } else {
+      // 免费用户 - 不显示会员信息
+      return null;
     }
-
-    return null;
   };
 
 
@@ -1366,7 +1367,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
       
       // 清除订阅缓存
       try {
-        const { subscriptionService } = await import('../services/subscriptionService');
+        const { subscriptionService } = await import('../../services/subscriptionService');
         await subscriptionService.clearSubscriptionCache();
         console.log('✅ 已清除订阅缓存');
       } catch (error) {

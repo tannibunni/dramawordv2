@@ -165,9 +165,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const { subscriptionService } = await import('../services/subscriptionService');
         await subscriptionService.clearSubscriptionCache();
         logger.log('订阅缓存已清除', 'logout');
-      } catch (error) {
-        logger.error('清除订阅缓存失败', 'logout', { error: error.message });
-      }
+                } catch (error) {
+                    logger.error('清除订阅缓存失败', 'logout');
+                    console.error('❌ 清除订阅缓存失败:', error);
+                }
     } catch (error) {
       console.error('登出失败:', error);
     }

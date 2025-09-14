@@ -618,39 +618,35 @@ class IAPService {
           trialEndsAt: parsed.trialEndsAt ? new Date(parsed.trialEndsAt) : undefined,
         };
       } else {
-        // 如果没有存储的状态，为新用户自动启动14天试用期
-        const trialEndsAt = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000); // 14天后，使用毫秒计算
-
+        // 如果没有存储的状态，新用户默认为免费用户，不启动试用期
         this.subscriptionStatus = {
           isActive: false,
-          isTrial: true,
-          trialEndsAt,
-          trialStartedAt: new Date(),
+          isTrial: false,
+          trialEndsAt: undefined,
+          trialStartedAt: undefined,
         };
 
-        // 保存新的试用期状态
+        // 保存免费用户状态
         await this.saveSubscriptionStatus(this.subscriptionStatus);
-        console.log('[IAPService] 新用户自动启动14天试用期，到期时间:', trialEndsAt);
+        console.log('[IAPService] 新用户默认为免费用户，无试用期');
       }
       
       console.log('[IAPService] 加载订阅状态:', this.subscriptionStatus);
     } catch (error) {
       console.error('[IAPService] 加载订阅状态失败:', error);
-      // 错误时为新用户启动试用期
-      const trialEndsAt = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000);
-
+      // 错误时默认为免费用户
       this.subscriptionStatus = {
         isActive: false,
-        isTrial: true,
-        trialEndsAt,
-        trialStartedAt: new Date(),
+        isTrial: false,
+        trialEndsAt: undefined,
+        trialStartedAt: undefined,
       };
 
       try {
         await this.saveSubscriptionStatus(this.subscriptionStatus);
-        console.log('[IAPService] 错误恢复：为用户启动14天试用期');
+        console.log('[IAPService] 错误恢复：设置为免费用户');
       } catch (saveError) {
-        console.error('[IAPService] 保存试用期状态失败:', saveError);
+        console.error('[IAPService] 保存免费用户状态失败:', saveError);
       }
     }
   }
