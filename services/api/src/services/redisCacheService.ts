@@ -103,7 +103,10 @@ export class RedisCacheService {
         keepAlive: 30000,
         connectTimeout: 10000,
         commandTimeout: 5000,
-        tls: isSSL ? {} : undefined
+        tls: isSSL ? {
+          rejectUnauthorized: false,
+          servername: url.hostname
+        } : undefined
       });
     } else {
       // 使用单独的Redis配置
