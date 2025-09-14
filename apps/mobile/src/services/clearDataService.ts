@@ -109,6 +109,11 @@ export class ClearDataService {
         // 通知设置
         'notificationPreferences',
         
+        // 订阅相关数据
+        'subscription_status',
+        'test_subscription_state',
+        'subscription_record',
+        
         // 其他数据
         'refreshVocabulary',
         'lastSyncTime',
@@ -130,6 +135,15 @@ export class ClearDataService {
       await this.clearKeysWithPrefix('guest_');
       await this.clearKeysWithPrefix('cache_');
       await this.clearKeysWithPrefix('temp_');
+
+      // 清除订阅服务缓存
+      try {
+        const { subscriptionService } = await import('./subscriptionService');
+        await subscriptionService.clearSubscriptionCache();
+        console.log('✅ 已清除订阅服务缓存');
+      } catch (error) {
+        console.warn('清除订阅服务缓存失败:', error);
+      }
 
       console.log('所有本地数据已清除完成');
       Alert.alert('成功', '所有本地数据已清除完成，应用将重新启动');

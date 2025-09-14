@@ -1364,6 +1364,15 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
       clearVocabulary();
       clearShows();
       
+      // 清除订阅缓存
+      try {
+        const { subscriptionService } = await import('../services/subscriptionService');
+        await subscriptionService.clearSubscriptionCache();
+        console.log('✅ 已清除订阅缓存');
+      } catch (error) {
+        console.error('❌ 清除订阅缓存失败:', error);
+      }
+      
       // 清除所有本地存储数据
       await AsyncStorage.clear();
       console.log('✅ 已清除所有本地存储数据');

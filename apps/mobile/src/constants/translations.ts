@@ -1477,7 +1477,7 @@ export const translations: Record<AppLanguage, Record<TranslationKey, string>> =
     add_manually: 'Add Manually',
     recommendations_tab: 'Picks',
     shows_tab: 'Shows',
-    wordbooks_tab: 'Wordbooks',
+    wordbooks_tab: 'Wordbook',
     not_completed: 'Not Watched',
     filter_by_status: 'Filter by Status',
     edit_wordbook: 'Edit Wordbook',

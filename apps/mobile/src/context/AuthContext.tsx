@@ -138,11 +138,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       
       // 新增：登录后强制刷新订阅状态
       try {
+        logger.log('开始刷新订阅状态...', 'login');
         const { subscriptionService } = await import('../services/subscriptionService');
-        await subscriptionService.checkSubscriptionStatus();
+        const status = await subscriptionService.checkSubscriptionStatus();
         logger.log('订阅状态已刷新', 'login');
+        console.log('📊 刷新后的订阅状态:', status);
       } catch (error) {
         logger.error('刷新订阅状态失败', 'login');
+        console.error('❌ 刷新订阅状态失败:', error);
       }
     } catch (error) {
       logger.error('login 失败', 'login');
@@ -156,6 +159,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setUser(null);
       setLoginType(null);
       setIsAuthenticated(false);
+      
+      // 清除订阅缓存
+      try {
+        const { subscriptionService } = await import('../services/subscriptionService');
+        await subscriptionService.clearSubscriptionCache();
+        logger.log('订阅缓存已清除', 'logout');
+      } catch (error) {
+        logger.error('清除订阅缓存失败', 'logout', { error: error.message });
+      }
     } catch (error) {
       console.error('登出失败:', error);
     }

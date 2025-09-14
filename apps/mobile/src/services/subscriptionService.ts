@@ -446,6 +446,32 @@ class SubscriptionService {
     return `此功能需要高级版订阅。升级后您可以享受${featureName}等更多功能！`;
   }
 
+  /**
+   * 清除订阅缓存（用于用户登出或删除账户时）
+   */
+  public async clearSubscriptionCache(): Promise<void> {
+    try {
+      console.log('[SubscriptionService] 开始清除订阅缓存...');
+      
+      // 重置内存中的订阅状态
+      this.currentStatus = {
+        isActive: false,
+      };
+      
+      // 清除本地存储的订阅状态
+      await AsyncStorage.removeItem('subscription_status');
+      await AsyncStorage.removeItem('test_subscription_state');
+      await AsyncStorage.removeItem('subscription_record');
+      
+      // 通知所有回调状态已重置
+      this.notifyStateChange(this.currentStatus);
+      
+      console.log('[SubscriptionService] ✅ 订阅缓存已清除');
+    } catch (error) {
+      console.error('[SubscriptionService] 清除订阅缓存失败:', error);
+    }
+  }
+
 
 
   // ==================== 私有方法 ====================

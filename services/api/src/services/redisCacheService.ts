@@ -68,20 +68,47 @@ export class RedisCacheService {
 
   // 初始化Redis连接
   private initializeRedis(): void {
-    const config: CacheConfig = {
-      host: process.env.REDIS_HOST || 'localhost',
-      port: parseInt(process.env.REDIS_PORT || '6379'),
-      password: process.env.REDIS_PASSWORD,
-      db: parseInt(process.env.REDIS_DB || '0'),
-      retryDelayOnFailover: 100,
-      maxRetriesPerRequest: 3,
-      lazyConnect: true,
-      keepAlive: 30000,
-      connectTimeout: 10000,
-      commandTimeout: 5000
-    };
+    // 检查是否有Redis配置
+    const hasRedisConfig = process.env.REDIS_HOST || process.env.REDIS_URL;
+    
+    if (!hasRedisConfig) {
+      logger.warn('⚠️ 未检测到Redis配置，缓存功能将被禁用');
+      this.isConnected = false;
+      return;
+    }
 
-    this.redis = new Redis(config);
+    let config: CacheConfig;
+    
+    // 优先使用REDIS_URL
+    if (process.env.REDIS_URL) {
+      logger.info('🔗 使用REDIS_URL连接Redis');
+      logger.info('Redis URL:', process.env.REDIS_URL.replace(/:[^:]*@/, ':***@'));
+      
+      this.redis = new Redis(process.env.REDIS_URL, {
+        maxRetriesPerRequest: 3,
+        lazyConnect: true,
+        keepAlive: 30000,
+        connectTimeout: 10000,
+        commandTimeout: 5000,
+        tls: process.env.REDIS_URL.startsWith('rediss://') ? {} : undefined
+      });
+    } else {
+      // 使用单独的Redis配置
+      config = {
+        host: process.env.REDIS_HOST || 'localhost',
+        port: parseInt(process.env.REDIS_PORT || '6379'),
+        password: process.env.REDIS_PASSWORD,
+        db: parseInt(process.env.REDIS_DB || '0'),
+        retryDelayOnFailover: 100,
+        maxRetriesPerRequest: 3,
+        lazyConnect: true,
+        keepAlive: 30000,
+        connectTimeout: 10000,
+        commandTimeout: 5000
+      };
+      
+      this.redis = new Redis(config);
+    }
 
     // 监听连接事件
     this.redis.on('connect', () => {
@@ -213,7 +240,7 @@ export class RedisCacheService {
 
   // 设置缓存
   public async set<T>(strategy: string, identifier: string, data: T): Promise<boolean> {
-    if (!this.isConnected) {
+    if (!this.isConnected || !this.redis) {
       logger.warn('📊 Redis未连接，跳过缓存设置');
       return false;
     }
@@ -242,7 +269,7 @@ export class RedisCacheService {
 
   // 获取缓存
   public async get<T>(strategy: string, identifier: string): Promise<T | null> {
-    if (!this.isConnected) {
+    if (!this.isConnected || !this.redis) {
       logger.warn('📊 Redis未连接，跳过缓存获取');
       this.stats.misses++;
       this.stats.totalOperations++;
@@ -284,7 +311,7 @@ export class RedisCacheService {
 
   // 删除缓存
   public async delete(strategy: string, identifier: string): Promise<boolean> {
-    if (!this.isConnected) {
+    if (!this.isConnected || !this.redis) {
       logger.warn('📊 Redis未连接，跳过缓存删除');
       return false;
     }
@@ -309,7 +336,7 @@ export class RedisCacheService {
 
   // 批量删除缓存
   public async deletePattern(strategy: string, pattern: string): Promise<number> {
-    if (!this.isConnected) {
+    if (!this.isConnected || !this.redis) {
       logger.warn('📊 Redis未连接，跳过批量缓存删除');
       return 0;
     }
@@ -420,7 +447,7 @@ export class RedisCacheService {
 
   // 获取Redis信息
   public async getRedisInfo(): Promise<any> {
-    if (!this.isConnected) {
+    if (!this.isConnected || !this.redis) {
       return null;
     }
 
@@ -440,8 +467,8 @@ export class RedisCacheService {
     stats: CacheStats;
     redisInfo?: any;
   }> {
-    const isHealthy = this.isConnected && this.stats.errors < 100;
-    const redisInfo = await this.getRedisInfo();
+    const isHealthy = this.isConnected && this.redis && this.stats.errors < 100;
+    const redisInfo = this.redis ? await this.getRedisInfo() : null;
 
     return {
       isHealthy,
