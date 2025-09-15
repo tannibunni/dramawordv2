@@ -74,6 +74,8 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   const [chToEnQuery, setChToEnQuery] = useState<string>('');
   const [enToChCandidates, setEnToChCandidates] = useState<string[]>([]); // 新增：英文查中文候选词
   const [enToChQuery, setEnToChQuery] = useState<string>('');
+  const [pinyinCandidates, setPinyinCandidates] = useState<string[]>([]); // 新增：拼音候选词
+  const [pinyinQuery, setPinyinQuery] = useState<string>('');
   const { selectedLanguage, getCurrentLanguageConfig, setSelectedLanguage } = useLanguage();
   const { appLanguage } = useAppLanguage();
   
@@ -194,6 +196,8 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     setChToEnQuery('');
     setEnToChCandidates([]);
     setEnToChQuery('');
+    setPinyinCandidates([]);
+    setPinyinQuery('');
     
     // 延迟验证修复后的状态
     setTimeout(() => {
@@ -217,6 +221,8 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       setChToEnQuery('');
       setEnToChCandidates([]);
       setEnToChQuery('');
+      setPinyinCandidates([]);
+      setPinyinQuery('');
     }
   };
 
@@ -335,6 +341,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
 
   const isChinese = (text: string) => /[\u4e00-\u9fa5]/.test(text);
   const isEnglish = (text: string) => /^[a-zA-Z\s]+$/.test(text);
+  const isPinyin = (text: string) => /^[a-z\s]+$/.test(text) && !/^[a-zA-Z\s]+$/.test(text) || /^[a-z\s]+$/.test(text);
 
   // handleSearch 只保留中英查词
   const handleSearch = async () => {
@@ -503,6 +510,45 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         } else {
           console.log(`❌ 英文翻译失败: ${word}`);
           // 翻译失败时继续正常搜索流程
+        }
+      } else if (isPinyin(word) && appLanguage === 'en-US') {
+        // 英文界面下输入拼音，显示中文候选词弹窗
+        console.log(`🔍 英文界面输入拼音，显示中文候选词: ${word}`);
+        
+        // 调用拼音→中文搜索API
+        const result = await wordService.searchWord(word.toLowerCase(), 'zh', appLanguage);
+        if (result.success && result.data) {
+          // 检查是否有candidates字段
+          if (result.data.candidates && result.data.candidates.length > 1) {
+            setPinyinCandidates(result.data.candidates);
+            setPinyinQuery(word);
+            console.log(`✅ 拼音候选词结果: ${word} -> ${result.data.candidates.join(', ')}`);
+            setIsLoading(false);
+            return;
+          } else {
+            // 如果没有多个候选词，直接显示结果
+            setSearchResult(result.data);
+            setSearchText('');
+            const definition = result.data.definitions && result.data.definitions[0]?.definition ? result.data.definitions[0].definition : t('no_definition', 'zh-CN');
+            await wordService.saveSearchHistory(result.data.correctedWord || word, definition);
+            setRecentWords(prev => {
+              const filtered = prev.filter(w => w.word !== (result.data.correctedWord || word));
+              return [
+                {
+                  id: Date.now().toString(),
+                  word: result.data.correctedWord || word,
+                  translation: definition,
+                  timestamp: Date.now(),
+                },
+                ...filtered
+              ];
+            });
+            setIsLoading(false);
+            return;
+          }
+        } else {
+          console.log(`❌ 拼音搜索失败: ${word}`);
+          // 搜索失败时继续正常搜索流程
         }
       }
       
@@ -948,6 +994,53 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                     setSearchResult(result.data);
                     setSearchText('');
                     // 将中文查词加入最近查词历史
+                    const definition = result.data.definitions && result.data.definitions[0]?.definition ? result.data.definitions[0].definition : t('no_definition', 'zh-CN');
+                    await wordService.saveSearchHistory(chinese, definition);
+                    setRecentWords(prev => {
+                      const filtered = prev.filter(w => w.word !== chinese);
+                      return [
+                        {
+                          id: Date.now().toString(),
+                          word: chinese,
+                          translation: definition,
+                          timestamp: Date.now(),
+                        },
+                        ...filtered
+                      ];
+                    });
+                  } else {
+                    Alert.alert('查询失败', result.error || '无法找到该单词');
+                  }
+                  setIsLoading(false);
+                }} style={{ paddingVertical: 10, paddingHorizontal: 24, borderRadius: 16, backgroundColor: colors.primary[50], marginBottom: 10 }}>
+                  <Text style={{ fontSize: 18, color: colors.primary[700], fontWeight: '500' }}>{chinese}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+        ) : pinyinCandidates.length > 0 ? (
+          <View style={styles.wordCardWrapper}>
+            <View style={[styles.wordCardCustom, styles.fixedCandidateCard] }>
+              {/* 关闭按钮 */}
+              <TouchableOpacity style={styles.closeButton} onPress={() => { setPinyinCandidates([]); setPinyinQuery(''); }}>
+                <Ionicons name="close" size={26} color={colors.text.secondary} />
+              </TouchableOpacity>
+              <Text style={{ fontSize: 20, fontWeight: 'bold', color: colors.text.primary, marginBottom: 16, marginTop: 8 }}>
+                "{pinyinQuery}" 的中文候选词
+              </Text>
+              {pinyinCandidates.map((chinese, idx) => (
+                <TouchableOpacity key={chinese} onPress={async () => {
+                  setIsLoading(true);
+                  setPinyinCandidates([]);
+                  setPinyinQuery('');
+                  setSearchText(chinese);
+                  // 切换到中文搜索界面
+                  setSelectedLanguage('CHINESE');
+                  // 使用中文进行搜索
+                  const result = await wordService.searchWord(chinese.toLowerCase(), 'zh', 'zh-CN');
+                  if (result.success && result.data) {
+                    setSearchResult(result.data);
+                    setSearchText('');
                     const definition = result.data.definitions && result.data.definitions[0]?.definition ? result.data.definitions[0].definition : t('no_definition', 'zh-CN');
                     await wordService.saveSearchHistory(chinese, definition);
                     setRecentWords(prev => {
