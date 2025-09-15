@@ -310,14 +310,14 @@ export class WordService {
       try {
         const local = await AsyncStorage.getItem(SEARCH_HISTORY_KEY);
         let history: RecentWord[] = local ? JSON.parse(local) : [];
-        // 去重，最多5条
+        // 去重，显示所有历史记录
         history = [{
           id: Date.now().toString(),
           word,
           translation: definition,
           timestamp: Date.now(),
           ...(candidates ? { candidates } : {})
-        }, ...history.filter(w => w.word !== word)].slice(0, 5);
+        }, ...history.filter(w => w.word !== word)];
         await AsyncStorage.setItem(SEARCH_HISTORY_KEY, JSON.stringify(history));
         console.log('✅ 游客模式：搜索历史已保存到本地');
         return true;
@@ -687,6 +687,35 @@ export class WordService {
       }
     } catch (error) {
       console.error(`❌ 中文翻译到${targetLanguage}错误:`, error);
+      return { success: false, candidates: [], error: error instanceof Error ? error.message : '未知错误' };
+    }
+  }
+
+  // 英文翻译到中文，返回 1-3 个中文释义
+  async translateEnglishToChinese(word: string): Promise<{ success: boolean; candidates: string[]; error?: string }> {
+    try {
+      console.log(`🔍 英文翻译到中文: ${word}`);
+      
+      const response = await fetch(`${API_BASE_URL}/words/translate-english-to-chinese`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          word: word.trim()
+        })
+      });
+      
+      if (!response.ok) {
+        throw new WordServiceError(`翻译失败: ${response.status}`, response.status);
+      }
+      
+      const result = await response.json();
+      if (result.success) {
+        return { success: true, candidates: result.candidates || [] };
+      } else {
+        return { success: false, candidates: [], error: result.error || '翻译失败' };
+      }
+    } catch (error) {
+      console.error(`❌ 英文翻译到中文错误:`, error);
       return { success: false, candidates: [], error: error instanceof Error ? error.message : '未知错误' };
     }
   }

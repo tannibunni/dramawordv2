@@ -522,12 +522,9 @@ export const getRecentSearches = async (req: Request, res: Response) => {
           timestamp: { $first: '$timestamp' }
         }
       },
-      // 按时间戳排序，获取最新的10条记录
+      // 按时间戳排序，获取所有记录
       {
         $sort: { timestamp: -1 }
-      },
-      {
-        $limit: 10
       }
     ]);
     
@@ -1445,6 +1442,95 @@ export const testOpenAI = async (req: Request, res: Response): Promise<void> => 
         keyPrefix: process.env.OPENAI_API_KEY ? process.env.OPENAI_API_KEY.substring(0, 7) + '...' : 'Not set',
         environment: process.env.NODE_ENV || 'unknown'
       }
+    });
+  }
+};
+
+// 英文查中文翻译 - 返回 1-3 个中文释义
+export const translateEnglishToChinese = async (req: Request, res: Response) => {
+  try {
+    const { word } = req.body;
+    if (!word) {
+      res.status(400).json({ success: false, error: 'Word parameter is required' });
+      return;
+    }
+    
+    const searchTerm = word.trim();
+    logger.info(`🌏 Translating English to Chinese: ${searchTerm}`);
+
+    // 1. 检查内存缓存
+    const cacheKey = `en_to_zh_${searchTerm}`;
+    if (chineseTranslationCache.has(cacheKey)) {
+      logger.info(`✅ Found in memory cache: ${cacheKey}`);
+      const candidates = chineseTranslationCache.get(cacheKey)!;
+      res.json({ success: true, query: searchTerm, candidates, source: 'memory_cache' });
+      return;
+    }
+
+    // 2. 使用 Google 翻译 API 或 OpenAI 生成新的翻译
+    logger.info(`🤖 Generating new translation: ${searchTerm} -> Chinese`);
+    
+    let candidates: string[] = [];
+    let responseText = '';
+    try {
+      // 使用 OpenAI 进行英文到中文翻译
+      const prompt = `你是专业的英文翻译助手。请将英文单词"${searchTerm}"翻译为1-3个常用中文词汇，按相关性降序排列，严格只返回一个 JSON 数组，如 ["词汇1","词汇2"]，不要其他内容。如果是常见名词，务必给出最常用中文词汇。如果没有合适的中文词汇，才返回空数组 []。`;
+      
+      const completion = await openai.chat.completions.create({
+        model: 'gpt-3.5-turbo',
+        messages: [
+          { role: 'system', content: '你是英文到中文翻译助手，只返回JSON数组，不要其他内容。' },
+          { role: 'user', content: prompt }
+        ],
+        temperature: 0.2,
+        max_tokens: 100
+      });
+      responseText = completion.choices[0]?.message?.content;
+      candidates = JSON.parse(responseText || '[]');
+      if (!Array.isArray(candidates)) candidates = [];
+    } catch (e) {
+      logger.error('❌ 解析 OpenAI 返回失败:', e, responseText);
+      candidates = [];
+    }
+
+    // 3. fallback: 常见词典
+    if (!candidates || candidates.length === 0) {
+      const fallbackDict: Record<string, string[]> = {
+        'hello': ['你好', '您好'],
+        'world': ['世界'],
+        'love': ['爱', '爱情'],
+        'time': ['时间', '时候'],
+        'water': ['水'],
+        'food': ['食物', '食品'],
+        'house': ['房子', '房屋'],
+        'car': ['汽车', '车'],
+        'book': ['书', '书籍'],
+        'school': ['学校']
+      };
+      
+      if (fallbackDict[searchTerm.toLowerCase()]) {
+        candidates = fallbackDict[searchTerm.toLowerCase()];
+        logger.info(`✅ 使用fallback词典: ${searchTerm} -> ${candidates.join(', ')}`);
+      }
+    }
+
+    // 4. 缓存结果
+    if (candidates && candidates.length > 0) {
+      chineseTranslationCache.set(cacheKey, candidates);
+    }
+
+    res.json({ 
+      success: true, 
+      query: searchTerm, 
+      candidates: candidates || [],
+      source: 'ai_translation'
+    });
+
+  } catch (error) {
+    logger.error('❌ Translate English to Chinese error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to translate English to Chinese'
     });
   }
 };

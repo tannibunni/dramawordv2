@@ -16,6 +16,7 @@ import {
   checkEnvironment,
   testOpenAI,
   translateChineseToEnglish, // 新增
+  translateEnglishToChinese, // 新增
   testPromptLoading, // 新增
   getRateLimitStatus, // 新增
   getCloudWord // 新增：云词库获取
@@ -40,6 +41,7 @@ router.post('/search',
   wordCacheSetMiddleware
 );
 router.post('/translate', translateChineseToEnglish); // 新增
+router.post('/translate-english-to-chinese', translateEnglishToChinese); // 新增
 router.get('/popular', 
   wordCacheMiddleware, 
   getPopularWords, 

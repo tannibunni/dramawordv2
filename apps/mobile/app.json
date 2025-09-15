@@ -15,7 +15,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.tannibunni.dramawordmobile",
-      "buildNumber": "39",
+      "buildNumber": "40",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
         "UIFileSharingEnabled": false,

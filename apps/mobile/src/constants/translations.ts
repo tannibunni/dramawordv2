@@ -359,6 +359,7 @@ export type TranslationKey =
   | 'keep_current_language'
   | 'target_language'
   | 'chinese_to_target'
+  | 'english_to_chinese'
   | 'badge_unlocked'
   | 'show_answer'
   | 'examples'
@@ -896,6 +897,7 @@ export const translations: Record<AppLanguage, Record<TranslationKey, string>> =
     keep_current_language: '保持当前语言',
     target_language: '目标语言',
     chinese_to_target: '中文转{target}',
+    english_to_chinese: '的中文释义',
     badge_unlock_message: '恭喜解锁 {count} 个单词徽章！',
     show_answer: '显示答案',
     examples: '例句：',
@@ -1439,6 +1441,7 @@ export const translations: Record<AppLanguage, Record<TranslationKey, string>> =
     keep_current_language: 'Keep Current',
     target_language: 'Target Language',
     chinese_to_target: 'Chinese to {target}',
+    english_to_chinese: ' Chinese Translation',
     badge_unlock_message: 'Congratulations! Unlocked {count} word badge!',
     show_answer: 'Show Answer',
     examples: 'Examples:',

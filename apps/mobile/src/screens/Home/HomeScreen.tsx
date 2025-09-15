@@ -15,7 +15,9 @@ import {
   FlatList,
   Animated,
   Dimensions,
+  AppState,
 } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { colors } from '../../constants/colors';
@@ -70,6 +72,8 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   const [celebratedBadges, setCelebratedBadges] = useState<Set<number>>(new Set());
   const [chToEnCandidates, setChToEnCandidates] = useState<string[]>([]); // 新增：中文查英文候选词
   const [chToEnQuery, setChToEnQuery] = useState<string>('');
+  const [enToChCandidates, setEnToChCandidates] = useState<string[]>([]); // 新增：英文查中文候选词
+  const [enToChQuery, setEnToChQuery] = useState<string>('');
   const { selectedLanguage, getCurrentLanguageConfig, setSelectedLanguage } = useLanguage();
   const { appLanguage } = useAppLanguage();
   
@@ -132,6 +136,120 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   useEffect(() => {
     loadRecentWords();
   }, []);
+
+  // 添加AppState监听，处理app从后台切换回来
+  useEffect(() => {
+    const handleAppStateChange = (nextAppState: string) => {
+      console.log('🔄 AppState变化:', nextAppState);
+      if (nextAppState === 'active') {
+        // app从后台切换回来时，恢复状态
+        console.log('📱 App重新激活，恢复状态');
+        restoreUIState();
+      }
+    };
+
+    const subscription = AppState.addEventListener('change', handleAppStateChange);
+    return () => subscription?.remove();
+  }, []);
+
+  // 添加焦点管理
+  useFocusEffect(
+    React.useCallback(() => {
+      console.log('🎯 HomeScreen获得焦点');
+      // 屏幕获得焦点时，确保状态正确
+      restoreUIState();
+      
+      return () => {
+        console.log('🎯 HomeScreen失去焦点');
+      };
+    }, [])
+  );
+
+  // 恢复UI状态的函数
+  const restoreUIState = () => {
+    console.log('🔧 开始恢复UI状态');
+    
+    // 先验证当前状态
+    const isStateValid = validateUIState();
+    if (!isStateValid) {
+      console.log('🔧 检测到状态异常，开始修复');
+    }
+    
+    // 重置搜索相关状态
+    if (searchText && !searchResult) {
+      console.log('🔧 重置搜索状态');
+      setSearchText('');
+      setSearchResult(null);
+      setIsLoading(false);
+    }
+    
+    // 确保最近查词已加载
+    if (recentWords.length === 0 && !isLoadingRecent) {
+      console.log('🔧 重新加载最近查词');
+      loadRecentWords();
+    }
+    
+    // 清理过期的语言提醒缓存
+    cleanupExpiredCache();
+    
+    // 重置其他可能异常的状态
+    setSearchSuggestions([]);
+    setChToEnCandidates([]);
+    setChToEnQuery('');
+    setEnToChCandidates([]);
+    setEnToChQuery('');
+    
+    // 延迟验证修复后的状态
+    setTimeout(() => {
+      const isFixed = validateUIState();
+      console.log('🔧 状态修复结果:', isFixed ? '成功' : '仍有问题');
+    }, 100);
+    
+    console.log('✅ UI状态恢复完成');
+  };
+
+  // 处理搜索输入变化，添加防抖和状态管理
+  const handleInputChange = (text: string) => {
+    console.log('🔍 搜索输入变化:', text);
+    setSearchText(text);
+    
+    // 如果输入为空，清理相关状态
+    if (!text.trim()) {
+      setSearchResult(null);
+      setSearchSuggestions([]);
+      setChToEnCandidates([]);
+      setChToEnQuery('');
+      setEnToChCandidates([]);
+      setEnToChQuery('');
+    }
+  };
+
+  // 验证UI状态是否正常
+  const validateUIState = () => {
+    const issues = [];
+    
+    // 检查搜索状态一致性
+    if (searchText && !searchResult && !isLoading) {
+      issues.push('搜索文本存在但无结果且未加载中');
+    }
+    
+    // 检查加载状态
+    if (isLoading && !searchText) {
+      issues.push('加载中但无搜索文本');
+    }
+    
+    // 检查最近查词状态
+    if (recentWords.length === 0 && !isLoadingRecent && !searchResult) {
+      issues.push('无最近查词且未加载中且无搜索结果');
+    }
+    
+    if (issues.length > 0) {
+      console.warn('⚠️ UI状态异常:', issues);
+      return false;
+    }
+    
+    return true;
+  };
 
   // 设置功能权限检查的回调
   useEffect(() => {
@@ -220,6 +338,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   };
 
   const isChinese = (text: string) => /[\u4e00-\u9fa5]/.test(text);
+  const isEnglish = (text: string) => /^[a-zA-Z\s]+$/.test(text);
 
   // handleSearch 只保留中英查词
   const handleSearch = async () => {
@@ -315,6 +434,8 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     setSearchSuggestions([]);
     setChToEnCandidates([]);
     setChToEnQuery('');
+    setEnToChCandidates([]);
+    setEnToChQuery('');
     
     try {
       if (isChinese(word)) {
@@ -355,7 +476,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                 timestamp: Date.now(),
                 candidates: result.candidates
               },
-              ...filtered.slice(0, 4)
+              ...filtered
             ];
           });
           setIsLoading(false);
@@ -368,6 +489,24 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
           );
           setIsLoading(false);
           return;
+        }
+      } else if (isEnglish(word) && appLanguage === 'en-US') {
+        // 英文界面下输入英文单词，显示中文翻译弹窗
+        console.log(`🔍 英文界面输入英文单词，显示中文翻译: ${word}`);
+        
+        // 调用英文→中文翻译API
+        const translationResult = await wordService.translateEnglishToChinese(word);
+        
+        if (translationResult.success && translationResult.candidates.length > 0) {
+          setEnToChCandidates(translationResult.candidates);
+          setEnToChQuery(word);
+          const translation = translationResult.candidates.join(', ');
+          console.log(`✅ 英文翻译结果: ${word} -> ${translation}`);
+          setIsLoading(false);
+          return;
+        } else {
+          console.log(`❌ 英文翻译失败: ${word}`);
+          // 翻译失败时继续正常搜索流程
         }
       }
       
@@ -412,7 +551,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
               translation: result.data?.definitions && result.data.definitions[0]?.definition ? result.data.definitions[0].definition : t('no_definition', appLanguage),
               timestamp: Date.now(),
             },
-            ...filtered.slice(0, 4)
+            ...filtered
           ];
         });
         setSearchResult(result.data);
@@ -489,13 +628,6 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     }
   };
 
-  // 搜索框内容变化
-  const handleInputChange = (text: string) => {
-    setSearchText(text);
-    if (text.length === 0) {
-      setSearchResult(null);
-    }
-  };
 
   // 收藏按钮高亮逻辑
   const isCollected = searchResult && vocabulary.some(w => w.word.trim().toLowerCase() === searchResult.word.trim().toLowerCase());
@@ -775,6 +907,8 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                     autoCapitalize="none"
                     autoCorrect={false}
                     editable={!isLoading}
+                    onFocus={() => console.log('🔍 搜索框获得焦点')}
+                    onBlur={() => console.log('🔍 搜索框失去焦点')}
                   />
                   {searchText.length > 0 && (
                     <TouchableOpacity onPress={() => handleInputChange('')} style={styles.clearButton}>
@@ -794,7 +928,55 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
           </View>
         </View>
         {/* 内容区：有查词结果时只显示卡片，否则显示最近查词 */}
-        {chToEnCandidates.length > 0 ? (
+        {enToChCandidates.length > 0 ? (
+          <View style={styles.wordCardWrapper}>
+            <View style={[styles.wordCardCustom, styles.fixedCandidateCard] }>
+              {/* 关闭按钮 */}
+              <TouchableOpacity style={styles.closeButton} onPress={() => { setEnToChCandidates([]); setEnToChQuery(''); }}>
+                <Ionicons name="close" size={26} color={colors.text.secondary} />
+              </TouchableOpacity>
+              <Text style={{ fontSize: 20, fontWeight: 'bold', color: colors.text.primary, marginBottom: 16, marginTop: 8 }}>
+                "{enToChQuery}"{t('english_to_chinese', appLanguage)}
+              </Text>
+              {enToChCandidates.map((chinese, idx) => (
+                <TouchableOpacity key={chinese} onPress={async () => {
+                  setIsLoading(true);
+                  setEnToChCandidates([]);
+                  setEnToChQuery('');
+                  setSearchText(chinese);
+                  // 切换到中文搜索界面
+                  setSelectedLanguage('CHINESE');
+                  // 使用中文进行搜索
+                  const result = await wordService.searchWord(chinese.toLowerCase(), 'zh', 'zh-CN');
+                  if (result.success && result.data) {
+                    setSearchResult(result.data);
+                    setSearchText('');
+                    // 将中文查词加入最近查词历史
+                    const definition = result.data.definitions && result.data.definitions[0]?.definition ? result.data.definitions[0].definition : t('no_definition', 'zh-CN');
+                    await wordService.saveSearchHistory(chinese, definition);
+                    setRecentWords(prev => {
+                      const filtered = prev.filter(w => w.word !== chinese);
+                      return [
+                        {
+                          id: Date.now().toString(),
+                          word: chinese,
+                          translation: definition,
+                          timestamp: Date.now(),
+                        },
+                        ...filtered
+                      ];
+                    });
+                  } else {
+                    Alert.alert('查询失败', result.error || '无法找到该单词');
+                  }
+                  setIsLoading(false);
+                }} style={{ paddingVertical: 10, paddingHorizontal: 24, borderRadius: 16, backgroundColor: colors.primary[50], marginBottom: 10 }}>
+                  <Text style={{ fontSize: 18, color: colors.primary[700], fontWeight: '500' }}>{chinese}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+        ) : chToEnCandidates.length > 0 ? (
           <View style={styles.wordCardWrapper}>
             <View style={[styles.wordCardCustom, styles.fixedCandidateCard] }>
               {/* 关闭按钮 */}
@@ -838,7 +1020,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                           translation: definition,
                           timestamp: Date.now(),
                         },
-                        ...filtered.slice(0, 4)
+                        ...filtered
                       ];
                     });
                   } else {
