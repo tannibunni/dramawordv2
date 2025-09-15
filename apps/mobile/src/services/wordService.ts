@@ -697,7 +697,7 @@ export class WordService {
       console.log(`🔍 英文翻译到中文: ${word}`);
       
       // 使用现有的翻译API，因为专用API暂时不可用
-      const response = await fetch(`${API_BASE_URL}/api/words/translate`, {
+      const response = await fetch(`${API_BASE_URL}/words/translate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
