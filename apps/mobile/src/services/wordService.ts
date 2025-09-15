@@ -696,8 +696,8 @@ export class WordService {
     try {
       console.log(`🔍 英文翻译到中文: ${word}`);
       
-      // 临时使用现有的翻译API
-      const response = await fetch(`${API_BASE_URL}/words/translate`, {
+      // 使用现有的翻译API，因为专用API暂时不可用
+      const response = await fetch(`${API_BASE_URL}/api/words/translate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
@@ -712,7 +712,7 @@ export class WordService {
       
       const result = await response.json();
       if (result.success) {
-        // 从返回的数据中提取中文释义
+        // 从返回的数据中提取中文释义作为候选词
         const candidates: string[] = [];
         if (result.data && result.data.definitions) {
           result.data.definitions.forEach((def: any) => {
