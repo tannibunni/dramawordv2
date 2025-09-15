@@ -211,9 +211,21 @@ const WordCardContent: React.FC<WordCardContentProps> = ({ wordData, onPlayAudio
               <Text style={styles.kana} selectable>{wordData.kana}</Text>
             )}
           </View>
-          <Text style={styles.phonetic} selectable>
-            {wordData.pinyin || wordData.phonetic}
-          </Text>
+          {/* 中文单词特殊显示：优先显示拼音，然后是音标 */}
+          {wordData.language === 'zh' || wordData.language === 'zh-CN' ? (
+            <View style={styles.chinesePhoneticContainer}>
+              {wordData.pinyin && (
+                <Text style={styles.pinyin} selectable>{wordData.pinyin}</Text>
+              )}
+              {wordData.phonetic && (
+                <Text style={styles.phonetic} selectable>{wordData.phonetic}</Text>
+              )}
+            </View>
+          ) : (
+            <Text style={styles.phonetic} selectable>
+              {wordData.pinyin || wordData.phonetic}
+            </Text>
+          )}
           {/* 来源 TAG 区域 */}
           {Array.isArray(wordData.sources) && wordData.sources.length > 0 && (
             <View style={styles.sourceTagsContainer}>
@@ -282,6 +294,12 @@ const WordCardContent: React.FC<WordCardContentProps> = ({ wordData, onPlayAudio
                       <View key={exIdx} style={styles.exampleContainer}>
                         <Text style={styles.exampleLabelAndText} selectable>{getExampleText()}</Text>
                         <Text style={styles.exampleLabelAndText} selectable>{ex.chinese}</Text>
+                        {/* 中文例句拼音显示 */}
+                        {wordData.language === 'zh' || wordData.language === 'zh-CN' ? (
+                          ex.pinyin && (
+                            <Text style={styles.examplePinyin} selectable>{ex.pinyin}</Text>
+                          )
+                        ) : null}
                       </View>
                     );
                   })}
@@ -307,6 +325,12 @@ const WordCardContent: React.FC<WordCardContentProps> = ({ wordData, onPlayAudio
                           <View key={exIdx} style={styles.exampleContainer}>
                           <Text style={styles.exampleLabelAndText} selectable>{ex.english}</Text>
                           <Text style={styles.exampleLabelAndText} selectable>{ex.chinese}</Text>
+                        {/* 中文例句拼音显示 */}
+                        {wordData.language === 'zh' || wordData.language === 'zh-CN' ? (
+                          ex.pinyin && (
+                            <Text style={styles.examplePinyin} selectable>{ex.pinyin}</Text>
+                          )
+                        ) : null}
                           </View>
                       ))}
                     </View>
@@ -333,6 +357,12 @@ const WordCardContent: React.FC<WordCardContentProps> = ({ wordData, onPlayAudio
                           <View key={exIdx} style={styles.exampleContainer}>
                           <Text style={styles.exampleLabelAndText} selectable>{ex.english}</Text>
                           <Text style={styles.exampleLabelAndText} selectable>{ex.chinese}</Text>
+                        {/* 中文例句拼音显示 */}
+                        {wordData.language === 'zh' || wordData.language === 'zh-CN' ? (
+                          ex.pinyin && (
+                            <Text style={styles.examplePinyin} selectable>{ex.pinyin}</Text>
+                          )
+                        ) : null}
                           </View>
                       ))}
                     </View>
@@ -378,6 +408,12 @@ const WordCardContent: React.FC<WordCardContentProps> = ({ wordData, onPlayAudio
                       <View key={exIdx} style={styles.exampleContainer}>
                         <Text style={styles.exampleLabelAndText} selectable>{getExampleText()}</Text>
                         <Text style={styles.exampleLabelAndText} selectable>{ex.chinese}</Text>
+                        {/* 中文例句拼音显示 */}
+                        {wordData.language === 'zh' || wordData.language === 'zh-CN' ? (
+                          ex.pinyin && (
+                            <Text style={styles.examplePinyin} selectable>{ex.pinyin}</Text>
+                          )
+                        ) : null}
                       </View>
                     );
                   })}
@@ -403,6 +439,12 @@ const WordCardContent: React.FC<WordCardContentProps> = ({ wordData, onPlayAudio
                         <View key={exIdx} style={styles.exampleContainer}>
                           <Text style={styles.exampleLabelAndText} selectable>{ex.english}</Text>
                           <Text style={styles.exampleLabelAndText} selectable>{ex.chinese}</Text>
+                        {/* 中文例句拼音显示 */}
+                        {wordData.language === 'zh' || wordData.language === 'zh-CN' ? (
+                          ex.pinyin && (
+                            <Text style={styles.examplePinyin} selectable>{ex.pinyin}</Text>
+                          )
+                        ) : null}
                         </View>
                       ))}
                     </View>
@@ -429,6 +471,12 @@ const WordCardContent: React.FC<WordCardContentProps> = ({ wordData, onPlayAudio
                         <View key={exIdx} style={styles.exampleContainer}>
                           <Text style={styles.exampleLabelAndText} selectable>{ex.english}</Text>
                           <Text style={styles.exampleLabelAndText} selectable>{ex.chinese}</Text>
+                        {/* 中文例句拼音显示 */}
+                        {wordData.language === 'zh' || wordData.language === 'zh-CN' ? (
+                          ex.pinyin && (
+                            <Text style={styles.examplePinyin} selectable>{ex.pinyin}</Text>
+                          )
+                        ) : null}
                         </View>
                       ))}
                     </View>
@@ -470,6 +518,21 @@ const styles = StyleSheet.create({
   phonetic: {
     fontSize: 14,
     color: '#888',
+    fontStyle: 'italic',
+    marginTop: 2,
+  },
+  chinesePhoneticContainer: {
+    marginTop: 2,
+  },
+  pinyin: {
+    fontSize: 16,
+    color: '#666',
+    fontStyle: 'italic',
+    marginBottom: 2,
+  },
+  examplePinyin: {
+    fontSize: 13,
+    color: '#999',
     fontStyle: 'italic',
     marginTop: 2,
   },
