@@ -211,6 +211,34 @@ const WordCardContent: React.FC<WordCardContentProps> = ({ wordData, onPlayAudio
               <Text style={styles.kana} selectable>{wordData.kana}</Text>
             )}
           </View>
+          {/* 候选词选择界面 */}
+          {wordData.candidates && wordData.candidates.length > 1 && (
+            <View style={styles.candidatesContainer}>
+              <Text style={styles.candidatesLabel}>选择正确的词：</Text>
+              <View style={styles.candidatesList}>
+                {wordData.candidates.map((candidate, index) => (
+                  <TouchableOpacity
+                    key={candidate}
+                    style={[
+                      styles.candidateButton,
+                      candidate === (wordData.correctedWord || wordData.word) && styles.selectedCandidate
+                    ]}
+                    onPress={() => {
+                      // 这里可以添加选择候选词的逻辑
+                      console.log(`选择了候选词: ${candidate}`);
+                    }}
+                  >
+                    <Text style={[
+                      styles.candidateText,
+                      candidate === (wordData.correctedWord || wordData.word) && styles.selectedCandidateText
+                    ]}>
+                      {candidate}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+          )}
           {/* 中文单词特殊显示：优先显示拼音，然后是音标 */}
           {wordData.language === 'zh' || wordData.language === 'zh-CN' ? (
             <View style={styles.chinesePhoneticContainer}>
@@ -535,6 +563,41 @@ const styles = StyleSheet.create({
     color: '#999',
     fontStyle: 'italic',
     marginTop: 2,
+  },
+  candidatesContainer: {
+    marginTop: 12,
+    marginBottom: 8,
+  },
+  candidatesLabel: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 8,
+    fontWeight: '500',
+  },
+  candidatesList: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  candidateButton: {
+    backgroundColor: '#f5f5f5',
+    borderRadius: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+  },
+  selectedCandidate: {
+    backgroundColor: '#7C3AED',
+    borderColor: '#7C3AED',
+  },
+  candidateText: {
+    fontSize: 14,
+    color: '#333',
+    fontWeight: '500',
+  },
+  selectedCandidateText: {
+    color: '#fff',
   },
   audioButton: {
     width: 40,

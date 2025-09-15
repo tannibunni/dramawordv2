@@ -22,6 +22,7 @@ export interface WordData {
   word: string;                // 词条本身
   phonetic?: string;           // 拼音
   pinyin?: string;             // 标准拼音
+  candidates?: string[];       // 候选词数组（拼音转中文时使用）
   definitions: WordDefinition[];
   audioUrl?: string;           // 发音音频链接
   isCollected?: boolean;       // 是否已收藏

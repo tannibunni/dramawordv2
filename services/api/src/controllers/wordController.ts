@@ -1226,6 +1226,7 @@ async function generateWordData(word: string, language: string = 'en', uiLanguag
       return {
         phonetic: parsedData.phonetic || `/${word}/`,
         pinyin: parsedData.pinyin || parsedData.phonetic || undefined, // 优先使用 pinyin 字段
+        candidates: parsedData.candidates || [], // 添加候选词数组
         definitions: definitions,
         audioUrl: getGoogleTTSUrl(word, language),
         correctedWord: parsedData.correctedWord || word,

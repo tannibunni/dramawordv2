@@ -6,6 +6,7 @@ export interface ICloudWord extends Document {
   uiLanguage: string; // 新增：界面语言（如 'en', 'zh-CN'）
   phonetic: string;
   pinyin?: string; // 新增：标准拼音字段
+  candidates?: string[]; // 新增：候选词数组
   definitions: Array<{
     partOfSpeech: string;
     definition: string;
@@ -48,6 +49,10 @@ const CloudWordSchema = new Schema<ICloudWord>({
     type: String,
     default: '',
   },
+  candidates: [{
+    type: String,
+    default: [],
+  }],
   definitions: [{
     partOfSpeech: {
       type: String,
