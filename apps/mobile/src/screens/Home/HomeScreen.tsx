@@ -17,7 +17,7 @@ import {
   Dimensions,
   AppState,
 } from 'react-native';
-import { useFocusEffect } from '@react-navigation/native';
+// import { useFocusEffect } from '@react-navigation/native'; // 移除React Navigation钩子
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { colors } from '../../constants/colors';
@@ -46,7 +46,7 @@ interface HomeScreenProps {
 }
 
 const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
-  const { navigate } = useNavigation();
+  const { navigate, currentScreen } = useNavigation();
   const [searchText, setSearchText] = useState('');
   const [recentWords, setRecentWords] = useState<RecentWord[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -152,18 +152,14 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     return () => subscription?.remove();
   }, []);
 
-  // 添加焦点管理
-  useFocusEffect(
-    React.useCallback(() => {
+  // 添加屏幕焦点管理 - 使用自定义导航上下文
+  useEffect(() => {
+    if (currentScreen === 'main') {
       console.log('🎯 HomeScreen获得焦点');
       // 屏幕获得焦点时，确保状态正确
       restoreUIState();
-      
-      return () => {
-        console.log('🎯 HomeScreen失去焦点');
-      };
-    }, [])
-  );
+    }
+  }, [currentScreen]);
 
   // 恢复UI状态的函数
   const restoreUIState = () => {

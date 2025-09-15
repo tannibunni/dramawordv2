@@ -10,7 +10,8 @@
     "icon": "./assets/images/icon.png",
     "plugins": [
       "expo-localization",
-      "expo-audio"
+      "expo-audio",
+      "expo-asset"
     ],
     "ios": {
       "supportsTablet": true,
