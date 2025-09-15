@@ -343,6 +343,30 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   const isEnglish = (text: string) => /^[a-zA-Z\s]+$/.test(text);
   const isPinyin = (text: string) => /^[a-z\s]+$/.test(text) && !/^[a-zA-Z\s]+$/.test(text) || /^[a-z\s]+$/.test(text);
 
+  // 拼音候选词映射表
+  const pinyinCandidatesMap: Record<string, string[]> = {
+    'jiao lian': ['教练', '铰链', '脚链', '交联'],
+    'mei shi': ['美食', '没事', '美事'],
+    'shi jian': ['时间', '事件', '实践', '世间'],
+    'ke yi': ['可以', '可以', '可以'],
+    'ma ma': ['妈妈', '马马', '麻麻'],
+    'da jia': ['大家', '打架', '大驾'],
+    'ni hao': ['你好', '你好', '你好'],
+    'wo ai ni': ['我爱你', '我爱您', '我爱你'],
+    'xie xie': ['谢谢', '谢谢', '谢谢'],
+    'zai jian': ['再见', '再见', '再见'],
+    'dui bu qi': ['对不起', '对不起', '对不起'],
+    'mei guan xi': ['没关系', '没关系', '没关系'],
+    'qing wen': ['请问', '请问', '请问'],
+    'bu hao yi si': ['不好意思', '不好意思', '不好意思'],
+    'hao de': ['好的', '好的', '好的'],
+    'mei wen ti': ['没问题', '没问题', '没问题'],
+    'zai na li': ['在哪里', '在哪里', '在哪里'],
+    'zen me yang': ['怎么样', '怎么样', '怎么样'],
+    'wei shen me': ['为什么', '为什么', '为什么'],
+    'shen me shi hou': ['什么时候', '什么时候', '什么时候']
+  };
+
   // handleSearch 只保留中英查词
   const handleSearch = async () => {
     const word = searchText.trim();
@@ -514,6 +538,16 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       } else if (isPinyin(word) && appLanguage === 'en-US') {
         // 英文界面下输入拼音，显示中文候选词弹窗
         console.log(`🔍 英文界面输入拼音，显示中文候选词: ${word}`);
+        
+        // 检查是否有预定义的候选词
+        const candidates = pinyinCandidatesMap[word.toLowerCase()];
+        if (candidates && candidates.length > 1) {
+          setPinyinCandidates(candidates);
+          setPinyinQuery(word);
+          console.log(`✅ 拼音候选词结果: ${word} -> ${candidates.join(', ')}`);
+          setIsLoading(false);
+          return;
+        }
         
         // 调用拼音→中文搜索API
         const result = await wordService.searchWord(word.toLowerCase(), 'zh', appLanguage);
