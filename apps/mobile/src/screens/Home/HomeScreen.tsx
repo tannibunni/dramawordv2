@@ -501,11 +501,10 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
           setIsLoading(false);
           return;
         }
-      } else if (isPinyin(word) && appLanguage === 'en-US') {
-        // 英文界面下输入拼音，显示中文候选词弹窗
-        console.log(`🔍 英文界面输入拼音，显示中文候选词: ${word}`);
-        console.log(`🔍 isPinyin(${word}): ${isPinyin(word)}`);
-        console.log(`🔍 appLanguage: ${appLanguage}`);
+      } else if (appLanguage === 'en-US' && selectedLanguage === 'CHINESE') {
+        // 英文界面下选择中文目标语言，所有输入都当作拼音处理
+        console.log(`🔍 英文界面+中文目标语言，输入当作拼音处理: ${word}`);
+        console.log(`🔍 appLanguage: ${appLanguage}, selectedLanguage: ${selectedLanguage}`);
         console.log(`🔍 进入拼音搜索分支`);
         
         // 检查缓存
@@ -555,9 +554,10 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
           setIsLoading(false);
           return;
         }
-      } else if (isEnglish(word) && appLanguage === 'en-US') {
-        // 英文界面下输入英文单词，显示中文翻译弹窗
+      } else if (isEnglish(word) && appLanguage === 'en-US' && selectedLanguage !== 'CHINESE') {
+        // 英文界面下输入英文单词，且目标语言不是中文，显示中文翻译弹窗
         console.log(`🔍 英文界面输入英文单词，显示中文翻译: ${word}`);
+        console.log(`🔍 selectedLanguage: ${selectedLanguage}`);
         
         // 调用英文→中文翻译API
         const translationResult = await wordService.translateEnglishToChinese(word);
@@ -572,6 +572,60 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         } else {
           console.log(`❌ 英文翻译失败: ${word}`);
           // 翻译失败时继续正常搜索流程
+        }
+      } else if (isPinyin(word) && appLanguage === 'en-US' && selectedLanguage !== 'CHINESE') {
+        // 英文界面下输入拼音，且目标语言不是中文，显示中文候选词弹窗
+        console.log(`🔍 英文界面输入拼音，显示中文候选词: ${word}`);
+        console.log(`🔍 isPinyin(${word}): ${isPinyin(word)}`);
+        console.log(`🔍 appLanguage: ${appLanguage}, selectedLanguage: ${selectedLanguage}`);
+        console.log(`🔍 进入拼音搜索分支`);
+        
+        // 检查缓存
+        if (pinyinCache[word.toLowerCase()]) {
+          const candidates = pinyinCache[word.toLowerCase()];
+          const chineseWords = candidates.map(item => item.chinese);
+          setPinyinCandidates(chineseWords);
+          setPinyinQuery(word);
+          console.log(`✅ 缓存拼音候选词: ${word} -> ${chineseWords.join(', ')}`);
+          setIsLoading(false);
+          return;
+        }
+        
+        // 调用拼音候选词API
+        try {
+          const response = await fetch(`${API_BASE_URL}/pinyin/candidates/${word.toLowerCase()}`);
+          if (response.ok) {
+            const result = await response.json();
+            if (result.success && result.data.candidates && result.data.candidates.length > 0) {
+              // 缓存结果
+              setPinyinCache(prev => ({
+                ...prev,
+                [word.toLowerCase()]: result.data.candidates
+              }));
+              
+              const chineseWords = result.data.candidates.map((item: any) => item.chinese);
+              setPinyinCandidates(chineseWords);
+              setPinyinQuery(word);
+              console.log(`✅ API返回拼音候选词: ${word} -> ${chineseWords.join(', ')}`);
+              setIsLoading(false);
+              return;
+            } else {
+              console.log(`❌ API返回空候选词: ${word}`);
+              Alert.alert('提示', '未找到该拼音的候选词');
+              setIsLoading(false);
+              return;
+            }
+          } else {
+            console.log(`❌ 拼音API调用失败: ${response.status}`);
+            Alert.alert('错误', '拼音候选词服务暂时不可用');
+            setIsLoading(false);
+            return;
+          }
+        } catch (error) {
+          console.log(`❌ 拼音候选词API调用失败: ${error}`);
+          Alert.alert('错误', '网络连接失败，请稍后重试');
+          setIsLoading(false);
+          return;
         }
       }
       
