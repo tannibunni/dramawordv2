@@ -341,7 +341,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
 
   const isChinese = (text: string) => /[\u4e00-\u9fa5]/.test(text);
   const isEnglish = (text: string) => /^[a-zA-Z\s]+$/.test(text);
-  const isPinyin = (text: string) => /^[a-z\s]+$/.test(text) && !/^[a-zA-Z\s]+$/.test(text) || /^[a-z\s]+$/.test(text);
+  const isPinyin = (text: string) => /^[a-z\s]+$/.test(text) && !/^[a-zA-Z\s]+$/.test(text);
 
   // 拼音候选词缓存 - 用于缓存API返回的候选词
   const [pinyinCache, setPinyinCache] = useState<Record<string, Array<{chinese: string, english: string}>>>({});
@@ -517,6 +517,8 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       } else if (isPinyin(word) && appLanguage === 'en-US') {
         // 英文界面下输入拼音，显示中文候选词弹窗
         console.log(`🔍 英文界面输入拼音，显示中文候选词: ${word}`);
+        console.log(`🔍 isPinyin(${word}): ${isPinyin(word)}`);
+        console.log(`🔍 appLanguage: ${appLanguage}`);
         
         // 检查缓存
         if (pinyinCache[word.toLowerCase()]) {
