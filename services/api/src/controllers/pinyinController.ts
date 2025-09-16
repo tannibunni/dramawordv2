@@ -93,10 +93,14 @@ async function generatePinyinCandidatesWithAI(pinyin: string): Promise<Array<{ch
 2. 英文释义要准确简洁
 3. frequency按100-60递减
 4. 只返回JSON，不要其他内容
+5. **重要：只返回发音完全匹配 "${pinyin}" 的词汇，不要返回其他发音的词**
 
 例如：
-- "luo ji" 应该返回 "逻辑" (logic), "落机" (landing), "罗技" (Logitech)
-- "ni hao" 应该返回 "你好" (hello), "泥好" (mud good)`;
+- "shu ru" 应该返回 "输入" (input), "输出" (output) - 都是 shu ru 发音
+- "luo ji" 应该返回 "逻辑" (logic), "落机" (landing), "罗技" (Logitech) - 都是 luo ji 发音
+- "ni hao" 应该返回 "你好" (hello), "泥好" (mud good) - 都是 ni hao 发音
+
+**不要返回发音不匹配的词，比如 "shu ru" 不应该返回 "书籍" (shu ji)**`;
 
   try {
     const completion = await openai.chat.completions.create({
