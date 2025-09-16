@@ -362,7 +362,7 @@ const WordCardContent: React.FC<WordCardContentProps> = ({ wordData, onPlayAudio
                     return (
                       <View key={exIdx} style={styles.exampleContainer}>
                         <Text style={styles.exampleLabelAndText} selectable>{getExampleText()}</Text>
-                        <Text style={styles.exampleLabelAndText} selectable>{ex.chinese}</Text>
+                        <Text style={styles.exampleChineseText} selectable>{ex.chinese}</Text>
                         {/* 中文例句拼音显示 */}
                         {wordData.language === 'zh' || wordData.language === 'zh-CN' ? (
                           ex.pinyin && (
@@ -412,7 +412,7 @@ const WordCardContent: React.FC<WordCardContentProps> = ({ wordData, onPlayAudio
                       {(wordData.slangMeaning as any).examples.map((ex: any, exIdx: number) => (
                           <View key={exIdx} style={styles.exampleContainer}>
                           <Text style={styles.exampleLabelAndText} selectable>{ex.english}</Text>
-                          <Text style={styles.exampleLabelAndText} selectable>{ex.chinese}</Text>
+                          <Text style={styles.exampleChineseText} selectable>{ex.chinese}</Text>
                         {/* 中文例句拼音显示 */}
                         {wordData.language === 'zh' || wordData.language === 'zh-CN' ? (
                           ex.pinyin && (
@@ -463,7 +463,7 @@ const WordCardContent: React.FC<WordCardContentProps> = ({ wordData, onPlayAudio
                       {(wordData.phraseExplanation as any).examples.map((ex: any, exIdx: number) => (
                           <View key={exIdx} style={styles.exampleContainer}>
                           <Text style={styles.exampleLabelAndText} selectable>{ex.english}</Text>
-                          <Text style={styles.exampleLabelAndText} selectable>{ex.chinese}</Text>
+                          <Text style={styles.exampleChineseText} selectable>{ex.chinese}</Text>
                         {/* 中文例句拼音显示 */}
                         {wordData.language === 'zh' || wordData.language === 'zh-CN' ? (
                           ex.pinyin && (
@@ -536,7 +536,7 @@ const WordCardContent: React.FC<WordCardContentProps> = ({ wordData, onPlayAudio
                     return (
                       <View key={exIdx} style={styles.exampleContainer}>
                         <Text style={styles.exampleLabelAndText} selectable>{getExampleText()}</Text>
-                        <Text style={styles.exampleLabelAndText} selectable>{ex.chinese}</Text>
+                        <Text style={styles.exampleChineseText} selectable>{ex.chinese}</Text>
                         {/* 中文例句拼音显示 */}
                         {wordData.language === 'zh' || wordData.language === 'zh-CN' ? (
                           ex.pinyin && (
@@ -586,7 +586,7 @@ const WordCardContent: React.FC<WordCardContentProps> = ({ wordData, onPlayAudio
                       {(wordData.slangMeaning as any).examples.map((ex: any, exIdx: number) => (
                         <View key={exIdx} style={styles.exampleContainer}>
                           <Text style={styles.exampleLabelAndText} selectable>{ex.english}</Text>
-                          <Text style={styles.exampleLabelAndText} selectable>{ex.chinese}</Text>
+                          <Text style={styles.exampleChineseText} selectable>{ex.chinese}</Text>
                         {/* 中文例句拼音显示 */}
                         {wordData.language === 'zh' || wordData.language === 'zh-CN' ? (
                           ex.pinyin && (
@@ -637,7 +637,7 @@ const WordCardContent: React.FC<WordCardContentProps> = ({ wordData, onPlayAudio
                       {(wordData.phraseExplanation as any).examples.map((ex: any, exIdx: number) => (
                         <View key={exIdx} style={styles.exampleContainer}>
                           <Text style={styles.exampleLabelAndText} selectable>{ex.english}</Text>
-                          <Text style={styles.exampleLabelAndText} selectable>{ex.chinese}</Text>
+                          <Text style={styles.exampleChineseText} selectable>{ex.chinese}</Text>
                         {/* 中文例句拼音显示 */}
                         {wordData.language === 'zh' || wordData.language === 'zh-CN' ? (
                           ex.pinyin && (
@@ -808,6 +808,14 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
     flex: 1,
     marginLeft: 0, // 移除左缩进，让文本左对齐
+  },
+  exampleChineseText: {
+    fontSize: 15,
+    color: '#888',
+    fontStyle: 'italic',
+    flex: 1,
+    marginLeft: 0, // 移除左缩进，让文本左对齐
+    marginTop: 4, // 在英文例句和中文例句之间添加间距
   },
   exampleAudioButton: {
     padding: 4,
