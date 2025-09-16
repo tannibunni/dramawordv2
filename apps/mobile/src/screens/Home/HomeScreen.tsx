@@ -539,7 +539,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
           const response = await fetch(`${API_BASE_URL}/pinyin/candidates/${word.toLowerCase()}`);
           if (response.ok) {
             const result = await response.json();
-            if (result.success && result.data.candidates.length > 1) {
+            if (result.success && result.data.candidates && result.data.candidates.length > 0) {
               // 缓存结果
               setPinyinCache(prev => ({
                 ...prev,
@@ -552,36 +552,23 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
               console.log(`✅ API返回拼音候选词: ${word} -> ${chineseWords.join(', ')}`);
               setIsLoading(false);
               return;
+            } else {
+              console.log(`❌ API返回空候选词: ${word}`);
+              Alert.alert('提示', '未找到该拼音的候选词');
+              setIsLoading(false);
+              return;
             }
+          } else {
+            console.log(`❌ 拼音API调用失败: ${response.status}`);
+            Alert.alert('错误', '拼音候选词服务暂时不可用');
+            setIsLoading(false);
+            return;
           }
         } catch (error) {
           console.log(`❌ 拼音候选词API调用失败: ${error}`);
-        }
-        
-        // 如果API失败，尝试普通搜索
-        const result = await wordService.searchWord(word.toLowerCase(), 'zh', appLanguage);
-        if (result.success && result.data) {
-          setSearchResult(result.data);
-          setSearchText('');
-          const definition = result.data.definitions && result.data.definitions[0]?.definition ? result.data.definitions[0].definition : t('no_definition', 'zh-CN');
-          await wordService.saveSearchHistory(result.data.correctedWord || word, definition);
-          setRecentWords(prev => {
-            const filtered = prev.filter(w => w.word !== (result.data.correctedWord || word));
-            return [
-              {
-                id: Date.now().toString(),
-                word: result.data.correctedWord || word,
-                translation: definition,
-                timestamp: Date.now(),
-              },
-              ...filtered
-            ];
-          });
+          Alert.alert('错误', '网络连接失败，请稍后重试');
           setIsLoading(false);
           return;
-        } else {
-          console.log(`❌ 拼音搜索失败: ${word}`);
-          // 搜索失败时继续正常搜索流程
         }
       }
       
