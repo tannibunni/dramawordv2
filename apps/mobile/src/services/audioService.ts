@@ -152,7 +152,12 @@ class AudioService {
 
     // 检测语言
     const detectedLanguage = language || this.detectLanguage(word);
-    console.log(`🎵 AudioService - 检测到语言: ${detectedLanguage} for word: ${word}`);
+    console.log(`🎵 AudioService - 语言检测结果:`, {
+      word: word,
+      explicitLanguage: language,
+      detectedLanguage: detectedLanguage,
+      isExplicit: !!language
+    });
 
     // 方案1: Google Translate TTS (免费，推荐)
     // 参数说明：
@@ -162,6 +167,8 @@ class AudioService {
     // - client=tw-ob: 客户端标识
     const googleTtsUrl = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(word.trim())}&tl=${detectedLanguage}&client=tw-ob`;
     
+    console.log(`🎵 AudioService - 生成的TTS URL:`, googleTtsUrl);
+    
     // 方案2: 备用 TTS 服务 (如果 Google TTS 有 CORS 问题)
     // const backupTtsUrl = `https://api.dictionaryapi.dev/media/pronunciations/${detectedLanguage}/${word.toLowerCase()}.mp3`;
     
@@ -170,22 +177,39 @@ class AudioService {
 
   // 检测词汇语言
   private detectLanguage(word: string): string {
-    // 检测中文字符
-    if (/[\u4e00-\u9fff]/.test(word)) {
-      return 'zh'; // 中文
-    }
+    // 计算各种语言的字符比例
+    const languageScores = {
+      'zh': (word.match(/[\u4e00-\u9fff]/g) || []).length,
+      'ja': (word.match(/[\u3040-\u309f\u30a0-\u30ff]/g) || []).length,
+      'ko': (word.match(/[\uac00-\ud7af]/g) || []).length,
+      'ru': (word.match(/[\u0400-\u04ff]/g) || []).length,
+      'ar': (word.match(/[\u0600-\u06ff]/g) || []).length,
+      'th': (word.match(/[\u0e00-\u0e7f]/g) || []).length,
+      'en': (word.match(/[a-zA-Z]/g) || []).length
+    };
+
+    // 找到得分最高的语言
+    const maxScore = Math.max(...Object.values(languageScores));
     
-    // 检测日文字符
-    if (/[\u3040-\u309f\u30a0-\u30ff]/.test(word)) {
-      return 'ja'; // 日文
+    // 如果没有非英文字符，默认为英文
+    if (maxScore === 0) {
+      return 'en';
     }
-    
-    // 检测韩文字符
-    if (/[\uac00-\ud7af]/.test(word)) {
-      return 'ko'; // 韩文
+
+    // 对于混合语言，如果英文得分较高，优先选择英文
+    // 这样可以避免 "Hello 世界" 被识别为中文
+    if (languageScores.en > 0 && languageScores.en >= maxScore * 0.5) {
+      return 'en';
     }
-    
-    // 默认为英文
+
+    // 返回得分最高的语言
+    for (const [language, score] of Object.entries(languageScores)) {
+      if (score === maxScore) {
+        return language;
+      }
+    }
+
+    // 默认返回英文
     return 'en';
   }
 
@@ -225,6 +249,46 @@ class AudioService {
       isPlaying: this.isPlaying,
       hasAudio: this.sound !== null,
     };
+  }
+
+  // 获取支持的语言列表
+  getSupportedLanguages(): string[] {
+    return ['en', 'zh', 'ja', 'ko', 'ru', 'ar', 'th'];
+  }
+
+  // 测试语言检测
+  testLanguageDetection(word: string): { word: string; detectedLanguage: string; confidence: string } {
+    const detectedLanguage = this.detectLanguage(word);
+    const confidence = this.getLanguageConfidence(word, detectedLanguage);
+    return {
+      word,
+      detectedLanguage,
+      confidence
+    };
+  }
+
+  // 获取语言检测置信度
+  private getLanguageConfidence(word: string, language: string): string {
+    const patterns = {
+      'zh': /[\u4e00-\u9fff]/g,
+      'ja': /[\u3040-\u309f\u30a0-\u30ff]/g,
+      'ko': /[\uac00-\ud7af]/g,
+      'ru': /[\u0400-\u04ff]/g,
+      'ar': /[\u0600-\u06ff]/g,
+      'th': /[\u0e00-\u0e7f]/g,
+      'en': /[a-zA-Z]/g
+    };
+
+    const pattern = patterns[language as keyof typeof patterns];
+    if (pattern) {
+      const matches = word.match(pattern);
+      const confidence = matches ? (matches.length / word.length) : 0;
+      if (confidence >= 0.8) return 'high';
+      if (confidence >= 0.5) return 'medium';
+      if (confidence > 0) return 'low';
+      return 'very-low';
+    }
+    return 'unknown';
   }
 
   // 设置音量
