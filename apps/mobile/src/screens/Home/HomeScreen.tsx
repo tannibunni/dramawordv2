@@ -446,6 +446,13 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       {chinese: '什么时候', english: 'when'},
       {chinese: '什么时候', english: 'when'},
       {chinese: '什么时候', english: 'when'}
+    ],
+    'bing': [
+      {chinese: '病', english: 'illness; disease'},
+      {chinese: '冰', english: 'ice'},
+      {chinese: '兵', english: 'soldier'},
+      {chinese: '饼', english: 'cake; biscuit'},
+      {chinese: '并', english: 'and; also'}
     ]
   };
 
