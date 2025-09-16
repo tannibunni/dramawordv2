@@ -18,9 +18,9 @@ export class DebugController {
         if (!acc[type]) acc[type] = [];
         acc[type].push({
           id: user._id,
-          deviceId: user.deviceId,
+          deviceId: user.auth?.deviceId,
           createdAt: user.createdAt,
-          lastLogin: user.lastLogin
+          lastLogin: user.auth?.lastLoginAt
         });
         return acc;
       }, {} as any);
@@ -30,14 +30,14 @@ export class DebugController {
       const duplicateDeviceIds = [];
       
       allUsers.forEach(user => {
-        if (user.deviceId) {
-          if (deviceIdMap.has(user.deviceId)) {
+        if (user.auth?.deviceId) {
+          if (deviceIdMap.has(user.auth.deviceId)) {
             duplicateDeviceIds.push({
-              deviceId: user.deviceId,
-              users: [deviceIdMap.get(user.deviceId), user._id]
+              deviceId: user.auth.deviceId,
+              users: [deviceIdMap.get(user.auth.deviceId), user._id]
             });
           } else {
-            deviceIdMap.set(user.deviceId, user._id);
+            deviceIdMap.set(user.auth.deviceId, user._id);
           }
         }
       });
@@ -53,10 +53,10 @@ export class DebugController {
         duplicateDetails: duplicateDeviceIds,
         allUsers: allUsers.map(user => ({
           id: user._id,
-          deviceId: user.deviceId,
+          deviceId: user.auth?.deviceId,
           loginType: user.auth?.loginType || 'unknown',
           createdAt: user.createdAt,
-          lastLogin: user.lastLogin
+          lastLogin: user.auth?.lastLoginAt
         }))
       };
 
@@ -99,7 +99,7 @@ export class DebugController {
       const usersWithVocabulary = allUserIds.length;
       
       // 获取所有用户详情
-      const allUsers = await User.find({}).select('_id username nickname auth createdAt lastLogin');
+      const allUsers = await User.find({}).select('_id username nickname auth createdAt');
       
       // 按登录类型分组
       const usersByType = allUsers.reduce((acc, user) => {
@@ -112,7 +112,7 @@ export class DebugController {
           deviceId: user.auth?.deviceId,
           guestId: user.auth?.guestId,
           createdAt: user.createdAt,
-          lastLogin: user.lastLogin
+          lastLogin: user.auth?.lastLoginAt
         });
         return acc;
       }, {} as any);
@@ -168,7 +168,7 @@ export class DebugController {
             deviceId: user.auth?.deviceId || 'none',
             guestId: user.auth?.guestId || 'none',
             createdAt: user.createdAt,
-            lastLogin: user.lastLogin
+            lastLogin: user.auth?.lastLoginAt
           })),
           allUserIds: allUserIds.slice(0, 10), // 只显示前10个
           sampleRecords: allVocabularyRecords.map(record => ({
