@@ -344,6 +344,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   const isPinyin = (text: string) => /^[a-z\s]+$/.test(text) && !/^[a-zA-Z\s]+$/.test(text) || /^[a-z\s]+$/.test(text);
 
   // 拼音候选词映射表 - 包含中文词汇和英文释义
+  // 这是一个简化的本地词典，类似Pleco的本地数据库
   const pinyinCandidatesMap: Record<string, Array<{chinese: string, english: string}>> = {
     'jiao lian': [
       {chinese: '教练', english: 'coach'},
@@ -453,6 +454,69 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       {chinese: '兵', english: 'soldier'},
       {chinese: '饼', english: 'cake; biscuit'},
       {chinese: '并', english: 'and; also'}
+    ],
+    'mao': [
+      {chinese: '猫', english: 'cat'},
+      {chinese: '毛', english: 'hair; fur'},
+      {chinese: '矛', english: 'spear'},
+      {chinese: '茅', english: 'thatch'},
+      {chinese: '锚', english: 'anchor'}
+    ],
+    'ma': [
+      {chinese: '马', english: 'horse'},
+      {chinese: '妈', english: 'mom'},
+      {chinese: '麻', english: 'hemp; numb'},
+      {chinese: '骂', english: 'scold'},
+      {chinese: '码', english: 'code; yard'}
+    ],
+    'li': [
+      {chinese: '里', english: 'inside; mile'},
+      {chinese: '力', english: 'power; force'},
+      {chinese: '立', english: 'stand; establish'},
+      {chinese: '理', english: 'reason; manage'},
+      {chinese: '利', english: 'benefit; sharp'}
+    ],
+    'shi': [
+      {chinese: '是', english: 'be; yes'},
+      {chinese: '时', english: 'time'},
+      {chinese: '事', english: 'thing; matter'},
+      {chinese: '十', english: 'ten'},
+      {chinese: '石', english: 'stone'}
+    ],
+    'yi': [
+      {chinese: '一', english: 'one'},
+      {chinese: '以', english: 'with; by'},
+      {chinese: '已', english: 'already'},
+      {chinese: '意', english: 'meaning; intention'},
+      {chinese: '易', english: 'easy; change'}
+    ],
+    'bu': [
+      {chinese: '不', english: 'not; no'},
+      {chinese: '步', english: 'step'},
+      {chinese: '部', english: 'part; department'},
+      {chinese: '布', english: 'cloth'},
+      {chinese: '补', english: 'supplement; repair'}
+    ],
+    'zhi': [
+      {chinese: '之', english: 'of; it'},
+      {chinese: '知', english: 'know'},
+      {chinese: '直', english: 'straight; direct'},
+      {chinese: '只', english: 'only; measure word'},
+      {chinese: '指', english: 'finger; point'}
+    ],
+    'you': [
+      {chinese: '有', english: 'have; there is'},
+      {chinese: '又', english: 'again; also'},
+      {chinese: '右', english: 'right'},
+      {chinese: '由', english: 'from; because'},
+      {chinese: '油', english: 'oil'}
+    ],
+    'he': [
+      {chinese: '和', english: 'and; with'},
+      {chinese: '河', english: 'river'},
+      {chinese: '何', english: 'what; how'},
+      {chinese: '合', english: 'combine; fit'},
+      {chinese: '核', english: 'nucleus; core'}
     ]
   };
 
