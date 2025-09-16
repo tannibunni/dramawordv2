@@ -121,7 +121,7 @@ export const getChineseWordDetails = async (req: Request, res: Response) => {
       language: 'zh',
       uiLanguage: uiLanguage,
       phonetic: wordData.pinyin,
-      pinyin: wordData.pinyin,
+      pinyin: '', // 中文词汇的拼音统一使用 phonetic 字段
       definitions: wordData.definitions.map((def: any) => ({
         partOfSpeech: def.partOfSpeech || 'n.',
         definition: def.definition,

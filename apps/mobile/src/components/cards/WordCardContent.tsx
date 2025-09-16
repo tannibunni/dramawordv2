@@ -239,18 +239,10 @@ const WordCardContent: React.FC<WordCardContentProps> = ({ wordData, onPlayAudio
               </View>
             </View>
           )}
-          {/* 中文单词特殊显示：只显示拼音 */}
-          {wordData.language === 'zh' || wordData.language === 'zh-CN' ? (
-            <View style={styles.chinesePhoneticContainer}>
-              {wordData.pinyin && (
-                <Text style={styles.pinyin} selectable>{wordData.pinyin}</Text>
-              )}
-            </View>
-          ) : (
-            <Text style={styles.phonetic} selectable>
-              {wordData.pinyin || wordData.phonetic}
-            </Text>
-          )}
+          {/* 统一使用 phonetic 字段显示音标 */}
+          <Text style={styles.phonetic} selectable>
+            {wordData.phonetic}
+          </Text>
           {/* 来源 TAG 区域 */}
           {Array.isArray(wordData.sources) && wordData.sources.length > 0 && (
             <View style={styles.sourceTagsContainer}>
