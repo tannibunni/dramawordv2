@@ -8,7 +8,7 @@ class AudioService {
   private isPlaying = false;
 
   // 播放单词发音
-  async playWordPronunciation(word: string): Promise<void> {
+  async playWordPronunciation(word: string, language?: string): Promise<void> {
     console.log('🎵 AudioService - 开始播放单词发音');
     console.log('🎵 单词:', word);
     
@@ -50,7 +50,7 @@ class AudioService {
 
       // 获取音频 URL
       console.log('🎵 AudioService - 获取音频URL...');
-      const audioUrl = this.getAudioUrl(word);
+      const audioUrl = this.getAudioUrl(word, language);
       console.log('🎵 AudioService - 音频URL:', audioUrl);
       
       if (audioUrl) {
@@ -145,23 +145,48 @@ class AudioService {
   }
 
   // 获取音频 URL
-  private getAudioUrl(word: string): string | null {
+  private getAudioUrl(word: string, language?: string): string | null {
     if (!word || word.trim() === '') {
       return null;
     }
+
+    // 检测语言
+    const detectedLanguage = language || this.detectLanguage(word);
+    console.log(`🎵 AudioService - 检测到语言: ${detectedLanguage} for word: ${word}`);
 
     // 方案1: Google Translate TTS (免费，推荐)
     // 参数说明：
     // - ie=UTF-8: 输入编码
     // - q=${word}: 要发音的文本
-    // - tl=en: 目标语言 (英语)
+    // - tl=${lang}: 目标语言
     // - client=tw-ob: 客户端标识
-    const googleTtsUrl = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(word.trim())}&tl=en&client=tw-ob`;
+    const googleTtsUrl = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(word.trim())}&tl=${detectedLanguage}&client=tw-ob`;
     
     // 方案2: 备用 TTS 服务 (如果 Google TTS 有 CORS 问题)
-    // const backupTtsUrl = `https://api.dictionaryapi.dev/media/pronunciations/en/${word.toLowerCase()}.mp3`;
+    // const backupTtsUrl = `https://api.dictionaryapi.dev/media/pronunciations/${detectedLanguage}/${word.toLowerCase()}.mp3`;
     
     return googleTtsUrl;
+  }
+
+  // 检测词汇语言
+  private detectLanguage(word: string): string {
+    // 检测中文字符
+    if (/[\u4e00-\u9fff]/.test(word)) {
+      return 'zh'; // 中文
+    }
+    
+    // 检测日文字符
+    if (/[\u3040-\u309f\u30a0-\u30ff]/.test(word)) {
+      return 'ja'; // 日文
+    }
+    
+    // 检测韩文字符
+    if (/[\uac00-\ud7af]/.test(word)) {
+      return 'ko'; // 韩文
+    }
+    
+    // 默认为英文
+    return 'en';
   }
 
   // 使用 Web Speech API 播放发音 (备用方案)
@@ -190,8 +215,8 @@ class AudioService {
   }
 
   // 检查是否有音频可用
-  hasAudio(word: string): boolean {
-    return Boolean(word && word.trim() !== '' && this.getAudioUrl(word) !== null);
+  hasAudio(word: string, language?: string): boolean {
+    return Boolean(word && word.trim() !== '' && this.getAudioUrl(word, language) !== null);
   }
 
   // 获取播放状态

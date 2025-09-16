@@ -346,7 +346,9 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
     console.log('🎵 ReviewScreen - 开始播放音频:', word);
     
     try {
-      await audioService.playWordPronunciation(word);
+      // 检测词汇语言
+      const language = /[\u4e00-\u9fff]/.test(word) ? 'zh' : 'en';
+      await audioService.playWordPronunciation(word, language);
       console.log('✅ ReviewScreen - 音频播放成功');
     } catch (error) {
       console.error('❌ ReviewScreen - 音频播放失败:', error);

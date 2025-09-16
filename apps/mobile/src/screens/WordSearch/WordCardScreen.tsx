@@ -164,7 +164,9 @@ const WordCardScreen: React.FC<WordCardScreenProps> = ({ navigation = {}, route 
   const playPronunciation = async () => {
     if (wordData) {
       try {
-        await audioService.playWordPronunciation(wordData.word);
+        // 根据词汇语言选择TTS语言
+        const language = wordData.language === 'zh' ? 'zh' : 'en';
+        await audioService.playWordPronunciation(wordData.word, language);
       } catch (error) {
         console.error('发音播放失败:', error);
         Alert.alert('播放失败', '音频播放失败，请稍后重试');

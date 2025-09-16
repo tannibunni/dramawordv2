@@ -131,7 +131,7 @@ export const getChineseWordDetails = async (req: Request, res: Response) => {
           english: ex.english
         }))
       })),
-      audioUrl: '',
+      audioUrl: generateChineseAudioUrl(wordData.word),
       slangMeaning: null,
       phraseExplanation: null,
       correctedWord: wordData.word,
@@ -2008,4 +2008,16 @@ export const wordController = {
   testOpenAI,
   translateChineseToEnglish,
   testPromptLoading
-}; 
+};
+
+// 生成中文词汇发音URL
+function generateChineseAudioUrl(word: string): string {
+  try {
+    // 使用Google TTS中文发音
+    const encodedWord = encodeURIComponent(word);
+    return `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodedWord}&tl=zh&client=tw-ob`;
+  } catch (error) {
+    console.error('生成中文发音URL失败:', error);
+    return '';
+  }
+} 
