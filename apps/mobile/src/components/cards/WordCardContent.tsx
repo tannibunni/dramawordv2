@@ -96,6 +96,19 @@ const partOfSpeechMap: Record<string, Record<string, string>> = {
     '수사': 'Numeral', '수': 'Numeral',
     '조동사': 'Auxiliary', '조': 'Auxiliary',
     '한정사': 'Determiner', '한': 'Determiner',
+    // 中文词性映射（英文界面）
+    '名词': 'Noun', '名': 'Noun',
+    '动词': 'Verb', '动': 'Verb',
+    '形容词': 'Adjective', '形': 'Adjective',
+    '副词': 'Adverb', '副': 'Adverb',
+    '代词': 'Pronoun', '代': 'Pronoun',
+    '介词': 'Preposition', '介': 'Preposition',
+    '连词': 'Conjunction', '连': 'Conjunction',
+    '感叹词': 'Interjection', '叹': 'Interjection',
+    '冠词': 'Article', '冠': 'Article',
+    '数词': 'Numeral', '数': 'Numeral',
+    '助动词': 'Auxiliary', '助': 'Auxiliary',
+    '限定词': 'Determiner', '限': 'Determiner',
   }
 };
 
@@ -161,9 +174,16 @@ const getLanguageLabel = (languageCode: string, appLanguage: string) => {
       name: languageEntry.name // 中文界面显示中文名称
     };
   } else {
+    // 英文界面特殊处理
+    if (languageCode === 'zh' || languageCode === 'zh-CN') {
+      return {
+        flag: languageEntry.flag,
+        name: 'Chinese' // 英文界面显示 "Chinese"
+      };
+    }
     return {
       flag: languageEntry.flag,
-      name: languageEntry.nativeName // 英文界面显示原生名称
+      name: languageEntry.nativeName // 其他语言显示原生名称
     };
   }
 };
@@ -297,7 +317,10 @@ const WordCardContent: React.FC<WordCardContentProps> = ({ wordData, onPlayAudio
                 <View style={styles.examplesBlock}>
                   {/* 例句section发音按钮 */}
                   <View style={styles.examplesHeader}>
-                    <Text style={styles.examplesLabel}>例句</Text>
+                    {/* 只有中文界面才显示"例句"标签 */}
+                    {appLanguage === 'zh-CN' && (
+                      <Text style={styles.examplesLabel}>例句</Text>
+                    )}
                     {/* 只有中文词汇才显示例句发音按钮 */}
                     {(wordData.language === 'zh' || wordData.language === 'zh-CN') && (
                       <TouchableOpacity 
@@ -468,7 +491,10 @@ const WordCardContent: React.FC<WordCardContentProps> = ({ wordData, onPlayAudio
                 <View style={styles.examplesBlock}>
                   {/* 例句section发音按钮 */}
                   <View style={styles.examplesHeader}>
-                    <Text style={styles.examplesLabel}>例句</Text>
+                    {/* 只有中文界面才显示"例句"标签 */}
+                    {appLanguage === 'zh-CN' && (
+                      <Text style={styles.examplesLabel}>例句</Text>
+                    )}
                     {/* 只有中文词汇才显示例句发音按钮 */}
                     {(wordData.language === 'zh' || wordData.language === 'zh-CN') && (
                       <TouchableOpacity 

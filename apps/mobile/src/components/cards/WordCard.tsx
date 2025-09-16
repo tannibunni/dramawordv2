@@ -346,9 +346,9 @@ const WordCard: React.FC<WordCardProps> = ({
           
       {/* 滑动操作提示 + 汇报问题ICON */}
       <View style={styles.swipeHintsContainer}>
-        <Text style={styles.swipeHintLeft}>←左滑忽略</Text>
+        <Text style={styles.swipeHintLeft}>← Skip</Text>
         <FlagFeedbackButton onFeedback={() => handleFeedback('negative')} disabled={isSubmittingFeedback} />
-        <Text style={styles.swipeHintRight}>右滑收藏→</Text>
+        <Text style={styles.swipeHintRight}>Save →</Text>
       </View>
         </Animated.View>
       </PanGestureHandler>
