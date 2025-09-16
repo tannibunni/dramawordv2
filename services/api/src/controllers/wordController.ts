@@ -609,21 +609,33 @@ export const getPopularWords = async (req: Request, res: Response) => {
   }
 };
 
-// 获取最近搜索 - 从搜索历史表获取
+// 获取最近搜索 - 从搜索历史表获取（支持分页）
 export const getRecentSearches = async (req: Request, res: Response) => {
   try {
     const userId = req.user?.id || req.query.userId;
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 30; // 默认30条，最大30条
+    const skip = (page - 1) * limit;
     
     if (!userId) {
       // 如果没有用户ID，返回空数组
       logger.info('📝 No user ID provided, returning empty recent searches');
       return res.json({
         success: true,
-        data: []
+        data: [],
+        pagination: {
+          page,
+          limit,
+          total: 0,
+          hasMore: false
+        }
       });
     }
     
-    logger.info(`📝 Getting recent searches for user: ${userId}`);
+    logger.info(`📝 Getting recent searches for user: ${userId}, page: ${page}, limit: ${limit}`);
+    
+    // 限制最大数量为30条
+    const actualLimit = Math.min(limit, 30);
     
     // 使用聚合管道进行去重，每个单词只保留最新的一条记录
     const recentSearches = await SearchHistory.aggregate([
@@ -641,11 +653,30 @@ export const getRecentSearches = async (req: Request, res: Response) => {
           timestamp: { $first: '$timestamp' }
         }
       },
-      // 按时间戳排序，获取所有记录
+      // 按时间戳排序
       {
         $sort: { timestamp: -1 }
-      }
+      },
+      // 分页
+      { $skip: skip },
+      { $limit: actualLimit }
     ]);
+    
+    // 获取总数（用于分页信息）
+    const totalCount = await SearchHistory.aggregate([
+      { $match: { userId: userId } },
+      { $sort: { timestamp: -1 } },
+      {
+        $group: {
+          _id: '$word',
+          word: { $first: '$word' }
+        }
+      },
+      { $count: 'total' }
+    ]);
+    
+    const total = totalCount.length > 0 ? totalCount[0].total : 0;
+    const hasMore = skip + actualLimit < total;
     
     const formattedSearches = recentSearches.map(search => ({
       word: search.word,
@@ -655,7 +686,13 @@ export const getRecentSearches = async (req: Request, res: Response) => {
     
     res.json({
       success: true,
-      data: formattedSearches
+      data: formattedSearches,
+      pagination: {
+        page,
+        limit: actualLimit,
+        total,
+        hasMore
+      }
     });
 
   } catch (error) {

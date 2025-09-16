@@ -105,7 +105,7 @@ const WordSearchScreen: React.FC = () => {
             translation: result.data?.definitions && result.data.definitions[0]?.definition ? result.data.definitions[0].definition : '暂无释义',
             timestamp: Date.now(),
           },
-          ...prev.filter(w => w.word.trim().toLowerCase() !== (result.data?.word || '').trim().toLowerCase()).slice(0, 4)
+          ...prev.filter(w => w.word.trim().toLowerCase() !== (result.data?.word || '').trim().toLowerCase())
         ]);
         setSearchResult(result.data);
         setSearchText('');

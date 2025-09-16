@@ -26,6 +26,18 @@ export interface RecentWord {
   candidates?: string[]; // 新增
 }
 
+export interface PaginationInfo {
+  page: number;
+  limit: number;
+  total: number;
+  hasMore: boolean;
+}
+
+export interface RecentWordsResponse {
+  data: RecentWord[];
+  pagination: PaginationInfo;
+}
+
 // API配置
 
 // 错误处理
@@ -220,8 +232,8 @@ export class WordService {
     }
   }
 
-  // 获取最近查词记录（支持本地/云端）
-  async getRecentWords(): Promise<RecentWord[]> {
+  // 获取最近查词记录（支持本地/云端，支持分页）
+  async getRecentWords(page: number = 1, limit: number = 30): Promise<RecentWordsResponse> {
     const token = await getUserToken();
     const userInfo = await AsyncStorage.getItem('userInfo');
     
@@ -235,16 +247,46 @@ export class WordService {
         if (local) {
           const parsedData = JSON.parse(local);
           if (parsedData && parsedData.length > 0) {
-            return parsedData;
+            // 本地分页处理
+            const startIndex = (page - 1) * limit;
+            const endIndex = startIndex + limit;
+            const paginatedData = parsedData.slice(startIndex, endIndex);
+            const hasMore = endIndex < parsedData.length;
+            
+            return {
+              data: paginatedData,
+              pagination: {
+                page,
+                limit,
+                total: parsedData.length,
+                hasMore
+              }
+            };
           }
         }
-        // 如果没有本地数据，返回空数组（不返回模拟数据）
+        // 如果没有本地数据，返回空数组
         console.log('📚 没有本地搜索历史，返回空数组');
-        return [];
+        return {
+          data: [],
+          pagination: {
+            page,
+            limit,
+            total: 0,
+            hasMore: false
+          }
+        };
       } catch (e) {
         console.error('读取本地搜索历史失败:', e);
         // 出错时返回空数组
-        return [];
+        return {
+          data: [],
+          pagination: {
+            page,
+            limit,
+            total: 0,
+            hasMore: false
+          }
+        };
       }
     }
     
@@ -262,7 +304,7 @@ export class WordService {
         throw new Error('No user ID available');
       }
       
-      const response = await fetch(`${API_BASE_URL}/words/recent-searches?userId=${userId}`, {
+      const response = await fetch(`${API_BASE_URL}/words/recent-searches?userId=${userId}&page=${page}&limit=${limit}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       
@@ -270,12 +312,22 @@ export class WordService {
       const result = await response.json();
       
       if (result.success && result.data) {
-        return result.data.map((word: any, index: number) => ({
+        const formattedData = result.data.map((word: any, index: number) => ({
           id: `recent-${index}`,
           word: word.word,
           translation: word.definition || '暂无释义',
           timestamp: word.timestamp || Date.now() - index * 1000,
         }));
+        
+        return {
+          data: formattedData,
+          pagination: result.pagination || {
+            page,
+            limit,
+            total: formattedData.length,
+            hasMore: false
+          }
+        };
       } else {
         throw new WordServiceError(result.error || '获取最近查词失败');
       }
@@ -287,13 +339,35 @@ export class WordService {
         if (local) {
           const parsedData = JSON.parse(local);
           if (parsedData && parsedData.length > 0) {
-            return parsedData;
+            // 本地分页处理
+            const startIndex = (page - 1) * limit;
+            const endIndex = startIndex + limit;
+            const paginatedData = parsedData.slice(startIndex, endIndex);
+            const hasMore = endIndex < parsedData.length;
+            
+            return {
+              data: paginatedData,
+              pagination: {
+                page,
+                limit,
+                total: parsedData.length,
+                hasMore
+              }
+            };
           }
         }
       } catch (e) {
         console.error('读取本地搜索历史失败:', e);
       }
-      return [];
+      return {
+        data: [],
+        pagination: {
+          page,
+          limit,
+          total: 0,
+          hasMore: false
+        }
+      };
     }
   }
 

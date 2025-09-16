@@ -796,6 +796,7 @@ const styles = StyleSheet.create({
     padding: 6,
     borderRadius: 16,
     backgroundColor: colors.primary[50],
+    marginTop: 10,
   },
   examplesAudioContainer: {
     marginTop: 8,
@@ -823,7 +824,7 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
     flex: 1,
     marginLeft: 0, // 移除左缩进，让文本左对齐
-    marginTop: 14, // 在英文例句和中文例句之间添加间距
+    marginTop: 10, // 在英文例句和中文例句之间添加间距
   },
   exampleAudioButton: {
     padding: 4,

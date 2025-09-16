@@ -51,6 +51,9 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   const [recentWords, setRecentWords] = useState<RecentWord[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingRecent, setIsLoadingRecent] = useState(true);
+  const [recentWordsPage, setRecentWordsPage] = useState(1);
+  const [hasMoreRecentWords, setHasMoreRecentWords] = useState(false);
+  const [isLoadingMoreRecent, setIsLoadingMoreRecent] = useState(false);
   const [searchResult, setSearchResult] = useState<any>(null);
   const { shows, addShow } = useShowList();
   const { vocabulary, addWord, isWordInShow } = useVocabulary();
@@ -310,16 +313,21 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     prevVocabCount.current = vocabulary.length;
   }, [vocabulary.length, celebratedBadges]);
 
-  const loadRecentWords = async () => {
+  const loadRecentWords = async (page: number = 1, append: boolean = false) => {
     try {
-      setIsLoadingRecent(true);
-      const recent = await wordService.getRecentWords();
+      if (append) {
+        setIsLoadingMoreRecent(true);
+      } else {
+        setIsLoadingRecent(true);
+      }
       
-      console.log('🔍 从wordService获取的最近查词数据:', recent);
-      console.log('🔍 数据长度:', recent.length);
+      const response = await wordService.getRecentWords(page, 30);
+      
+      console.log('🔍 从wordService获取的最近查词数据:', response.data);
+      console.log('🔍 分页信息:', response.pagination);
       
       // 前端去重逻辑，确保没有重复单词
-      const uniqueWords = recent.reduce((acc: RecentWord[], current) => {
+      const uniqueWords = response.data.reduce((acc: RecentWord[], current) => {
         const exists = acc.find(item => item.word.toLowerCase() === current.word.toLowerCase());
         if (!exists) {
           acc.push(current);
@@ -330,12 +338,29 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       console.log('🔍 去重后的最近查词数据:', uniqueWords);
       console.log('🔍 去重后数据长度:', uniqueWords.length);
       
-      setRecentWords(uniqueWords);
+      if (append) {
+        setRecentWords(prev => [...prev, ...uniqueWords]);
+      } else {
+        setRecentWords(uniqueWords);
+      }
+      
+      setHasMoreRecentWords(response.pagination.hasMore);
+      setRecentWordsPage(page);
     } catch (error) {
       console.error('加载最近查词失败:', error);
       Alert.alert(t('tip', appLanguage), t('load_history_failed', appLanguage));
     } finally {
-      setIsLoadingRecent(false);
+      if (append) {
+        setIsLoadingMoreRecent(false);
+      } else {
+        setIsLoadingRecent(false);
+      }
+    }
+  };
+
+  const loadMoreRecentWords = async () => {
+    if (hasMoreRecentWords && !isLoadingMoreRecent) {
+      await loadRecentWords(recentWordsPage + 1, true);
     }
   };
 
@@ -479,7 +504,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                 timestamp: Date.now(),
               },
               ...filtered
-            ].slice(0, 10);
+            ];
           });
         } else {
           console.log(`❌ 查询中文词汇详细信息失败: ${word}`);
@@ -1277,6 +1302,23 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                     <Text style={styles.emptyStateText}>{t('no_recent_searches', appLanguage)}</Text>
                   </View>
                 )}
+                
+                {/* Load More 按钮 */}
+                {recentWords.length > 0 && hasMoreRecentWords && (
+                  <TouchableOpacity
+                    style={styles.loadMoreButton}
+                    onPress={loadMoreRecentWords}
+                    disabled={isLoadingMoreRecent}
+                  >
+                    {isLoadingMoreRecent ? (
+                      <ActivityIndicator size="small" color={colors.primary[500]} />
+                    ) : (
+                      <Text style={styles.loadMoreText}>
+                        {appLanguage === 'zh-CN' ? '加载更多' : 'Load More'}
+                      </Text>
+                    )}
+                  </TouchableOpacity>
+                )}
               </View>
             </View>
           </ScrollView>
@@ -1843,6 +1885,21 @@ const styles = StyleSheet.create({
     color: colors.text.primary,
     marginBottom: 0,
     flex: 1,
+  },
+  loadMoreButton: {
+    marginTop: 16,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    backgroundColor: colors.primary[50],
+    borderRadius: 8,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.primary[200],
+  },
+  loadMoreText: {
+    fontSize: 16,
+    color: colors.primary[600],
+    fontWeight: '500',
   },
   fixedCandidateCard: {
     width: 340,
