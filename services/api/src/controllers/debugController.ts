@@ -98,16 +98,52 @@ export class DebugController {
       // 获取有词汇记录的用户数
       const usersWithVocabulary = allUserIds.length;
       
+      // 获取所有用户详情
+      const allUsers = await User.find({}).select('_id username nickname auth createdAt lastLogin');
+      
+      // 按登录类型分组
+      const usersByType = allUsers.reduce((acc, user) => {
+        const type = user.auth?.loginType || 'unknown';
+        if (!acc[type]) acc[type] = [];
+        acc[type].push({
+          id: user._id,
+          username: user.username,
+          nickname: user.nickname,
+          deviceId: user.auth?.deviceId,
+          guestId: user.auth?.guestId,
+          createdAt: user.createdAt,
+          lastLogin: user.lastLogin
+        });
+        return acc;
+      }, {} as any);
+
+      // 检查重复的deviceId
+      const deviceIdMap = new Map();
+      const duplicateDeviceIds = [];
+      
+      allUsers.forEach(user => {
+        if (user.auth?.deviceId) {
+          if (deviceIdMap.has(user.auth.deviceId)) {
+            duplicateDeviceIds.push({
+              deviceId: user.auth.deviceId,
+              users: [deviceIdMap.get(user.auth.deviceId), user._id]
+            });
+          } else {
+            deviceIdMap.set(user.auth.deviceId, user._id);
+          }
+        }
+      });
+      
       // 获取Apple用户数
-      const appleUsers = await User.countDocuments({ loginType: 'apple' });
+      const appleUsers = await User.countDocuments({ 'auth.loginType': 'apple' });
       
       // 获取Apple用户的词汇记录
-      const appleUserIds = await User.find({ loginType: 'apple' }).distinct('_id');
+      const appleUserIds = await User.find({ 'auth.loginType': 'apple' }).distinct('_id');
       const appleUserVocabularyCount = await UserVocabulary.countDocuments({ 
         userId: { $in: appleUserIds } 
       });
 
-      logger.info(`调试结果: 总词汇记录=${totalVocabularyRecords}, 总用户=${totalUsers}, 有词汇用户=${usersWithVocabulary}`);
+      logger.info(`调试结果: 总词汇记录=${totalVocabularyRecords}, 总用户=${totalUsers}, 有词汇用户=${usersWithVocabulary}, 重复设备=${duplicateDeviceIds.length}`);
 
       res.json({
         success: true,
@@ -118,6 +154,22 @@ export class DebugController {
           usersWithVocabulary,
           appleUsers,
           appleUserVocabularyCount,
+          duplicateDeviceIds: duplicateDeviceIds.length,
+          duplicateDetails: duplicateDeviceIds,
+          usersByType: Object.keys(usersByType).reduce((acc, type) => {
+            acc[type] = usersByType[type].length;
+            return acc;
+          }, {} as any),
+          allUsers: allUsers.map(user => ({
+            id: user._id,
+            username: user.username,
+            nickname: user.nickname,
+            loginType: user.auth?.loginType || 'unknown',
+            deviceId: user.auth?.deviceId || 'none',
+            guestId: user.auth?.guestId || 'none',
+            createdAt: user.createdAt,
+            lastLogin: user.lastLogin
+          })),
           allUserIds: allUserIds.slice(0, 10), // 只显示前10个
           sampleRecords: allVocabularyRecords.map(record => ({
             userId: record.userId,
