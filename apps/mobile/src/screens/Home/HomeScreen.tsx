@@ -456,6 +456,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         const result = await wordService.getChineseWordDetails(word, appLanguage);
         if (result.success && result.data) {
           console.log(`✅ 获取中文词汇详细信息成功: ${word}`);
+          console.log(`🔍 设置searchResult数据:`, result.data);
           setSearchResult(result.data);
           setSearchText('');
           
