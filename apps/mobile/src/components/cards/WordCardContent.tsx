@@ -184,7 +184,6 @@ const WordCardContent: React.FC<WordCardContentProps> = ({ wordData, onPlayAudio
   // 例句发音处理函数
   const handlePlayExampleAudio = async (exampleText: string, language?: string) => {
     try {
-      console.log(`🎵 播放例句发音: ${exampleText} (语言: ${language || 'auto'})`);
       await audioService.playWordPronunciation(exampleText, language);
     } catch (error) {
       console.error('播放例句发音失败:', error);
@@ -321,7 +320,6 @@ const WordCardContent: React.FC<WordCardContentProps> = ({ wordData, onPlayAudio
                     return (
                       <View key={exIdx} style={styles.exampleContainer}>
                         <View style={styles.exampleTextRow}>
-                          <Text style={styles.exampleLabelAndText} selectable>{getExampleText()}</Text>
                           {/* 只有非中文词汇才显示英文例句发音按钮 */}
                           {wordData.language !== 'zh' && wordData.language !== 'zh-CN' && (
                             <TouchableOpacity 
@@ -331,9 +329,9 @@ const WordCardContent: React.FC<WordCardContentProps> = ({ wordData, onPlayAudio
                               <Ionicons name="volume-high" size={16} color={colors.primary[500]} />
                             </TouchableOpacity>
                           )}
+                          <Text style={styles.exampleLabelAndText} selectable>{getExampleText()}</Text>
                         </View>
                         <View style={styles.exampleTextRow}>
-                          <Text style={styles.exampleLabelAndText} selectable>{ex.chinese}</Text>
                           {/* 只有中文词汇才显示中文例句发音按钮 */}
                           {(wordData.language === 'zh' || wordData.language === 'zh-CN') && (
                             <TouchableOpacity 
@@ -343,6 +341,7 @@ const WordCardContent: React.FC<WordCardContentProps> = ({ wordData, onPlayAudio
                               <Ionicons name="volume-high" size={16} color={colors.primary[500]} />
                             </TouchableOpacity>
                           )}
+                          <Text style={styles.exampleLabelAndText} selectable>{ex.chinese}</Text>
                         </View>
                         {/* 中文例句拼音显示 */}
                         {wordData.language === 'zh' || wordData.language === 'zh-CN' ? (
@@ -374,7 +373,6 @@ const WordCardContent: React.FC<WordCardContentProps> = ({ wordData, onPlayAudio
                       {(wordData.slangMeaning as any).examples.map((ex: any, exIdx: number) => (
                           <View key={exIdx} style={styles.exampleContainer}>
                           <View style={styles.exampleTextRow}>
-                            <Text style={styles.exampleLabelAndText} selectable>{ex.english}</Text>
                             {/* 只有非中文词汇才显示英文例句发音按钮 */}
                             {wordData.language !== 'zh' && wordData.language !== 'zh-CN' && (
                               <TouchableOpacity 
@@ -384,9 +382,9 @@ const WordCardContent: React.FC<WordCardContentProps> = ({ wordData, onPlayAudio
                                 <Ionicons name="volume-high" size={16} color={colors.primary[500]} />
                               </TouchableOpacity>
                             )}
+                            <Text style={styles.exampleLabelAndText} selectable>{ex.english}</Text>
                           </View>
                           <View style={styles.exampleTextRow}>
-                            <Text style={styles.exampleLabelAndText} selectable>{ex.chinese}</Text>
                             {/* 只有中文词汇才显示中文例句发音按钮 */}
                             {(wordData.language === 'zh' || wordData.language === 'zh-CN') && (
                               <TouchableOpacity 
@@ -396,6 +394,7 @@ const WordCardContent: React.FC<WordCardContentProps> = ({ wordData, onPlayAudio
                                 <Ionicons name="volume-high" size={16} color={colors.primary[500]} />
                               </TouchableOpacity>
                             )}
+                            <Text style={styles.exampleLabelAndText} selectable>{ex.chinese}</Text>
                           </View>
                         {/* 中文例句拼音显示 */}
                         {wordData.language === 'zh' || wordData.language === 'zh-CN' ? (
@@ -428,7 +427,6 @@ const WordCardContent: React.FC<WordCardContentProps> = ({ wordData, onPlayAudio
                       {(wordData.phraseExplanation as any).examples.map((ex: any, exIdx: number) => (
                           <View key={exIdx} style={styles.exampleContainer}>
                           <View style={styles.exampleTextRow}>
-                            <Text style={styles.exampleLabelAndText} selectable>{ex.english}</Text>
                             {/* 只有非中文词汇才显示英文例句发音按钮 */}
                             {wordData.language !== 'zh' && wordData.language !== 'zh-CN' && (
                               <TouchableOpacity 
@@ -438,9 +436,9 @@ const WordCardContent: React.FC<WordCardContentProps> = ({ wordData, onPlayAudio
                                 <Ionicons name="volume-high" size={16} color={colors.primary[500]} />
                               </TouchableOpacity>
                             )}
+                            <Text style={styles.exampleLabelAndText} selectable>{ex.english}</Text>
                           </View>
                           <View style={styles.exampleTextRow}>
-                            <Text style={styles.exampleLabelAndText} selectable>{ex.chinese}</Text>
                             {/* 只有中文词汇才显示中文例句发音按钮 */}
                             {(wordData.language === 'zh' || wordData.language === 'zh-CN') && (
                               <TouchableOpacity 
@@ -450,6 +448,7 @@ const WordCardContent: React.FC<WordCardContentProps> = ({ wordData, onPlayAudio
                                 <Ionicons name="volume-high" size={16} color={colors.primary[500]} />
                               </TouchableOpacity>
                             )}
+                            <Text style={styles.exampleLabelAndText} selectable>{ex.chinese}</Text>
                           </View>
                         {/* 中文例句拼音显示 */}
                         {wordData.language === 'zh' || wordData.language === 'zh-CN' ? (
@@ -501,7 +500,6 @@ const WordCardContent: React.FC<WordCardContentProps> = ({ wordData, onPlayAudio
                     return (
                       <View key={exIdx} style={styles.exampleContainer}>
                         <View style={styles.exampleTextRow}>
-                          <Text style={styles.exampleLabelAndText} selectable>{getExampleText()}</Text>
                           {/* 只有非中文词汇才显示英文例句发音按钮 */}
                           {wordData.language !== 'zh' && wordData.language !== 'zh-CN' && (
                             <TouchableOpacity 
@@ -511,9 +509,9 @@ const WordCardContent: React.FC<WordCardContentProps> = ({ wordData, onPlayAudio
                               <Ionicons name="volume-high" size={16} color={colors.primary[500]} />
                             </TouchableOpacity>
                           )}
+                          <Text style={styles.exampleLabelAndText} selectable>{getExampleText()}</Text>
                         </View>
                         <View style={styles.exampleTextRow}>
-                          <Text style={styles.exampleLabelAndText} selectable>{ex.chinese}</Text>
                           {/* 只有中文词汇才显示中文例句发音按钮 */}
                           {(wordData.language === 'zh' || wordData.language === 'zh-CN') && (
                             <TouchableOpacity 
@@ -523,6 +521,7 @@ const WordCardContent: React.FC<WordCardContentProps> = ({ wordData, onPlayAudio
                               <Ionicons name="volume-high" size={16} color={colors.primary[500]} />
                             </TouchableOpacity>
                           )}
+                          <Text style={styles.exampleLabelAndText} selectable>{ex.chinese}</Text>
                         </View>
                         {/* 中文例句拼音显示 */}
                         {wordData.language === 'zh' || wordData.language === 'zh-CN' ? (
@@ -554,7 +553,6 @@ const WordCardContent: React.FC<WordCardContentProps> = ({ wordData, onPlayAudio
                       {(wordData.slangMeaning as any).examples.map((ex: any, exIdx: number) => (
                         <View key={exIdx} style={styles.exampleContainer}>
                           <View style={styles.exampleTextRow}>
-                            <Text style={styles.exampleLabelAndText} selectable>{ex.english}</Text>
                             {/* 只有非中文词汇才显示英文例句发音按钮 */}
                             {wordData.language !== 'zh' && wordData.language !== 'zh-CN' && (
                               <TouchableOpacity 
@@ -564,9 +562,9 @@ const WordCardContent: React.FC<WordCardContentProps> = ({ wordData, onPlayAudio
                                 <Ionicons name="volume-high" size={16} color={colors.primary[500]} />
                               </TouchableOpacity>
                             )}
+                            <Text style={styles.exampleLabelAndText} selectable>{ex.english}</Text>
                           </View>
                           <View style={styles.exampleTextRow}>
-                            <Text style={styles.exampleLabelAndText} selectable>{ex.chinese}</Text>
                             {/* 只有中文词汇才显示中文例句发音按钮 */}
                             {(wordData.language === 'zh' || wordData.language === 'zh-CN') && (
                               <TouchableOpacity 
@@ -576,6 +574,7 @@ const WordCardContent: React.FC<WordCardContentProps> = ({ wordData, onPlayAudio
                                 <Ionicons name="volume-high" size={16} color={colors.primary[500]} />
                               </TouchableOpacity>
                             )}
+                            <Text style={styles.exampleLabelAndText} selectable>{ex.chinese}</Text>
                           </View>
                         {/* 中文例句拼音显示 */}
                         {wordData.language === 'zh' || wordData.language === 'zh-CN' ? (
@@ -608,7 +607,6 @@ const WordCardContent: React.FC<WordCardContentProps> = ({ wordData, onPlayAudio
                       {(wordData.phraseExplanation as any).examples.map((ex: any, exIdx: number) => (
                         <View key={exIdx} style={styles.exampleContainer}>
                           <View style={styles.exampleTextRow}>
-                            <Text style={styles.exampleLabelAndText} selectable>{ex.english}</Text>
                             {/* 只有非中文词汇才显示英文例句发音按钮 */}
                             {wordData.language !== 'zh' && wordData.language !== 'zh-CN' && (
                               <TouchableOpacity 
@@ -618,9 +616,9 @@ const WordCardContent: React.FC<WordCardContentProps> = ({ wordData, onPlayAudio
                                 <Ionicons name="volume-high" size={16} color={colors.primary[500]} />
                               </TouchableOpacity>
                             )}
+                            <Text style={styles.exampleLabelAndText} selectable>{ex.english}</Text>
                           </View>
                           <View style={styles.exampleTextRow}>
-                            <Text style={styles.exampleLabelAndText} selectable>{ex.chinese}</Text>
                             {/* 只有中文词汇才显示中文例句发音按钮 */}
                             {(wordData.language === 'zh' || wordData.language === 'zh-CN') && (
                               <TouchableOpacity 
@@ -630,6 +628,7 @@ const WordCardContent: React.FC<WordCardContentProps> = ({ wordData, onPlayAudio
                                 <Ionicons name="volume-high" size={16} color={colors.primary[500]} />
                               </TouchableOpacity>
                             )}
+                            <Text style={styles.exampleLabelAndText} selectable>{ex.chinese}</Text>
                           </View>
                         {/* 中文例句拼音显示 */}
                         {wordData.language === 'zh' || wordData.language === 'zh-CN' ? (
@@ -776,7 +775,6 @@ const styles = StyleSheet.create({
   exampleTextRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
     marginBottom: 2,
   },
   exampleLabelAndText: {
@@ -784,13 +782,13 @@ const styles = StyleSheet.create({
     color: '#888',
     fontStyle: 'italic',
     flex: 1,
-    marginRight: 8,
+    marginLeft: 8,
   },
   exampleAudioButton: {
     padding: 4,
     borderRadius: 12,
     backgroundColor: colors.primary[50],
-    marginLeft: 8,
+    marginRight: 8,
   },
   kana: {
     fontSize: 16,

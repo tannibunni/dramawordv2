@@ -9,37 +9,20 @@ class AudioService {
 
   // 播放单词发音
   async playWordPronunciation(word: string, language?: string): Promise<void> {
-    console.log('🎵 AudioService - 开始播放单词发音');
-    console.log('🎵 单词:', word);
-    
     try {
       // 只有在有音频正在播放时才停止
       if (this.sound && this.isPlaying) {
-        console.log('🎵 AudioService - 停止当前播放...');
         await this.stopAudio();
-        console.log('🎵 AudioService - 当前播放已停止');
       }
 
       // 创建新的音频实例
-      console.log('🎵 AudioService - 创建新的音频实例...');
       this.sound = new Audio.Sound();
-      console.log('🎵 AudioService - 音频实例创建成功');
 
       // 设置音频状态监听
       this.sound.setOnPlaybackStatusUpdate((status: any) => {
-        console.log('🎵 AudioService - 播放状态更新:', {
-          isLoaded: status.isLoaded,
-          isPlaying: status.isPlaying,
-          didJustFinish: status.didJustFinish,
-          error: status.error,
-          durationMillis: status.durationMillis,
-          positionMillis: status.positionMillis
-        });
-
         if (status.isLoaded) {
           this.isPlaying = status.isPlaying;
           if (status.didJustFinish) {
-            console.log('🎵 AudioService - 播放完成');
             this.isPlaying = false;
           }
         } else if (status.error) {
@@ -49,32 +32,18 @@ class AudioService {
       });
 
       // 获取音频 URL
-      console.log('🎵 AudioService - 获取音频URL...');
       const audioUrl = this.getAudioUrl(word, language);
-      console.log('🎵 AudioService - 音频URL:', audioUrl);
       
       if (audioUrl) {
-        console.log('🎵 AudioService - 加载音频...');
         await this.sound.loadAsync({ uri: audioUrl });
-        console.log('🎵 AudioService - 音频加载成功');
-        
-        console.log('🎵 AudioService - 开始播放...');
         await this.sound.playAsync();
-        console.log('🎵 AudioService - 播放命令已发送');
       } else {
-        console.warn('⚠️ AudioService - 没有音频URL');
         throw new Error('No audio available for word');
       }
     } catch (error) {
       console.error('🎵 AudioService - 播放异常:', error);
-      console.error('🎵 AudioService - 错误详情:', {
-        message: error instanceof Error ? error.message : 'Unknown error',
-        stack: error instanceof Error ? error.stack : undefined,
-        word: word
-      });
-      // 重置状态
       this.isPlaying = false;
-      throw new Error('Failed to play audio');
+      throw error;
     }
   }
 
@@ -152,12 +121,6 @@ class AudioService {
 
     // 检测语言
     const detectedLanguage = language || this.detectLanguage(word);
-    console.log(`🎵 AudioService - 语言检测结果:`, {
-      word: word,
-      explicitLanguage: language,
-      detectedLanguage: detectedLanguage,
-      isExplicit: !!language
-    });
 
     // 方案1: Google Translate TTS (免费，推荐)
     // 参数说明：
@@ -166,8 +129,6 @@ class AudioService {
     // - tl=${lang}: 目标语言
     // - client=tw-ob: 客户端标识
     const googleTtsUrl = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(word.trim())}&tl=${detectedLanguage}&client=tw-ob`;
-    
-    console.log(`🎵 AudioService - 生成的TTS URL:`, googleTtsUrl);
     
     // 方案2: 备用 TTS 服务 (如果 Google TTS 有 CORS 问题)
     // const backupTtsUrl = `https://api.dictionaryapi.dev/media/pronunciations/${detectedLanguage}/${word.toLowerCase()}.mp3`;
