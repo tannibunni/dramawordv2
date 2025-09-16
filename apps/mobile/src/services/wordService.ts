@@ -736,6 +736,17 @@ export class WordService {
     try {
       console.log(`🔍 查询中文词汇详细信息: ${word} (UI语言: ${uiLanguage})`);
       
+      // 参数验证
+      if (!word || typeof word !== 'string') {
+        console.error(`❌ 无效的词汇参数: ${word}`);
+        return { success: false, error: '无效的词汇参数' };
+      }
+      
+      if (!uiLanguage || typeof uiLanguage !== 'string') {
+        console.error(`❌ 无效的UI语言参数: ${uiLanguage}`);
+        return { success: false, error: '无效的UI语言参数' };
+      }
+      
       // 生成缓存键
       const cacheKey = `chinese_${word}_${uiLanguage}`;
       
@@ -752,10 +763,13 @@ export class WordService {
       });
       
       if (!response.ok) {
+        console.error(`❌ API请求失败: ${response.status} ${response.statusText}`);
         throw new WordServiceError(`查询中文词汇失败: ${response.status}`, response.status);
       }
       
       const result = await response.json();
+      console.log(`🔍 API返回结果:`, result);
+      
       if (result.success && result.data) {
         // 缓存结果
         await cacheService.set(cacheKey, result.data, 24 * 60 * 60 * 1000); // 24小时缓存
@@ -763,6 +777,7 @@ export class WordService {
         console.log(`✅ 查询中文词汇成功: ${word}`);
         return { success: true, data: result.data };
       } else {
+        console.error(`❌ API返回失败:`, result);
         return { success: false, error: result.error || '查询中文词汇失败' };
       }
     } catch (error) {
