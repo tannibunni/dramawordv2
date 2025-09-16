@@ -30,7 +30,7 @@ import { Audio } from 'expo-av';
 import LanguagePicker from '../../components/common/LanguagePicker';
 import { useLanguage } from '../../context/LanguageContext';
 import { useAppLanguage } from '../../context/AppLanguageContext';
-import { SUPPORTED_LANGUAGES, SupportedLanguageCode } from '../../constants/config';
+import { SUPPORTED_LANGUAGES, SupportedLanguageCode, API_BASE_URL } from '../../constants/config';
 import { shouldShowLanguageReminder, generateLanguageReminderMessage } from '../../utils/languageDetector';
 import { t } from '../../constants/translations';
 // 导入功能权限控制相关组件
