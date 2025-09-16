@@ -450,57 +450,36 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     
     try {
       if (isChinese(word)) {
-        // 获取当前选择的目标语言
-        const currentLanguageConfig = getCurrentLanguageConfig();
-        if (!currentLanguageConfig) {
-          console.error('❌ 无法获取当前语言配置');
-          Alert.alert(t('error', appLanguage), t('language_config_error', appLanguage));
-          setIsLoading(false);
-          return;
-        }
+        console.log(`🔍 直接输入中文词汇: ${word}`);
         
-        const targetLanguage = currentLanguageConfig.code;
-        console.log(`🔍 中文翻译到目标语言: ${word} -> ${targetLanguage}`);
-        
-        // 根据目标语言调用相应的翻译功能
-        let result;
-        if (targetLanguage === 'en') {
-          // 中文查英文（原有功能）
-          result = await wordService.translateChineseToEnglish(word);
-        } else {
-          // 中文翻译到其他目标语言（新功能）
-          result = await wordService.translateChineseToTargetLanguage(word, targetLanguage);
-        }
-        
-        if (result.success && result.candidates.length > 0) {
-          setChToEnCandidates(result.candidates);
-          setChToEnQuery(word);
-          const translation = result.candidates.join(', ');
-          await wordService.saveSearchHistory(word, translation, result.candidates);
+        // 使用统一的中文词汇查询API
+        const result = await wordService.getChineseWordDetails(word, appLanguage);
+        if (result.success && result.data) {
+          console.log(`✅ 获取中文词汇详细信息成功: ${word}`);
+          setSearchResult(result.data);
+          setSearchText('');
+          
+          // 保存搜索历史
+          const definition = result.data.definitions && result.data.definitions[0]?.definition ? result.data.definitions[0].definition : t('no_definition', 'zh-CN');
+          await wordService.saveSearchHistory(word, definition);
           setRecentWords(prev => {
             const filtered = prev.filter(w => w.word !== word);
             return [
               {
                 id: Date.now().toString(),
-                word,
-                translation,
+                word: word,
+                translation: definition,
                 timestamp: Date.now(),
-                candidates: result.candidates
               },
               ...filtered
-            ];
+            ].slice(0, 10);
           });
-          setIsLoading(false);
-          return;
         } else {
-          const targetLanguageName = currentLanguageConfig.name;
-          Alert.alert(
-            t('no_suitable_english_meaning', appLanguage), 
-            `没有找到合适的${targetLanguageName}释义，请尝试其他中文词汇`
-          );
-          setIsLoading(false);
-          return;
+          console.log(`❌ 查询中文词汇详细信息失败: ${word}`);
+          Alert.alert('错误', '查询失败，请重试');
         }
+        setIsLoading(false);
+        return;
       } else if (appLanguage === 'en-US' && selectedLanguage === 'CHINESE') {
         // 英文界面下选择中文目标语言，所有输入都当作拼音处理
         console.log(`🔍 英文界面+中文目标语言，输入当作拼音处理: ${word}`);
@@ -534,14 +513,14 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
               setPinyinCandidates(chineseWords);
               setPinyinQuery(word);
               console.log(`✅ API返回拼音候选词: ${word} -> ${chineseWords.join(', ')}`);
-              setIsLoading(false);
-              return;
-            } else {
+          setIsLoading(false);
+          return;
+        } else {
               console.log(`❌ API返回空候选词: ${word}`);
               Alert.alert('提示', '未找到该拼音的候选词');
-              setIsLoading(false);
-              return;
-            }
+          setIsLoading(false);
+          return;
+        }
           } else {
             console.log(`❌ 拼音API调用失败: ${response.status}`);
             Alert.alert('错误', '拼音候选词服务暂时不可用');
