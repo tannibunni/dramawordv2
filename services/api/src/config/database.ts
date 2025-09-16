@@ -5,6 +5,11 @@ const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/dramaw
 
 export const connectDatabase = async (): Promise<void> => {
   try {
+    // 检查MongoDB URI
+    if (!MONGODB_URI || MONGODB_URI === 'mongodb://localhost:27017/dramaword') {
+      logger.warn('⚠️ 使用默认MongoDB URI，请设置MONGODB_URI环境变量');
+    }
+
     // 🚀 高性能连接池配置 - 针对高并发优化
     const mongooseOptions = {
       // 连接池配置 - 提高并发性能
@@ -13,9 +18,9 @@ export const connectDatabase = async (): Promise<void> => {
       maxConnecting: 5,                   // 最大连接中数量 (原2) - 提高150%
       
       // 超时配置 - 平衡性能和稳定性
-      serverSelectionTimeoutMS: 10000,    // 服务器选择超时 (原5000) - 提高100%
+      serverSelectionTimeoutMS: 30000,    // 服务器选择超时 (增加到30秒)
       socketTimeoutMS: 60000,             // Socket超时 (原45000) - 提高33%
-      connectTimeoutMS: 10000,            // 连接超时
+      connectTimeoutMS: 30000,            // 连接超时 (增加到30秒)
       maxIdleTimeMS: 60000,              // 最大空闲时间 (原30000) - 提高100%
       
       // 重试和容错配置
@@ -29,8 +34,8 @@ export const connectDatabase = async (): Promise<void> => {
       // 心跳和监控
       heartbeatFrequencyMS: 10000,        // 心跳频率
       
-                  // 读写关注配置
-                  readPreference: 'primary' as const,          // 读取偏好
+      // 读写关注配置
+      readPreference: 'primary' as const,          // 读取偏好
       writeConcern: {                     // 写入关注
         w: 'majority' as const,                    // 写入确认
         j: true,                          // 日志确认
@@ -39,15 +44,35 @@ export const connectDatabase = async (): Promise<void> => {
       
       // 连接字符串选项
       directConnection: false,            // 不直接连接
-      ssl: false,                         // SSL配置
+      ssl: true,                          // 启用SSL (Atlas需要)
       authSource: 'admin',                // 认证源
       
       // 性能监控
       monitorCommands: process.env.NODE_ENV === 'development', // 开发环境监控命令
     };
 
-    await mongoose.connect(MONGODB_URI, mongooseOptions);
-    logger.info('✅ MongoDB connected successfully with high-performance connection pool');
+    // 尝试连接数据库，带重试机制
+    let retryCount = 0;
+    const maxRetries = 3;
+    
+    while (retryCount < maxRetries) {
+      try {
+        await mongoose.connect(MONGODB_URI, mongooseOptions);
+        logger.info('✅ MongoDB connected successfully with high-performance connection pool');
+        break;
+      } catch (error) {
+        retryCount++;
+        logger.error(`❌ MongoDB连接失败 (尝试 ${retryCount}/${maxRetries}):`, error);
+        
+        if (retryCount < maxRetries) {
+          const waitTime = retryCount * 5000; // 5秒, 10秒, 15秒
+          logger.info(`⏳ ${waitTime/1000}秒后重试连接...`);
+          await new Promise(resolve => setTimeout(resolve, waitTime));
+        } else {
+          throw error;
+        }
+      }
+    }
     
     // 监听连接事件
     mongoose.connection.on('error', (error) => {
