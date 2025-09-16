@@ -343,28 +343,110 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   const isEnglish = (text: string) => /^[a-zA-Z\s]+$/.test(text);
   const isPinyin = (text: string) => /^[a-z\s]+$/.test(text) && !/^[a-zA-Z\s]+$/.test(text) || /^[a-z\s]+$/.test(text);
 
-  // 拼音候选词映射表
-  const pinyinCandidatesMap: Record<string, string[]> = {
-    'jiao lian': ['教练', '铰链', '脚链', '交联'],
-    'mei shi': ['美食', '没事', '美事'],
-    'shi jian': ['时间', '事件', '实践', '世间'],
-    'ke yi': ['可以', '可以', '可以'],
-    'ma ma': ['妈妈', '马马', '麻麻'],
-    'da jia': ['大家', '打架', '大驾'],
-    'ni hao': ['你好', '你好', '你好'],
-    'wo ai ni': ['我爱你', '我爱您', '我爱你'],
-    'xie xie': ['谢谢', '谢谢', '谢谢'],
-    'zai jian': ['再见', '再见', '再见'],
-    'dui bu qi': ['对不起', '对不起', '对不起'],
-    'mei guan xi': ['没关系', '没关系', '没关系'],
-    'qing wen': ['请问', '请问', '请问'],
-    'bu hao yi si': ['不好意思', '不好意思', '不好意思'],
-    'hao de': ['好的', '好的', '好的'],
-    'mei wen ti': ['没问题', '没问题', '没问题'],
-    'zai na li': ['在哪里', '在哪里', '在哪里'],
-    'zen me yang': ['怎么样', '怎么样', '怎么样'],
-    'wei shen me': ['为什么', '为什么', '为什么'],
-    'shen me shi hou': ['什么时候', '什么时候', '什么时候']
+  // 拼音候选词映射表 - 包含中文词汇和英文释义
+  const pinyinCandidatesMap: Record<string, Array<{chinese: string, english: string}>> = {
+    'jiao lian': [
+      {chinese: '教练', english: 'coach'},
+      {chinese: '铰链', english: 'chain'},
+      {chinese: '脚链', english: 'ankle chain'},
+      {chinese: '交联', english: 'crosslink'}
+    ],
+    'mei shi': [
+      {chinese: '美食', english: 'delicious food'},
+      {chinese: '没事', english: 'nothing'},
+      {chinese: '美事', english: 'good thing'}
+    ],
+    'shi jian': [
+      {chinese: '时间', english: 'time'},
+      {chinese: '事件', english: 'event'},
+      {chinese: '实践', english: 'practice'},
+      {chinese: '世间', english: 'world'}
+    ],
+    'ke yi': [
+      {chinese: '可以', english: 'can; may'},
+      {chinese: '可以', english: 'can; may'},
+      {chinese: '可以', english: 'can; may'}
+    ],
+    'ma ma': [
+      {chinese: '妈妈', english: 'mom'},
+      {chinese: '马马', english: 'horse'},
+      {chinese: '麻麻', english: 'mom (cute)'}
+    ],
+    'da jia': [
+      {chinese: '大家', english: 'everyone'},
+      {chinese: '打架', english: 'fight'},
+      {chinese: '大驾', english: 'honor'}
+    ],
+    'ni hao': [
+      {chinese: '你好', english: 'hello'},
+      {chinese: '你好', english: 'hello'},
+      {chinese: '你好', english: 'hello'}
+    ],
+    'wo ai ni': [
+      {chinese: '我爱你', english: 'I love you'},
+      {chinese: '我爱您', english: 'I love you (respectful)'},
+      {chinese: '我爱你', english: 'I love you'}
+    ],
+    'xie xie': [
+      {chinese: '谢谢', english: 'thank you'},
+      {chinese: '谢谢', english: 'thank you'},
+      {chinese: '谢谢', english: 'thank you'}
+    ],
+    'zai jian': [
+      {chinese: '再见', english: 'goodbye'},
+      {chinese: '再见', english: 'goodbye'},
+      {chinese: '再见', english: 'goodbye'}
+    ],
+    'dui bu qi': [
+      {chinese: '对不起', english: 'sorry'},
+      {chinese: '对不起', english: 'sorry'},
+      {chinese: '对不起', english: 'sorry'}
+    ],
+    'mei guan xi': [
+      {chinese: '没关系', english: 'no problem'},
+      {chinese: '没关系', english: 'no problem'},
+      {chinese: '没关系', english: 'no problem'}
+    ],
+    'qing wen': [
+      {chinese: '请问', english: 'excuse me'},
+      {chinese: '请问', english: 'excuse me'},
+      {chinese: '请问', english: 'excuse me'}
+    ],
+    'bu hao yi si': [
+      {chinese: '不好意思', english: 'excuse me'},
+      {chinese: '不好意思', english: 'excuse me'},
+      {chinese: '不好意思', english: 'excuse me'}
+    ],
+    'hao de': [
+      {chinese: '好的', english: 'okay'},
+      {chinese: '好的', english: 'okay'},
+      {chinese: '好的', english: 'okay'}
+    ],
+    'mei wen ti': [
+      {chinese: '没问题', english: 'no problem'},
+      {chinese: '没问题', english: 'no problem'},
+      {chinese: '没问题', english: 'no problem'}
+    ],
+    'zai na li': [
+      {chinese: '在哪里', english: 'where'},
+      {chinese: '在哪里', english: 'where'},
+      {chinese: '在哪里', english: 'where'}
+    ],
+    'zen me yang': [
+      {chinese: '怎么样', english: 'how'},
+      {chinese: '怎么样', english: 'how'},
+      {chinese: '怎么样', english: 'how'}
+    ],
+    'wei shen me': [
+      {chinese: '为什么', english: 'why'},
+      {chinese: '为什么', english: 'why'},
+      {chinese: '为什么', english: 'why'}
+    ],
+    'shen me shi hou': [
+      {chinese: '什么时候', english: 'when'},
+      {chinese: '什么时候', english: 'when'},
+      {chinese: '什么时候', english: 'when'}
+    ]
   };
 
   // handleSearch 只保留中英查词
@@ -542,9 +624,11 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         // 检查是否有预定义的候选词
         const candidates = pinyinCandidatesMap[word.toLowerCase()];
         if (candidates && candidates.length > 1) {
-          setPinyinCandidates(candidates);
+          // 提取中文词汇用于显示
+          const chineseWords = candidates.map(item => item.chinese);
+          setPinyinCandidates(chineseWords);
           setPinyinQuery(word);
-          console.log(`✅ 拼音候选词结果: ${word} -> ${candidates.join(', ')}`);
+          console.log(`✅ 拼音候选词结果: ${word} -> ${chineseWords.join(', ')}`);
           setIsLoading(false);
           return;
         }
@@ -1052,53 +1136,63 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
               ))}
             </View>
           </View>
-        ) : pinyinCandidates.length > 0 ? (
-          <View style={styles.wordCardWrapper}>
-            <View style={[styles.wordCardCustom, styles.fixedCandidateCard] }>
-              {/* 关闭按钮 */}
-              <TouchableOpacity style={styles.closeButton} onPress={() => { setPinyinCandidates([]); setPinyinQuery(''); }}>
-                <Ionicons name="close" size={26} color={colors.text.secondary} />
-              </TouchableOpacity>
-              <Text style={{ fontSize: 20, fontWeight: 'bold', color: colors.text.primary, marginBottom: 16, marginTop: 8 }}>
-                "{pinyinQuery}" 的中文候选词
-              </Text>
-              {pinyinCandidates.map((chinese, idx) => (
-                <TouchableOpacity key={chinese} onPress={async () => {
-                  setIsLoading(true);
-                  setPinyinCandidates([]);
-                  setPinyinQuery('');
-                  setSearchText(chinese);
-                  // 切换到中文搜索界面
-                  setSelectedLanguage('CHINESE');
-                  // 使用中文进行搜索
-                  const result = await wordService.searchWord(chinese.toLowerCase(), 'zh', 'zh-CN');
-                  if (result.success && result.data) {
-                    setSearchResult(result.data);
-                    setSearchText('');
-                    const definition = result.data.definitions && result.data.definitions[0]?.definition ? result.data.definitions[0].definition : t('no_definition', 'zh-CN');
-                    await wordService.saveSearchHistory(chinese, definition);
-                    setRecentWords(prev => {
-                      const filtered = prev.filter(w => w.word !== chinese);
-                      return [
-                        {
-                          id: Date.now().toString(),
-                          word: chinese,
-                          translation: definition,
-                          timestamp: Date.now(),
-                        },
-                        ...filtered
-                      ];
-                    });
-                  } else {
-                    Alert.alert('查询失败', result.error || '无法找到该单词');
-                  }
-                  setIsLoading(false);
-                }} style={{ paddingVertical: 10, paddingHorizontal: 24, borderRadius: 16, backgroundColor: colors.primary[50], marginBottom: 10 }}>
-                  <Text style={{ fontSize: 18, color: colors.primary[700], fontWeight: '500' }}>{chinese}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
+            ) : pinyinCandidates.length > 0 ? (
+              <View style={styles.wordCardWrapper}>
+                <View style={[styles.wordCardCustom, styles.fixedCandidateCard] }>
+                  {/* 关闭按钮 */}
+                  <TouchableOpacity style={styles.closeButton} onPress={() => { setPinyinCandidates([]); setPinyinQuery(''); }}>
+                    <Ionicons name="close" size={26} color={colors.text.secondary} />
+                  </TouchableOpacity>
+                  <Text style={{ fontSize: 20, fontWeight: 'bold', color: colors.text.primary, marginBottom: 16, marginTop: 8 }}>
+                    "{pinyinQuery}" 的中文候选词
+                  </Text>
+                  {pinyinCandidates.map((chinese, idx) => {
+                    // 获取对应的英文释义
+                    const candidates = pinyinCandidatesMap[pinyinQuery.toLowerCase()];
+                    const candidate = candidates ? candidates.find(item => item.chinese === chinese) : null;
+                    const englishMeaning = candidate ? candidate.english : '';
+                    
+                    return (
+                      <TouchableOpacity key={chinese} onPress={async () => {
+                        setIsLoading(true);
+                        setPinyinCandidates([]);
+                        setPinyinQuery('');
+                        setSearchText(chinese);
+                        // 切换到中文搜索界面
+                        setSelectedLanguage('CHINESE');
+                        // 使用中文进行搜索
+                        const result = await wordService.searchWord(chinese.toLowerCase(), 'zh', 'zh-CN');
+                        if (result.success && result.data) {
+                          setSearchResult(result.data);
+                          setSearchText('');
+                          const definition = result.data.definitions && result.data.definitions[0]?.definition ? result.data.definitions[0].definition : t('no_definition', 'zh-CN');
+                          await wordService.saveSearchHistory(chinese, definition);
+                          setRecentWords(prev => {
+                            const filtered = prev.filter(w => w.word !== chinese);
+                            return [
+                              {
+                                id: Date.now().toString(),
+                                word: chinese,
+                                translation: definition,
+                                timestamp: Date.now(),
+                              },
+                              ...filtered
+                            ];
+                          });
+                        } else {
+                          Alert.alert('查询失败', result.error || '无法找到该单词');
+                        }
+                        setIsLoading(false);
+                      }} style={{ paddingVertical: 12, paddingHorizontal: 24, borderRadius: 16, backgroundColor: colors.primary[50], marginBottom: 10 }}>
+                        <Text style={{ fontSize: 18, color: colors.primary[700], fontWeight: '500', marginBottom: 2 }}>{chinese}</Text>
+                        {englishMeaning && (
+                          <Text style={{ fontSize: 14, color: colors.primary[600], fontStyle: 'italic' }}>{englishMeaning}</Text>
+                        )}
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              </View>
         ) : chToEnCandidates.length > 0 ? (
           <View style={styles.wordCardWrapper}>
             <View style={[styles.wordCardCustom, styles.fixedCandidateCard] }>
