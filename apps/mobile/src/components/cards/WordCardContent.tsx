@@ -239,14 +239,11 @@ const WordCardContent: React.FC<WordCardContentProps> = ({ wordData, onPlayAudio
               </View>
             </View>
           )}
-          {/* 中文单词特殊显示：优先显示拼音，然后是音标 */}
+          {/* 中文单词特殊显示：只显示拼音 */}
           {wordData.language === 'zh' || wordData.language === 'zh-CN' ? (
             <View style={styles.chinesePhoneticContainer}>
               {wordData.pinyin && (
                 <Text style={styles.pinyin} selectable>{wordData.pinyin}</Text>
-              )}
-              {wordData.phonetic && (
-                <Text style={styles.phonetic} selectable>{wordData.phonetic}</Text>
               )}
             </View>
           ) : (
