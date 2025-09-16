@@ -343,182 +343,8 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   const isEnglish = (text: string) => /^[a-zA-Z\s]+$/.test(text);
   const isPinyin = (text: string) => /^[a-z\s]+$/.test(text) && !/^[a-zA-Z\s]+$/.test(text) || /^[a-z\s]+$/.test(text);
 
-  // 拼音候选词映射表 - 包含中文词汇和英文释义
-  // 这是一个简化的本地词典，类似Pleco的本地数据库
-  const pinyinCandidatesMap: Record<string, Array<{chinese: string, english: string}>> = {
-    'jiao lian': [
-      {chinese: '教练', english: 'coach'},
-      {chinese: '铰链', english: 'chain'},
-      {chinese: '脚链', english: 'ankle chain'},
-      {chinese: '交联', english: 'crosslink'}
-    ],
-    'mei shi': [
-      {chinese: '美食', english: 'delicious food'},
-      {chinese: '没事', english: 'nothing'},
-      {chinese: '美事', english: 'good thing'}
-    ],
-    'shi jian': [
-      {chinese: '时间', english: 'time'},
-      {chinese: '事件', english: 'event'},
-      {chinese: '实践', english: 'practice'},
-      {chinese: '世间', english: 'world'}
-    ],
-    'ke yi': [
-      {chinese: '可以', english: 'can; may'},
-      {chinese: '可以', english: 'can; may'},
-      {chinese: '可以', english: 'can; may'}
-    ],
-    'ma ma': [
-      {chinese: '妈妈', english: 'mom'},
-      {chinese: '马马', english: 'horse'},
-      {chinese: '麻麻', english: 'mom (cute)'}
-    ],
-    'da jia': [
-      {chinese: '大家', english: 'everyone'},
-      {chinese: '打架', english: 'fight'},
-      {chinese: '大驾', english: 'honor'}
-    ],
-    'ni hao': [
-      {chinese: '你好', english: 'hello'},
-      {chinese: '你好', english: 'hello'},
-      {chinese: '你好', english: 'hello'}
-    ],
-    'wo ai ni': [
-      {chinese: '我爱你', english: 'I love you'},
-      {chinese: '我爱您', english: 'I love you (respectful)'},
-      {chinese: '我爱你', english: 'I love you'}
-    ],
-    'xie xie': [
-      {chinese: '谢谢', english: 'thank you'},
-      {chinese: '谢谢', english: 'thank you'},
-      {chinese: '谢谢', english: 'thank you'}
-    ],
-    'zai jian': [
-      {chinese: '再见', english: 'goodbye'},
-      {chinese: '再见', english: 'goodbye'},
-      {chinese: '再见', english: 'goodbye'}
-    ],
-    'dui bu qi': [
-      {chinese: '对不起', english: 'sorry'},
-      {chinese: '对不起', english: 'sorry'},
-      {chinese: '对不起', english: 'sorry'}
-    ],
-    'mei guan xi': [
-      {chinese: '没关系', english: 'no problem'},
-      {chinese: '没关系', english: 'no problem'},
-      {chinese: '没关系', english: 'no problem'}
-    ],
-    'qing wen': [
-      {chinese: '请问', english: 'excuse me'},
-      {chinese: '请问', english: 'excuse me'},
-      {chinese: '请问', english: 'excuse me'}
-    ],
-    'bu hao yi si': [
-      {chinese: '不好意思', english: 'excuse me'},
-      {chinese: '不好意思', english: 'excuse me'},
-      {chinese: '不好意思', english: 'excuse me'}
-    ],
-    'hao de': [
-      {chinese: '好的', english: 'okay'},
-      {chinese: '好的', english: 'okay'},
-      {chinese: '好的', english: 'okay'}
-    ],
-    'mei wen ti': [
-      {chinese: '没问题', english: 'no problem'},
-      {chinese: '没问题', english: 'no problem'},
-      {chinese: '没问题', english: 'no problem'}
-    ],
-    'zai na li': [
-      {chinese: '在哪里', english: 'where'},
-      {chinese: '在哪里', english: 'where'},
-      {chinese: '在哪里', english: 'where'}
-    ],
-    'zen me yang': [
-      {chinese: '怎么样', english: 'how'},
-      {chinese: '怎么样', english: 'how'},
-      {chinese: '怎么样', english: 'how'}
-    ],
-    'wei shen me': [
-      {chinese: '为什么', english: 'why'},
-      {chinese: '为什么', english: 'why'},
-      {chinese: '为什么', english: 'why'}
-    ],
-    'shen me shi hou': [
-      {chinese: '什么时候', english: 'when'},
-      {chinese: '什么时候', english: 'when'},
-      {chinese: '什么时候', english: 'when'}
-    ],
-    'bing': [
-      {chinese: '病', english: 'illness; disease'},
-      {chinese: '冰', english: 'ice'},
-      {chinese: '兵', english: 'soldier'},
-      {chinese: '饼', english: 'cake; biscuit'},
-      {chinese: '并', english: 'and; also'}
-    ],
-    'mao': [
-      {chinese: '猫', english: 'cat'},
-      {chinese: '毛', english: 'hair; fur'},
-      {chinese: '矛', english: 'spear'},
-      {chinese: '茅', english: 'thatch'},
-      {chinese: '锚', english: 'anchor'}
-    ],
-    'ma': [
-      {chinese: '马', english: 'horse'},
-      {chinese: '妈', english: 'mom'},
-      {chinese: '麻', english: 'hemp; numb'},
-      {chinese: '骂', english: 'scold'},
-      {chinese: '码', english: 'code; yard'}
-    ],
-    'li': [
-      {chinese: '里', english: 'inside; mile'},
-      {chinese: '力', english: 'power; force'},
-      {chinese: '立', english: 'stand; establish'},
-      {chinese: '理', english: 'reason; manage'},
-      {chinese: '利', english: 'benefit; sharp'}
-    ],
-    'shi': [
-      {chinese: '是', english: 'be; yes'},
-      {chinese: '时', english: 'time'},
-      {chinese: '事', english: 'thing; matter'},
-      {chinese: '十', english: 'ten'},
-      {chinese: '石', english: 'stone'}
-    ],
-    'yi': [
-      {chinese: '一', english: 'one'},
-      {chinese: '以', english: 'with; by'},
-      {chinese: '已', english: 'already'},
-      {chinese: '意', english: 'meaning; intention'},
-      {chinese: '易', english: 'easy; change'}
-    ],
-    'bu': [
-      {chinese: '不', english: 'not; no'},
-      {chinese: '步', english: 'step'},
-      {chinese: '部', english: 'part; department'},
-      {chinese: '布', english: 'cloth'},
-      {chinese: '补', english: 'supplement; repair'}
-    ],
-    'zhi': [
-      {chinese: '之', english: 'of; it'},
-      {chinese: '知', english: 'know'},
-      {chinese: '直', english: 'straight; direct'},
-      {chinese: '只', english: 'only; measure word'},
-      {chinese: '指', english: 'finger; point'}
-    ],
-    'you': [
-      {chinese: '有', english: 'have; there is'},
-      {chinese: '又', english: 'again; also'},
-      {chinese: '右', english: 'right'},
-      {chinese: '由', english: 'from; because'},
-      {chinese: '油', english: 'oil'}
-    ],
-    'he': [
-      {chinese: '和', english: 'and; with'},
-      {chinese: '河', english: 'river'},
-      {chinese: '何', english: 'what; how'},
-      {chinese: '合', english: 'combine; fit'},
-      {chinese: '核', english: 'nucleus; core'}
-    ]
-  };
+  // 拼音候选词缓存 - 用于缓存API返回的候选词
+  const [pinyinCache, setPinyinCache] = useState<Record<string, Array<{chinese: string, english: string}>>>({});
 
   // handleSearch 只保留中英查词
   const handleSearch = async () => {
@@ -692,49 +518,62 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         // 英文界面下输入拼音，显示中文候选词弹窗
         console.log(`🔍 英文界面输入拼音，显示中文候选词: ${word}`);
         
-        // 优先调用API获取候选词
-        const result = await wordService.searchWord(word.toLowerCase(), 'zh', appLanguage);
-        if (result.success && result.data) {
-          // 检查API是否返回了candidates字段
-          if (result.data.candidates && result.data.candidates.length > 1) {
-            setPinyinCandidates(result.data.candidates);
-            setPinyinQuery(word);
-            console.log(`✅ API返回拼音候选词: ${word} -> ${result.data.candidates.join(', ')}`);
-            setIsLoading(false);
-            return;
-          } else {
-            // API没有返回多个候选词，检查前端映射表
-            const candidates = pinyinCandidatesMap[word.toLowerCase()];
-            if (candidates && candidates.length > 1) {
-              // 提取中文词汇用于显示
-              const chineseWords = candidates.map(item => item.chinese);
+        // 检查缓存
+        if (pinyinCache[word.toLowerCase()]) {
+          const candidates = pinyinCache[word.toLowerCase()];
+          const chineseWords = candidates.map(item => item.chinese);
+          setPinyinCandidates(chineseWords);
+          setPinyinQuery(word);
+          console.log(`✅ 缓存拼音候选词: ${word} -> ${chineseWords.join(', ')}`);
+          setIsLoading(false);
+          return;
+        }
+        
+        // 调用拼音候选词API
+        try {
+          const response = await fetch(`${API_BASE_URL}/pinyin/candidates/${word.toLowerCase()}`);
+          if (response.ok) {
+            const result = await response.json();
+            if (result.success && result.data.candidates.length > 1) {
+              // 缓存结果
+              setPinyinCache(prev => ({
+                ...prev,
+                [word.toLowerCase()]: result.data.candidates
+              }));
+              
+              const chineseWords = result.data.candidates.map((item: any) => item.chinese);
               setPinyinCandidates(chineseWords);
               setPinyinQuery(word);
-              console.log(`✅ 前端映射拼音候选词: ${word} -> ${chineseWords.join(', ')}`);
-              setIsLoading(false);
-              return;
-            } else {
-              // 都没有多个候选词，直接显示结果
-              setSearchResult(result.data);
-              setSearchText('');
-              const definition = result.data.definitions && result.data.definitions[0]?.definition ? result.data.definitions[0].definition : t('no_definition', 'zh-CN');
-              await wordService.saveSearchHistory(result.data.correctedWord || word, definition);
-              setRecentWords(prev => {
-                const filtered = prev.filter(w => w.word !== (result.data.correctedWord || word));
-                return [
-                  {
-                    id: Date.now().toString(),
-                    word: result.data.correctedWord || word,
-                    translation: definition,
-                    timestamp: Date.now(),
-                  },
-                  ...filtered
-                ];
-              });
+              console.log(`✅ API返回拼音候选词: ${word} -> ${chineseWords.join(', ')}`);
               setIsLoading(false);
               return;
             }
           }
+        } catch (error) {
+          console.log(`❌ 拼音候选词API调用失败: ${error}`);
+        }
+        
+        // 如果API失败，尝试普通搜索
+        const result = await wordService.searchWord(word.toLowerCase(), 'zh', appLanguage);
+        if (result.success && result.data) {
+          setSearchResult(result.data);
+          setSearchText('');
+          const definition = result.data.definitions && result.data.definitions[0]?.definition ? result.data.definitions[0].definition : t('no_definition', 'zh-CN');
+          await wordService.saveSearchHistory(result.data.correctedWord || word, definition);
+          setRecentWords(prev => {
+            const filtered = prev.filter(w => w.word !== (result.data.correctedWord || word));
+            return [
+              {
+                id: Date.now().toString(),
+                word: result.data.correctedWord || word,
+                translation: definition,
+                timestamp: Date.now(),
+              },
+              ...filtered
+            ];
+          });
+          setIsLoading(false);
+          return;
         } else {
           console.log(`❌ 拼音搜索失败: ${word}`);
           // 搜索失败时继续正常搜索流程
@@ -1219,7 +1058,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                   </Text>
                   {pinyinCandidates.map((chinese, idx) => {
                     // 获取对应的英文释义
-                    const candidates = pinyinCandidatesMap[pinyinQuery.toLowerCase()];
+                    const candidates = pinyinCache[pinyinQuery.toLowerCase()];
                     const candidate = candidates ? candidates.find(item => item.chinese === chinese) : null;
                     const englishMeaning = candidate ? candidate.english : '';
                     

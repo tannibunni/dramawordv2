@@ -40,6 +40,7 @@ import userStatsRoutes from './routes/userStats';
 import userSearchRoutes from './routes/userSearch';
 import badgeRoutes from './routes/badgeRoutes';
 import cacheMonitoringRoutes from './routes/cacheMonitoringRoutes';
+import pinyinRoutes from './routes/pinyinRoutes';
 import CacheMonitoringService from './services/cacheMonitoringService';
 import { logger } from './utils/logger';
 import { OpenAI } from 'openai';
@@ -88,6 +89,7 @@ app.use('/api/user-stats', userStatsRoutes);
 app.use('/api/user-search', userSearchRoutes);
 app.use('/api/badges', badgeRoutes);
 app.use('/api/cache-monitoring', cacheMonitoringRoutes);
+app.use('/api/pinyin', pinyinRoutes);
 
 // 健康检查端点
 app.get('/health', (req, res) => {
