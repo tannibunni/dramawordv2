@@ -44,6 +44,7 @@ function getLanguageName(lang: string) {
 
 // 查询中文词汇详细信息
 export const getChineseWordDetails = async (req: Request, res: Response) => {
+  console.log(`🚀 getChineseWordDetails 函数被调用！`);
   try {
     const { word } = req.params;
     const { uiLanguage = 'en-US' } = req.query;
@@ -63,9 +64,11 @@ export const getChineseWordDetails = async (req: Request, res: Response) => {
     
     if (wordCache.has(cacheKey)) {
       console.log(`✅ 从缓存返回中文词汇: ${word}`);
+      const cachedData = wordCache.get(cacheKey);
+      console.log(`🔍 缓存数据:`, cachedData);
       return res.json({
         success: true,
-        data: wordCache.get(cacheKey)
+        data: cachedData
       });
     }
 
