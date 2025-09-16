@@ -866,17 +866,27 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
 
   // 清除本地存储的所有数据
   const handleClearLocalData = async () => {
-    Alert.alert(
-      appLanguage === 'zh-CN' ? '清除用户数据' : 'Clear User Data',
-      appLanguage === 'zh-CN' 
-        ? '这将删除：\n• 历史搜索数据\n• 剧单\n• 单词本\n• 已储存的单词\n\n但会保留：\n• 经验数据\n• 学习数据\n\n确定要继续吗？'
-        : 'This will delete:\n• Search history\n• Shows\n• Vocabulary\n• Saved words\n\nBut will keep:\n• Experience data\n• Learning data\n\nAre you sure you want to continue?',
-      [
-        { text: t('cancel', appLanguage), style: 'cancel' },
-        { 
-          text: t('confirm', appLanguage), 
-          style: 'destructive', 
-          onPress: async () => {
+    try {
+      // 获取缓存大小信息
+      const cacheSizeInfo = await cacheService.getCacheSizeInfo();
+      
+      const cacheSizeText = cacheSizeInfo.totalSizeMB > 1 
+        ? `${cacheSizeInfo.totalSizeMB} MB`
+        : `${cacheSizeInfo.totalSizeKB} KB`;
+      
+      const message = appLanguage === 'zh-CN' 
+        ? `这将删除：\n• 历史搜索数据\n• 剧单\n• 单词本\n• 已储存的单词\n• 前端缓存 (${cacheSizeText}, ${cacheSizeInfo.itemCount} 项)\n\n但会保留：\n• 经验数据\n• 学习数据\n\n确定要继续吗？`
+        : `This will delete:\n• Search history\n• Shows\n• Vocabulary\n• Saved words\n• Frontend cache (${cacheSizeText}, ${cacheSizeInfo.itemCount} items)\n\nBut will keep:\n• Experience data\n• Learning data\n\nAre you sure you want to continue?`;
+
+      Alert.alert(
+        appLanguage === 'zh-CN' ? '清除用户数据' : 'Clear User Data',
+        message,
+        [
+          { text: t('cancel', appLanguage), style: 'cancel' },
+          { 
+            text: t('confirm', appLanguage), 
+            style: 'destructive', 
+            onPress: async () => {
             try {
               console.log('🗑️ 开始清除用户数据（保留经验和学习数据）...');
               
@@ -917,6 +927,61 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
         },
       ]
     );
+    } catch (error) {
+      console.error('获取缓存大小信息失败:', error);
+      // 如果获取缓存信息失败，显示默认消息
+      Alert.alert(
+        appLanguage === 'zh-CN' ? '清除用户数据' : 'Clear User Data',
+        appLanguage === 'zh-CN' 
+          ? '这将删除：\n• 历史搜索数据\n• 剧单\n• 单词本\n• 已储存的单词\n• 前端缓存\n\n但会保留：\n• 经验数据\n• 学习数据\n\n确定要继续吗？'
+          : 'This will delete:\n• Search history\n• Shows\n• Vocabulary\n• Saved words\n• Frontend cache\n\nBut will keep:\n• Experience data\n• Learning data\n\nAre you sure you want to continue?',
+        [
+          { text: t('cancel', appLanguage), style: 'cancel' },
+          { 
+            text: t('confirm', appLanguage), 
+            style: 'destructive', 
+            onPress: async () => {
+              try {
+                console.log('🗑️ 开始清除用户数据（保留经验和学习数据）...');
+                
+                // 清除词汇数据
+                await clearVocabulary();
+                
+                // 清除剧集数据
+                await clearShows();
+                
+                // 清除搜索历史
+                await wordService.clearSearchHistory();
+                
+                // 清除单词缓存
+                await cacheService.clearPrefix(CACHE_KEYS.WORD_DETAIL);
+                
+                // 只清除部分AsyncStorage数据（保留经验和学习数据）
+                await AsyncStorage.multiRemove([
+                  'search_history',
+                  'user_shows',
+                  'vocabulary',
+                  'bookmarks',
+                  'wrongWords'
+                ]);
+                
+                console.log('✅ 用户数据清除完成（经验和学习数据已保留）');
+                Alert.alert(
+                  appLanguage === 'zh-CN' ? '清除成功' : 'Clear Successful', 
+                  appLanguage === 'zh-CN' ? '用户数据已清除（经验和学习数据已保留）' : 'User data cleared (experience and learning data preserved)'
+                );
+              } catch (error) {
+                console.error('清除用户数据失败:', error);
+                Alert.alert(
+                  appLanguage === 'zh-CN' ? '清除失败' : 'Clear Failed',
+                  appLanguage === 'zh-CN' ? '清除用户数据时发生错误' : 'Error occurred while clearing user data'
+                );
+              }
+            }
+          }
+        ]
+      );
+    }
   };
 
 

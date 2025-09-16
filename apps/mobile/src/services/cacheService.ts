@@ -234,6 +234,63 @@ export class CacheService {
     }
   }
 
+  // 获取缓存大小信息（以字节为单位）
+  async getCacheSizeInfo(): Promise<{
+    totalSizeBytes: number;
+    totalSizeKB: number;
+    totalSizeMB: number;
+    itemCount: number;
+    breakdown: {
+      memorySize: number;
+      storageSize: number;
+    };
+  }> {
+    let totalSizeBytes = 0;
+    let itemCount = 0;
+    
+    // 计算内存缓存大小
+    let memorySize = 0;
+    for (const [key, value] of this.memoryCache.entries()) {
+      const keySize = new Blob([key]).size;
+      const valueSize = new Blob([JSON.stringify(value)]).size;
+      memorySize += keySize + valueSize;
+    }
+    
+    // 计算存储缓存大小
+    let storageSize = 0;
+    try {
+      const keys = await AsyncStorage.getAllKeys();
+      const cacheKeys = keys.filter(key => 
+        Object.values(CACHE_KEYS).some(prefix => key.startsWith(prefix))
+      );
+      
+      for (const key of cacheKeys) {
+        const value = await AsyncStorage.getItem(key);
+        if (value) {
+          const keySize = new Blob([key]).size;
+          const valueSize = new Blob([value]).size;
+          storageSize += keySize + valueSize;
+          itemCount++;
+        }
+      }
+    } catch (error) {
+      console.error('❌ 计算存储缓存大小失败:', error);
+    }
+    
+    totalSizeBytes = memorySize + storageSize;
+    
+    return {
+      totalSizeBytes,
+      totalSizeKB: Math.round(totalSizeBytes / 1024 * 100) / 100,
+      totalSizeMB: Math.round(totalSizeBytes / (1024 * 1024) * 100) / 100,
+      itemCount,
+      breakdown: {
+        memorySize: Math.round(memorySize / 1024 * 100) / 100,
+        storageSize: Math.round(storageSize / 1024 * 100) / 100,
+      }
+    };
+  }
+
   // 更新缓存配置
   updateConfig(newConfig: Partial<CacheConfig>): void {
     this.config = { ...this.config, ...newConfig };
