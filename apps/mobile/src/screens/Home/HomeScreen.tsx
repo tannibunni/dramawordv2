@@ -343,7 +343,9 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   const isEnglish = (text: string) => /^[a-zA-Z\s]+$/.test(text);
   const isPinyin = (text: string) => {
     // 只包含小写字母和空格，不包含大写字母
-    return /^[a-z\s]+$/.test(text) && !/[A-Z]/.test(text);
+    const result = /^[a-z\s]+$/.test(text) && !/[A-Z]/.test(text);
+    console.log(`🔍 isPinyin("${text}"): ${result} (regex1: ${/^[a-z\s]+$/.test(text)}, regex2: ${!/[A-Z]/.test(text)})`);
+    return result;
   };
 
   // 拼音候选词缓存 - 用于缓存API返回的候选词
@@ -499,29 +501,12 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
           setIsLoading(false);
           return;
         }
-      } else if (isEnglish(word) && appLanguage === 'en-US') {
-        // 英文界面下输入英文单词，显示中文翻译弹窗
-        console.log(`🔍 英文界面输入英文单词，显示中文翻译: ${word}`);
-        
-        // 调用英文→中文翻译API
-        const translationResult = await wordService.translateEnglishToChinese(word);
-        
-        if (translationResult.success && translationResult.candidates.length > 0) {
-          setEnToChCandidates(translationResult.candidates);
-          setEnToChQuery(word);
-          const translation = translationResult.candidates.join(', ');
-          console.log(`✅ 英文翻译结果: ${word} -> ${translation}`);
-          setIsLoading(false);
-          return;
-        } else {
-          console.log(`❌ 英文翻译失败: ${word}`);
-          // 翻译失败时继续正常搜索流程
-        }
       } else if (isPinyin(word) && appLanguage === 'en-US') {
         // 英文界面下输入拼音，显示中文候选词弹窗
         console.log(`🔍 英文界面输入拼音，显示中文候选词: ${word}`);
         console.log(`🔍 isPinyin(${word}): ${isPinyin(word)}`);
         console.log(`🔍 appLanguage: ${appLanguage}`);
+        console.log(`🔍 进入拼音搜索分支`);
         
         // 检查缓存
         if (pinyinCache[word.toLowerCase()]) {
@@ -569,6 +554,24 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
           Alert.alert('错误', '网络连接失败，请稍后重试');
           setIsLoading(false);
           return;
+        }
+      } else if (isEnglish(word) && appLanguage === 'en-US') {
+        // 英文界面下输入英文单词，显示中文翻译弹窗
+        console.log(`🔍 英文界面输入英文单词，显示中文翻译: ${word}`);
+        
+        // 调用英文→中文翻译API
+        const translationResult = await wordService.translateEnglishToChinese(word);
+        
+        if (translationResult.success && translationResult.candidates.length > 0) {
+          setEnToChCandidates(translationResult.candidates);
+          setEnToChQuery(word);
+          const translation = translationResult.candidates.join(', ');
+          console.log(`✅ 英文翻译结果: ${word} -> ${translation}`);
+          setIsLoading(false);
+          return;
+        } else {
+          console.log(`❌ 英文翻译失败: ${word}`);
+          // 翻译失败时继续正常搜索流程
         }
       }
       
