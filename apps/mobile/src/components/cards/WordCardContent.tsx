@@ -702,6 +702,7 @@ const styles = StyleSheet.create({
     color: '#999',
     fontStyle: 'italic',
     marginTop: 2,
+    textAlign: 'left', // 确保拼音左对齐
   },
   candidatesContainer: {
     marginTop: 12,
@@ -794,7 +795,7 @@ const styles = StyleSheet.create({
   },
   exampleContainer: {
     marginTop: 4,
-    paddingLeft: 8,
+    paddingLeft: 0, // 移除左缩进，让内容左对齐
   },
   exampleTextRow: {
     flexDirection: 'row',
@@ -806,7 +807,7 @@ const styles = StyleSheet.create({
     color: '#888',
     fontStyle: 'italic',
     flex: 1,
-    marginLeft: 8,
+    marginLeft: 0, // 移除左缩进，让文本左对齐
   },
   exampleAudioButton: {
     padding: 4,
