@@ -360,10 +360,11 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     }
 
     // 如果是中文输入，直接进入翻译功能，不触发语言提醒
-    if (isChinese(word)) {
-      await performSearch(word);
-      return;
-    }
+    // 注意：这里不处理中文输入，让performSearch中的逻辑处理
+    // if (isChinese(word)) {
+    //   await performSearch(word);
+    //   return;
+    // }
 
     // 如果是英文UI且输入英文，直接进入翻译功能，不触发语言提醒
     if (appLanguage === 'en-US' && /^[a-zA-Z\s]+$/.test(word)) {
