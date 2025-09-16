@@ -341,7 +341,10 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
 
   const isChinese = (text: string) => /[\u4e00-\u9fa5]/.test(text);
   const isEnglish = (text: string) => /^[a-zA-Z\s]+$/.test(text);
-  const isPinyin = (text: string) => /^[a-z\s]+$/.test(text) && !/^[a-zA-Z\s]+$/.test(text);
+  const isPinyin = (text: string) => {
+    // 只包含小写字母和空格，不包含大写字母
+    return /^[a-z\s]+$/.test(text) && !/[A-Z]/.test(text);
+  };
 
   // 拼音候选词缓存 - 用于缓存API返回的候选词
   const [pinyinCache, setPinyinCache] = useState<Record<string, Array<{chinese: string, english: string}>>>({});

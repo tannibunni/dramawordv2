@@ -77,22 +77,26 @@ async function generatePinyinCandidatesWithAI(pinyin: string): Promise<Array<{ch
     apiKey: process.env.OPENAI_API_KEY,
   });
 
-  const prompt = `请为拼音 "${pinyin}" 生成3-5个最常用的中文字符候选词，按使用频率排序。
+  const prompt = `请为拼音 "${pinyin}" 生成3-5个最常用的中文词汇候选词，按使用频率排序。
 
 返回JSON格式：
 {
   "candidates": [
-    {"chinese": "最常用字符", "english": "英文释义", "frequency": 100},
-    {"chinese": "次常用字符", "english": "英文释义", "frequency": 90},
-    {"chinese": "第三常用字符", "english": "英文释义", "frequency": 80}
+    {"chinese": "最常用词汇", "english": "英文释义", "frequency": 100},
+    {"chinese": "次常用词汇", "english": "英文释义", "frequency": 90},
+    {"chinese": "第三常用词汇", "english": "英文释义", "frequency": 80}
   ]
 }
 
 要求：
-1. 只返回最常用的中文字符
+1. 优先返回完整词汇，不是单字
 2. 英文释义要准确简洁
 3. frequency按100-60递减
-4. 只返回JSON，不要其他内容`;
+4. 只返回JSON，不要其他内容
+
+例如：
+- "luo ji" 应该返回 "逻辑" (logic), "落机" (landing), "罗技" (Logitech)
+- "ni hao" 应该返回 "你好" (hello), "泥好" (mud good)`;
 
   try {
     const completion = await openai.chat.completions.create({
