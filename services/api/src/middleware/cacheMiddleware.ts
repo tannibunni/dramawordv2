@@ -202,8 +202,24 @@ export const userCacheSetMiddleware = createCacheSetMiddleware({
 export const wordCacheMiddleware = createCacheMiddleware({
   strategy: 'word',
   keyGenerator: (req) => {
-    const wordId = req.params.id || req.query.wordId;
+    // 支持多种参数名：id, word, wordId
+    const wordId = req.params.id || req.params.word || req.query.wordId;
     const userId = (req as any).user?.id || 'anonymous';
+    
+    // 添加调试信息
+    console.log(`🔍 缓存键生成调试:`, {
+      path: req.path,
+      params: req.params,
+      query: req.query,
+      wordId,
+      userId
+    });
+    
+    if (!wordId) {
+      console.error(`❌ wordId为空，路径: ${req.path}, 参数:`, req.params);
+      throw new Error(`wordId不能为空，路径: ${req.path}`);
+    }
+    
     return `word:${wordId}:${userId}`;
   },
   skipCache: (req) => {
@@ -214,8 +230,24 @@ export const wordCacheMiddleware = createCacheMiddleware({
 export const wordCacheSetMiddleware = createCacheSetMiddleware({
   strategy: 'word',
   keyGenerator: (req) => {
-    const wordId = req.params.id || req.query.wordId;
+    // 支持多种参数名：id, word, wordId
+    const wordId = req.params.id || req.params.word || req.query.wordId;
     const userId = (req as any).user?.id || 'anonymous';
+    
+    // 添加调试信息
+    console.log(`🔍 缓存设置键生成调试:`, {
+      path: req.path,
+      params: req.params,
+      query: req.query,
+      wordId,
+      userId
+    });
+    
+    if (!wordId) {
+      console.error(`❌ wordId为空，路径: ${req.path}, 参数:`, req.params);
+      throw new Error(`wordId不能为空，路径: ${req.path}`);
+    }
+    
     return `word:${wordId}:${userId}`;
   }
 });
