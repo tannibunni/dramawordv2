@@ -49,9 +49,18 @@ export const getChineseWordDetails = async (req: Request, res: Response) => {
     const { uiLanguage = 'en-US' } = req.query;
 
     console.log(`🔍 查询中文词汇详细信息: ${word}, UI语言: ${uiLanguage}`);
+    console.log(`🔍 请求参数详情:`, {
+      params: req.params,
+      query: req.query,
+      path: req.path,
+      method: req.method
+    });
 
     // 检查缓存
     const cacheKey = `chinese_${word}_${uiLanguage}`;
+    console.log(`🔍 缓存键: ${cacheKey}`);
+    console.log(`🔍 缓存检查: word=${word}, uiLanguage=${uiLanguage}`);
+    
     if (wordCache.has(cacheKey)) {
       console.log(`✅ 从缓存返回中文词汇: ${word}`);
       return res.json({
@@ -130,6 +139,7 @@ export const getChineseWordDetails = async (req: Request, res: Response) => {
     };
 
     // 缓存结果
+    console.log(`🔍 设置缓存: ${cacheKey}`);
     wordCache.set(cacheKey, result);
 
     console.log(`✅ 生成中文词汇详细信息: ${word}`);
