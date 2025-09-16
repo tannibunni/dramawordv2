@@ -452,9 +452,14 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     try {
       if (isChinese(word)) {
         console.log(`🔍 直接输入中文词汇: ${word}`);
+        console.log(`🔍 appLanguage: ${appLanguage}, type: ${typeof appLanguage}`);
+        
+        // 安全检查appLanguage
+        const safeAppLanguage = appLanguage || 'en-US';
+        console.log(`🔍 使用安全的appLanguage: ${safeAppLanguage}`);
         
         // 使用统一的中文词汇查询API
-        const result = await wordService.getChineseWordDetails(word, appLanguage);
+        const result = await wordService.getChineseWordDetails(word, safeAppLanguage);
         if (result.success && result.data) {
           console.log(`✅ 获取中文词汇详细信息成功: ${word}`);
           console.log(`🔍 设置searchResult数据:`, result.data);
@@ -1048,8 +1053,11 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                   setSelectedLanguage('CHINESE');
                   console.log(`🔍 点击英文翻译候选词: ${chinese}`);
                   
+                  // 安全检查appLanguage
+                  const safeAppLanguage = appLanguage || 'en-US';
+                  
                   // 使用统一的中文词汇查询API
-                  const result = await wordService.getChineseWordDetails(chinese, appLanguage);
+                  const result = await wordService.getChineseWordDetails(chinese, safeAppLanguage);
                   if (result.success && result.data) {
                     setSearchResult(result.data);
                     setSearchText('');
@@ -1105,8 +1113,11 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                         setSelectedLanguage('CHINESE');
                         console.log(`🔍 点击拼音候选词: ${chinese}`);
                         
+                        // 安全检查appLanguage
+                        const safeAppLanguage = appLanguage || 'en-US';
+                        
                         // 使用新的中文词汇查询API
-                        const result = await wordService.getChineseWordDetails(chinese, appLanguage);
+                        const result = await wordService.getChineseWordDetails(chinese, safeAppLanguage);
                         if (result.success && result.data) {
                           setSearchResult(result.data);
                           setSearchText('');
