@@ -108,6 +108,94 @@ app.get('/health', (req, res) => {
   });
 });
 
+// 临时邀请码验证端点（用于测试）
+app.post('/api/invite/validate', (req, res) => {
+  try {
+    const { code } = req.body;
+    
+    if (!code || typeof code !== 'string') {
+      return res.status(400).json({
+        success: false,
+        message: '邀请码不能为空'
+      });
+    }
+
+    logger.info(`🔍 验证邀请码: ${code}`);
+
+    // 模拟邀请码验证
+    const mockInviteCodes = {
+      'DWMFN05BRN5PN9S0': {
+        code: 'DWMFN05BRN5PN9S0',
+        discount: 20,
+        maxUses: 100,
+        usedCount: 5,
+        expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+        isActive: true
+      },
+      'DWTEST123456789': {
+        code: 'DWTEST123456789',
+        discount: 10,
+        maxUses: 50,
+        usedCount: 10,
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+        isActive: true
+      }
+    };
+
+    const inviteCode = mockInviteCodes[code];
+    
+    if (!inviteCode) {
+      return res.status(404).json({
+        success: false,
+        message: '邀请码不存在'
+      });
+    }
+
+    if (!inviteCode.isActive) {
+      return res.status(400).json({
+        success: false,
+        message: '邀请码已失效'
+      });
+    }
+
+    if (inviteCode.usedCount >= inviteCode.maxUses) {
+      return res.status(400).json({
+        success: false,
+        message: '邀请码使用次数已达上限'
+      });
+    }
+
+    if (inviteCode.expiresAt && new Date() > inviteCode.expiresAt) {
+      return res.status(400).json({
+        success: false,
+        message: '邀请码已过期'
+      });
+    }
+
+    logger.info(`✅ 邀请码验证成功: ${code}, 折扣: ${inviteCode.discount}%`);
+
+    res.json({
+      success: true,
+      message: '邀请码验证成功',
+      data: {
+        code: inviteCode.code,
+        discount: inviteCode.discount,
+        maxUses: inviteCode.maxUses,
+        usedCount: inviteCode.usedCount,
+        expiresAt: inviteCode.expiresAt
+      }
+    });
+
+  } catch (error) {
+    logger.error('❌ 验证邀请码失败:', error);
+    res.status(500).json({
+      success: false,
+      message: '验证邀请码失败',
+      error: error instanceof Error ? error.message : '未知错误'
+    });
+  }
+});
+
 // OpenAI健康检查端点
 app.get('/health/openai', async (req, res) => {
   try {
