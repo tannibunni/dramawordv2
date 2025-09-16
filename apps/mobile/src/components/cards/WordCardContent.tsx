@@ -315,26 +315,11 @@ const WordCardContent: React.FC<WordCardContentProps> = ({ wordData, onPlayAudio
               <Text style={styles.definition} selectable>{def.definition}</Text>
               {def.examples && def.examples.length > 0 && (
                 <View style={styles.examplesBlock}>
-                  {/* 例句section发音按钮 */}
+                  {/* 例句section标签 */}
                   <View style={styles.examplesHeader}>
                     {/* 只有中文界面才显示"例句"标签 */}
                     {appLanguage === 'zh-CN' && (
                       <Text style={styles.examplesLabel}>例句</Text>
-                    )}
-                    {/* 只有中文词汇才显示例句发音按钮 */}
-                    {(wordData.language === 'zh' || wordData.language === 'zh-CN') && (
-                      <TouchableOpacity 
-                        style={styles.examplesAudioButton}
-                        onPress={() => {
-                          // 播放第一个中文例句
-                          const firstChineseExample = def.examples.find((ex: any) => ex.chinese);
-                          if (firstChineseExample) {
-                            handlePlayExampleAudio(firstChineseExample.chinese, 'zh');
-                          }
-                        }}
-                      >
-                        <Ionicons name="volume-high" size={18} color={colors.primary[500]} />
-                      </TouchableOpacity>
                     )}
                   </View>
                   {def.examples.map((ex, exIdx) => {
@@ -372,6 +357,23 @@ const WordCardContent: React.FC<WordCardContentProps> = ({ wordData, onPlayAudio
                       </View>
                     );
                   })}
+                  {/* 例句发音按钮 - 放在最底下 */}
+                  {(wordData.language === 'zh' || wordData.language === 'zh-CN') && (
+                    <View style={styles.examplesAudioContainer}>
+                      <TouchableOpacity 
+                        style={styles.examplesAudioButton}
+                        onPress={() => {
+                          // 播放第一个中文例句
+                          const firstChineseExample = def.examples.find((ex: any) => ex.chinese);
+                          if (firstChineseExample) {
+                            handlePlayExampleAudio(firstChineseExample.chinese, 'zh');
+                          }
+                        }}
+                      >
+                        <Ionicons name="volume-high" size={18} color={colors.primary[500]} />
+                      </TouchableOpacity>
+                    </View>
+                  )}
                 </View>
               )}
             </View>
@@ -489,26 +491,11 @@ const WordCardContent: React.FC<WordCardContentProps> = ({ wordData, onPlayAudio
               <Text style={styles.definition} selectable>{def.definition}</Text>
               {def.examples && def.examples.length > 0 && (
                 <View style={styles.examplesBlock}>
-                  {/* 例句section发音按钮 */}
+                  {/* 例句section标签 */}
                   <View style={styles.examplesHeader}>
                     {/* 只有中文界面才显示"例句"标签 */}
                     {appLanguage === 'zh-CN' && (
                       <Text style={styles.examplesLabel}>例句</Text>
-                    )}
-                    {/* 只有中文词汇才显示例句发音按钮 */}
-                    {(wordData.language === 'zh' || wordData.language === 'zh-CN') && (
-                      <TouchableOpacity 
-                        style={styles.examplesAudioButton}
-                        onPress={() => {
-                          // 播放第一个中文例句
-                          const firstChineseExample = def.examples.find((ex: any) => ex.chinese);
-                          if (firstChineseExample) {
-                            handlePlayExampleAudio(firstChineseExample.chinese, 'zh');
-                          }
-                        }}
-                      >
-                        <Ionicons name="volume-high" size={18} color={colors.primary[500]} />
-                      </TouchableOpacity>
                     )}
                   </View>
                   {def.examples.map((ex, exIdx) => {
@@ -546,6 +533,23 @@ const WordCardContent: React.FC<WordCardContentProps> = ({ wordData, onPlayAudio
                       </View>
                     );
                   })}
+                  {/* 例句发音按钮 - 放在最底下 */}
+                  {(wordData.language === 'zh' || wordData.language === 'zh-CN') && (
+                    <View style={styles.examplesAudioContainer}>
+                      <TouchableOpacity 
+                        style={styles.examplesAudioButton}
+                        onPress={() => {
+                          // 播放第一个中文例句
+                          const firstChineseExample = def.examples.find((ex: any) => ex.chinese);
+                          if (firstChineseExample) {
+                            handlePlayExampleAudio(firstChineseExample.chinese, 'zh');
+                          }
+                        }}
+                      >
+                        <Ionicons name="volume-high" size={18} color={colors.primary[500]} />
+                      </TouchableOpacity>
+                    </View>
+                  )}
                 </View>
               )}
             </View>
@@ -793,6 +797,10 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     backgroundColor: colors.primary[50],
   },
+  examplesAudioContainer: {
+    marginTop: 8,
+    alignItems: 'flex-start', // 左对齐
+  },
   exampleContainer: {
     marginTop: 4,
     paddingLeft: 0, // 移除左缩进，让内容左对齐
@@ -810,12 +818,12 @@ const styles = StyleSheet.create({
     marginLeft: 0, // 移除左缩进，让文本左对齐
   },
   exampleChineseText: {
-    fontSize: 15,
+    fontSize: 20,
     color: '#888',
     fontStyle: 'italic',
     flex: 1,
     marginLeft: 0, // 移除左缩进，让文本左对齐
-    marginTop: 4, // 在英文例句和中文例句之间添加间距
+    marginTop: 14, // 在英文例句和中文例句之间添加间距
   },
   exampleAudioButton: {
     padding: 4,
