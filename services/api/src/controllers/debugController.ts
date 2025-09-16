@@ -4,6 +4,80 @@ import { User } from '../models/User';
 import { logger } from '../utils/logger';
 
 export class DebugController {
+  // 调试用户统计
+  static async debugUserStats(req: Request, res: Response) {
+    try {
+      logger.info('开始调试用户统计');
+
+      // 获取所有用户
+      const allUsers = await User.find({});
+      
+      // 按登录类型分组
+      const usersByType = allUsers.reduce((acc, user) => {
+        const type = user.auth?.loginType || 'unknown';
+        if (!acc[type]) acc[type] = [];
+        acc[type].push({
+          id: user._id,
+          deviceId: user.deviceId,
+          createdAt: user.createdAt,
+          lastLogin: user.lastLogin
+        });
+        return acc;
+      }, {} as any);
+
+      // 检查重复的deviceId
+      const deviceIdMap = new Map();
+      const duplicateDeviceIds = [];
+      
+      allUsers.forEach(user => {
+        if (user.deviceId) {
+          if (deviceIdMap.has(user.deviceId)) {
+            duplicateDeviceIds.push({
+              deviceId: user.deviceId,
+              users: [deviceIdMap.get(user.deviceId), user._id]
+            });
+          } else {
+            deviceIdMap.set(user.deviceId, user._id);
+          }
+        }
+      });
+
+      // 统计信息
+      const stats = {
+        totalUsers: allUsers.length,
+        usersByType: Object.keys(usersByType).reduce((acc, type) => {
+          acc[type] = usersByType[type].length;
+          return acc;
+        }, {} as any),
+        duplicateDeviceIds: duplicateDeviceIds.length,
+        duplicateDetails: duplicateDeviceIds,
+        allUsers: allUsers.map(user => ({
+          id: user._id,
+          deviceId: user.deviceId,
+          loginType: user.auth?.loginType || 'unknown',
+          createdAt: user.createdAt,
+          lastLogin: user.lastLogin
+        }))
+      };
+
+      logger.info(`用户统计: 总用户=${stats.totalUsers}, 重复设备=${stats.duplicateDeviceIds}`);
+
+      res.json({
+        success: true,
+        message: '用户统计调试成功',
+        data: stats
+      });
+
+    } catch (error) {
+      logger.error('调试用户统计失败:', error);
+      res.status(500).json({
+        success: false,
+        message: '调试用户统计失败',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  }
+
   // 调试用户词汇数据
   static async debugUserVocabulary(req: Request, res: Response) {
     try {
