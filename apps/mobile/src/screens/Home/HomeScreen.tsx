@@ -535,8 +535,8 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
           setIsLoading(false);
           return;
         }
-      } else if (isEnglish(word) && appLanguage === 'en-US' && selectedLanguage !== 'CHINESE') {
-        // 英文界面下输入英文单词，且目标语言不是中文，显示中文翻译弹窗
+      } else if (isEnglish(word) && appLanguage === 'en-US') {
+        // 英文界面下输入英文单词，显示中文翻译弹窗
         console.log(`🔍 英文界面输入英文单词，显示中文翻译: ${word}`);
         console.log(`🔍 selectedLanguage: ${selectedLanguage}`);
         
@@ -1046,8 +1046,10 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                   setSearchText(chinese);
                   // 切换到中文搜索界面
                   setSelectedLanguage('CHINESE');
-                  // 使用中文进行搜索
-                  const result = await wordService.searchWord(chinese.toLowerCase(), 'zh', 'zh-CN');
+                  console.log(`🔍 点击英文翻译候选词: ${chinese}`);
+                  
+                  // 使用统一的中文词汇查询API
+                  const result = await wordService.getChineseWordDetails(chinese, appLanguage);
                   if (result.success && result.data) {
                     setSearchResult(result.data);
                     setSearchText('');
@@ -1067,7 +1069,8 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                       ];
                     });
                   } else {
-                    Alert.alert('查询失败', result.error || '无法找到该单词');
+                    console.log(`❌ 查询中文词汇详细信息失败: ${chinese}`);
+                    Alert.alert('错误', '查询失败，请重试');
                   }
                   setIsLoading(false);
                 }} style={{ paddingVertical: 10, paddingHorizontal: 24, borderRadius: 16, backgroundColor: colors.primary[50], marginBottom: 10 }}>
