@@ -86,7 +86,14 @@ export function createCacheMiddleware(options: CacheMiddlewareOptions) {
         next();
       }
     } catch (error) {
-      logger.error('📊 缓存中间件错误:', error);
+      console.error('📊 缓存中间件错误:', error);
+      console.error('📊 错误详情:', {
+        message: error instanceof Error ? error.message : '未知错误',
+        stack: error instanceof Error ? error.stack : undefined,
+        path: req.path,
+        params: req.params,
+        query: req.query
+      });
       // 出错时继续处理请求
       next();
     }
@@ -217,7 +224,10 @@ export const wordCacheMiddleware = createCacheMiddleware({
     
     if (!wordId) {
       console.error(`❌ wordId为空，路径: ${req.path}, 参数:`, req.params);
-      throw new Error(`wordId不能为空，路径: ${req.path}`);
+      // 使用路径作为fallback
+      const fallbackWordId = req.path.split('/').pop() || 'unknown';
+      console.log(`🔧 使用fallback wordId: ${fallbackWordId}`);
+      return `word:${fallbackWordId}:${userId}`;
     }
     
     return `word:${wordId}:${userId}`;
@@ -245,7 +255,10 @@ export const wordCacheSetMiddleware = createCacheSetMiddleware({
     
     if (!wordId) {
       console.error(`❌ wordId为空，路径: ${req.path}, 参数:`, req.params);
-      throw new Error(`wordId不能为空，路径: ${req.path}`);
+      // 使用路径作为fallback
+      const fallbackWordId = req.path.split('/').pop() || 'unknown';
+      console.log(`🔧 使用fallback wordId: ${fallbackWordId}`);
+      return `word:${fallbackWordId}:${userId}`;
     }
     
     return `word:${wordId}:${userId}`;
