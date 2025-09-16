@@ -747,11 +747,8 @@ export class WordService {
         return { success: false, error: '无效的UI语言参数' };
       }
       
-      // 生成缓存键
-      const cacheKey = `chinese_${word}_${uiLanguage}`;
-      
       // 检查缓存
-      const cached = await cacheService.get(cacheKey);
+      const cached = await cacheService.get('chinese', `${word}_${uiLanguage}`);
       if (cached) {
         console.log(`✅ 从缓存返回中文词汇: ${word}`);
         return { success: true, data: cached };
@@ -772,7 +769,7 @@ export class WordService {
       
       if (result.success && result.data) {
         // 缓存结果
-        await cacheService.set(cacheKey, result.data, 24 * 60 * 60 * 1000); // 24小时缓存
+        await cacheService.set('chinese', `${word}_${uiLanguage}`, result.data, { maxAge: 24 * 60 * 60 * 1000 }); // 24小时缓存
         
         console.log(`✅ 查询中文词汇成功: ${word}`);
         return { success: true, data: result.data };
