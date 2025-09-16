@@ -42,6 +42,112 @@ function getLanguageName(lang: string) {
   }
 }
 
+// 查询中文词汇详细信息
+export const getChineseWordDetails = async (req: Request, res: Response) => {
+  try {
+    const { word } = req.params;
+    const { uiLanguage = 'en-US' } = req.query;
+
+    console.log(`🔍 查询中文词汇详细信息: ${word}, UI语言: ${uiLanguage}`);
+
+    // 检查缓存
+    const cacheKey = `chinese_${word}_${uiLanguage}`;
+    if (wordCache.has(cacheKey)) {
+      console.log(`✅ 从缓存返回中文词汇: ${word}`);
+      return res.json({
+        success: true,
+        data: wordCache.get(cacheKey)
+      });
+    }
+
+    // 使用OpenAI生成中文词汇详细信息
+    const prompt = `请为中文词汇 "${word}" 生成详细信息，包括：
+
+1. 拼音（带声调）
+2. 英文释义（简洁准确）
+3. 词性
+4. 例句（中文+拼音+英文翻译）
+
+返回JSON格式：
+{
+  "word": "${word}",
+  "pinyin": "拼音带声调",
+  "definitions": [
+    {
+      "partOfSpeech": "词性",
+      "definition": "英文释义",
+      "examples": [
+        {
+          "chinese": "中文例句",
+          "pinyin": "例句拼音带声调",
+          "english": "英文翻译"
+        }
+      ]
+    }
+  ]
+}
+
+要求：
+- 拼音必须准确，带声调符号
+- 英文释义要简洁准确
+- 例句要实用，包含拼音和英文翻译
+- 只返回JSON，不要其他内容`;
+
+    const completion = await openai.chat.completions.create({
+      model: "gpt-3.5-turbo",
+      messages: [{ role: "user", content: prompt }],
+      max_tokens: 1000,
+      temperature: 0.3
+    });
+
+    const response = completion.choices[0].message.content;
+    const wordData = JSON.parse(response);
+
+    // 构建返回数据
+    const result = {
+      word: wordData.word,
+      language: 'zh',
+      uiLanguage: uiLanguage,
+      phonetic: wordData.pinyin,
+      pinyin: wordData.pinyin,
+      definitions: wordData.definitions.map((def: any) => ({
+        partOfSpeech: def.partOfSpeech || 'n.',
+        definition: def.definition,
+        examples: def.examples.map((ex: any) => ({
+          chinese: ex.chinese,
+          pinyin: ex.pinyin,
+          english: ex.english
+        }))
+      })),
+      audioUrl: '',
+      slangMeaning: null,
+      phraseExplanation: null,
+      correctedWord: wordData.word,
+      searchCount: 1,
+      lastSearched: new Date(),
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+
+    // 缓存结果
+    wordCache.set(cacheKey, result);
+
+    console.log(`✅ 生成中文词汇详细信息: ${word}`);
+    res.json({
+      success: true,
+      data: result
+    });
+
+  } catch (error) {
+    console.error('❌ 查询中文词汇详细信息失败:', error);
+    res.status(500).json({
+      success: false,
+      error: '查询中文词汇详细信息失败',
+      details: error instanceof Error ? error.message : '未知错误'
+    });
+  }
+};
+
 function mapUILanguage(uiLanguage: string) {
   if (uiLanguage.startsWith('en')) return 'en';
   if (uiLanguage.startsWith('zh')) return 'zh-CN';

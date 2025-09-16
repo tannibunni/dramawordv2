@@ -19,7 +19,8 @@ import {
   translateEnglishToChinese, // 新增
   testPromptLoading, // 新增
   getRateLimitStatus, // 新增
-  getCloudWord // 新增：云词库获取
+  getCloudWord, // 新增：云词库获取
+  getChineseWordDetails // 新增：中文词汇详细信息
 } from '../controllers/wordController';
 import { 
   wordCacheMiddleware, 
@@ -63,6 +64,13 @@ router.post('/history',
 router.get('/cloud/:word', 
   wordCacheMiddleware, 
   getCloudWord, 
+  wordCacheSetMiddleware
+);
+
+// 中文词汇详细信息路由
+router.get('/chinese/:word', 
+  wordCacheMiddleware, 
+  getChineseWordDetails, 
   wordCacheSetMiddleware
 );
 

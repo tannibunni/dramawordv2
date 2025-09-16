@@ -730,6 +730,46 @@ export class WordService {
       return { success: false, candidates: [], error: error instanceof Error ? error.message : '未知错误' };
     }
   }
+
+  // 查询中文词汇详细信息
+  async getChineseWordDetails(word: string, uiLanguage: string = 'en-US'): Promise<SearchResult> {
+    try {
+      console.log(`🔍 查询中文词汇详细信息: ${word} (UI语言: ${uiLanguage})`);
+      
+      // 生成缓存键
+      const cacheKey = `chinese_${word}_${uiLanguage}`;
+      
+      // 检查缓存
+      const cached = await cacheService.get(cacheKey);
+      if (cached) {
+        console.log(`✅ 从缓存返回中文词汇: ${word}`);
+        return { success: true, data: cached };
+      }
+      
+      const response = await fetch(`${API_BASE_URL}/words/chinese/${encodeURIComponent(word)}?uiLanguage=${uiLanguage}`, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      
+      if (!response.ok) {
+        throw new WordServiceError(`查询中文词汇失败: ${response.status}`, response.status);
+      }
+      
+      const result = await response.json();
+      if (result.success && result.data) {
+        // 缓存结果
+        await cacheService.set(cacheKey, result.data, 24 * 60 * 60 * 1000); // 24小时缓存
+        
+        console.log(`✅ 查询中文词汇成功: ${word}`);
+        return { success: true, data: result.data };
+      } else {
+        return { success: false, error: result.error || '查询中文词汇失败' };
+      }
+    } catch (error) {
+      console.error(`❌ 查询中文词汇详细信息错误:`, error);
+      return { success: false, error: error instanceof Error ? error.message : '未知错误' };
+    }
+  }
 }
 
 // 导出单例实例
