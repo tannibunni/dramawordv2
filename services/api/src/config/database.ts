@@ -5,23 +5,49 @@ const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/dramaw
 
 export const connectDatabase = async (): Promise<void> => {
   try {
-    // 优化连接配置 - 使用mongoose 8.x兼容的选项
+    // 🚀 高性能连接池配置 - 针对高并发优化
     const mongooseOptions = {
-      maxPoolSize: 10,                    // 最大连接池大小
-      serverSelectionTimeoutMS: 5000,     // 服务器选择超时
-      socketTimeoutMS: 45000,             // Socket超时
-      maxIdleTimeMS: 30000,              // 最大空闲时间
+      // 连接池配置 - 提高并发性能
+      maxPoolSize: 20,                    // 最大连接池大小 (原10) - 提高100%
+      minPoolSize: 5,                     // 最小连接池大小 (原2) - 提高150%
+      maxConnecting: 5,                   // 最大连接中数量 (原2) - 提高150%
+      
+      // 超时配置 - 平衡性能和稳定性
+      serverSelectionTimeoutMS: 10000,    // 服务器选择超时 (原5000) - 提高100%
+      socketTimeoutMS: 60000,             // Socket超时 (原45000) - 提高33%
+      connectTimeoutMS: 10000,            // 连接超时
+      maxIdleTimeMS: 60000,              // 最大空闲时间 (原30000) - 提高100%
+      
+      // 重试和容错配置
       retryWrites: true,                 // 启用重试写入
       retryReads: true,                  // 启用重试读取
-      compressors: ['zlib'] as ('zlib' | 'none' | 'snappy' | 'zstd')[],    // 启用压缩
-      zlibCompressionLevel: 6 as 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9,           // 压缩级别
-      heartbeatFrequencyMS: 10000,       // 心跳频率
-      maxConnecting: 2,                  // 最大连接中数量
-      minPoolSize: 2                     // 最小连接池大小
+      
+      // 压缩和性能优化
+      compressors: ['zlib'] as ('zlib' | 'none' | 'snappy' | 'zstd')[],
+      zlibCompressionLevel: 6 as 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9,
+      
+      // 心跳和监控
+      heartbeatFrequencyMS: 10000,        // 心跳频率
+      
+                  // 读写关注配置
+                  readPreference: 'primary' as const,          // 读取偏好
+      writeConcern: {                     // 写入关注
+        w: 'majority' as const,                    // 写入确认
+        j: true,                          // 日志确认
+        wtimeout: 10000                   // 写入超时
+      },
+      
+      // 连接字符串选项
+      directConnection: false,            // 不直接连接
+      ssl: false,                         // SSL配置
+      authSource: 'admin',                // 认证源
+      
+      // 性能监控
+      monitorCommands: process.env.NODE_ENV === 'development', // 开发环境监控命令
     };
 
     await mongoose.connect(MONGODB_URI, mongooseOptions);
-    logger.info('✅ MongoDB connected successfully with optimized connection pool');
+    logger.info('✅ MongoDB connected successfully with high-performance connection pool');
     
     // 监听连接事件
     mongoose.connection.on('error', (error) => {
@@ -53,16 +79,27 @@ export const connectDatabase = async (): Promise<void> => {
       
       logger.info(`📊 MongoDB connection state: ${connectionStates[connectionState]}`);
       
-      // 记录连接池统计信息
-      if (mongoose.connection.db) {
-        mongoose.connection.db.admin().serverStatus()
-          .then((status) => {
-            logger.info(`📈 MongoDB server status - Connections: ${status.connections?.current || 'N/A'}`);
-          })
-          .catch((error) => {
-            logger.warn('⚠️ Failed to get server status:', error.message);
-          });
-      }
+        // 获取连接池统计信息
+        if (mongoose.connection.db) {
+          mongoose.connection.db.admin().serverStatus()
+            .then((status) => {
+              logger.info(`📈 MongoDB server status:`, {
+                connections: {
+                  current: status.connections?.current || 0,
+                  available: status.connections?.available || 0,
+                  totalCreated: status.connections?.totalCreated || 0
+                },
+                memory: {
+                  resident: status.mem?.resident || 0,
+                  virtual: status.mem?.virtual || 0
+                },
+                uptime: status.uptime || 0
+              });
+            })
+            .catch((error) => {
+              logger.warn('⚠️ Failed to get server status:', error.message);
+            });
+        }
     }, 60000); // 每分钟检查一次
     
     // 优雅关闭

@@ -353,7 +353,7 @@ export class NetworkController {
     }
   }
 
-  // 确定最优同步设置
+  // 确定最优同步设置 - 优化批量处理策略
   private static determineOptimalSyncSettings(
     networkInfo: {
       networkType?: string;
@@ -370,7 +370,7 @@ export class NetworkController {
     if (networkInfo.networkType === 'wifi') {
       if (networkInfo.signalStrength && networkInfo.signalStrength >= -60) {
         return {
-          batchSize: 1000,
+          batchSize: 2000,              // 增加批量大小 (原1000) - 减少50%请求
           timeout: 30000,
           retryAttempts: 3,
           enableCompression: false,
@@ -378,7 +378,7 @@ export class NetworkController {
         };
       } else {
         return {
-          batchSize: 500,
+          batchSize: 1000,              // 增加批量大小 (原500) - 减少50%请求
           timeout: 45000,
           retryAttempts: 5,
           enableCompression: true,
@@ -388,7 +388,7 @@ export class NetworkController {
     } else if (networkInfo.networkType === 'cellular') {
       if (networkInfo.cellularGeneration === '5G') {
         return {
-          batchSize: 800,
+          batchSize: 1500,              // 增加批量大小 (原800) - 减少47%请求
           timeout: 35000,
           retryAttempts: 4,
           enableCompression: false,
@@ -396,7 +396,7 @@ export class NetworkController {
         };
       } else if (networkInfo.cellularGeneration === '4G') {
         return {
-          batchSize: 300,
+          batchSize: 600,               // 增加批量大小 (原300) - 减少50%请求
           timeout: 50000,
           retryAttempts: 6,
           enableCompression: true,
@@ -404,7 +404,7 @@ export class NetworkController {
         };
       } else {
         return {
-          batchSize: 100,
+          batchSize: 200,               // 增加批量大小 (原100) - 减少50%请求
           timeout: 60000,
           retryAttempts: 8,
           enableCompression: true,
@@ -413,7 +413,7 @@ export class NetworkController {
       }
     } else {
       return {
-        batchSize: 50,
+        batchSize: 100,                // 增加批量大小 (原50) - 减少50%请求
         timeout: 90000,
         retryAttempts: 10,
         enableCompression: true,

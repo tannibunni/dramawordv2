@@ -5,6 +5,7 @@
 
 import Redis from 'ioredis';
 import { logger } from '../utils/logger';
+import { fallbackCacheService } from './fallbackCacheService';
 
 export interface CacheConfig {
   host: string;
@@ -257,8 +258,8 @@ export class RedisCacheService {
   // 设置缓存
   public async set<T>(strategy: string, identifier: string, data: T): Promise<boolean> {
     if (!this.isConnected || !this.redis) {
-      logger.warn('📊 Redis未连接，跳过缓存设置');
-      return false;
+      logger.warn('📊 Redis未连接，使用内存缓存降级');
+      return await fallbackCacheService.set(strategy, identifier, data);
     }
 
     try {
@@ -279,18 +280,18 @@ export class RedisCacheService {
       logger.error('📊 缓存设置失败:', error);
       this.stats.errors++;
       this.stats.totalOperations++;
-      return false;
+      
+      // 降级到内存缓存
+      logger.warn('🔄 降级到内存缓存');
+      return await fallbackCacheService.set(strategy, identifier, data);
     }
   }
 
   // 获取缓存
   public async get<T>(strategy: string, identifier: string): Promise<T | null> {
     if (!this.isConnected || !this.redis) {
-      logger.warn('📊 Redis未连接，跳过缓存获取');
-      this.stats.misses++;
-      this.stats.totalOperations++;
-      this.updateHitRate();
-      return null;
+      logger.warn('📊 Redis未连接，使用内存缓存降级');
+      return await fallbackCacheService.get(strategy, identifier);
     }
 
     try {
@@ -321,7 +322,10 @@ export class RedisCacheService {
       this.stats.misses++;
       this.stats.totalOperations++;
       this.updateHitRate();
-      return null;
+      
+      // 降级到内存缓存
+      logger.warn('🔄 降级到内存缓存');
+      return await fallbackCacheService.get(strategy, identifier);
     }
   }
 

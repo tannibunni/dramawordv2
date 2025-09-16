@@ -10,6 +10,7 @@ import { localizationService, LocalizedProduct } from '../../services/localizati
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAppLanguage } from '../../context/AppLanguageContext';
 import { t } from '../../constants/translations';
+import { InviteCodeInput } from '../../components/common/InviteCodeInput';
 
 const renderFeatureTable = (subscriptionStatus: any, appLanguage: 'zh-CN' | 'en-US') => {
   const featureTable = getFeatureTable(subscriptionStatus, appLanguage);
@@ -101,6 +102,8 @@ const SubscriptionScreen = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [showBottomCta, setShowBottomCta] = useState(false);
   const [localizedProducts, setLocalizedProducts] = useState<LocalizedProduct[]>([]);
+  const [inviteCode, setInviteCode] = useState('');
+  const [inviteDiscount, setInviteDiscount] = useState(0);
   const { goBack, navigate } = useNavigation();
   const { appLanguage } = useAppLanguage();
   const scrollViewRef = useRef<ScrollView>(null);
@@ -165,6 +168,38 @@ const SubscriptionScreen = () => {
 
     initializeSubscription();
   }, []);
+
+  // 处理邀请码应用
+  const handleInviteCodeApplied = (code: string, discount: number) => {
+    setInviteCode(code);
+    setInviteDiscount(discount);
+    console.log(`🎁 邀请码已应用: ${code}, 折扣: ${discount}%`);
+  };
+
+  // 处理邀请码移除
+  const handleInviteCodeRemoved = () => {
+    setInviteCode('');
+    setInviteDiscount(0);
+    console.log('🗑️ 邀请码已移除');
+  };
+
+  // 计算折扣后的价格
+  const getDiscountedPrice = (originalPrice: string): string => {
+    if (inviteDiscount <= 0) return originalPrice;
+    
+    // 提取数字部分
+    const priceMatch = originalPrice.match(/[\d,]+\.?\d*/);
+    if (!priceMatch) return originalPrice;
+    
+    const price = parseFloat(priceMatch[0].replace(',', ''));
+    const discountedPrice = price * (1 - inviteDiscount / 100);
+    
+    // 格式化价格
+    const formattedPrice = discountedPrice.toFixed(2);
+    const currency = originalPrice.replace(/[\d,]+\.?\d*/, '').trim();
+    
+    return `${currency}${formattedPrice}`;
+  };
 
   // 订阅按钮点击逻辑
   const handleSubscribe = async () => {
@@ -681,6 +716,13 @@ const SubscriptionScreen = () => {
           
           <Text style={styles.planDesc}>{selectedPlanFromTabs.description}</Text>
           
+          {/* 邀请码输入 */}
+          <InviteCodeInput
+            onCodeApplied={handleInviteCodeApplied}
+            onCodeRemoved={handleInviteCodeRemoved}
+            disabled={isLoading}
+          />
+          
           {/* 主CTA按钮 */}
           <TouchableOpacity
             style={styles.mainCtaButton}
@@ -696,7 +738,7 @@ const SubscriptionScreen = () => {
             >
               <Text style={styles.mainCtaButtonText}>
                 {isLoading ? t('processing', appLanguage) : t('subscribe_button', appLanguage, {
-                  price: getLocalizedPrice(selectedPlanFromTabs.id)
+                  price: getDiscountedPrice(getLocalizedPrice(selectedPlanFromTabs.id))
                 })}
               </Text>
             </LinearGradient>

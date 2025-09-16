@@ -39,54 +39,70 @@ export class BatchOperationService {
     return BatchOperationService.instance;
   }
 
-  // 初始化批量配置
+  // 初始化批量配置 - 优化批量处理策略
   private initializeConfigs(): void {
-    // 学习记录批量配置
+    // 学习记录批量配置 - 高频数据，大幅增加批量大小
     this.configs.set('learningRecords', {
-      maxBatchSize: 50,        // 最多50条记录
+      maxBatchSize: 200,       // 增加批量大小 (原50) - 减少75%请求
       maxBatchWaitTime: 30 * 1000,  // 最多等待30秒
       flushInterval: 60 * 1000,     // 每分钟刷新一次
       maxRetries: 3
     });
 
-    // 词汇数据批量配置
+    // 词汇数据批量配置 - 中频数据，增加批量大小
     this.configs.set('vocabulary', {
-      maxBatchSize: 20,        // 最多20个词汇
+      maxBatchSize: 100,       // 增加批量大小 (原20) - 减少80%请求
       maxBatchWaitTime: 60 * 1000,  // 最多等待1分钟
       flushInterval: 2 * 60 * 1000,  // 每2分钟刷新一次
       maxRetries: 3
     });
 
-    // 用户统计批量配置
+    // 用户统计批量配置 - 低频数据，适度增加批量大小
     this.configs.set('userStats', {
-      maxBatchSize: 10,        // 最多10条统计
+      maxBatchSize: 50,        // 增加批量大小 (原10) - 减少80%请求
       maxBatchWaitTime: 2 * 60 * 1000,  // 最多等待2分钟
       flushInterval: 5 * 60 * 1000,     // 每5分钟刷新一次
       maxRetries: 2
     });
 
-    // 经验值批量配置
+    // 经验值批量配置 - 超高频数据，大幅增加批量大小
     this.configs.set('experience', {
-      maxBatchSize: 100,       // 最多100条经验记录
+      maxBatchSize: 500,       // 增加批量大小 (原100) - 减少80%请求
       maxBatchWaitTime: 10 * 1000,  // 最多等待10秒
       flushInterval: 30 * 1000,     // 每30秒刷新一次
       maxRetries: 3
     });
 
-    // 剧单数据批量配置
+    // 剧单数据批量配置 - 低频数据，适度增加批量大小
     this.configs.set('shows', {
-      maxBatchSize: 10,        // 最多10个剧单
+      maxBatchSize: 30,        // 增加批量大小 (原10) - 减少67%请求
       maxBatchWaitTime: 5 * 60 * 1000,  // 最多等待5分钟
       flushInterval: 10 * 60 * 1000,    // 每10分钟刷新一次
       maxRetries: 2
     });
 
-    // 徽章数据批量配置
+    // 徽章数据批量配置 - 低频数据，适度增加批量大小
     this.configs.set('badges', {
-      maxBatchSize: 20,        // 最多20个徽章
+      maxBatchSize: 50,        // 增加批量大小 (原20) - 减少60%请求
       maxBatchWaitTime: 5 * 60 * 1000,  // 最多等待5分钟
       flushInterval: 15 * 60 * 1000,    // 每15分钟刷新一次
       maxRetries: 2
+    });
+
+    // 搜索历史批量配置 - 中频数据，大幅增加批量大小
+    this.configs.set('searchHistory', {
+      maxBatchSize: 300,       // 新增配置 - 大幅批量处理
+      maxBatchWaitTime: 2 * 60 * 1000,  // 最多等待2分钟
+      flushInterval: 5 * 60 * 1000,     // 每5分钟刷新一次
+      maxRetries: 2
+    });
+
+    // 用户设置批量配置 - 超低频数据，保持较小批量大小
+    this.configs.set('userSettings', {
+      maxBatchSize: 20,        // 新增配置 - 保持较小批量
+      maxBatchWaitTime: 10 * 60 * 1000,  // 最多等待10分钟
+      flushInterval: 30 * 60 * 1000,     // 每30分钟刷新一次
+      maxRetries: 1
     });
   }
 

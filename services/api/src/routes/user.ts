@@ -129,6 +129,15 @@ router.put('/showlist', authenticateToken, UserShowListController.updateShow);
 // 批量数据同步 API
 router.post('/batch-sync', authenticateToken, SyncController.uploadData);
 
+// 用户数据强制同步（上传+下载）
+router.post('/sync/force', authenticateToken, SyncController.forceSync);
+
+// 用户数据下载
+router.get('/sync/download', authenticateToken, SyncController.downloadData);
+
+// 用户数据上传
+router.post('/sync/upload', authenticateToken, SyncController.uploadData);
+
 // 用户扩展信息 API
 // 更新用户地理位置信息
 router.put('/:userId/location', 

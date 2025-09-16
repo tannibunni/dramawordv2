@@ -98,13 +98,13 @@ export class UnifiedSyncService {
   private pendingOperations: Set<string> = new Set();
   private syncProgress: number = 0;
 
-  // 统一配置 - 优化数据库性能
+  // 统一配置 - 优化数据库性能和批量处理
   private config: SyncConfig = {
-    wifiSyncInterval: 5 * 60 * 1000,   // 5分钟 (原2分钟) - 减少60%访问
-    mobileSyncInterval: 10 * 60 * 1000, // 10分钟 (原5分钟) - 减少50%访问
-    offlineSyncInterval: 15 * 60 * 1000, // 15分钟 (原10分钟) - 减少33%访问
+    wifiSyncInterval: 15 * 60 * 1000,  // 15分钟 (原5分钟) - 减少66%访问
+    mobileSyncInterval: 30 * 60 * 1000, // 30分钟 (原10分钟) - 减少66%访问
+    offlineSyncInterval: 60 * 60 * 1000, // 60分钟 (原15分钟) - 减少75%访问
     maxRetryAttempts: 3,               // 减少重试次数 (原5次) - 减少40%重试
-    batchSize: 50,                     // 增加批量大小 (原20) - 减少60%请求
+    batchSize: 200,                    // 大幅增加批量大小 (原50) - 减少75%请求
     enableIncrementalSync: false,      // ❌ 禁用增量同步（与多邻国方案冲突）
     enableOfflineFirst: true,
     enableRealTimeSync: false,         // ❌ 禁用实时同步（与多邻国方案冲突）
@@ -114,10 +114,10 @@ export class UnifiedSyncService {
     
     // 智能延迟同步配置 - 数据库性能优化
     enableSmartDelaySync: true,         // ✅ 启用智能延迟同步
-    highPriorityDelay: 5 * 1000,       // 高优先级：5秒延迟 (原立即)
-    mediumPriorityDelay: 30 * 1000,    // 中优先级：30秒延迟 (原10秒)
-    lowPriorityDelay: 2 * 60 * 1000,   // 低优先级：2分钟延迟 (原1分钟)
-    maxBatchDelay: 10 * 60 * 1000      // 最大批量延迟：10分钟 (原5分钟)
+    highPriorityDelay: 30 * 1000,      // 高优先级：30秒延迟 (原5秒) - 减少90%请求
+    mediumPriorityDelay: 2 * 60 * 1000, // 中优先级：2分钟延迟 (原30秒) - 减少75%请求
+    lowPriorityDelay: 5 * 60 * 1000,   // 低优先级：5分钟延迟 (原2分钟) - 减少60%请求
+    maxBatchDelay: 30 * 60 * 1000      // 最大批量延迟：30分钟 (原10分钟) - 减少66%请求
   };
 
   private constructor() {

@@ -450,6 +450,9 @@ export type TranslationKey =
   | 'subscribe_button'
   | 'subscribed'
   | 'processing'
+  | 'invite_code'
+  | 'enter_invite_code'
+  | 'apply'
   | 'feature_comparison'
   | 'free_version'
   | 'premium_version'
@@ -987,6 +990,9 @@ export const translations: Record<AppLanguage, Record<TranslationKey, string>> =
     subscribe_button: '订阅 {price}',
     subscribed: '已订阅',
     processing: '处理中...',
+    invite_code: '邀请码',
+    enter_invite_code: '输入邀请码',
+    apply: '应用',
     feature_comparison: '功能',
     free_version: '免费版',
     premium_version: '高级版',
@@ -1531,6 +1537,9 @@ export const translations: Record<AppLanguage, Record<TranslationKey, string>> =
     subscribe_button: 'Subscribe {price}',
     subscribed: 'Subscribed',
     processing: 'Processing...',
+    invite_code: 'Invite Code',
+    enter_invite_code: 'Enter invite code',
+    apply: 'Apply',
     feature_comparison: 'Features',
     free_version: 'Free',
     premium_version: 'Premium',
