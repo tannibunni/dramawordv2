@@ -190,6 +190,25 @@ const getLanguageLabel = (languageCode: string, appLanguage: string) => {
 
 const WordCardContent: React.FC<WordCardContentProps> = ({ wordData, onPlayAudio, style, scrollable = false, onScroll, showHeader = true }) => {
   const { appLanguage } = useAppLanguage();
+  
+  // 检查内容是否有效（不是"无内容"的提示）
+  const hasValidSlangMeaning = (slang: any) => {
+    if (!slang) return false;
+    if (typeof slang === 'string') {
+      return !slang.includes('No slang or informal meaning available') && 
+             !slang.includes('No slang meaning available');
+    }
+    return true;
+  };
+  
+  const hasValidPhraseExplanation = (phrase: any) => {
+    if (!phrase) return false;
+    if (typeof phrase === 'string') {
+      return !phrase.includes('No specific phrase explanation') && 
+             !phrase.includes('No phrase explanation available');
+    }
+    return true;
+  };
   const handlePlayAudio = async () => {
     try {
       if (wordData.audioUrl) {
@@ -328,16 +347,19 @@ const WordCardContent: React.FC<WordCardContentProps> = ({ wordData, onPlayAudio
                       const example = ex as any; // 类型断言
                       if (wordData.language === 'ja') {
                         // 日语：显示日语例句
-                        return example.english || example.japanese || '';
+                        console.log(`🔍 例句调试 - 语言: ${wordData.language}, 例句数据:`, example);
+                        const result = example.japanese || example.english || '';
+                        console.log(`🔍 日语例句结果: "${result}"`);
+                        return result;
                       } else if (wordData.language === 'ko') {
                         // 韩语：显示韩语例句
-                        return example.english || example.korean || '';
+                        return example.korean || example.english || '';
                       } else if (wordData.language === 'fr') {
                         // 法语：显示法语例句
-                        return example.english || example.french || '';
+                        return example.french || example.english || '';
                       } else if (wordData.language === 'es') {
                         // 西班牙语：显示西班牙语例句
-                        return example.english || example.spanish || '';
+                        return example.spanish || example.english || '';
                       } else {
                         // 英语或其他语言：显示英语例句
                         return example.english || '';
@@ -373,19 +395,19 @@ const WordCardContent: React.FC<WordCardContentProps> = ({ wordData, onPlayAudio
                             handlePlayExampleAudio(firstExample.english, 'en');
                           } else if (wordData.language === 'ja') {
                             // 日文词汇：播放日文例句
-                            const japaneseText = firstExample.english || firstExample.japanese;
+                            const japaneseText = firstExample.japanese || firstExample.english;
                             if (japaneseText) handlePlayExampleAudio(japaneseText, 'ja');
                           } else if (wordData.language === 'ko') {
                             // 韩文词汇：播放韩文例句
-                            const koreanText = firstExample.english || firstExample.korean;
+                            const koreanText = firstExample.korean || firstExample.english;
                             if (koreanText) handlePlayExampleAudio(koreanText, 'ko');
                           } else if (wordData.language === 'fr') {
                             // 法文词汇：播放法文例句
-                            const frenchText = firstExample.english || firstExample.french;
+                            const frenchText = firstExample.french || firstExample.english;
                             if (frenchText) handlePlayExampleAudio(frenchText, 'fr');
                           } else if (wordData.language === 'es') {
                             // 西班牙文词汇：播放西班牙文例句
-                            const spanishText = firstExample.english || firstExample.spanish;
+                            const spanishText = firstExample.spanish || firstExample.english;
                             if (spanishText) handlePlayExampleAudio(spanishText, 'es');
                           }
                         }
@@ -400,7 +422,7 @@ const WordCardContent: React.FC<WordCardContentProps> = ({ wordData, onPlayAudio
           ))}
           
           {/* 俚语/缩写含义 */}
-          {wordData.slangMeaning && (
+          {hasValidSlangMeaning(wordData.slangMeaning) && (
             <View style={styles.definitionBlock}>
               <View style={styles.posTagWrapper}>
                 <Text style={styles.posTag}>{getSpecialLabel('slang', appLanguage)}</Text>
@@ -451,7 +473,7 @@ const WordCardContent: React.FC<WordCardContentProps> = ({ wordData, onPlayAudio
           )}
           
           {/* 短语解释 */}
-          {wordData.phraseExplanation && (
+          {hasValidPhraseExplanation(wordData.phraseExplanation) && (
             <View style={styles.definitionBlock}>
               <View style={styles.posTagWrapper}>
                 <Text style={styles.posTag}>{getSpecialLabel('phrase', appLanguage)}</Text>
@@ -524,16 +546,19 @@ const WordCardContent: React.FC<WordCardContentProps> = ({ wordData, onPlayAudio
                       const example = ex as any; // 类型断言
                       if (wordData.language === 'ja') {
                         // 日语：显示日语例句
-                        return example.english || example.japanese || '';
+                        console.log(`🔍 例句调试 - 语言: ${wordData.language}, 例句数据:`, example);
+                        const result = example.japanese || example.english || '';
+                        console.log(`🔍 日语例句结果: "${result}"`);
+                        return result;
                       } else if (wordData.language === 'ko') {
                         // 韩语：显示韩语例句
-                        return example.english || example.korean || '';
+                        return example.korean || example.english || '';
                       } else if (wordData.language === 'fr') {
                         // 法语：显示法语例句
-                        return example.english || example.french || '';
+                        return example.french || example.english || '';
                       } else if (wordData.language === 'es') {
                         // 西班牙语：显示西班牙语例句
-                        return example.english || example.spanish || '';
+                        return example.spanish || example.english || '';
                       } else {
                         // 英语或其他语言：显示英语例句
                         return example.english || '';
@@ -569,19 +594,19 @@ const WordCardContent: React.FC<WordCardContentProps> = ({ wordData, onPlayAudio
                             handlePlayExampleAudio(firstExample.english, 'en');
                           } else if (wordData.language === 'ja') {
                             // 日文词汇：播放日文例句
-                            const japaneseText = firstExample.english || firstExample.japanese;
+                            const japaneseText = firstExample.japanese || firstExample.english;
                             if (japaneseText) handlePlayExampleAudio(japaneseText, 'ja');
                           } else if (wordData.language === 'ko') {
                             // 韩文词汇：播放韩文例句
-                            const koreanText = firstExample.english || firstExample.korean;
+                            const koreanText = firstExample.korean || firstExample.english;
                             if (koreanText) handlePlayExampleAudio(koreanText, 'ko');
                           } else if (wordData.language === 'fr') {
                             // 法文词汇：播放法文例句
-                            const frenchText = firstExample.english || firstExample.french;
+                            const frenchText = firstExample.french || firstExample.english;
                             if (frenchText) handlePlayExampleAudio(frenchText, 'fr');
                           } else if (wordData.language === 'es') {
                             // 西班牙文词汇：播放西班牙文例句
-                            const spanishText = firstExample.english || firstExample.spanish;
+                            const spanishText = firstExample.spanish || firstExample.english;
                             if (spanishText) handlePlayExampleAudio(spanishText, 'es');
                           }
                         }
@@ -596,7 +621,7 @@ const WordCardContent: React.FC<WordCardContentProps> = ({ wordData, onPlayAudio
           ))}
           
           {/* 俚语/缩写含义 */}
-          {wordData.slangMeaning && (
+          {hasValidSlangMeaning(wordData.slangMeaning) && (
             <View style={styles.definitionBlock}>
               <View style={styles.posTagWrapper}>
                 <Text style={styles.posTag}>{getSpecialLabel('slang', appLanguage)}</Text>
@@ -647,7 +672,7 @@ const WordCardContent: React.FC<WordCardContentProps> = ({ wordData, onPlayAudio
           )}
           
           {/* 短语解释 */}
-          {wordData.phraseExplanation && (
+          {hasValidPhraseExplanation(wordData.phraseExplanation) && (
             <View style={styles.definitionBlock}>
               <View style={styles.posTagWrapper}>
                 <Text style={styles.posTag}>{getSpecialLabel('phrase', appLanguage)}</Text>

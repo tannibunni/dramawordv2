@@ -560,143 +560,180 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   };
 
   const renderSettings = () => (
-    <View style={styles.settingsSection}>
-      <Text style={styles.sectionTitle}>{t('settings', appLanguage)}</Text>
+    <View style={styles.settingsContainer}>
+      <Text style={styles.settingsTitle}>{t('settings', appLanguage)}</Text>
       
-      {/* 推送通知设置 */}
-      <View style={styles.settingItem}>
-        <View style={styles.settingLeft}>
-          <Ionicons name="notifications-outline" size={24} color={colors.primary[500]} />
-          <Text style={styles.settingLabel}>{t('push_notifications', appLanguage)}</Text>
+      {/* General Section */}
+      <View style={styles.settingsGroup}>
+        <Text style={styles.groupHeader}>GENERAL</Text>
+        
+        {/* Push Notifications */}
+        <View style={styles.settingRow}>
+          <View style={styles.settingLeft}>
+            <Ionicons name="notifications-outline" size={22} color={colors.primary[500]} />
+            <Text style={styles.settingLabel}>{t('push_notifications', appLanguage)}</Text>
+          </View>
+          <Switch
+            value={notificationsEnabled}
+            onValueChange={handleNotificationToggle}
+            trackColor={{ false: '#E5E7EB', true: colors.primary[300] }}
+            thumbColor={notificationsEnabled ? colors.primary[500] : '#FFFFFF'}
+          />
         </View>
-        <Switch
-          value={notificationsEnabled}
-          onValueChange={handleNotificationToggle}
-          trackColor={{ false: colors.border.light, true: colors.primary[300] }}
-          thumbColor={notificationsEnabled ? colors.primary[500] : colors.text.tertiary}
-        />
+
+        {/* Language */}
+        <TouchableOpacity 
+          style={styles.settingRow}
+          onPress={() => setLanguageModalVisible(true)}
+          activeOpacity={0.7}
+        >
+          <View style={styles.settingLeft}>
+            <Ionicons name="language-outline" size={22} color={colors.primary[500]} />
+            <Text style={styles.settingLabel}>{t('language_settings', appLanguage)}</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color={colors.neutral[400]} />
+        </TouchableOpacity>
       </View>
 
-      <TouchableOpacity 
-        style={styles.settingItem}
-        onPress={() => setLanguageModalVisible(true)}
-      >
-        <View style={styles.settingLeft}>
-          <Ionicons name="language-outline" size={24} color={colors.primary[500]} />
-          <Text style={styles.settingLabel}>{t('language_settings', appLanguage)}</Text>
-        </View>
-        <Ionicons name="chevron-forward" size={20} color={colors.neutral[500]} />
-      </TouchableOpacity>
-
-      {/* 分享应用 */}
-      <TouchableOpacity 
-        style={styles.settingItem}
-        onPress={() => setShareAppModalVisible(true)}
-      >
-        <View style={styles.settingLeft}>
-          <Ionicons name="share-social-outline" size={24} color={colors.primary[500]} />
-          <Text style={styles.settingLabel}>{t('share_app', appLanguage)}</Text>
-        </View>
-        <Ionicons name="chevron-forward" size={20} color={colors.neutral[500]} />
-      </TouchableOpacity>
-
-      {/* Apple ID跨设备同步 - 仅对Apple用户显示 */}
-      {loginType === 'apple' && (
+      {/* About Section */}
+      <View style={styles.settingsGroup}>
+        <Text style={styles.groupHeader}>ABOUT</Text>
+        
+        {/* Share App */}
         <TouchableOpacity 
-          style={styles.settingItem}
-          onPress={() => handleCrossDeviceSync()}
+          style={styles.settingRow}
+          onPress={() => setShareAppModalVisible(true)}
+          activeOpacity={0.7}
         >
           <View style={styles.settingLeft}>
-            <Ionicons name="cloudy-outline" size={24} color={colors.primary[500]} />
+            <Ionicons name="share-social-outline" size={22} color={colors.primary[500]} />
+            <Text style={styles.settingLabel}>{t('share_app', appLanguage)}</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color={colors.neutral[400]} />
+        </TouchableOpacity>
+
+        {/* Feedback */}
+        <TouchableOpacity 
+          style={styles.settingRow}
+          onPress={() => setFeedbackModalVisible(true)}
+          activeOpacity={0.7}
+        >
+          <View style={styles.settingLeft}>
+            <Ionicons name="chatbubble-ellipses-outline" size={22} color={colors.primary[500]} />
             <Text style={styles.settingLabel}>
-              {appLanguage === 'zh-CN' ? '跨设备同步' : 'Cross-Device Sync'}
+              {appLanguage === 'zh-CN' ? '反馈问题' : 'Feedback'}
             </Text>
           </View>
-          <View style={styles.settingLeft}>
-            {crossDeviceSyncStatus?.isSyncing ? (
-              <ActivityIndicator size="small" color={colors.primary[500]} />
-            ) : (
-              <Ionicons name="chevron-forward" size={20} color={colors.neutral[500]} />
-            )}
-          </View>
+          <Ionicons name="chevron-forward" size={18} color={colors.neutral[400]} />
         </TouchableOpacity>
-      )}
 
-      {/* 订阅管理 - 仅对付费订阅会员显示 */}
-      {subscriptionStatus?.isActive && (
+        {/* About Us */}
         <TouchableOpacity 
-          style={styles.settingItem}
-          onPress={handleGoToSubscription}
+          style={styles.settingRow}
+          onPress={() => setAboutModalVisible(true)}
+          activeOpacity={0.7}
         >
           <View style={styles.settingLeft}>
-            <Ionicons name="diamond" size={24} color={colors.primary[500]} />
-            <Text style={styles.settingLabel}>{t('manage_subscription', appLanguage)}</Text>
+            <Ionicons name="information-circle-outline" size={22} color={colors.primary[500]} />
+            <Text style={styles.settingLabel}>{t('about_us', appLanguage)}</Text>
           </View>
-          <Ionicons name="chevron-forward" size={20} color={colors.neutral[500]} />
+          <Ionicons name="chevron-forward" size={18} color={colors.neutral[400]} />
         </TouchableOpacity>
-      )}
 
+        {/* Apple ID跨设备同步 - 仅对Apple用户显示 */}
+        {loginType === 'apple' && (
+          <TouchableOpacity 
+            style={styles.settingRow}
+            onPress={() => handleCrossDeviceSync()}
+            activeOpacity={0.7}
+          >
+            <View style={styles.settingLeft}>
+              <Ionicons name="cloudy-outline" size={22} color={colors.primary[500]} />
+              <Text style={styles.settingLabel}>
+                {appLanguage === 'zh-CN' ? '跨设备同步' : 'Cross-Device Sync'}
+              </Text>
+            </View>
+            <View style={styles.settingRight}>
+              {crossDeviceSyncStatus?.isSyncing ? (
+                <ActivityIndicator size="small" color={colors.primary[500]} />
+              ) : (
+                <Ionicons name="chevron-forward" size={18} color={colors.neutral[400]} />
+              )}
+            </View>
+          </TouchableOpacity>
+        )}
 
+        {/* 订阅管理 - 仅对付费订阅会员显示 */}
+        {subscriptionStatus?.isActive && (
+          <TouchableOpacity 
+            style={styles.settingRow}
+            onPress={handleGoToSubscription}
+            activeOpacity={0.7}
+          >
+            <View style={styles.settingLeft}>
+              <Ionicons name="diamond" size={22} color={colors.primary[500]} />
+              <Text style={styles.settingLabel}>{t('manage_subscription', appLanguage)}</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={colors.neutral[400]} />
+          </TouchableOpacity>
+        )}
+      </View>
 
-      <TouchableOpacity 
-        style={styles.settingItem}
-        onPress={() => setFeedbackModalVisible(true)}
-      >
-        <View style={styles.settingLeft}>
-          <Ionicons name="chatbubble-ellipses-outline" size={24} color={colors.primary[500]} />
-          <Text style={styles.settingLabel}>
-            {appLanguage === 'zh-CN' ? '反馈问题' : 'Feedback'}
-          </Text>
-        </View>
-        <Ionicons name="chevron-forward" size={20} color={colors.neutral[500]} />
-      </TouchableOpacity>
+      {/* Danger Zone Section */}
+      <View style={styles.settingsGroup}>
+        <Text style={styles.groupHeader}>DANGER ZONE</Text>
+        
+        {/* 清除用户数据（仅开发模式可见） */}
+        {__DEV__ && (
+          <TouchableOpacity 
+            style={[styles.settingRow, styles.dangerRow]}
+            onPress={handleClearLocalData}
+            activeOpacity={0.7}
+          >
+            <View style={styles.settingLeft}>
+              <Ionicons name="trash-bin-outline" size={22} color="#E53935" />
+              <Text style={[styles.settingLabel, styles.dangerText]}>
+                {appLanguage === 'zh-CN' ? '清除用户数据' : 'Clear User Data'}
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color="#E53935" />
+          </TouchableOpacity>
+        )}
 
-      <TouchableOpacity style={styles.settingItem} onPress={() => setAboutModalVisible(true)}>
-        <View style={styles.settingLeft}>
-          <Ionicons name="information-circle-outline" size={24} color={colors.primary[500]} />
-          <Text style={styles.settingLabel}>{t('about_us', appLanguage)}</Text>
-        </View>
-        <Ionicons name="chevron-forward" size={20} color={colors.neutral[500]} />
-      </TouchableOpacity>
+        {/* 完全清除所有数据（仅开发模式可见） */}
+        {__DEV__ && (
+          <TouchableOpacity 
+            style={[styles.settingRow, styles.dangerRow]}
+            onPress={handleClearAllData}
+            activeOpacity={0.7}
+          >
+            <View style={styles.settingLeft}>
+              <Ionicons name="trash-outline" size={22} color="#E53935" />
+              <Text style={[styles.settingLabel, styles.dangerText]}>
+                {appLanguage === 'zh-CN' ? '完全清除所有数据' : 'Clear All Data Completely'}
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color="#E53935" />
+          </TouchableOpacity>
+        )}
 
-      {/* 清除用户数据 */}
-      <TouchableOpacity style={styles.settingItem} onPress={handleClearLocalData}>
-        <View style={styles.settingLeft}>
-          <Ionicons name="trash-bin-outline" size={24} color={colors.error[500]} />
-          <Text style={[styles.settingText, { color: colors.error[500] }]}>
-            {appLanguage === 'zh-CN' ? '清除用户数据' : 'Clear User Data'}
-          </Text>
-        </View>
-        <Ionicons name="chevron-forward" size={20} color={colors.neutral[500]} />
-      </TouchableOpacity>
-
-
-
-      {/* 完全清除所有数据（仅开发模式可见） */}
-      {__DEV__ && (
-        <TouchableOpacity style={styles.settingItem} onPress={handleClearAllData}>
-          <View style={styles.settingLeft}>
-            <Ionicons name="trash-outline" size={24} color={colors.error[500]} />
-            <Text style={[styles.settingText, { color: colors.error[500] }]}>
-              {appLanguage === 'zh-CN' ? '完全清除所有数据' : 'Clear All Data Completely'}
-            </Text>
-          </View>
-          <Ionicons name="chevron-forward" size={20} color={colors.neutral[500]} />
-        </TouchableOpacity>
-      )}
-
-      {/* 注销账户 - 仅对已登录用户显示 */}
-      {isAuthenticated && loginType !== 'guest' && (
-        <TouchableOpacity style={styles.settingItem} onPress={handleDeleteAccount}>
-          <View style={styles.settingLeft}>
-            <Ionicons name="person-remove-outline" size={24} color={colors.error[500]} />
-            <Text style={[styles.settingText, { color: colors.error[500] }]}>
-              {appLanguage === 'zh-CN' ? '注销账户' : 'Delete Account'}
-            </Text>
-          </View>
-          <Ionicons name="chevron-forward" size={20} color={colors.neutral[500]} />
-        </TouchableOpacity>
-      )}
+        {/* 注销账户 - 仅对已登录用户显示 */}
+        {isAuthenticated && loginType !== 'guest' && (
+          <TouchableOpacity 
+            style={[styles.settingRow, styles.dangerRow]}
+            onPress={handleDeleteAccount}
+            activeOpacity={0.7}
+          >
+            <View style={styles.settingLeft}>
+              <Ionicons name="person-remove-outline" size={22} color="#E53935" />
+              <Text style={[styles.settingLabel, styles.dangerText]}>
+                {appLanguage === 'zh-CN' ? '注销账户' : 'Delete Account'}
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color="#E53935" />
+          </TouchableOpacity>
+        )}
+      </View>
 
       {/* 开发模式测试按钮 */}
       {__DEV__ && (
@@ -1911,40 +1948,70 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: colors.text.secondary,
   },
-  settingsSection: {
-    backgroundColor: colors.background.secondary,
+  settingsContainer: {
     marginHorizontal: 20,
     marginBottom: 20,
-    borderRadius: 16,
-    padding: 20,
-    shadowColor: colors.primary[200],
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
   },
-  settingItem: {
+  settingsTitle: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: colors.text.primary,
+    marginBottom: 24,
+    textAlign: 'left',
+  },
+  settingsGroup: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    marginBottom: 16,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+    overflow: 'hidden',
+  },
+  groupHeader: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#6B7280',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    backgroundColor: '#FAFAFA',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+  },
+  settingRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    paddingHorizontal: 16,
     paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: colors.neutral[100],
+    borderBottomColor: '#F3F4F6',
   },
   settingLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  settingRight: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   settingLabel: {
     fontSize: 16,
+    fontWeight: '500',
     color: colors.text.primary,
     marginLeft: 12,
-    fontWeight: '500',
   },
-  settingText: {
-    fontSize: 16,
-    color: colors.text.secondary,
-    marginLeft: 12,
+  dangerRow: {
+    backgroundColor: '#FEFEFE',
+  },
+  dangerText: {
+    color: '#E53935',
+    fontWeight: '600',
   },
   settingItemDisabled: {
     opacity: 0.5,
