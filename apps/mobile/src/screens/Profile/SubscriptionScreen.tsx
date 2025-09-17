@@ -716,13 +716,6 @@ const SubscriptionScreen = () => {
           
           <Text style={styles.planDesc}>{selectedPlanFromTabs.description}</Text>
           
-          {/* 邀请码输入 */}
-          <InviteCodeInput
-            onCodeApplied={handleInviteCodeApplied}
-            onCodeRemoved={handleInviteCodeRemoved}
-            disabled={isLoading}
-          />
-          
           {/* 主CTA按钮 */}
           <TouchableOpacity
             style={styles.mainCtaButton}
@@ -743,6 +736,13 @@ const SubscriptionScreen = () => {
               </Text>
             </LinearGradient>
           </TouchableOpacity>
+          
+          {/* 邀请码输入 - 放在订阅按钮下面 */}
+          <InviteCodeInput
+            onCodeApplied={handleInviteCodeApplied}
+            onCodeRemoved={handleInviteCodeRemoved}
+            disabled={isLoading}
+          />
         </View>
 
 

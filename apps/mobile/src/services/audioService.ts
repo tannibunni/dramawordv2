@@ -15,7 +15,10 @@ class AudioService {
         await this.stopAudio();
       }
 
-      // 创建新的音频实例
+      // 清理并创建新的音频实例
+      if (this.sound) {
+        await this.sound.unloadAsync();
+      }
       this.sound = new Audio.Sound();
 
       // 设置音频状态监听
@@ -35,7 +38,9 @@ class AudioService {
       const audioUrl = this.getAudioUrl(word, language);
       
       if (audioUrl) {
+        console.log('🎵 AudioService - 加载音频:', { word, language, audioUrl });
         await this.sound.loadAsync({ uri: audioUrl });
+        console.log('🎵 AudioService - 音频加载完成，开始播放');
         await this.sound.playAsync();
       } else {
         throw new Error('No audio available for word');
@@ -122,16 +127,29 @@ class AudioService {
     // 检测语言
     const detectedLanguage = language || this.detectLanguage(word);
 
+    // 清理文本，移除多余的标点符号和空格
+    let cleanText = word.trim().replace(/\s+/g, ' ');
+    
+    // 如果文本太长，截取前100个字符（Google TTS有长度限制）
+    if (cleanText.length > 100) {
+      cleanText = cleanText.substring(0, 100);
+      console.log('🎵 AudioService - 文本过长，已截取:', { original: word, truncated: cleanText });
+    }
+
     // 方案1: Google Translate TTS (免费，推荐)
     // 参数说明：
     // - ie=UTF-8: 输入编码
     // - q=${word}: 要发音的文本
     // - tl=${lang}: 目标语言
     // - client=tw-ob: 客户端标识
-    const googleTtsUrl = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(word.trim())}&tl=${detectedLanguage}&client=tw-ob`;
+    const googleTtsUrl = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(cleanText)}&tl=${detectedLanguage}&client=tw-ob`;
     
-    // 方案2: 备用 TTS 服务 (如果 Google TTS 有 CORS 问题)
-    // const backupTtsUrl = `https://api.dictionaryapi.dev/media/pronunciations/${detectedLanguage}/${word.toLowerCase()}.mp3`;
+    console.log('🎵 AudioService - 生成音频URL:', { 
+      originalText: word, 
+      cleanText, 
+      detectedLanguage, 
+      url: googleTtsUrl 
+    });
     
     return googleTtsUrl;
   }

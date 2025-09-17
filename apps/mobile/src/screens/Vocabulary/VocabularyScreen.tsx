@@ -725,6 +725,8 @@ const VocabularyScreen: React.FC = () => {
               ) : selectedWordDetail ? (
                 <WordCardContent 
                   wordData={selectedWordDetail} 
+                  scrollable={true}
+                  showHeader={true}
                   onProgressUpdate={(progressData) => {
                     // 确保使用正确的单词对象进行进度更新
                     const wordToUpdate = selectedWord || selectedWordDetail;

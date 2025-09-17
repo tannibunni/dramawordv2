@@ -1,5 +1,5 @@
 import { API_BASE_URL } from '../constants/config';
-import { logger } from '../utils/logger';
+import logger from '../utils/logger';
 
 export interface UserActivityData {
   userId: string;
@@ -133,7 +133,7 @@ export class SmartSyncService {
         headers: {
           'Content-Type': 'application/json',
           'X-Network-Type': await this.getNetworkType(),
-          'X-Battery-Level': await this.getBatteryLevel(),
+          'X-Battery-Level': (await this.getBatteryLevel()).toString(),
           'X-Timezone': Intl.DateTimeFormat().resolvedOptions().timeZone,
           'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8'
         }
@@ -293,7 +293,7 @@ export class SmartSyncService {
       console.log(`⏰ 设置同步定时器: ${this.currentStrategy.syncInterval}ms`);
       this.syncTimer = setInterval(() => {
         this.performSmartSync();
-      }, this.currentStrategy.syncInterval);
+      }, this.currentStrategy.syncInterval) as any;
     }
 
     console.log('✅ 智能同步策略应用完成');

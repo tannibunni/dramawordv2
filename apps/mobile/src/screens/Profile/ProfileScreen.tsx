@@ -1391,11 +1391,11 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
       
       // 5. 同步搜索历史
       const searchHistory = await wordService.getRecentWords();
-      if (searchHistory && searchHistory.length > 0) {
+      if (searchHistory && searchHistory.data && searchHistory.data.length > 0) {
         syncTasks.push(
           unifiedSyncService.addToSyncQueue({
             type: 'searchHistory',
-            data: searchHistory.map(item => ({
+            data: searchHistory.data.map((item: any) => ({
               ...item,
               lastUpdated: Date.now()
             })),

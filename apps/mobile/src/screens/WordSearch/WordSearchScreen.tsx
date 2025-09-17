@@ -52,7 +52,9 @@ const WordSearchScreen: React.FC = () => {
     try {
       setIsLoadingRecent(true);
       const recent = await wordService.getRecentWords();
-      setRecentWords(recent);
+      if (recent && recent.data) {
+        setRecentWords(recent.data);
+      }
     } catch (error) {
       console.error('加载最近查词失败:', error);
       Alert.alert('提示', '加载历史词失败，请检查网络连接');

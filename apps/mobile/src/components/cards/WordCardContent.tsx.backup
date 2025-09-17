@@ -190,6 +190,14 @@ const getLanguageLabel = (languageCode: string, appLanguage: string) => {
 
 const WordCardContent: React.FC<WordCardContentProps> = ({ wordData, onPlayAudio, style, scrollable = false, onScroll, showHeader = true }) => {
   const { appLanguage } = useAppLanguage();
+  
+  // 调试日志
+  console.log('🔍 WordCardContent 调试:', {
+    word: wordData.word,
+    definitionsLength: wordData.definitions?.length,
+    definitions: wordData.definitions,
+    scrollable: scrollable
+  });
   const handlePlayAudio = async () => {
     try {
       if (wordData.audioUrl) {
@@ -483,23 +491,23 @@ const WordCardContent: React.FC<WordCardContentProps> = ({ wordData, onPlayAudio
                         )}
                       </View>
                       {(wordData.phraseExplanation as any).examples.map((ex: any, exIdx: number) => (
-                          <View key={exIdx} style={styles.exampleContainer}>
+                        <View key={exIdx} style={styles.exampleContainer}>
                           <Text style={styles.exampleLabelAndText} selectable>{ex.english}</Text>
                           <Text style={styles.exampleChineseText} selectable>{ex.chinese}</Text>
-                        {/* 中文例句拼音显示 */}
-                        {wordData.language === 'zh' || wordData.language === 'zh-CN' ? (
-                          ex.pinyin && (
-                            <Text style={styles.examplePinyin} selectable>{ex.pinyin}</Text>
-                          )
-                        ) : null}
-                          </View>
+                          {/* 中文例句拼音显示 */}
+                          {wordData.language === 'zh' || wordData.language === 'zh-CN' ? (
+                            ex.pinyin && (
+                              <Text style={styles.examplePinyin} selectable>{ex.pinyin}</Text>
+                            )
+                          ) : null}
+                        </View>
                       ))}
                     </View>
                   )}
                 </>
               )}
             </View>
-          )}
+          ))}
         </ScrollView>
       ) : (
         <View style={{ marginBottom: 8 }}>

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useCallback } from 'react';
+import React, { useEffect, useRef, useCallback, useState } from 'react';
 import { View, Animated, StyleSheet, Dimensions } from 'react-native';
 
 interface ParticleProps {
@@ -18,6 +18,7 @@ export const ExperienceParticles: React.FC<ParticleProps> = ({
   onComplete,
   color = '#7C3AED'
 }) => {
+  const [isAnimating, setIsAnimating] = useState(false);
   const particles = useRef(Array(NUM_PARTICLES).fill(0).map(() => ({
     position: new Animated.ValueXY({ x: startPosition.x, y: startPosition.y }),
     scale: new Animated.Value(1),
@@ -25,54 +26,69 @@ export const ExperienceParticles: React.FC<ParticleProps> = ({
   }))).current;
 
   // 使用useCallback稳定onComplete函数
-  const stableOnComplete = useCallback(onComplete, []);
+  const stableOnComplete = useCallback(() => {
+    setIsAnimating(false);
+    onComplete();
+  }, [onComplete]);
 
   useEffect(() => {
-    // 为每个粒子创建随机的中间点
-    const animations = particles.map((particle, index) => {
-      const angle = (2 * Math.PI * index) / NUM_PARTICLES; // 均匀分布的角度
-      const radius = 50 + Math.random() * 30; // 随机半径
-      const midX = startPosition.x + radius * Math.cos(angle);
-      const midY = startPosition.y + radius * Math.sin(angle);
+    // 延迟启动动画，避免在渲染过程中调度更新
+    const timer = setTimeout(() => {
+      setIsAnimating(true);
+      
+      // 为每个粒子创建随机的中间点
+      const animations = particles.map((particle, index) => {
+        const angle = (2 * Math.PI * index) / NUM_PARTICLES; // 均匀分布的角度
+        const radius = 50 + Math.random() * 30; // 随机半径
+        const midX = startPosition.x + radius * Math.cos(angle);
+        const midY = startPosition.y + radius * Math.sin(angle);
 
-      return Animated.sequence([
-        // 第一阶段：向外扩散
-        Animated.parallel([
-          Animated.timing(particle.position, {
-            toValue: { x: midX, y: midY },
-            duration: 300,
-            useNativeDriver: true,
-          }),
-          Animated.timing(particle.scale, {
-            toValue: 1.5,
-            duration: 300,
-            useNativeDriver: true,
-          })
-        ]),
-        // 第二阶段：聚集到目标点
-        Animated.parallel([
-          Animated.timing(particle.position, {
-            toValue: { x: endPosition.x, y: endPosition.y },
-            duration: 400,
-            useNativeDriver: true,
-          }),
-          Animated.timing(particle.scale, {
-            toValue: 0.5,
-            duration: 400,
-            useNativeDriver: true,
-          }),
-          Animated.timing(particle.opacity, {
-            toValue: 0,
-            duration: 400,
-            useNativeDriver: true,
-          })
-        ])
-      ]);
-    });
+        return Animated.sequence([
+          // 第一阶段：向外扩散
+          Animated.parallel([
+            Animated.timing(particle.position, {
+              toValue: { x: midX, y: midY },
+              duration: 300,
+              useNativeDriver: true,
+            }),
+            Animated.timing(particle.scale, {
+              toValue: 1.5,
+              duration: 300,
+              useNativeDriver: true,
+            })
+          ]),
+          // 第二阶段：聚集到目标点
+          Animated.parallel([
+            Animated.timing(particle.position, {
+              toValue: { x: endPosition.x, y: endPosition.y },
+              duration: 400,
+              useNativeDriver: true,
+            }),
+            Animated.timing(particle.scale, {
+              toValue: 0.5,
+              duration: 400,
+              useNativeDriver: true,
+            }),
+            Animated.timing(particle.opacity, {
+              toValue: 0,
+              duration: 400,
+              useNativeDriver: true,
+            })
+          ])
+        ]);
+      });
 
-    // 同时执行所有粒子动画
-    Animated.parallel(animations).start(stableOnComplete);
+      // 同时执行所有粒子动画
+      Animated.parallel(animations).start(stableOnComplete);
+    }, 50); // 50ms延迟
+
+    return () => clearTimeout(timer);
   }, [startPosition.x, startPosition.y, endPosition.x, endPosition.y, stableOnComplete]);
+
+  // 只有在动画开始时才渲染粒子
+  if (!isAnimating) {
+    return null;
+  }
 
   return (
     <View style={StyleSheet.absoluteFill}>

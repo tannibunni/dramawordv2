@@ -825,7 +825,7 @@ export class WordService {
       const cached = await cacheService.get('chinese', `${word}_${uiLanguage}`);
       if (cached) {
         console.log(`✅ 从缓存返回中文词汇: ${word}`);
-        return { success: true, data: cached };
+        return { success: true, data: cached as WordData };
       }
       
       const response = await fetch(`${API_BASE_URL}/words/chinese/${encodeURIComponent(word)}?uiLanguage=${uiLanguage}`, {

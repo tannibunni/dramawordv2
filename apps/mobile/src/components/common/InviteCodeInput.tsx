@@ -67,14 +67,18 @@ export const InviteCodeInput: React.FC<InviteCodeInputProps> = ({
 
       if (result.success) {
         setIsValid(true);
-        setDiscount(result.discount || 0);
+        // 根据邀请码类型设置不同的奖励值
+        const rewardValue = result.data?.type === 'free_trial' 
+          ? result.data.reward?.freeTrialDays || 0
+          : result.data?.reward?.discountPercent || 0;
+        setDiscount(rewardValue);
         setErrorMessage('');
         
         // 清除待处理的邀请码
         await AsyncStorage.removeItem('pendingInviteCode');
         
         if (onCodeApplied) {
-          onCodeApplied(code.trim(), result.discount || 0);
+          onCodeApplied(code.trim(), rewardValue);
         }
       } else {
         setIsValid(false);
@@ -117,35 +121,32 @@ export const InviteCodeInput: React.FC<InviteCodeInputProps> = ({
 
   const getDiscountText = () => {
     if (discount > 0) {
-      return appLanguage === 'zh-CN' 
-        ? `立减 ${discount}%` 
-        : `${discount}% OFF`;
+      // 根据邀请码类型显示不同的文本
+      if (discount >= 30) { // 假设30天以上是免费试用
+        return appLanguage === 'zh-CN' 
+          ? `免费试用 ${discount} 天` 
+          : `Free Trial ${discount} Days`;
+      } else {
+        return appLanguage === 'zh-CN' 
+          ? `立减 ${discount}%` 
+          : `${discount}% OFF`;
+      }
     }
     return '';
   };
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <View style={styles.titleContainer}>
-          <Ionicons 
-            name="gift-outline" 
-            size={20} 
-            color={colors.primary[500]} 
-            style={styles.giftIcon}
-          />
-          <Text style={styles.title}>
-            {t('invite_code', appLanguage)}
-          </Text>
-        </View>
-        {isValid && (
+      {/* 只显示折扣徽章，不显示标题 */}
+      {isValid && (
+        <View style={styles.discountBadgeContainer}>
           <View style={styles.discountBadge}>
             <Text style={styles.discountText}>
               {getDiscountText()}
             </Text>
           </View>
-        )}
-      </View>
+        </View>
+      )}
 
       <View style={styles.inputContainer}>
         <TextInput
@@ -216,24 +217,12 @@ export const InviteCodeInput: React.FC<InviteCodeInputProps> = ({
 const styles = StyleSheet.create({
   container: {
     marginVertical: 16,
+    marginHorizontal: -8, // 负边距，让组件超出父容器的padding
+    width: '100%', // 确保占满宽度
   },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+  discountBadgeContainer: {
+    alignItems: 'flex-end',
     marginBottom: 12,
-  },
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  giftIcon: {
-    marginRight: 8,
-  },
-  title: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.text.primary,
   },
   discountBadge: {
     backgroundColor: colors.success[100],
@@ -252,9 +241,11 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background.secondary,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: colors.border.primary,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    borderColor: colors.border.medium,
+    paddingHorizontal: 20, // 增加水平内边距
+    paddingVertical: 14, // 增加垂直内边距
+    minHeight: 52, // 增加最小高度
+    marginHorizontal: 8, // 添加水平边距，抵消容器的负边距
   },
   input: {
     flex: 1,
@@ -271,15 +262,16 @@ const styles = StyleSheet.create({
     backgroundColor: colors.error[50],
   },
   inputDisabled: {
-    backgroundColor: colors.background.disabled,
-    color: colors.text.disabled,
+    backgroundColor: colors.background.tertiary,
+    color: colors.text.tertiary,
   },
   applyButton: {
     backgroundColor: colors.primary[500],
-    paddingHorizontal: 16,
-    paddingVertical: 8,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
     borderRadius: 8,
-    marginLeft: 8,
+    marginLeft: 12,
+    minWidth: 80, // 设置最小宽度
   },
   applyButtonText: {
     color: colors.white,
@@ -287,12 +279,12 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   removeButton: {
-    marginLeft: 8,
-    padding: 4,
+    marginLeft: 12,
+    padding: 6,
   },
   loadingContainer: {
-    marginLeft: 8,
-    padding: 4,
+    marginLeft: 12,
+    padding: 6,
   },
   errorText: {
     color: colors.error[500],
