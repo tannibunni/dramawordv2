@@ -1260,28 +1260,43 @@ async function generateWordData(word: string, language: string = 'en', uiLanguag
         definition: def.definition || '暂无释义',
         examples: Array.isArray(def.examples) ? def.examples.map((ex: any) => {
           // 根据语言处理不同的例句格式
+          console.log(`🔍 例句处理调试 - 语言: ${language}, 原始例句数据:`, ex);
           if (typeof ex === 'object') {
             // 优先检查特定语言的字段
-            if (language === 'ko' && ex.korean && ex.chinese) {
+            if (language === 'ko' && ex.korean) {
               return {
-                english: ex.korean, // 韩文例句
-                chinese: ex.chinese
+                korean: ex.korean, // 韩文例句
+                chinese: ex.chinese || ex.english // 中文翻译或英文翻译
               };
-            } else if (language === 'ja' && ex.japanese && ex.chinese) {
+            } else if (language === 'ja') {
+              if (ex.japanese) {
+                console.log(`🔍 找到日语例句: ${ex.japanese}`);
+                return {
+                  japanese: ex.japanese, // 日文例句
+                  chinese: ex.chinese || ex.english, // 中文翻译或英文翻译
+                  romaji: ex.romaji // 添加罗马音字段
+                };
+              } else if (ex.english) {
+                // 检查 english 字段是否包含日文字符
+                const hasJapaneseChars = /[あ-んア-ン一-龯]/.test(ex.english);
+                console.log(`🔍 检查 english 字段是否包含日文: "${ex.english}", 结果: ${hasJapaneseChars}`);
+                if (hasJapaneseChars) {
+                  return {
+                    japanese: ex.english, // 将包含日文的 english 字段作为日语例句
+                    chinese: ex.chinese, // 中文翻译
+                    romaji: ex.romaji // 添加罗马音字段
+                  };
+                }
+              }
+            } else if (language === 'fr' && ex.french) {
               return {
-                english: ex.japanese, // 日文例句
-                chinese: ex.chinese,
-                romaji: ex.romaji // 添加罗马音字段
+                french: ex.french, // 法文例句
+                chinese: ex.chinese || ex.english // 中文翻译或英文翻译
               };
-            } else if (language === 'fr' && ex.french && ex.chinese) {
+            } else if (language === 'es' && ex.spanish) {
               return {
-                english: ex.french, // 法文例句
-                chinese: ex.chinese
-              };
-            } else if (language === 'es' && ex.spanish && ex.chinese) {
-              return {
-                english: ex.spanish, // 西班牙文例句
-                chinese: ex.chinese
+                spanish: ex.spanish, // 西班牙文例句
+                chinese: ex.chinese || ex.english // 中文翻译或英文翻译
               };
             } else if (ex.english && ex.chinese) {
               // 如果AI返回的是english字段，但语言不是英语，我们需要检查内容
@@ -1342,13 +1357,20 @@ async function generateWordData(word: string, language: string = 'en', uiLanguag
         definitions.forEach(def => {
           if (def.examples && def.examples.length > 0) {
             def.examples.forEach(ex => {
-              // 检查例句是否包含目标语言字符
-              const hasKoreanChars = /[가-힣]/.test(ex.english);
-              const hasJapaneseChars = /[あ-んア-ン一-龯]/.test(ex.english);
-              
-              if ((language === 'ko' && !hasKoreanChars) || (language === 'ja' && !hasJapaneseChars)) {
-                console.log(`🔄 强制替换例句: "${ex.english}" -> "${word}"`);
-                ex.english = word;
+              if (language === 'ko' && ex.korean) {
+                // 检查韩语例句是否包含韩文字符
+                const hasKoreanChars = /[가-힣]/.test(ex.korean);
+                if (!hasKoreanChars) {
+                  console.log(`🔄 强制替换韩语例句: "${ex.korean}" -> "${word}"`);
+                  ex.korean = word;
+                }
+              } else if (language === 'ja' && ex.japanese) {
+                // 检查日语例句是否包含日文字符
+                const hasJapaneseChars = /[あ-んア-ン一-龯]/.test(ex.japanese);
+                if (!hasJapaneseChars) {
+                  console.log(`🔄 强制替换日语例句: "${ex.japanese}" -> "${word}"`);
+                  ex.japanese = word;
+                }
               }
             });
           }
