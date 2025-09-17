@@ -113,7 +113,9 @@ export const getChineseWordDetails = async (req: Request, res: Response) => {
     });
 
     const response = completion.choices[0].message.content;
-    const wordData = JSON.parse(response);
+    // 清理控制字符，防止 JSON 解析错误
+    const cleanedResponse = response.replace(/[\x00-\x1F\x7F-\x9F]/g, '');
+    const wordData = JSON.parse(cleanedResponse);
 
     // 构建返回数据
     const result = {
@@ -1252,6 +1254,9 @@ async function generateWordData(word: string, language: string = 'en', uiLanguag
         cleanedResponse = cleanedResponse.replace(/\s*```$/, '');
       }
       
+      // 清理控制字符，防止 JSON 解析错误
+      cleanedResponse = cleanedResponse.replace(/[\x00-\x1F\x7F-\x9F]/g, '');
+      
       const parsedData = JSON.parse(cleanedResponse);
       
       // 验证和修复数据格式
@@ -1665,7 +1670,9 @@ export const translateEnglishToChinese = async (req: Request, res: Response) => 
         max_tokens: 100
       });
       responseText = completion.choices[0]?.message?.content;
-      candidates = JSON.parse(responseText || '[]');
+      // 清理控制字符，防止 JSON 解析错误
+      const cleanedResponse = (responseText || '').replace(/[\x00-\x1F\x7F-\x9F]/g, '');
+      candidates = JSON.parse(cleanedResponse || '[]');
       if (!Array.isArray(candidates)) candidates = [];
     } catch (e) {
       logger.error('❌ 解析 OpenAI 返回失败:', e, responseText);
@@ -1767,7 +1774,9 @@ export const translateChineseToEnglish = async (req: Request, res: Response) => 
         max_tokens: 100
       });
       responseText = completion.choices[0]?.message?.content;
-      candidates = JSON.parse(responseText || '[]');
+      // 清理控制字符，防止 JSON 解析错误
+      const cleanedResponse = (responseText || '').replace(/[\x00-\x1F\x7F-\x9F]/g, '');
+      candidates = JSON.parse(cleanedResponse || '[]');
       if (!Array.isArray(candidates)) candidates = [];
     } catch (e) {
       logger.error('❌ 解析 OpenAI 返回失败:', e, responseText);
