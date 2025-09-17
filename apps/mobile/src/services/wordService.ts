@@ -805,6 +805,84 @@ export class WordService {
     }
   }
 
+  // 中文翻译到日语，返回 1-3 个日语候选词
+  async translateChineseToJapanese(word: string): Promise<{ success: boolean; candidates: string[]; error?: string }> {
+    try {
+      console.log(`🔍 中文翻译到日语: ${word}`);
+      
+      const response = await fetch(`${API_BASE_URL}/words/translate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          word: word.trim(),
+          targetLanguage: 'ja'
+        })
+      });
+      
+      if (!response.ok) {
+        throw new WordServiceError(`翻译失败: ${response.status}`, response.status);
+      }
+      
+      const result = await response.json();
+      if (result.success) {
+        // 从返回的数据中提取日语释义作为候选词
+        const candidates: string[] = [];
+        if (result.data && result.data.definitions) {
+          result.data.definitions.forEach((def: any) => {
+            if (def.definition) {
+              candidates.push(def.definition);
+            }
+          });
+        }
+        return { success: true, candidates: candidates };
+      } else {
+        return { success: false, candidates: [], error: result.error || '翻译失败' };
+      }
+    } catch (error) {
+      console.error(`❌ 中文翻译到日语错误:`, error);
+      return { success: false, candidates: [], error: error instanceof Error ? error.message : '未知错误' };
+    }
+  }
+
+  // 英文翻译到日语，返回 1-3 个日语候选词
+  async translateEnglishToJapanese(word: string): Promise<{ success: boolean; candidates: string[]; error?: string }> {
+    try {
+      console.log(`🔍 英文翻译到日语: ${word}`);
+      
+      const response = await fetch(`${API_BASE_URL}/words/translate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          word: word.trim(),
+          targetLanguage: 'ja'
+        })
+      });
+      
+      if (!response.ok) {
+        throw new WordServiceError(`翻译失败: ${response.status}`, response.status);
+      }
+      
+      const result = await response.json();
+      if (result.success) {
+        // 从返回的数据中提取日语释义作为候选词
+        const candidates: string[] = [];
+        if (result.data && result.data.definitions) {
+          result.data.definitions.forEach((def: any) => {
+            if (def.definition) {
+              candidates.push(def.definition);
+            }
+          });
+        }
+        return { success: true, candidates: candidates };
+      } else {
+        return { success: false, candidates: [], error: result.error || '翻译失败' };
+      }
+    } catch (error) {
+      console.error(`❌ 英文翻译到日语错误:`, error);
+      return { success: false, candidates: [], error: error instanceof Error ? error.message : '未知错误' };
+    }
+  }
+
   // 查询中文词汇详细信息
   async getChineseWordDetails(word: string, uiLanguage: string = 'en-US'): Promise<SearchResult> {
     try {

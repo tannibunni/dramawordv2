@@ -77,6 +77,10 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   const [chToEnQuery, setChToEnQuery] = useState<string>('');
   const [enToChCandidates, setEnToChCandidates] = useState<string[]>([]); // 新增：英文查中文候选词
   const [enToChQuery, setEnToChQuery] = useState<string>('');
+  const [chToJaCandidates, setChToJaCandidates] = useState<string[]>([]); // 新增：中文查日语候选词
+  const [chToJaQuery, setChToJaQuery] = useState<string>('');
+  const [enToJaCandidates, setEnToJaCandidates] = useState<string[]>([]); // 新增：英文查日语候选词
+  const [enToJaQuery, setEnToJaQuery] = useState<string>('');
   const [pinyinCandidates, setPinyinCandidates] = useState<string[]>([]); // 新增：拼音候选词
   const [pinyinQuery, setPinyinQuery] = useState<string>('');
   const { selectedLanguage, getCurrentLanguageConfig, setSelectedLanguage } = useLanguage();
@@ -199,6 +203,10 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     setChToEnQuery('');
     setEnToChCandidates([]);
     setEnToChQuery('');
+    setChToJaCandidates([]);
+    setChToJaQuery('');
+    setEnToJaCandidates([]);
+    setEnToJaQuery('');
     setPinyinCandidates([]);
     setPinyinQuery('');
     
@@ -473,45 +481,66 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     setChToEnQuery('');
     setEnToChCandidates([]);
     setEnToChQuery('');
+    setChToJaCandidates([]);
+    setChToJaQuery('');
+    setEnToJaCandidates([]);
+    setEnToJaQuery('');
     
     try {
       if (isChinese(word)) {
-        console.log(`🔍 直接输入中文词汇: ${word}`);
-        console.log(`🔍 appLanguage: ${appLanguage}, type: ${typeof appLanguage}`);
+        console.log(`🔍 输入中文词汇: ${word}`);
+        console.log(`🔍 appLanguage: ${appLanguage}, selectedLanguage: ${selectedLanguage}`);
         
-        // 安全检查appLanguage
-        const safeAppLanguage = appLanguage || 'en-US';
-        console.log(`🔍 使用安全的appLanguage: ${safeAppLanguage}`);
-        
-        // 使用统一的中文词汇查询API
-        const result = await wordService.getChineseWordDetails(word, safeAppLanguage);
-        if (result.success && result.data) {
-          console.log(`✅ 获取中文词汇详细信息成功: ${word}`);
-          console.log(`🔍 设置searchResult数据:`, result.data);
-          setSearchResult(result.data);
-          setSearchText('');
+        if (selectedLanguage === 'JAPANESE') {
+          // 目标语言是日语，显示日语翻译弹窗
+          const translationResult = await wordService.translateChineseToJapanese(word);
           
-          // 保存搜索历史
-          const definition = result.data.definitions && result.data.definitions[0]?.definition ? result.data.definitions[0].definition : t('no_definition', 'zh-CN');
-          await wordService.saveSearchHistory(word, definition);
-          setRecentWords(prev => {
-            const filtered = prev.filter(w => w.word !== word);
-            return [
-              {
-                id: Date.now().toString(),
-                word: word,
-                translation: definition,
-                timestamp: Date.now(),
-              },
-              ...filtered
-            ];
-          });
+          if (translationResult.success && translationResult.candidates.length > 0) {
+            setChToJaCandidates(translationResult.candidates);
+            setChToJaQuery(word);
+            const translation = translationResult.candidates.join(', ');
+            console.log(`✅ 中文翻译到日语结果: ${word} -> ${translation}`);
+            setIsLoading(false);
+            return;
+          } else {
+            console.log(`❌ 中文翻译到日语失败: ${word}`);
+            // 翻译失败时继续正常搜索流程
+          }
         } else {
-          console.log(`❌ 查询中文词汇详细信息失败: ${word}`);
-          Alert.alert('错误', '查询失败，请重试');
+          // 目标语言是中文，直接查询中文词汇详情
+          const safeAppLanguage = appLanguage || 'en-US';
+          console.log(`🔍 使用安全的appLanguage: ${safeAppLanguage}`);
+          
+          // 使用统一的中文词汇查询API
+          const result = await wordService.getChineseWordDetails(word, safeAppLanguage);
+          if (result.success && result.data) {
+            console.log(`✅ 获取中文词汇详细信息成功: ${word}`);
+            console.log(`🔍 设置searchResult数据:`, result.data);
+            setSearchResult(result.data);
+            setSearchText('');
+            
+            // 保存搜索历史
+            const definition = result.data.definitions && result.data.definitions[0]?.definition ? result.data.definitions[0].definition : t('no_definition', 'zh-CN');
+            await wordService.saveSearchHistory(word, definition);
+            setRecentWords(prev => {
+              const filtered = prev.filter(w => w.word !== word);
+              return [
+                {
+                  id: Date.now().toString(),
+                  word: word,
+                  translation: definition,
+                  timestamp: Date.now(),
+                },
+                ...filtered
+              ];
+            });
+          } else {
+            console.log(`❌ 查询中文词汇详细信息失败: ${word}`);
+            Alert.alert('错误', '查询失败，请重试');
+          }
+          setIsLoading(false);
+          return;
         }
-        setIsLoading(false);
-        return;
       } else if (appLanguage === 'en-US' && selectedLanguage === 'CHINESE') {
         // 英文界面下选择中文目标语言，所有输入都当作拼音处理
         console.log(`🔍 英文界面+中文目标语言，输入当作拼音处理: ${word}`);
@@ -566,23 +595,40 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
           return;
         }
       } else if (isEnglish(word) && appLanguage === 'en-US') {
-        // 英文界面下输入英文单词，显示中文翻译弹窗
-        console.log(`🔍 英文界面输入英文单词，显示中文翻译: ${word}`);
+        // 英文界面下输入英文单词，根据目标语言显示翻译弹窗
+        console.log(`🔍 英文界面输入英文单词: ${word}`);
         console.log(`🔍 selectedLanguage: ${selectedLanguage}`);
         
-        // 调用英文→中文翻译API
-        const translationResult = await wordService.translateEnglishToChinese(word);
-        
-        if (translationResult.success && translationResult.candidates.length > 0) {
-          setEnToChCandidates(translationResult.candidates);
-          setEnToChQuery(word);
-          const translation = translationResult.candidates.join(', ');
-          console.log(`✅ 英文翻译结果: ${word} -> ${translation}`);
-          setIsLoading(false);
-          return;
+        if (selectedLanguage === 'JAPANESE') {
+          // 目标语言是日语，显示日语翻译弹窗
+          const translationResult = await wordService.translateEnglishToJapanese(word);
+          
+          if (translationResult.success && translationResult.candidates.length > 0) {
+            setEnToJaCandidates(translationResult.candidates);
+            setEnToJaQuery(word);
+            const translation = translationResult.candidates.join(', ');
+            console.log(`✅ 英文翻译到日语结果: ${word} -> ${translation}`);
+            setIsLoading(false);
+            return;
+          } else {
+            console.log(`❌ 英文翻译到日语失败: ${word}`);
+            // 翻译失败时继续正常搜索流程
+          }
         } else {
-          console.log(`❌ 英文翻译失败: ${word}`);
-          // 翻译失败时继续正常搜索流程
+          // 目标语言是中文，显示中文翻译弹窗
+          const translationResult = await wordService.translateEnglishToChinese(word);
+          
+          if (translationResult.success && translationResult.candidates.length > 0) {
+            setEnToChCandidates(translationResult.candidates);
+            setEnToChQuery(word);
+            const translation = translationResult.candidates.join(', ');
+            console.log(`✅ 英文翻译结果: ${word} -> ${translation}`);
+            setIsLoading(false);
+            return;
+          } else {
+            console.log(`❌ 英文翻译失败: ${word}`);
+            // 翻译失败时继续正常搜索流程
+          }
         }
       } else if (isPinyin(word) && appLanguage === 'en-US' && selectedLanguage !== 'CHINESE') {
         // 英文界面下输入拼音，且目标语言不是中文，显示中文候选词弹窗
@@ -1112,6 +1158,106 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
               ))}
             </View>
           </View>
+            ) : chToJaCandidates.length > 0 ? (
+              <View style={styles.wordCardWrapper}>
+                <View style={[styles.wordCardCustom, styles.fixedCandidateCard] }>
+                  {/* 关闭按钮 */}
+                  <TouchableOpacity style={styles.closeButton} onPress={() => { setChToJaCandidates([]); setChToJaQuery(''); }}>
+                    <Ionicons name="close" size={26} color={colors.text.secondary} />
+                  </TouchableOpacity>
+                  <Text style={{ fontSize: 20, fontWeight: 'bold', color: colors.text.primary, marginBottom: 16, marginTop: 8 }}>
+                    "{chToJaQuery}" 的日语翻译
+                  </Text>
+                  {chToJaCandidates.map((japanese, idx) => (
+                    <TouchableOpacity key={japanese} onPress={async () => {
+                      setIsLoading(true);
+                      setChToJaCandidates([]);
+                      setChToJaQuery('');
+                      setSearchText(japanese);
+                      // 切换到日语搜索界面
+                      setSelectedLanguage('JAPANESE');
+                      console.log(`🔍 点击中文翻译候选词: ${japanese}`);
+                      
+                      // 使用日语词汇查询API
+                      const result = await wordService.searchWord(japanese, 'ja', appLanguage || 'en-US');
+                      if (result.success && result.data) {
+                        setSearchResult(result.data);
+                        setSearchText('');
+                        const definition = result.data.definitions && result.data.definitions[0]?.definition ? result.data.definitions[0].definition : t('no_definition', 'zh-CN');
+                        await wordService.saveSearchHistory(japanese, definition);
+                        setRecentWords(prev => {
+                          const filtered = prev.filter(w => w.word !== japanese);
+                          return [
+                            {
+                              id: Date.now().toString(),
+                              word: japanese,
+                              translation: definition,
+                              timestamp: Date.now(),
+                            },
+                            ...filtered
+                          ];
+                        });
+                      } else {
+                        console.log(`❌ 查询日语词汇详细信息失败: ${japanese}`);
+                        Alert.alert('错误', '查询失败，请重试');
+                      }
+                      setIsLoading(false);
+                    }} style={{ paddingVertical: 10, paddingHorizontal: 24, borderRadius: 16, backgroundColor: colors.primary[50], marginBottom: 10 }}>
+                      <Text style={{ fontSize: 18, color: colors.primary[700], fontWeight: '500' }}>{japanese}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+            ) : enToJaCandidates.length > 0 ? (
+              <View style={styles.wordCardWrapper}>
+                <View style={[styles.wordCardCustom, styles.fixedCandidateCard] }>
+                  {/* 关闭按钮 */}
+                  <TouchableOpacity style={styles.closeButton} onPress={() => { setEnToJaCandidates([]); setEnToJaQuery(''); }}>
+                    <Ionicons name="close" size={26} color={colors.text.secondary} />
+                  </TouchableOpacity>
+                  <Text style={{ fontSize: 20, fontWeight: 'bold', color: colors.text.primary, marginBottom: 16, marginTop: 8 }}>
+                    "{enToJaQuery}" 的日语翻译
+                  </Text>
+                  {enToJaCandidates.map((japanese, idx) => (
+                    <TouchableOpacity key={japanese} onPress={async () => {
+                      setIsLoading(true);
+                      setEnToJaCandidates([]);
+                      setEnToJaQuery('');
+                      setSearchText(japanese);
+                      // 切换到日语搜索界面
+                      setSelectedLanguage('JAPANESE');
+                      console.log(`🔍 点击英文翻译候选词: ${japanese}`);
+                      
+                      // 使用日语词汇查询API
+                      const result = await wordService.searchWord(japanese, 'ja', appLanguage || 'en-US');
+                      if (result.success && result.data) {
+                        setSearchResult(result.data);
+                        setSearchText('');
+                        const definition = result.data.definitions && result.data.definitions[0]?.definition ? result.data.definitions[0].definition : t('no_definition', 'zh-CN');
+                        await wordService.saveSearchHistory(japanese, definition);
+                        setRecentWords(prev => {
+                          const filtered = prev.filter(w => w.word !== japanese);
+                          return [
+                            {
+                              id: Date.now().toString(),
+                              word: japanese,
+                              translation: definition,
+                              timestamp: Date.now(),
+                            },
+                            ...filtered
+                          ];
+                        });
+                      } else {
+                        console.log(`❌ 查询日语词汇详细信息失败: ${japanese}`);
+                        Alert.alert('错误', '查询失败，请重试');
+                      }
+                      setIsLoading(false);
+                    }} style={{ paddingVertical: 10, paddingHorizontal: 24, borderRadius: 16, backgroundColor: colors.primary[50], marginBottom: 10 }}>
+                      <Text style={{ fontSize: 18, color: colors.primary[700], fontWeight: '500' }}>{japanese}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
             ) : pinyinCandidates.length > 0 ? (
               <View style={styles.wordCardWrapper}>
                 <View style={[styles.wordCardCustom, styles.fixedCandidateCard] }>
