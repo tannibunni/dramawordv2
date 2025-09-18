@@ -47,6 +47,7 @@ import smartSyncRoutes from './routes/smartSync';
 import inviteRoutes from './routes/invite';
 import jotobaRoutes from './routes/jotobaRoutes';
 import directTranslationRoutes from './routes/directTranslationRoutes';
+import japaneseTranslationRoutes from './routes/japaneseTranslationRoutes';
 import CacheMonitoringService from './services/cacheMonitoringService';
 import { logger } from './utils/logger';
 import { OpenAI } from 'openai';
@@ -102,6 +103,7 @@ app.use('/api/smart-sync', smartSyncRoutes);
 app.use('/api/invite', inviteRoutes);
 app.use('/api/jotoba', jotobaRoutes);
 app.use('/api/words', directTranslationRoutes);
+app.use('/api/japanese', japaneseTranslationRoutes);
 
 // 健康检查端点
 app.get('/health', (req, res) => {
