@@ -2,6 +2,7 @@
 import { analyzeInput, getQuerySuggestions, InputAnalysis } from '../utils/inputDetector';
 import { jotobaService, JotobaSearchResult } from './jotobaService';
 import { wordService } from './wordService';
+import { directTranslationService, DirectTranslationResult } from './directTranslationService';
 
 export interface QueryResult {
   type: 'dictionary' | 'translation' | 'ambiguous';
@@ -46,6 +47,17 @@ export class UnifiedQueryService {
       // 获取查询建议
       const suggestions = getQuerySuggestions(analysis);
       console.log(`🔍 查询建议:`, suggestions);
+
+      // 检查是否为英文句子，如果是则直接翻译
+      if (analysis.type === 'english_sentence') {
+        const directResult = await directTranslationService.translateEnglishSentence(input, uiLanguage);
+        if (directResult.success && directResult.data) {
+          return {
+            type: 'translation',
+            data: directResult.data
+          };
+        }
+      }
 
       // 并行执行查询
       const [dictionaryResults, translationResults] = await Promise.all([

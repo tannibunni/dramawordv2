@@ -1,7 +1,7 @@
 // 输入类型检测工具
 import * as wanakana from 'wanakana';
 
-export type InputType = 'chinese' | 'japanese_kanji' | 'japanese_kana' | 'english' | 'romaji' | 'mixed';
+export type InputType = 'chinese' | 'japanese_kanji' | 'japanese_kana' | 'english' | 'english_sentence' | 'romaji' | 'mixed';
 
 export interface InputAnalysis {
   type: InputType;
@@ -85,7 +85,7 @@ export function analyzeInput(input: string): InputAnalysis {
     if (isEnglishSentenceInput) {
       // 英文句子，直接翻译
       return {
-        type: 'english',
+        type: 'english_sentence',
         confidence: 0.9,
         suggestions: {
           romaji: trimmed
@@ -257,6 +257,11 @@ export function getQuerySuggestions(analysis: InputAnalysis): {
 
     case 'english':
       // 英文：翻译
+      suggestions.translation.push(analysis.suggestions.romaji || '');
+      break;
+
+    case 'english_sentence':
+      // 英文句子：直接翻译
       suggestions.translation.push(analysis.suggestions.romaji || '');
       break;
 
