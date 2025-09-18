@@ -157,16 +157,23 @@ export class TranslationService {
   }
 
   /**
-   * 判断是否为日语句子
+   * 判断是否为句子（支持多种语言）
    */
   private isJapaneseSentence(text: string): boolean {
     // 检查是否包含句子特征
     const sentenceIndicators = [
+      // 日语特征
       '。', '！', '？', 'です', 'ます', 'だ', 'である', 'です。', 'ます。', 'だ。', 'である。',
-      'を', 'が', 'に', 'で', 'と', 'は', 'も', 'の', 'か', 'ね', 'よ', 'わ'
+      'を', 'が', 'に', 'で', 'と', 'は', 'も', 'の', 'か', 'ね', 'よ', 'わ',
+      // 英文特征
+      'I ', 'you ', 'he ', 'she ', 'we ', 'they ', 'am ', 'is ', 'are ', 'was ', 'were ',
+      'have ', 'has ', 'had ', 'do ', 'does ', 'did ', 'will ', 'would ', 'can ', 'could ',
+      'like ', 'love ', 'want ', 'need ', 'go ', 'come ', 'see ', 'know ', 'think ', 'feel ',
+      'a ', 'an ', 'the ', 'and ', 'or ', 'but ', 'in ', 'on ', 'at ', 'to ', 'for ', 'of ',
+      'with ', 'by ', 'from ', 'up ', 'down ', 'out ', 'off ', 'over ', 'under ', 'through '
     ];
     
-    // 如果包含句子标点符号或助词，认为是句子
+    // 如果包含句子标点符号、助词或英文句子特征，认为是句子
     return sentenceIndicators.some(indicator => text.includes(indicator)) || text.length > 10;
   }
 

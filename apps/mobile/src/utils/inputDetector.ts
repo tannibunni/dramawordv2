@@ -80,8 +80,18 @@ export function analyzeInput(input: string): InputAnalysis {
   if (englishRatio > 0.7 && otherRatio < 0.3) {
     // 主要是英文字符，可能是英文或罗马音
     const isRomaji = isLikelyRomaji(trimmed);
+    const isEnglishSentenceInput = isEnglishSentence(trimmed);
     
-    if (isRomaji) {
+    if (isEnglishSentenceInput) {
+      // 英文句子，直接翻译
+      return {
+        type: 'english',
+        confidence: 0.9,
+        suggestions: {
+          romaji: trimmed
+        }
+      };
+    } else if (isRomaji) {
       // 尝试转换为假名
       try {
         const kana = wanakana.toHiragana(trimmed);
@@ -137,6 +147,28 @@ export function analyzeInput(input: string): InputAnalysis {
       romaji: trimmed
     }
   };
+}
+
+/**
+ * 判断是否为英文句子
+ */
+function isEnglishSentence(input: string): boolean {
+  // 检查是否包含空格（句子特征）
+  if (!input.includes(' ')) {
+    return false;
+  }
+  
+  // 检查是否包含英文句子特征
+  const englishSentenceIndicators = [
+    'I ', 'you ', 'he ', 'she ', 'we ', 'they ', 'am ', 'is ', 'are ', 'was ', 'were ',
+    'have ', 'has ', 'had ', 'do ', 'does ', 'did ', 'will ', 'would ', 'can ', 'could ',
+    'like ', 'love ', 'want ', 'need ', 'go ', 'come ', 'see ', 'know ', 'think ', 'feel ',
+    'a ', 'an ', 'the ', 'and ', 'or ', 'but ', 'in ', 'on ', 'at ', 'to ', 'for ', 'of ',
+    'with ', 'by ', 'from ', 'up ', 'down ', 'out ', 'off ', 'over ', 'under ', 'through '
+  ];
+  
+  const lowerInput = input.toLowerCase();
+  return englishSentenceIndicators.some(indicator => lowerInput.includes(indicator));
 }
 
 /**

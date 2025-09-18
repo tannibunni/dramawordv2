@@ -136,7 +136,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     borderWidth: 1,
-    borderColor: colors.border.primary,
+    borderColor: colors.border.light,
   },
   optionHeader: {
     flexDirection: 'row',
