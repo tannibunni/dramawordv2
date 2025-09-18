@@ -28,33 +28,28 @@ export const directTranslate = async (req: Request, res: Response): Promise<void
     const { japaneseText, romaji, hiragana, audioUrl } = translationResult.data;
     logger.info(`✅ Azure翻译成功: ${text} -> ${japaneseText}`);
 
-    // 构建返回数据
+    // 构建返回数据 - Azure句子翻译只显示英文原句
     const result = {
       success: true,
       data: {
         word: text, // 词卡标题显示用户搜索的原句
-        language: 'ja',
-        phonetic: romaji, // Azure罗马音
-        kana: hiragana, // Azure假名
-        romaji: romaji, // Azure罗马音字段
+        language: 'en', // 改为英文，因为只显示原句
+        phonetic: '', // 不显示发音
+        kana: '', // 不显示假名
+        romaji: '', // 不显示罗马音
         definitions: [
           {
             partOfSpeech: 'sentence',
             definition: text, // 释义显示原句
-            examples: [
-              {
-                japanese: japaneseText,
-                english: text // 例句中显示原文
-              }
-            ]
+            examples: [] // 不显示例句
           }
         ],
-        audioUrl: audioUrl, // Azure TTS音频URL
-        correctedWord: japaneseText, // 翻译结果作为correctedWord
+        audioUrl: '', // 不显示发音
+        correctedWord: text, // 原句作为correctedWord
         slangMeaning: null,
         phraseExplanation: null,
         originalText: text, // 原文本字段
-        translation: japaneseText // 添加翻译结果字段
+        translation: japaneseText // 翻译结果存储在translation字段（不显示）
       }
     };
 
