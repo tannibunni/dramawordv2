@@ -10,7 +10,6 @@ export interface JapaneseTranslationResult {
     japaneseText: string;
     romaji: string;
     hiragana: string;
-    katakana: string;
     sourceLanguage: string;
     audioUrl: string;
   };
@@ -127,7 +126,6 @@ export class JapaneseTranslationService {
           japaneseText: japaneseText,
           romaji: transliterateResult.romaji || '',
           hiragana: kuromojiResult.hiragana || '',
-          katakana: kuromojiResult.katakana || kuromojiResult.hiragana || '',
           sourceLanguage: sourceLanguage,
           audioUrl: this.generateAudioUrl(japaneseText)
         }

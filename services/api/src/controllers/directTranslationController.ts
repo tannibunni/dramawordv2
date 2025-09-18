@@ -25,7 +25,7 @@ export const directTranslate = async (req: Request, res: Response): Promise<void
       throw new Error(translationResult.error || '翻译失败');
     }
 
-    const { japaneseText, romaji, hiragana, katakana, audioUrl } = translationResult.data;
+    const { japaneseText, romaji, hiragana, audioUrl } = translationResult.data;
     logger.info(`✅ Azure翻译成功: ${text} -> ${japaneseText}`);
 
     // 构建返回数据
@@ -36,7 +36,6 @@ export const directTranslate = async (req: Request, res: Response): Promise<void
         language: 'ja',
         phonetic: romaji, // Azure罗马音
         kana: hiragana, // Azure假名
-        katakana: katakana, // Azure片假名
         romaji: romaji, // Azure罗马音字段
         definitions: [
           {
