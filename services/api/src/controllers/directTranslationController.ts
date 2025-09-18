@@ -28,6 +28,21 @@ export const directTranslate = async (req: Request, res: Response): Promise<void
     const translatedText = translationResult.translatedText;
     logger.info(`✅ 直接翻译成功: ${text} -> ${translatedText}`);
 
+    // 生成罗马音（仅对日语）
+    let romaji = '';
+    if (targetLanguage === 'ja') {
+      try {
+        // 使用Google翻译API获取罗马音
+        const romajiResult = await translationService.translateText(translatedText, 'en', 'ja');
+        if (romajiResult.success && romajiResult.translatedText) {
+          // 简单的罗马音转换（这里可以集成更专业的罗马音转换库）
+          romaji = romajiResult.translatedText.toLowerCase();
+        }
+      } catch (error) {
+        logger.warn(`⚠️ 获取罗马音失败: ${error}`);
+      }
+    }
+
     // 生成TTS音频URL
     const audioUrl = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(translatedText)}&tl=${targetLanguage}&client=tw-ob`;
 
@@ -35,14 +50,15 @@ export const directTranslate = async (req: Request, res: Response): Promise<void
     const result = {
       success: true,
       data: {
-        word: translatedText, // 词卡显示翻译后的内容
+        word: text, // 词卡标题显示用户搜索的原句
         language: targetLanguage,
-        phonetic: translatedText, // 对于句子，phonetic就是翻译结果
-        kana: undefined,
+        phonetic: romaji || translatedText, // 优先使用罗马音，否则使用翻译结果
+        kana: targetLanguage === 'ja' ? translatedText : undefined, // 日语时kana为翻译结果
+        romaji: romaji, // 添加罗马音字段
         definitions: [
           {
             partOfSpeech: 'sentence',
-            definition: translatedText,
+            definition: text, // 释义显示原句
             examples: [
               {
                 japanese: translatedText,
@@ -52,10 +68,11 @@ export const directTranslate = async (req: Request, res: Response): Promise<void
           }
         ],
         audioUrl: audioUrl,
-        correctedWord: translatedText,
+        correctedWord: translatedText, // 翻译结果作为correctedWord
         slangMeaning: null,
         phraseExplanation: null,
-        originalText: text // 添加原文本字段，用于显示
+        originalText: text, // 原文本字段
+        translation: translatedText // 添加翻译结果字段
       }
     };
 
