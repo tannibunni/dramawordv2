@@ -133,7 +133,7 @@ export const getChineseWordDetails = async (req: Request, res: Response) => {
           english: ex.english
         }))
       })),
-      audioUrl: generateChineseAudioUrl(wordData.word),
+      audioUrl: generateChineseAudioUrl(wordData.pinyin || wordData.word, 'zh'),
       slangMeaning: null,
       phraseExplanation: null,
       correctedWord: wordData.word,
@@ -1411,7 +1411,7 @@ async function generateWordData(word: string, language: string = 'en', uiLanguag
         pinyin: parsedData.pinyin || parsedData.phonetic || undefined, // 优先使用 pinyin 字段
         candidates: parsedData.candidates || [], // 添加候选词数组
         definitions: definitions,
-        audioUrl: getGoogleTTSUrl(word, language),
+        audioUrl: getGoogleTTSUrl(parsedData.phonetic || word, language),
         correctedWord: parsedData.correctedWord || word,
         kana: parsedData.kana || undefined,
         slangMeaning: slangMeaning,
@@ -2079,13 +2079,13 @@ export const wordController = {
 };
 
 // 生成中文词汇发音URL
-function generateChineseAudioUrl(word: string): string {
+function generateChineseAudioUrl(word: string, language: string = 'zh'): string {
   try {
-    // 使用Google TTS中文发音
+    // 使用Google TTS发音
     const encodedWord = encodeURIComponent(word);
-    return `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodedWord}&tl=zh&client=tw-ob`;
+    return `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodedWord}&tl=${language}&client=tw-ob`;
   } catch (error) {
-    console.error('生成中文发音URL失败:', error);
+    console.error('生成发音URL失败:', error);
     return '';
   }
 } 
