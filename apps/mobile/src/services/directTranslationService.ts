@@ -50,6 +50,9 @@ export class DirectTranslationService {
       }
 
       // 调用后端直接翻译API
+      console.log(`🔍 调用后端翻译API: ${API_BASE_URL}/words/direct-translate`);
+      console.log(`🔍 请求参数:`, { text: englishSentence, uiLanguage: uiLanguage });
+      
       const response = await fetch(`${API_BASE_URL}/words/direct-translate`, {
         method: 'POST',
         headers: {
@@ -61,11 +64,16 @@ export class DirectTranslationService {
         })
       });
 
+      console.log(`🔍 响应状态: ${response.status}`);
+      
       if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`❌ 翻译API错误: ${response.status} - ${errorText}`);
         throw new Error(`Direct translation failed: ${response.status}`);
       }
 
       const result = await response.json();
+      console.log(`🔍 翻译结果:`, result);
       
       // 缓存结果
       this.cache.set(cacheKey, result);

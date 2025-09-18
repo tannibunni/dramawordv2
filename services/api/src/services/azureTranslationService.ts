@@ -26,18 +26,26 @@ export class AzureTranslationService {
     const endpoint = process.env.AZURE_TRANSLATOR_ENDPOINT;
     const apiKey = process.env.AZURE_TRANSLATOR_KEY;
     
+    logger.info(`🔍 Azure配置检查: endpoint=${endpoint ? '已配置' : '未配置'}, apiKey=${apiKey ? '已配置' : '未配置'}`);
+    
     if (!endpoint || !apiKey) {
+      logger.error('❌ Azure Translator credentials not configured');
       throw new Error('Azure Translator credentials not configured');
     }
 
     // 确保端点格式正确
     const normalizedEndpoint = endpoint.endsWith('/') ? endpoint.slice(0, -1) : endpoint;
     
-    const credential = new AzureKeyCredential(apiKey);
-    this.translatorClient = TranslatorClient(normalizedEndpoint, credential);
-    this.transliterateClient = TranslatorClient(normalizedEndpoint, credential);
-    
-    logger.info(`✅ Azure Translator客户端初始化成功，端点: ${normalizedEndpoint}`);
+    try {
+      const credential = new AzureKeyCredential(apiKey);
+      this.translatorClient = TranslatorClient(normalizedEndpoint, credential);
+      this.transliterateClient = TranslatorClient(normalizedEndpoint, credential);
+      
+      logger.info(`✅ Azure Translator客户端初始化成功，端点: ${normalizedEndpoint}`);
+    } catch (error) {
+      logger.error(`❌ Azure Translator客户端初始化失败:`, error);
+      throw error;
+    }
   }
 
   static getInstance(): AzureTranslationService {

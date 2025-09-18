@@ -23,8 +23,21 @@ export class JapaneseTranslationService {
   private cache = new Map<string, JapaneseTranslationResult>();
 
   constructor() {
-    this.azureService = AzureTranslationService.getInstance();
-    this.kuromojiService = KuromojiService.getInstance();
+    try {
+      this.azureService = AzureTranslationService.getInstance();
+      logger.info('✅ Azure Translation Service初始化成功');
+    } catch (error) {
+      logger.error('❌ Azure Translation Service初始化失败:', error);
+      // 不抛出错误，允许降级方案工作
+    }
+    
+    try {
+      this.kuromojiService = KuromojiService.getInstance();
+      logger.info('✅ Kuromoji Service初始化成功');
+    } catch (error) {
+      logger.error('❌ Kuromoji Service初始化失败:', error);
+      // 不抛出错误，允许降级方案工作
+    }
   }
 
   static getInstance(): JapaneseTranslationService {
@@ -86,6 +99,11 @@ export class JapaneseTranslationService {
       }
 
       logger.info(`🔍 开始日文翻译流程: ${trimmedText}`);
+
+      // 检查Azure服务是否可用
+      if (!this.azureService) {
+        throw new Error('Azure Translation Service不可用');
+      }
 
       // 步骤1: Azure翻译
       const translationResult = await this.azureService.translateToJapanese(trimmedText);
