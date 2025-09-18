@@ -45,6 +45,7 @@ import adminRoutes from './routes/adminRoutes';
 import batchProcessingRoutes from './routes/batchProcessing';
 import smartSyncRoutes from './routes/smartSync';
 import inviteRoutes from './routes/invite';
+import jotobaRoutes from './routes/jotobaRoutes';
 import CacheMonitoringService from './services/cacheMonitoringService';
 import { logger } from './utils/logger';
 import { OpenAI } from 'openai';
@@ -98,6 +99,7 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/batch', batchProcessingRoutes);
 app.use('/api/smart-sync', smartSyncRoutes);
 app.use('/api/invite', inviteRoutes);
+app.use('/api/jotoba', jotobaRoutes);
 
 // 健康检查端点
 app.get('/health', (req, res) => {

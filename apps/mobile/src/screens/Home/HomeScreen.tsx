@@ -22,6 +22,8 @@ import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { colors } from '../../constants/colors';
 import { wordService, RecentWord } from '../../services/wordService';
+import { unifiedQueryService } from '../../services/unifiedQueryService';
+import { AmbiguousChoiceCard } from '../../components/cards/AmbiguousChoiceCard';
 import WordCard from '../../components/cards/WordCard';
 import { useShowList } from '../../context/ShowListContext';
 import { useVocabulary } from '../../context/VocabularyContext';
@@ -81,6 +83,9 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   const [chToJaQuery, setChToJaQuery] = useState<string>('');
   const [enToJaCandidates, setEnToJaCandidates] = useState<string[]>([]); // 新增：英文查日语候选词
   const [enToJaQuery, setEnToJaQuery] = useState<string>('');
+  const [ambiguousOptions, setAmbiguousOptions] = useState<any[]>([]); // 新增：歧义选择选项
+  const [showAmbiguousChoice, setShowAmbiguousChoice] = useState(false); // 新增：显示歧义选择
+  const [ambiguousInput, setAmbiguousInput] = useState<string>(''); // 新增：歧义输入
   const [pinyinCandidates, setPinyinCandidates] = useState<string[]>([]); // 新增：拼音候选词
   const [pinyinQuery, setPinyinQuery] = useState<string>('');
   const { selectedLanguage, getCurrentLanguageConfig, setSelectedLanguage } = useLanguage();
@@ -485,6 +490,9 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     setChToJaQuery('');
     setEnToJaCandidates([]);
     setEnToJaQuery('');
+    setAmbiguousOptions([]);
+    setShowAmbiguousChoice(false);
+    setAmbiguousInput('');
     
     try {
       if (isChinese(word)) {
@@ -738,6 +746,50 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     } catch (error) {
       console.error('搜索失败:', error);
       Alert.alert(t('search_failed', appLanguage), t('network_error', appLanguage));
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // 处理歧义选择
+  const handleAmbiguousChoice = async (option: { type: 'dictionary' | 'translation'; data: any }) => {
+    setShowAmbiguousChoice(false);
+    setIsLoading(true);
+
+    try {
+      if (option.type === 'dictionary') {
+        // 词典结果：转换为WordData格式
+        if (option.data && option.data.length > 0) {
+          const firstResult = option.data[0];
+          const wordData = {
+            word: firstResult.kanji || firstResult.reading,
+            language: 'ja',
+            phonetic: firstResult.reading,
+            kana: firstResult.reading,
+            definitions: firstResult.senses.map((sense: any) => ({
+              partOfSpeech: sense.pos[0] || 'n.',
+              definition: sense.glosses[0] || 'No definition available',
+              examples: []
+            }))
+          };
+          setSearchResult(wordData);
+          setSearchText('');
+        }
+      } else if (option.type === 'translation') {
+        // 翻译结果：显示候选词弹窗
+        if (option.data && option.data.length > 0) {
+          if (selectedLanguage === 'JAPANESE') {
+            setEnToJaCandidates(option.data);
+            setEnToJaQuery(ambiguousInput);
+          } else {
+            setEnToChCandidates(option.data);
+            setEnToChQuery(ambiguousInput);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('处理歧义选择失败:', error);
+      Alert.alert('错误', '处理选择失败，请重试');
     } finally {
       setIsLoading(false);
     }
@@ -1378,6 +1430,13 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
               ))}
             </View>
           </View>
+        ) : showAmbiguousChoice ? (
+          <AmbiguousChoiceCard
+            options={ambiguousOptions}
+            onSelect={handleAmbiguousChoice}
+            onClose={() => setShowAmbiguousChoice(false)}
+            input={ambiguousInput}
+          />
         ) : searchResult ? (
           <View style={styles.wordCardWrapper}>
             <WordCard
