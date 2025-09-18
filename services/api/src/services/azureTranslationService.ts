@@ -30,9 +30,14 @@ export class AzureTranslationService {
       throw new Error('Azure Translator credentials not configured');
     }
 
+    // 确保端点格式正确
+    const normalizedEndpoint = endpoint.endsWith('/') ? endpoint.slice(0, -1) : endpoint;
+    
     const credential = new AzureKeyCredential(apiKey);
-    this.translatorClient = TranslatorClient(endpoint, credential);
-    this.transliterateClient = TranslatorClient(endpoint, credential);
+    this.translatorClient = TranslatorClient(normalizedEndpoint, credential);
+    this.transliterateClient = TranslatorClient(normalizedEndpoint, credential);
+    
+    logger.info(`✅ Azure Translator客户端初始化成功，端点: ${normalizedEndpoint}`);
   }
 
   static getInstance(): AzureTranslationService {
