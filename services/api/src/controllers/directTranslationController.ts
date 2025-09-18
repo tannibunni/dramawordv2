@@ -20,6 +20,7 @@ export const directTranslate = async (req: Request, res: Response): Promise<void
     // 使用Azure日文翻译服务
     let translationResult;
     try {
+      logger.info(`🔍 尝试Azure翻译: ${text}`);
       const japaneseService = JapaneseTranslationService.getInstance();
       translationResult = await japaneseService.translateToJapanese(text);
       
@@ -32,26 +33,36 @@ export const directTranslate = async (req: Request, res: Response): Promise<void
       logger.error(`❌ Azure翻译失败，使用降级方案: ${azureError.message}`);
       
       // 降级方案：使用Google翻译
-      const { translationService } = await import('../services/translationService');
-      const targetLanguage = uiLanguage === 'zh-CN' ? 'zh' : 'ja';
-      const fallbackResult = await translationService.translateText(text, targetLanguage, 'en');
-      
-      if (!fallbackResult.success || !fallbackResult.translatedText) {
-        throw new Error('翻译服务不可用');
-      }
-      
-      // 构建降级结果
-      translationResult = {
-        success: true,
-        data: {
-          japaneseText: fallbackResult.translatedText,
-          romaji: '',
-          hiragana: '',
-          audioUrl: ''
+      try {
+        logger.info(`🔍 尝试Google翻译降级: ${text}`);
+        const { translationService } = await import('../services/translationService');
+        const targetLanguage = uiLanguage === 'zh-CN' ? 'zh' : 'ja';
+        logger.info(`🔍 目标语言: ${targetLanguage}`);
+        
+        const fallbackResult = await translationService.translateText(text, targetLanguage, 'en');
+        logger.info(`🔍 Google翻译结果:`, fallbackResult);
+        
+        if (!fallbackResult.success || !fallbackResult.translatedText) {
+          throw new Error('Google翻译服务不可用');
         }
-      };
-      
-      logger.info(`✅ 降级翻译成功: ${text} -> ${fallbackResult.translatedText}`);
+        
+        // 构建降级结果
+        translationResult = {
+          success: true,
+          data: {
+            japaneseText: fallbackResult.translatedText,
+            romaji: '',
+            hiragana: '',
+            sourceLanguage: 'en',
+            audioUrl: ''
+          }
+        };
+        
+        logger.info(`✅ 降级翻译成功: ${text} -> ${fallbackResult.translatedText}`);
+      } catch (googleError) {
+        logger.error(`❌ Google翻译也失败: ${googleError.message}`);
+        throw new Error('所有翻译服务都不可用');
+      }
     }
 
     // 构建返回数据 - Azure句子翻译只显示英文原句
