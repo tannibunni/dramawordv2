@@ -8,6 +8,7 @@ import UserVocabulary from '../models/UserVocabulary';
 import { ChineseTranslation } from '../models/ChineseTranslation';
 import { User } from '../models/User';
 import { ExperienceService } from '../services/experienceService';
+import { translationService } from '../services/translationService';
 import { logger } from '../utils/logger';
 import { openAIRateLimiter } from '../utils/rateLimiter';
 import fs from 'fs';
@@ -1405,6 +1406,29 @@ async function generateWordData(word: string, language: string = 'en', uiLanguag
       // 添加调试日志
       logger.info(`🔍 数据处理调试 - slangMeaning: ${typeof slangMeaning} = ${JSON.stringify(slangMeaning)}`);
       logger.info(`🔍 数据处理调试 - phraseExplanation: ${typeof phraseExplanation} = ${JSON.stringify(phraseExplanation)}`);
+
+      // 如果是日语词汇，使用翻译API替换释义
+      if (language === 'ja') {
+        try {
+          logger.info(`🔍 开始翻译日语释义: ${word}, UI语言: ${uiLanguage}`);
+          const translationResult = await translationService.translateJapaneseDefinition(
+            parsedData.correctedWord || word, 
+            uiLanguage === 'zh-CN' ? 'zh' : 'en'
+          );
+          
+          if (translationResult.success && translationResult.translatedText) {
+            // 替换第一个定义的释义
+            if (definitions.length > 0) {
+              definitions[0].definition = translationResult.translatedText;
+              logger.info(`✅ 日语释义翻译成功: ${word} -> ${translationResult.translatedText}`);
+            }
+          } else {
+            logger.warn(`⚠️ 日语释义翻译失败: ${word}, 使用原始释义`);
+          }
+        } catch (error) {
+          logger.error(`❌ 日语释义翻译异常: ${word}`, error);
+        }
+      }
 
       return {
         phonetic: parsedData.phonetic || `/${word}/`,
