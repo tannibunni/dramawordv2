@@ -18,15 +18,41 @@ export const directTranslate = async (req: Request, res: Response): Promise<void
     logger.info(`🔍 直接翻译请求: ${text}, UI语言: ${uiLanguage}`);
 
     // 使用Azure日文翻译服务
-    const japaneseService = JapaneseTranslationService.getInstance();
-    const translationResult = await japaneseService.translateToJapanese(text);
-
-    if (!translationResult.success || !translationResult.data) {
-      throw new Error(translationResult.error || '翻译失败');
+    let translationResult;
+    try {
+      const japaneseService = JapaneseTranslationService.getInstance();
+      translationResult = await japaneseService.translateToJapanese(text);
+      
+      if (!translationResult.success || !translationResult.data) {
+        throw new Error(translationResult.error || 'Azure翻译失败');
+      }
+      
+      logger.info(`✅ Azure翻译成功: ${text} -> ${translationResult.data.japaneseText}`);
+    } catch (azureError) {
+      logger.error(`❌ Azure翻译失败，使用降级方案: ${azureError.message}`);
+      
+      // 降级方案：使用Google翻译
+      const { translationService } = await import('../services/translationService');
+      const targetLanguage = uiLanguage === 'zh-CN' ? 'zh' : 'ja';
+      const fallbackResult = await translationService.translateText(text, targetLanguage, 'en');
+      
+      if (!fallbackResult.success || !fallbackResult.translatedText) {
+        throw new Error('翻译服务不可用');
+      }
+      
+      // 构建降级结果
+      translationResult = {
+        success: true,
+        data: {
+          japaneseText: fallbackResult.translatedText,
+          romaji: '',
+          hiragana: '',
+          audioUrl: ''
+        }
+      };
+      
+      logger.info(`✅ 降级翻译成功: ${text} -> ${fallbackResult.translatedText}`);
     }
-
-    const { japaneseText, romaji, hiragana, audioUrl } = translationResult.data;
-    logger.info(`✅ Azure翻译成功: ${text} -> ${japaneseText}`);
 
     // 构建返回数据 - Azure句子翻译只显示英文原句
     const result = {
@@ -49,11 +75,11 @@ export const directTranslate = async (req: Request, res: Response): Promise<void
         slangMeaning: null,
         phraseExplanation: null,
         originalText: text, // 原文本字段
-        translation: japaneseText // 翻译结果存储在translation字段（不显示）
+        translation: translationResult.data.japaneseText // 翻译结果存储在translation字段（不显示）
       }
     };
 
-    logger.info(`✅ 直接翻译完成: ${text} -> ${japaneseText}`);
+    logger.info(`✅ 直接翻译完成: ${text} -> ${translationResult.data.japaneseText}`);
     res.json(result);
 
   } catch (error) {
