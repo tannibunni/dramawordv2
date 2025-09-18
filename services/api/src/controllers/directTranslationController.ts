@@ -35,7 +35,7 @@ export const directTranslate = async (req: Request, res: Response): Promise<void
     const result = {
       success: true,
       data: {
-        word: text,
+        word: translatedText, // 词卡显示翻译后的内容
         language: targetLanguage,
         phonetic: translatedText, // 对于句子，phonetic就是翻译结果
         kana: undefined,
@@ -46,7 +46,7 @@ export const directTranslate = async (req: Request, res: Response): Promise<void
             examples: [
               {
                 japanese: translatedText,
-                english: text
+                english: text // 例句中显示原文
               }
             ]
           }
@@ -54,7 +54,8 @@ export const directTranslate = async (req: Request, res: Response): Promise<void
         audioUrl: audioUrl,
         correctedWord: translatedText,
         slangMeaning: null,
-        phraseExplanation: null
+        phraseExplanation: null,
+        originalText: text // 添加原文本字段，用于显示
       }
     };
 
