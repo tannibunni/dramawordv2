@@ -495,6 +495,84 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     setAmbiguousInput('');
     
     try {
+      // 使用统一查询服务处理所有输入类型
+      console.log(`🔍 使用统一查询服务处理: ${word}`);
+      const queryResult = await unifiedQueryService.query(word, appLanguage || 'en-US');
+      
+      if (queryResult.type === 'translation') {
+        // 直接翻译结果
+        console.log(`✅ 统一查询返回翻译结果:`, queryResult.data);
+        setSearchResult(queryResult.data);
+        setSearchText('');
+        
+        // 保存搜索历史
+        const definition = queryResult.data.definitions && queryResult.data.definitions[0]?.definition ? queryResult.data.definitions[0].definition : t('no_definition', appLanguage);
+        await wordService.saveSearchHistory(word, definition);
+        setRecentWords(prev => {
+          const filtered = prev.filter(w => w.word !== word);
+          return [
+            {
+              id: Date.now().toString(),
+              word: word,
+              translation: definition,
+              timestamp: Date.now(),
+            },
+            ...filtered
+          ];
+        });
+        setIsLoading(false);
+        return;
+      } else if (queryResult.type === 'ambiguous') {
+        // 歧义选择
+        console.log(`🔍 统一查询返回歧义选择:`, (queryResult as any).options);
+        setAmbiguousOptions((queryResult as any).options);
+        setShowAmbiguousChoice(true);
+        setAmbiguousInput(word);
+        setIsLoading(false);
+        return;
+      } else if (queryResult.type === 'dictionary') {
+        // 词典结果
+        console.log(`✅ 统一查询返回词典结果:`, queryResult.data);
+        if (queryResult.data && queryResult.data.length > 0) {
+          const firstResult = queryResult.data[0];
+          const wordData = {
+            word: firstResult.kanji || firstResult.reading,
+            language: 'ja',
+            phonetic: firstResult.reading,
+            kana: firstResult.reading,
+            definitions: firstResult.senses.map((sense: any) => ({
+              partOfSpeech: sense.pos[0] || 'n.',
+              definition: sense.glosses[0] || 'No definition available',
+              examples: []
+            }))
+          };
+          setSearchResult(wordData);
+          setSearchText('');
+          
+          // 保存搜索历史
+          const definition = wordData.definitions[0]?.definition || t('no_definition', appLanguage);
+          await wordService.saveSearchHistory(word, definition);
+          setRecentWords(prev => {
+            const filtered = prev.filter(w => w.word !== word);
+            return [
+              {
+                id: Date.now().toString(),
+                word: word,
+                translation: definition,
+                timestamp: Date.now(),
+              },
+              ...filtered
+            ];
+          });
+        }
+        setIsLoading(false);
+        return;
+      }
+      
+      // 如果统一查询服务没有处理，回退到原有逻辑
+      console.log(`⚠️ 统一查询服务未处理，回退到原有逻辑: ${word}`);
+      
+      // 原有的搜索逻辑作为回退
       if (isChinese(word)) {
         console.log(`🔍 输入中文词汇: ${word}`);
         console.log(`🔍 appLanguage: ${appLanguage}, selectedLanguage: ${selectedLanguage}`);
