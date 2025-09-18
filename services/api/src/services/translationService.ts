@@ -105,6 +105,72 @@ export class TranslationService {
   }
 
   /**
+   * 翻译日语句子或短语
+   */
+  async translateJapaneseSentence(japaneseText: string, targetLanguage: string): Promise<TranslationResult> {
+    try {
+      logger.info(`🔍 翻译日语句子: ${japaneseText} -> ${targetLanguage}`);
+      
+      // 直接使用Google Translate翻译句子
+      const result = await this.translateText(japaneseText, targetLanguage, 'ja');
+      
+      if (result.success) {
+        logger.info(`✅ 日语句子翻译成功: ${japaneseText} -> ${result.translatedText}`);
+      } else {
+        logger.warn(`⚠️ 日语句子翻译失败: ${japaneseText}`);
+      }
+      
+      return result;
+
+    } catch (error) {
+      logger.error(`❌ 翻译日语句子失败: ${japaneseText}`, error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : '翻译失败'
+      };
+    }
+  }
+
+  /**
+   * 智能翻译：自动判断是单词还是句子
+   */
+  async smartTranslateJapanese(input: string, targetLanguage: string): Promise<TranslationResult> {
+    try {
+      // 判断输入类型
+      const isSentence = this.isJapaneseSentence(input);
+      
+      if (isSentence) {
+        // 句子或短语，直接翻译
+        return await this.translateJapaneseSentence(input, targetLanguage);
+      } else {
+        // 单词，使用词汇翻译逻辑
+        return await this.translateJapaneseDefinition(input, targetLanguage);
+      }
+
+    } catch (error) {
+      logger.error(`❌ 智能翻译失败: ${input}`, error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : '翻译失败'
+      };
+    }
+  }
+
+  /**
+   * 判断是否为日语句子
+   */
+  private isJapaneseSentence(text: string): boolean {
+    // 检查是否包含句子特征
+    const sentenceIndicators = [
+      '。', '！', '？', 'です', 'ます', 'だ', 'である', 'です。', 'ます。', 'だ。', 'である。',
+      'を', 'が', 'に', 'で', 'と', 'は', 'も', 'の', 'か', 'ね', 'よ', 'わ'
+    ];
+    
+    // 如果包含句子标点符号或助词，认为是句子
+    return sentenceIndicators.some(indicator => text.includes(indicator)) || text.length > 10;
+  }
+
+  /**
    * 从Jotoba获取英文释义
    */
   private async getJotobaDefinition(japaneseWord: string): Promise<{ success: boolean; definition?: string; error?: string }> {

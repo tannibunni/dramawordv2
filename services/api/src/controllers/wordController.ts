@@ -1407,11 +1407,11 @@ async function generateWordData(word: string, language: string = 'en', uiLanguag
       logger.info(`🔍 数据处理调试 - slangMeaning: ${typeof slangMeaning} = ${JSON.stringify(slangMeaning)}`);
       logger.info(`🔍 数据处理调试 - phraseExplanation: ${typeof phraseExplanation} = ${JSON.stringify(phraseExplanation)}`);
 
-      // 如果是日语词汇，使用翻译API替换释义
+      // 如果是日语词汇，使用智能翻译API替换释义
       if (language === 'ja') {
         try {
-          logger.info(`🔍 开始翻译日语释义: ${word}, UI语言: ${uiLanguage}`);
-          const translationResult = await translationService.translateJapaneseDefinition(
+          logger.info(`🔍 开始智能翻译日语: ${word}, UI语言: ${uiLanguage}`);
+          const translationResult = await translationService.smartTranslateJapanese(
             parsedData.correctedWord || word, 
             uiLanguage === 'zh-CN' ? 'zh' : 'en'
           );
@@ -1420,13 +1420,13 @@ async function generateWordData(word: string, language: string = 'en', uiLanguag
             // 替换第一个定义的释义
             if (definitions.length > 0) {
               definitions[0].definition = translationResult.translatedText;
-              logger.info(`✅ 日语释义翻译成功: ${word} -> ${translationResult.translatedText}`);
+              logger.info(`✅ 日语智能翻译成功: ${word} -> ${translationResult.translatedText}`);
             }
           } else {
-            logger.warn(`⚠️ 日语释义翻译失败: ${word}, 使用原始释义`);
+            logger.warn(`⚠️ 日语智能翻译失败: ${word}, 使用原始释义`);
           }
         } catch (error) {
-          logger.error(`❌ 日语释义翻译异常: ${word}`, error);
+          logger.error(`❌ 日语智能翻译异常: ${word}`, error);
         }
       }
 
