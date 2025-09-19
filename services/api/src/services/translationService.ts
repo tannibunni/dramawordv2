@@ -182,6 +182,8 @@ export class TranslationService {
    */
   private async getJotobaDefinition(japaneseWord: string): Promise<{ success: boolean; definition?: string; error?: string }> {
     try {
+      logger.info(`🔍 从Jotoba获取英文释义: ${japaneseWord}`);
+      
       const response = await axios.post('https://jotoba.de/api/search', {
         query: japaneseWord,
         language: 'english',
@@ -195,11 +197,24 @@ export class TranslationService {
         }
       });
 
-      if (response.data && Array.isArray(response.data) && response.data.length > 0) {
-        const word = response.data[0];
+      logger.info(`🔍 Jotoba API响应状态: ${response.status}`);
+      
+      if (response.status !== 200) {
+        return {
+          success: false,
+          error: `Jotoba API returned status ${response.status}`
+        };
+      }
+
+      const data = response.data;
+      logger.info(`🔍 Jotoba API响应数据:`, JSON.stringify(data, null, 2));
+
+      if (data && Array.isArray(data) && data.length > 0) {
+        const word = data[0];
         if (word.senses && word.senses.length > 0) {
           const sense = word.senses[0];
           if (sense.glosses && sense.glosses.length > 0) {
+            logger.info(`✅ Jotoba获取释义成功: ${japaneseWord} -> ${sense.glosses[0]}`);
             return {
               success: true,
               definition: sense.glosses[0]
@@ -208,6 +223,7 @@ export class TranslationService {
         }
       }
 
+      logger.warn(`⚠️ Jotoba未找到释义: ${japaneseWord}`);
       return {
         success: false,
         error: 'No definition found in Jotoba'

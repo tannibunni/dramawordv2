@@ -98,16 +98,33 @@ export class JapanesePronunciationService {
    */
   private async getFromJotoba(japaneseText: string): Promise<PronunciationInfo> {
     try {
+      logger.info(`🔍 调用Jotoba API获取发音信息: ${japaneseText}`);
+      
       const response = await axios.post('https://jotoba.de/api/search', {
         query: japaneseText,
-        language: 'english'
+        language: 'english',
+        no_english: false,
+        page_size: 1
       }, {
-        timeout: 5000
+        timeout: 10000,
+        headers: {
+          'Content-Type': 'application/json',
+          'User-Agent': 'DramaWord/1.0'
+        }
       });
 
-      const data = response.data as JotobaResponse;
-      if (data && data.words && data.words.length > 0) {
-        const word = data.words[0];
+      logger.info(`🔍 Jotoba API响应状态: ${response.status}`);
+      
+      if (response.status !== 200) {
+        throw new Error(`Jotoba API returned status ${response.status}`);
+      }
+
+      const data = response.data;
+      logger.info(`🔍 Jotoba API响应数据:`, JSON.stringify(data, null, 2));
+      
+      // 检查响应格式 - Jotoba API返回的是数组格式
+      if (Array.isArray(data) && data.length > 0) {
+        const word = data[0];
         
         // 提取罗马音
         let romaji = '';
@@ -126,19 +143,32 @@ export class JapanesePronunciationService {
           hiragana = word.kana;
         }
 
-        return {
+        const result = {
           romaji: romaji,
           hiragana: hiragana,
           katakana: katakana,
           audioUrl: this.generateAudioUrl(japaneseText),
           pitchAccent: word.pitch_accent || undefined
         };
+        
+        logger.info(`✅ Jotoba API获取发音成功: ${japaneseText} -> ${result.romaji}`);
+        return result;
       }
 
-      throw new Error('Jotoba API未返回有效数据');
+      // 如果没有找到结果，返回基本结构
+      logger.warn(`⚠️ Jotoba API未找到结果: ${japaneseText}`);
+      return {
+        romaji: '',
+        hiragana: '',
+        katakana: '',
+        audioUrl: this.generateAudioUrl(japaneseText),
+        pitchAccent: undefined
+      };
+      
     } catch (error) {
-      logger.error(`❌ Jotoba API调用失败: ${error.message}`);
-      throw error;
+      logger.error(`❌ Jotoba API调用失败: ${japaneseText}`, error);
+      // 不抛出错误，让调用方使用降级方案
+      throw new Error(`Jotoba API error: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 
