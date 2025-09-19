@@ -255,7 +255,7 @@ const WordCardContent: React.FC<WordCardContentProps> = ({ wordData, onPlayAudio
             </View>
           )}
           <View style={styles.wordContainer}>
-            <Text style={styles.word} selectable>{wordData.correctedWord || wordData.word}</Text>
+            <Text style={styles.word} selectable>{wordData.translation || wordData.correctedWord || wordData.word}</Text>
             {wordData.kana && (
               <Text style={styles.kana} selectable>{wordData.kana}</Text>
             )}
@@ -270,7 +270,7 @@ const WordCardContent: React.FC<WordCardContentProps> = ({ wordData, onPlayAudio
                     key={candidate}
                     style={[
                       styles.candidateButton,
-                      candidate === (wordData.correctedWord || wordData.word) && styles.selectedCandidate
+                      candidate === (wordData.translation || wordData.correctedWord || wordData.word) && styles.selectedCandidate
                     ]}
                     onPress={() => {
                       // 这里可以添加选择候选词的逻辑
@@ -279,7 +279,7 @@ const WordCardContent: React.FC<WordCardContentProps> = ({ wordData, onPlayAudio
                   >
                     <Text style={[
                       styles.candidateText,
-                      candidate === (wordData.correctedWord || wordData.word) && styles.selectedCandidateText
+                      candidate === (wordData.translation || wordData.correctedWord || wordData.word) && styles.selectedCandidateText
                     ]}>
                       {candidate}
                     </Text>

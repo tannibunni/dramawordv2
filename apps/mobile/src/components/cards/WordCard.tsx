@@ -418,8 +418,8 @@ function getWordLangLabel(wordData: WordData) {
   if (lang === 'zh' || lang === 'zh-CN') return '【中文】';
   if (lang === 'ja' || lang === 'ja-JP') return '【日语】';
   if (lang === 'en' || lang === 'en-US') return '【英语】';
-  // 自动推断
-  const w = wordData.correctedWord || wordData.word || '';
+  // 自动推断 - 优先检查translation字段
+  const w = wordData.translation || wordData.correctedWord || wordData.word || '';
   if (/[0-9]+$/.test(w) && /^[a-zA-Z\s\-']+$/.test(w)) return '【英语】';
   if (/[0-9]*[\u4e00-\u9fa5]+/.test(w)) return '【中文】';
   if (/([\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF])/.test(w)) return '【日语】';
@@ -436,7 +436,7 @@ function getWordLangShort(wordData: WordData, appLanguage: string) {
   if (lang === 'zh' || lang === 'zh-CN') return 'ZH';
   if (lang === 'ja' || lang === 'ja-JP') return 'JA';
   if (lang === 'en' || lang === 'en-US') return 'EN';
-  const w = wordData.correctedWord || wordData.word || '';
+  const w = wordData.translation || wordData.correctedWord || wordData.word || '';
   if (wordData.kana) return 'JA';
   if (/^[a-zA-Z\s\-']+$/.test(w)) return 'EN';
   if (/[\u3040-\u309F\u30A0-\u30FF]/.test(w)) return 'JA';
@@ -456,7 +456,7 @@ function getWordLangFlag(wordData: WordData, appLanguage: string) {
   if (lang === 'zh' || lang === 'zh-CN') return '🇨🇳';
   if (lang === 'ja' || lang === 'ja-JP') return '🇯🇵';
   if (lang === 'en' || lang === 'en-US') return '🇺🇸';
-  const w = wordData.correctedWord || wordData.word || '';
+  const w = wordData.translation || wordData.correctedWord || wordData.word || '';
   if (wordData.kana) return '🇯🇵';
   if (/^[a-zA-Z\s\-']+$/.test(w)) return '🇺🇸';
   if (/[\u3040-\u309F\u30A0-\u30FF]/.test(w)) return '🇯🇵';

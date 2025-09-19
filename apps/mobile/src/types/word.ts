@@ -35,6 +35,7 @@ export interface WordData {
   language?: string;           // 语言代码 (en, ja, ko, fr, es, zh)
   slangMeaning?: string;       // 俚语/缩写含义 (统一为字符串)
   phraseExplanation?: string;  // 短语解释 (统一为字符串)
+  translation?: string;        // 翻译结果（用于句子翻译）
 }
 
 // 服务层使用的扩展接口 (用于API响应)

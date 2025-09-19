@@ -70,12 +70,12 @@ export const directTranslate = async (req: Request, res: Response): Promise<void
       }
     }
 
-    // 构建返回数据 - Azure句子翻译只显示英文原句
+    // 构建返回数据 - Azure句子翻译显示日文翻译
     const result = {
       success: true,
       data: {
         word: text, // 词卡标题显示用户搜索的原句
-        language: 'en', // 改为英文，因为只显示原句
+        language: 'ja', // 改为日文，因为显示翻译结果
         phonetic: '', // 不显示发音
         kana: '', // 不显示假名
         romaji: '', // 不显示罗马音
