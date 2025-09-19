@@ -1778,33 +1778,32 @@ export const translateChineseToEnglish = async (req: Request, res: Response) => 
       return;
     }
 
-    // 3. 使用 OpenAI 生成新的翻译
-    logger.info(`🤖 Generating new translation with AI: ${searchTerm} -> ${targetLang}`);
-    
-    // 根据目标语言生成不同的提示词
-    const targetLanguageName = getLanguageName(targetLang);
-    const prompt = `你是专业的中文翻译助手。请将中文词语"${searchTerm}"翻译为1-3个常用${targetLanguageName}单词，按相关性降序排列，严格只返回一个 JSON 数组，如 ["word1","word2"]，不要其他内容。如果是常见名词，务必给出最常用${targetLanguageName}单词。如果没有合适的${targetLanguageName}单词，才返回空数组 []。`;
-    
+    // 3. 根据目标语言选择翻译方法
     let candidates: string[] = [];
-    let responseText = '';
-    try {
-      const completion = await openai.chat.completions.create({
-        model: 'gpt-3.5-turbo',
-        messages: [
-          { role: 'system', content: `你是中文到${targetLanguageName}翻译助手，只返回JSON数组，不要其他内容。` },
-          { role: 'user', content: prompt }
-        ],
-        temperature: 0.2,
-        max_tokens: 100
-      });
-      responseText = completion.choices[0]?.message?.content;
-      // 清理控制字符，防止 JSON 解析错误
-      const cleanedResponse = (responseText || '').replace(/[\x00-\x1F\x7F-\x9F]/g, '');
-      candidates = JSON.parse(cleanedResponse || '[]');
-      if (!Array.isArray(candidates)) candidates = [];
-    } catch (e) {
-      logger.error('❌ 解析 OpenAI 返回失败:', e, responseText);
-      candidates = [];
+    
+    if (targetLang === 'ja') {
+      // 使用Azure日文翻译服务
+      logger.info(`🌏 使用Azure翻译服务: ${searchTerm} -> 日语`);
+      try {
+        const { JapaneseTranslationService } = await import('../services/japaneseTranslationService');
+        const japaneseService = JapaneseTranslationService.getInstance();
+        const translationResult = await japaneseService.translateToJapanese(searchTerm);
+        
+        if (translationResult.success && translationResult.data) {
+          candidates = [translationResult.data.japaneseText];
+          logger.info(`✅ Azure翻译成功: ${searchTerm} -> ${translationResult.data.japaneseText}`);
+        } else {
+          logger.error(`❌ Azure翻译失败: ${translationResult.error}`);
+          candidates = [];
+        }
+      } catch (azureError) {
+        logger.error(`❌ Azure翻译服务不可用: ${azureError.message}`);
+        // 降级到OpenAI
+        candidates = await generateTranslationWithOpenAI(searchTerm, targetLang);
+      }
+    } else {
+      // 使用OpenAI翻译其他语言
+      candidates = await generateTranslationWithOpenAI(searchTerm, targetLang);
     }
 
     // 4. fallback: 常见词典（仅对英文）
@@ -2111,5 +2110,40 @@ function generateChineseAudioUrl(word: string, language: string = 'zh'): string 
   } catch (error) {
     console.error('生成发音URL失败:', error);
     return '';
+  }
+}
+
+// 使用OpenAI生成翻译的辅助函数
+async function generateTranslationWithOpenAI(searchTerm: string, targetLang: string): Promise<string[]> {
+  try {
+    logger.info(`🤖 使用OpenAI翻译: ${searchTerm} -> ${targetLang}`);
+    
+    const targetLanguageName = getLanguageName(targetLang);
+    const prompt = `你是专业的中文翻译助手。请将中文词语"${searchTerm}"翻译为1-3个常用${targetLanguageName}单词，按相关性降序排列，严格只返回一个 JSON 数组，如 ["word1","word2"]，不要其他内容。如果是常见名词，务必给出最常用${targetLanguageName}单词。如果没有合适的${targetLanguageName}单词，才返回空数组 []。`;
+    
+    const completion = await openai.chat.completions.create({
+      model: 'gpt-3.5-turbo',
+      messages: [
+        { role: 'system', content: `你是中文到${targetLanguageName}翻译助手，只返回JSON数组，不要其他内容。` },
+        { role: 'user', content: prompt }
+      ],
+      temperature: 0.2,
+      max_tokens: 100
+    });
+    
+    const responseText = completion.choices[0]?.message?.content;
+    const cleanedResponse = (responseText || '').replace(/[\x00-\x1F\x7F-\x9F]/g, '');
+    const candidates = JSON.parse(cleanedResponse || '[]');
+    
+    if (!Array.isArray(candidates)) {
+      logger.warn(`⚠️ OpenAI返回不是数组: ${candidates}`);
+      return [];
+    }
+    
+    logger.info(`✅ OpenAI翻译成功: ${searchTerm} -> ${candidates.join(', ')}`);
+    return candidates;
+  } catch (error) {
+    logger.error(`❌ OpenAI翻译失败: ${error}`);
+    return [];
   }
 } 
