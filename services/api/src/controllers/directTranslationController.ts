@@ -51,15 +51,19 @@ export const directTranslate = async (req: Request, res: Response): Promise<void
           throw new Error('Google翻译服务不可用');
         }
         
-        // 构建降级结果
+        // 构建降级结果 - 添加罗马音和音频
+        const japaneseText = fallbackResult.translatedText;
+        const romaji = generateFallbackRomaji(japaneseText);
+        const audioUrl = generateAudioUrl(japaneseText);
+        
         translationResult = {
           success: true,
           data: {
-            japaneseText: fallbackResult.translatedText,
-            romaji: '',
+            japaneseText: japaneseText,
+            romaji: romaji,
             hiragana: '',
             sourceLanguage: 'en',
-            audioUrl: ''
+            audioUrl: audioUrl
           }
         };
         
@@ -76,9 +80,9 @@ export const directTranslate = async (req: Request, res: Response): Promise<void
       data: {
         word: text, // 词卡标题显示用户搜索的原句
         language: 'ja', // 改为日文，因为显示翻译结果
-        phonetic: '', // 不显示发音
-        kana: '', // 不显示假名
-        romaji: '', // 不显示罗马音
+        phonetic: translationResult.data.romaji || '', // 显示罗马音
+        kana: translationResult.data.hiragana || '', // 显示假名
+        romaji: translationResult.data.romaji || '', // 显示罗马音
         definitions: [
           {
             partOfSpeech: 'sentence',
@@ -86,7 +90,7 @@ export const directTranslate = async (req: Request, res: Response): Promise<void
             examples: [] // 不显示例句
           }
         ],
-        audioUrl: '', // 不显示发音
+        audioUrl: translationResult.data.audioUrl || '', // 显示发音
         correctedWord: text, // 原句作为correctedWord
         slangMeaning: null,
         phraseExplanation: null,
@@ -106,3 +110,39 @@ export const directTranslate = async (req: Request, res: Response): Promise<void
     });
   }
 };
+
+/**
+ * 生成备用罗马音（简单实现）
+ */
+function generateFallbackRomaji(japaneseText: string): string {
+  // 简单的日文到罗马音映射
+  const romajiMap: Record<string, string> = {
+    'これ': 'kore',
+    'が': 'ga',
+    '欲しい': 'hoshii',
+    'です': 'desu',
+    'は': 'wa',
+    'を': 'wo',
+    'に': 'ni',
+    'の': 'no',
+    'と': 'to',
+    'で': 'de',
+    'だ': 'da',
+    'ます': 'masu'
+  };
+  
+  let romaji = japaneseText;
+  for (const [japanese, romanji] of Object.entries(romajiMap)) {
+    romaji = romaji.replace(new RegExp(japanese, 'g'), romanji);
+  }
+  
+  return romaji;
+}
+
+/**
+ * 生成TTS音频URL
+ */
+function generateAudioUrl(japaneseText: string): string {
+  const encodedText = encodeURIComponent(japaneseText);
+  return `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodedText}&tl=ja&client=tw-ob`;
+}
