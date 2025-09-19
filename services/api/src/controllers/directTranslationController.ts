@@ -1,6 +1,7 @@
 // 直接翻译控制器 - 使用Azure翻译服务
 import { Request, Response } from 'express';
 import { JapaneseTranslationService } from '../services/japaneseTranslationService';
+import { JapanesePronunciationService } from '../services/japanesePronunciationService';
 import { logger } from '../utils/logger';
 
 export const directTranslate = async (req: Request, res: Response): Promise<void> => {
@@ -51,19 +52,21 @@ export const directTranslate = async (req: Request, res: Response): Promise<void
           throw new Error('Google翻译服务不可用');
         }
         
-        // 构建降级结果 - 添加罗马音和音频
+        // 构建降级结果 - 使用专业发音服务
         const japaneseText = fallbackResult.translatedText;
-        const romaji = generateFallbackRomaji(japaneseText);
-        const audioUrl = generateAudioUrl(japaneseText);
+        
+        // 使用专业发音服务获取完整发音信息
+        const pronunciationService = JapanesePronunciationService.getInstance();
+        const pronunciationInfo = await pronunciationService.getPronunciationInfo(japaneseText);
         
         translationResult = {
           success: true,
           data: {
             japaneseText: japaneseText,
-            romaji: romaji,
-            hiragana: '',
+            romaji: pronunciationInfo.romaji,
+            hiragana: pronunciationInfo.hiragana,
             sourceLanguage: 'en',
-            audioUrl: audioUrl
+            audioUrl: pronunciationInfo.audioUrl
           }
         };
         
