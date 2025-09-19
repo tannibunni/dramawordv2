@@ -21,6 +21,9 @@ export interface ICloudWord extends Document {
   correctedWord: string;
   searchCount: number;
   lastSearched: Date;
+  translation?: string; // 新增：翻译结果字段
+  kana?: string; // 新增：假名字段
+  romaji?: string; // 新增：罗马音字段
   createdAt: Date;
   updatedAt: Date;
 }
@@ -98,6 +101,18 @@ const CloudWordSchema = new Schema<ICloudWord>({
   lastSearched: {
     type: Date,
     default: Date.now,
+  },
+  translation: {
+    type: String,
+    default: ''
+  },
+  kana: {
+    type: String,
+    default: ''
+  },
+  romaji: {
+    type: String,
+    default: ''
   },
 }, {
   timestamps: true,

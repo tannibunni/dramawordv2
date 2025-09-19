@@ -2,6 +2,7 @@
 import { Request, Response } from 'express';
 import { JapaneseTranslationService } from '../services/japaneseTranslationService';
 import { JapanesePronunciationService } from '../services/japanesePronunciationService';
+import { CloudWord } from '../models/CloudWord';
 import { logger } from '../utils/logger';
 
 export const directTranslate = async (req: Request, res: Response): Promise<void> => {
@@ -103,6 +104,10 @@ export const directTranslate = async (req: Request, res: Response): Promise<void
     };
 
     logger.info(`✅ 直接翻译完成: ${text} -> ${translationResult.data.japaneseText}`);
+    
+    // 存储翻译结果到CloudWords
+    await saveTranslationToCloudWords(text, translationResult.data.japaneseText, uiLanguage);
+    
     res.json(result);
 
   } catch (error) {
@@ -377,4 +382,63 @@ function getKanjiRomaji(kanji: string): string {
 function generateAudioUrl(japaneseText: string): string {
   const encodedText = encodeURIComponent(japaneseText);
   return `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodedText}&tl=ja&client=tw-ob`;
+}
+
+/**
+ * 保存翻译结果到CloudWords
+ */
+async function saveTranslationToCloudWords(originalText: string, translatedText: string, uiLanguage: string): Promise<void> {
+  try {
+    logger.info(`💾 保存翻译结果到CloudWords: ${originalText} -> ${translatedText}`);
+    
+    // 检查是否已存在
+    const existingWord = await CloudWord.findOne({ 
+      word: originalText.toLowerCase(), 
+      language: 'en', 
+      uiLanguage: uiLanguage 
+    });
+    
+    if (existingWord) {
+      // 更新搜索次数
+      await CloudWord.updateOne(
+        { _id: existingWord._id },
+        { 
+          $inc: { searchCount: 1 },
+          $set: { lastSearched: new Date() }
+        }
+      );
+      logger.info(`✅ 更新现有CloudWord: ${originalText}`);
+      return;
+    }
+    
+    // 创建新的CloudWord记录
+    const cloudWord = new CloudWord({
+      word: originalText.toLowerCase(),
+      language: 'en',
+      uiLanguage: uiLanguage,
+      definitions: [
+        {
+          partOfSpeech: 'sentence',
+          definition: originalText,
+          examples: []
+        }
+      ],
+      audioUrl: generateAudioUrl(originalText),
+      correctedWord: originalText,
+      searchCount: 1,
+      lastSearched: new Date(),
+      // 添加翻译相关字段
+      translation: translatedText,
+      phonetic: '', // 英文句子不需要罗马音
+      kana: '',
+      romaji: ''
+    });
+    
+    await cloudWord.save();
+    logger.info(`✅ 创建新CloudWord: ${originalText} -> ${translatedText}`);
+    
+  } catch (error) {
+    logger.error(`❌ 保存翻译结果到CloudWords失败:`, error);
+    // 不抛出错误，避免影响翻译功能
+  }
 }
