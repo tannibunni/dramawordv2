@@ -119,28 +119,51 @@ function generateFallbackRomaji(japaneseText: string): string {
     // 使用wanakana库进行假名到罗马音转换
     const wanakana = require('wanakana');
     
-    // 先尝试直接转换
-    if (wanakana.isJapanese(japaneseText)) {
+    logger.info(`🔍 开始转换罗马音: ${japaneseText}`);
+    
+    // 检查是否包含汉字
+    const hasKanji = /[一-龯]/.test(japaneseText);
+    logger.info(`🔍 包含汉字: ${hasKanji}`);
+    
+    if (hasKanji) {
+      // 包含汉字，需要分词处理
+      logger.info(`🔍 分词处理汉字文本: ${japaneseText}`);
+      
+      // 使用更精确的分词正则表达式
+      const words = japaneseText.split(/([一-龯]+|[ひらがな]+|[カタカナ]+)/);
+      logger.info(`🔍 分词结果:`, words);
+      
+      let result = '';
+      
+      for (const word of words) {
+        if (!word.trim()) continue;
+        
+        logger.info(`🔍 处理单词: "${word}"`);
+        
+        if (/[一-龯]/.test(word)) {
+          // 汉字部分
+          const kanjiRomaji = getKanjiRomaji(word);
+          logger.info(`🔍 汉字转换: "${word}" -> "${kanjiRomaji}"`);
+          result += kanjiRomaji;
+        } else if (wanakana.isJapanese(word)) {
+          // 假名部分
+          const kanaRomaji = wanakana.toRomaji(word);
+          logger.info(`🔍 假名转换: "${word}" -> "${kanaRomaji}"`);
+          result += kanaRomaji;
+        } else {
+          // 其他字符（标点等）
+          result += word;
+        }
+      }
+      
+      logger.info(`✅ 分词转换成功: ${japaneseText} -> ${result}`);
+      return result;
+    } else {
+      // 纯假名，直接转换
       const romaji = wanakana.toRomaji(japaneseText);
-      logger.info(`✅ Wanakana转换成功: ${japaneseText} -> ${romaji}`);
+      logger.info(`✅ Wanakana直接转换成功: ${japaneseText} -> ${romaji}`);
       return romaji;
     }
-    
-    // 如果包含汉字，尝试分词后转换
-    const words = japaneseText.split(/([一-龯]+|[ひらがな]+|[カタカナ]+)/);
-    let result = '';
-    
-    for (const word of words) {
-      if (wanakana.isJapanese(word)) {
-        result += wanakana.toRomaji(word);
-      } else if (word.trim()) {
-        // 对于汉字，使用简单映射
-        result += getKanjiRomaji(word);
-      }
-    }
-    
-    logger.info(`✅ 分词转换成功: ${japaneseText} -> ${result}`);
-    return result;
     
   } catch (error) {
     logger.error(`❌ Wanakana转换失败，使用简单映射: ${error.message}`);
@@ -177,6 +200,7 @@ function generateFallbackRomaji(japaneseText: string): string {
  */
 function getKanjiRomaji(kanji: string): string {
   const kanjiMap: Record<string, string> = {
+    '愛': 'ai',
     '新': 'shin',
     '欲': 'hoshii',
     '食': 'tabe',
@@ -244,7 +268,6 @@ function getKanjiRomaji(kanji: string): string {
     '子': 'ko',
     '親': 'oya',
     '友': 'tomodachi',
-    '愛': 'ai',
     '恋': 'koi',
     '幸': 'shiawase',
     '悲': 'kanashii',
