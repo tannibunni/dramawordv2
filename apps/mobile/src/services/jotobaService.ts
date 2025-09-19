@@ -45,7 +45,7 @@ export class JotobaService {
       }
 
       // 调用Jotoba API
-      const response = await fetch(`${API_BASE_URL}/jotoba/search`, {
+      const response = await fetch(`${API_BASE_URL}/api/jotoba/search`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
