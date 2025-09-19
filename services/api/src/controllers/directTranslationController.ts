@@ -21,8 +21,13 @@ export const directTranslate = async (req: Request, res: Response): Promise<void
     let translationResult;
     try {
       logger.info(`🔍 尝试Azure翻译: ${text}`);
+      logger.info(`🔍 Azure环境变量检查: AZURE_TRANSLATOR_ENDPOINT=${process.env.AZURE_TRANSLATOR_ENDPOINT ? '已配置' : '未配置'}, AZURE_TRANSLATOR_KEY=${process.env.AZURE_TRANSLATOR_KEY ? '已配置' : '未配置'}`);
+      
       const japaneseService = JapaneseTranslationService.getInstance();
+      logger.info(`🔍 JapaneseTranslationService实例创建成功`);
+      
       translationResult = await japaneseService.translateToJapanese(text);
+      logger.info(`🔍 Azure翻译调用完成:`, translationResult);
       
       if (!translationResult.success || !translationResult.data) {
         throw new Error(translationResult.error || 'Azure翻译失败');

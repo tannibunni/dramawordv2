@@ -48,6 +48,9 @@ export class DirectTranslationService {
         console.log(`✅ 从缓存获取直接翻译结果: ${englishSentence}`);
         return this.cache.get(cacheKey)!;
       }
+      
+      // 临时禁用缓存进行调试
+      console.log(`🔍 跳过缓存，直接调用API: ${englishSentence}`);
 
       // 调用后端直接翻译API
       console.log(`🔍 调用后端翻译API: ${API_BASE_URL}/words/direct-translate`);
