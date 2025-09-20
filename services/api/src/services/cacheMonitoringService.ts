@@ -60,6 +60,13 @@ export class CacheMonitoringService {
       return;
     }
 
+    // 检查是否有Redis配置
+    const hasRedisConfig = process.env.REDIS_HOST || process.env.REDIS_URL;
+    if (!hasRedisConfig) {
+      logger.info('📊 Redis未配置，跳过缓存监控服务');
+      return;
+    }
+
     this.isMonitoring = true;
     logger.info('📊 启动缓存监控服务');
 
