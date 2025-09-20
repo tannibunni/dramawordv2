@@ -53,10 +53,10 @@ export class DirectTranslationService {
       console.log(`🔍 跳过缓存，直接调用API: ${englishSentence}`);
 
       // 调用后端直接翻译API
-      console.log(`🔍 调用后端翻译API: ${API_BASE_URL}/words/direct-translate`);
+      console.log(`🔍 调用后端翻译API: ${API_BASE_URL}/direct-translate/direct-translate`);
       console.log(`🔍 请求参数:`, { text: englishSentence, uiLanguage: uiLanguage });
       
-      const response = await fetch(`${API_BASE_URL}/words/direct-translate`, {
+      const response = await fetch(`${API_BASE_URL}/direct-translate/direct-translate`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

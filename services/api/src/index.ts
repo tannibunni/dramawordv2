@@ -102,7 +102,7 @@ app.use('/api/batch', batchProcessingRoutes);
 app.use('/api/smart-sync', smartSyncRoutes);
 app.use('/api/invite', inviteRoutes);
 app.use('/api/jotoba', jotobaRoutes);
-app.use('/api/words', directTranslationRoutes);
+app.use('/api/direct-translate', directTranslationRoutes);
 app.use('/api/japanese', japaneseTranslationRoutes);
 
 // 健康检查端点
