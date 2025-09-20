@@ -550,7 +550,11 @@ export type TranslationKey =
   | 'per_quarter'
   | 'per_year'
   | 'balanced_choice'
-  | 'save_8_percent';
+  | 'save_8_percent'
+  | 'translation_from_azure'
+  | 'translation_from_google'
+  | 'translation_from_openai'
+  | 'translation_from_cache';
 
 // 翻译内容
 export const translations: Record<AppLanguage, Record<TranslationKey, string>> = {
@@ -1097,6 +1101,12 @@ export const translations: Record<AppLanguage, Record<TranslationKey, string>> =
     guest_data_migrated: '游客数据已迁移',
     upgrade_to_email_account_flow: '升级到邮箱账户',
     upgrade_to_apple_account_flow: '升级到苹果账户',
+    
+    // 翻译来源
+    translation_from_azure: '此翻译来自Azure',
+    translation_from_google: '此翻译来自Google',
+    translation_from_openai: '此翻译来自OpenAI',
+    translation_from_cache: '此翻译来自缓存',
   },
   
   'en-US': {
@@ -1643,6 +1653,12 @@ export const translations: Record<AppLanguage, Record<TranslationKey, string>> =
     guest_data_migrated: 'Guest data migrated',
     upgrade_to_email_account_flow: 'Upgrade to Email Account',
     upgrade_to_apple_account_flow: 'Upgrade to Apple Account',
+    
+    // Translation sources
+    translation_from_azure: 'This translation is from Azure',
+    translation_from_google: 'This translation is from Google',
+    translation_from_openai: 'This translation is from OpenAI',
+    translation_from_cache: 'This translation is from cache',
   },
 };
 

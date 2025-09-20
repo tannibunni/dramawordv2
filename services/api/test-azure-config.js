@@ -1,44 +1,76 @@
-// 测试Azure Translator配置
-const { AzureTranslationService } = require('./dist/services/azureTranslationService');
+// 测试Azure翻译服务配置
+const axios = require('axios');
 
 async function testAzureConfig() {
   try {
-    console.log('🔍 测试Azure Translator配置...');
+    console.log('🔍 检查Azure翻译服务配置...\n');
     
-    // 检查环境变量
-    console.log('📋 环境变量检查:');
-    console.log('AZURE_TRANSLATOR_ENDPOINT:', process.env.AZURE_TRANSLATOR_ENDPOINT ? '✅ 已配置' : '❌ 未配置');
-    console.log('AZURE_TRANSLATOR_KEY:', process.env.AZURE_TRANSLATOR_KEY ? '✅ 已配置' : '❌ 未配置');
-    
-    if (!process.env.AZURE_TRANSLATOR_ENDPOINT || !process.env.AZURE_TRANSLATOR_KEY) {
-      console.error('❌ Azure Translator环境变量未配置');
-      return;
+    // 1. 测试Azure翻译服务健康检查
+    console.log('1️⃣ 测试Azure翻译服务健康检查:');
+    try {
+      const response = await axios.get('https://dramawordv2.onrender.com/api/health/azure-translation', {
+        timeout: 10000
+      });
+      console.log(`📊 状态: ${response.status}`);
+      console.log(`📊 响应:`, JSON.stringify(response.data, null, 2));
+    } catch (error) {
+      console.error(`❌ Azure健康检查失败: ${error.message}`);
+      if (error.response) {
+        console.error(`📊 错误响应:`, error.response.data);
+      }
     }
     
-    // 测试服务初始化
-    console.log('\n🔧 测试服务初始化...');
-    const azureService = AzureTranslationService.getInstance();
-    console.log('✅ Azure Translation Service初始化成功');
+    console.log('\n' + '='.repeat(50) + '\n');
     
-    // 测试简单翻译
-    console.log('\n🌐 测试翻译功能...');
-    const testText = 'hello world';
-    console.log(`📝 测试文本: "${testText}"`);
+    // 2. 测试Azure翻译服务初始化
+    console.log('2️⃣ 测试Azure翻译服务初始化:');
+    try {
+      const response = await axios.post('https://dramawordv2.onrender.com/api/test/azure-init', {
+        text: '测试',
+        targetLanguage: 'ja'
+      }, {
+        headers: { 'Content-Type': 'application/json' },
+        timeout: 15000
+      });
+      console.log(`📊 状态: ${response.status}`);
+      console.log(`📊 响应:`, JSON.stringify(response.data, null, 2));
+    } catch (error) {
+      console.error(`❌ Azure初始化测试失败: ${error.message}`);
+      if (error.response) {
+        console.error(`📊 错误响应:`, error.response.data);
+      }
+    }
     
-    const result = await azureService.translateToJapanese(testText);
+    console.log('\n' + '='.repeat(50) + '\n');
     
-    if (result.success) {
-      console.log('✅ 翻译成功!');
-      console.log('📊 结果详情:');
-      console.log('  - 原文:', result.translatedText);
-      console.log('  - 源语言:', result.sourceLanguage);
-    } else {
-      console.error('❌ 翻译失败:', result.error);
+    // 3. 直接测试Azure翻译API
+    console.log('3️⃣ 直接测试Azure翻译API:');
+    try {
+      const response = await axios.post('https://dramawordv2.onrender.com/api/direct-translate/direct-translate', {
+        text: '我吃鱼',
+        targetLanguage: 'ja',
+        uiLanguage: 'zh-CN'
+      }, {
+        headers: { 'Content-Type': 'application/json' },
+        timeout: 15000
+      });
+      console.log(`📊 状态: ${response.status}`);
+      console.log(`📊 成功: ${response.data.success}`);
+      if (response.data.success && response.data.data) {
+        console.log(`📊 翻译结果: ${response.data.data.translation}`);
+        console.log(`📊 来源服务: ${response.data.data.source || 'unknown'}`);
+      } else {
+        console.log(`📊 翻译失败: ${response.data.error}`);
+      }
+    } catch (error) {
+      console.error(`❌ 直接Azure翻译测试失败: ${error.message}`);
+      if (error.response) {
+        console.error(`📊 错误响应:`, error.response.data);
+      }
     }
     
   } catch (error) {
-    console.error('❌ 测试失败:', error.message);
-    console.error('详细错误:', error);
+    console.error('❌ Azure配置检查失败:', error.message);
   }
 }
 

@@ -88,9 +88,23 @@ export class UnifiedQueryService {
         };
       } else if (hasTranslationResults) {
         // 只有翻译结果
+        const mergedResult = this.mergeTranslationResults(translationResults);
+        // 创建WordData对象
+        const wordData = {
+          word: input,
+          translation: mergedResult.candidates[0] || '',
+          candidates: mergedResult.candidates,
+          definitions: [{
+            partOfSpeech: 'translation',
+            definition: mergedResult.candidates[0] || '',
+            examples: []
+          }],
+          language: targetLanguage,
+          translationSource: mergedResult.source
+        };
         return {
           type: 'translation',
-          data: this.mergeTranslationResults(translationResults)
+          data: wordData
         };
       } else {
         // 没有结果
@@ -191,12 +205,13 @@ export class UnifiedQueryService {
 
     // 翻译选项
     const translationData = this.mergeTranslationResults(translationResults);
-    if (translationData && translationData.length > 0) {
+    if (translationData && translationData.candidates && translationData.candidates.length > 0) {
       options.push({
         type: 'translation' as const,
         title: 'Translation',
         description: `Translate "${input}" to Japanese`,
-        data: translationData
+        data: translationData.candidates,
+        source: translationData.source
       });
     }
 
@@ -222,14 +237,24 @@ export class UnifiedQueryService {
   /**
    * 合并翻译结果
    */
-  private mergeTranslationResults(results: any[]): string[] {
+  private mergeTranslationResults(results: any[]): { candidates: string[], source: string } {
     const merged = [];
+    let source = 'unknown';
+    
     for (const result of results) {
       if (result.success && result.candidates) {
         merged.push(...result.candidates);
+        // 使用第一个成功的翻译来源
+        if (source === 'unknown' && result.source) {
+          source = result.source;
+        }
       }
     }
-    return [...new Set(merged)]; // 去重
+    
+    return {
+      candidates: [...new Set(merged)], // 去重
+      source: source
+    };
   }
 }
 
