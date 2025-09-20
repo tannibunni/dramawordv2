@@ -1818,26 +1818,27 @@ export const translateChineseToEnglish = async (req: Request, res: Response) => 
       }
     }
 
-    // 4. fallback: 常见词典（仅对英文）
-    if (!candidates || candidates.length === 0 && targetLang === 'en') {
-      const fallbackDict: Record<string, string[]> = {
-        '天空': ['sky', 'heaven'],
-        '城市': ['city', 'urban'],
-        '苹果': ['apple'],
-        '水': ['water'],
-        '太阳': ['sun'],
-        '月亮': ['moon'],
-        '山': ['mountain'],
-        '河': ['river'],
-        '树': ['tree'],
-        '花': ['flower'],
-        '书': ['book'],
-        '电脑': ['computer'],
-        '手机': ['phone'],
-        '桌子': ['table'],
-        '椅子': ['chair'],
-        '狗': ['dog'],
-        '猫': ['cat'],
+    // 4. fallback: 常见词典
+    if (!candidates || candidates.length === 0) {
+      if (targetLang === 'en') {
+        const fallbackDict: Record<string, string[]> = {
+          '天空': ['sky', 'heaven'],
+          '城市': ['city', 'urban'],
+          '苹果': ['apple'],
+          '水': ['water'],
+          '太阳': ['sun'],
+          '月亮': ['moon'],
+          '山': ['mountain'],
+          '河': ['river'],
+          '树': ['tree'],
+          '花': ['flower'],
+          '书': ['book'],
+          '电脑': ['computer'],
+          '手机': ['phone'],
+          '桌子': ['table'],
+          '椅子': ['chair'],
+          '狗': ['dog'],
+          '猫': ['cat'],
         '鸟': ['bird'],
         '鱼': ['fish'],
         '汽车': ['car'],
@@ -1856,7 +1857,43 @@ export const translateChineseToEnglish = async (req: Request, res: Response) => 
       };
       if (fallbackDict[searchTerm]) {
         candidates = fallbackDict[searchTerm];
-        logger.info(`🔄 使用 fallback 词典补充: ${searchTerm} -> ${candidates}`);
+        logger.info(`🔄 使用英文 fallback 词典补充: ${searchTerm} -> ${candidates}`);
+      }
+      } else if (targetLang === 'ja') {
+        const japaneseFallbackDict: Record<string, string[]> = {
+          '天空': ['空', 'そら'],
+          '水': ['水', 'みず'],
+          '太阳': ['太陽', 'たいよう'],
+          '月亮': ['月', 'つき'],
+          '山': ['山', 'やま'],
+          '河': ['川', 'かわ'],
+          '树': ['木', 'き'],
+          '花': ['花', 'はな'],
+          '书': ['本', 'ほん'],
+          '狗': ['犬', 'いぬ'],
+          '猫': ['猫', 'ねこ'],
+          '鸟': ['鳥', 'とり'],
+          '鱼': ['魚', 'さかな'],
+          '苹果': ['りんご'],
+          '你好': ['こんにちは'],
+          '谢谢': ['ありがとう'],
+          '再见': ['さようなら'],
+          '我吃中餐': ['中華料理を食べます'],
+          '城市': ['都市', 'とし'],
+          '学校': ['学校', 'がっこう'],
+          '老师': ['先生', 'せんせい'],
+          '学生': ['学生', 'がくせい'],
+          '朋友': ['友達', 'ともだち'],
+          '家': ['家', 'いえ'],
+          '工作': ['仕事', 'しごと'],
+          '学习': ['勉強', 'べんきょう'],
+          '快乐': ['楽しい', 'たのしい'],
+          '悲伤': ['悲しい', 'かなしい']
+        };
+        if (japaneseFallbackDict[searchTerm]) {
+          candidates = japaneseFallbackDict[searchTerm];
+          logger.info(`🔄 使用日文 fallback 词典补充: ${searchTerm} -> ${candidates}`);
+        }
       }
     }
 
