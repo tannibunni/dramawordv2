@@ -273,7 +273,7 @@ const WordCardContent: React.FC<WordCardContentProps> = ({ wordData, onPlayAudio
             </View>
           )}
           <View style={styles.wordContainer}>
-            <Text style={styles.word} selectable>{wordData.translation || wordData.correctedWord || wordData.word}</Text>
+            <Text style={styles.word} selectable>{wordData.word || wordData.correctedWord}</Text>
             {wordData.kana && (
               <Text style={styles.kana} selectable>{wordData.kana}</Text>
             )}
