@@ -1780,33 +1780,48 @@ export const translateChineseToEnglish = async (req: Request, res: Response) => 
 
     // 3. 根据目标语言选择翻译方法
     let candidates: string[] = [];
+    let translationSource = 'ai_generated'; // 默认来源
     
     if (targetLang === 'ja') {
-      // 使用Azure日文翻译服务
-      logger.info(`🌏 使用Azure翻译服务: ${searchTerm} -> 日语`);
+      // 步骤1: 尝试Azure翻译
+      logger.info(`🌏 步骤1: 尝试Azure翻译服务: ${searchTerm} -> 日语`);
       try {
-        const { JapaneseTranslationService } = await import('../services/japaneseTranslationService');
-        const japaneseService = JapaneseTranslationService.getInstance();
-        const translationResult = await japaneseService.translateToJapanese(searchTerm);
+        const { AzureTranslationService } = await import('../services/azureTranslationService');
+        const azureService = AzureTranslationService.getInstance();
+        const azureResult = await azureService.translateToJapanese(searchTerm);
         
-        if (translationResult.success && translationResult.data && translationResult.data.japaneseText) {
-          candidates = [translationResult.data.japaneseText];
-          logger.info(`✅ Azure翻译成功: ${searchTerm} -> ${translationResult.data.japaneseText}`);
+        if (azureResult.success && azureResult.translatedText) {
+          candidates = [azureResult.translatedText];
+          translationSource = 'azure_translation';
+          logger.info(`✅ Azure翻译成功: ${searchTerm} -> ${azureResult.translatedText}`);
         } else {
-          logger.error(`❌ Azure翻译失败: ${translationResult.error}`);
-          logger.error(`📊 翻译结果详情:`, JSON.stringify(translationResult, null, 2));
+          logger.error(`❌ Azure翻译失败: ${azureResult.error}`);
           candidates = [];
         }
       } catch (azureError) {
         logger.error(`❌ Azure翻译服务不可用: ${azureError.message}`);
-        // 直接使用Google翻译作为降级
-        logger.info(`🔄 Azure服务不可用，直接使用Google翻译: ${searchTerm} -> ${targetLang}`);
+        candidates = [];
+      }
+      
+      // 步骤2: 如果Azure失败，尝试Google翻译
+      if (!candidates || candidates.length === 0) {
+        logger.info(`🔄 步骤2: Azure失败，尝试Google翻译: ${searchTerm} -> ${targetLang}`);
         candidates = await generateTranslationWithGoogle(searchTerm, targetLang);
         
-        // 如果Google翻译也失败，尝试OpenAI
-        if (!candidates || candidates.length === 0) {
-          logger.info(`🔄 Google翻译失败，尝试OpenAI降级: ${searchTerm} -> ${targetLang}`);
-          candidates = await generateTranslationWithOpenAI(searchTerm, targetLang);
+        if (candidates && candidates.length > 0) {
+          translationSource = 'google_translation';
+          logger.info(`✅ Google翻译成功: ${searchTerm} -> ${candidates.join(', ')}`);
+        }
+      }
+      
+      // 步骤3: 如果Google也失败，最后尝试OpenAI
+      if (!candidates || candidates.length === 0) {
+        logger.info(`🔄 步骤3: Google失败，最后尝试OpenAI: ${searchTerm} -> ${targetLang}`);
+        candidates = await generateTranslationWithOpenAI(searchTerm, targetLang);
+        
+        if (candidates && candidates.length > 0) {
+          translationSource = 'openai_translation';
+          logger.info(`✅ OpenAI翻译成功: ${searchTerm} -> ${candidates.join(', ')}`);
         }
       }
     } else {
@@ -1822,7 +1837,117 @@ export const translateChineseToEnglish = async (req: Request, res: Response) => 
 
     // 4. fallback: 常见词典
     if (!candidates || candidates.length === 0) {
-      if (targetLang === 'en') {
+      if (targetLang === 'ja') {
+        const japaneseFallbackDict: Record<string, string[]> = {
+          '天空': ['空', 'そら'],
+          '城市': ['都市', 'とし'],
+          '苹果': ['りんご'],
+          '水': ['水', 'みず'],
+          '太阳': ['太陽', 'たいよう'],
+          '月亮': ['月', 'つき'],
+          '山': ['山', 'やま'],
+          '河': ['川', 'かわ'],
+          '树': ['木', 'き'],
+          '花': ['花', 'はな'],
+          '书': ['本', 'ほん'],
+          '电脑': ['コンピューター'],
+          '手机': ['携帯電話', 'けいたいでんわ'],
+          '桌子': ['机', 'つくえ'],
+          '椅子': ['椅子', 'いす'],
+          '狗': ['犬', 'いぬ'],
+          '猫': ['猫', 'ねこ'],
+          '鸟': ['鳥', 'とり'],
+          '鱼': ['魚', 'さかな'],
+          '汽车': ['車', 'くるま'],
+          '飞机': ['飛行機', 'ひこうき'],
+          '火车': ['電車', 'でんしゃ'],
+          '学校': ['学校', 'がっこう'],
+          '老师': ['先生', 'せんせい'],
+          '学生': ['学生', 'がくせい'],
+          '朋友': ['友達', 'ともだち'],
+          '今天': ['今日', 'きょう'],
+          '明天': ['明日', 'あした'],
+          '昨天': ['昨日', 'きのう'],
+          '我': ['私', 'わたし'],
+          '你': ['あなた'],
+          '他': ['彼', 'かれ'],
+          '她': ['彼女', 'かのじょ'],
+          '我们': ['私たち', 'わたしたち'],
+          '你们': ['あなたたち'],
+          '他们': ['彼ら', 'かれら'],
+          '高兴': ['嬉しい', 'うれしい'],
+          '快乐': ['楽しい', 'たのしい'],
+          '悲伤': ['悲しい', 'かなしい'],
+          '喜欢': ['好き', 'すき'],
+          '爱': ['愛', 'あい'],
+          '吃': ['食べる', 'たべる'],
+          '喝': ['飲む', 'のむ'],
+          '看': ['見る', 'みる'],
+          '听': ['聞く', 'きく'],
+          '说': ['話す', 'はなす'],
+          '走': ['歩く', 'あるく'],
+          '跑': ['走る', 'はしる'],
+          '坐': ['座る', 'すわる'],
+          '站': ['立つ', 'たつ'],
+          '睡觉': ['寝る', 'ねる'],
+          '工作': ['働く', 'はたらく'],
+          '学习': ['勉強する', 'べんきょうする'],
+          '玩': ['遊ぶ', 'あそぶ'],
+          '买': ['買う', 'かう'],
+          '卖': ['売る', 'うる'],
+          '来': ['来る', 'くる'],
+          '去': ['行く', 'いく'],
+          '回家': ['家に帰る', 'いえにかえる'],
+          '上班': ['仕事に行く', 'しごとにいく'],
+          '上学': ['学校に行く', 'がっこうにいく'],
+          '天气': ['天気', 'てんき'],
+          '下雨': ['雨が降る', 'あめがふる'],
+          '晴天': ['晴れ', 'はれ'],
+          '阴天': ['曇り', 'くもり'],
+          '雪': ['雪', 'ゆき'],
+          '风': ['風', 'かぜ'],
+          '热': ['暑い', 'あつい'],
+          '冷': ['寒い', 'さむい'],
+          '温暖': ['暖かい', 'あたたかい'],
+          '凉爽': ['涼しい', 'すずしい'],
+          '大': ['大きい', 'おおきい'],
+          '小': ['小さい', 'ちいさい'],
+          '高': ['高い', 'たかい'],
+          '低': ['低い', 'ひくい'],
+          '长': ['長い', 'ながい'],
+          '短': ['短い', 'みじかい'],
+          '新': ['新しい', 'あたらしい'],
+          '旧': ['古い', 'ふるい'],
+          '好': ['良い', 'よい'],
+          '坏': ['悪い', 'わるい'],
+          '美': ['美しい', 'うつくしい'],
+          '丑': ['醜い', 'みにくい'],
+          '快': ['速い', 'はやい'],
+          '慢': ['遅い', 'おそい'],
+          '多': ['多い', 'おおい'],
+          '少': ['少ない', 'すくない'],
+          '一': ['一', 'いち'],
+          '二': ['二', 'に'],
+          '三': ['三', 'さん'],
+          '四': ['四', 'よん'],
+          '五': ['五', 'ご'],
+          '六': ['六', 'ろく'],
+          '七': ['七', 'なな'],
+          '八': ['八', 'はち'],
+          '九': ['九', 'きゅう'],
+          '十': ['十', 'じゅう'],
+          '我吃鱼': ['私は魚を食べています', '魚を食べます'],
+          '我喜欢吃鱼': ['私は魚を食べるのが好きです', '魚が好きです'],
+          '今天天气很好': ['今日の天気はとても良いです', 'いい天気です'],
+          '我要去学校': ['私は学校に行きます', '学校へ行きます']
+        };
+        
+        if (japaneseFallbackDict[searchTerm]) {
+          candidates = japaneseFallbackDict[searchTerm];
+          translationSource = 'japanese_fallback_dict';
+          logger.info(`✅ 使用日文fallback词典: ${searchTerm} -> ${candidates.join(', ')}`);
+        }
+      } else if (targetLang === 'en') {
         const fallbackDict: Record<string, string[]> = {
           '天空': ['sky', 'heaven'],
           '城市': ['city', 'urban'],
@@ -1928,7 +2053,7 @@ export const translateChineseToEnglish = async (req: Request, res: Response) => 
       success: true, 
       query: searchTerm, 
       candidates, 
-      source: 'ai_generated',
+      source: translationSource,
       targetLanguage: targetLang
     });
 
