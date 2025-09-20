@@ -22,6 +22,9 @@ export const AmbiguousChoiceCard: React.FC<AmbiguousChoiceCardProps> = ({
   onClose,
   input
 }) => {
+  // 安全检查：确保options是数组
+  const safeOptions = Array.isArray(options) ? options : [];
+  
   return (
     <View style={styles.container}>
       <View style={styles.card}>
@@ -40,7 +43,7 @@ export const AmbiguousChoiceCard: React.FC<AmbiguousChoiceCardProps> = ({
 
         {/* 选项列表 */}
         <View style={styles.optionsContainer}>
-          {options.map((option, index) => (
+          {safeOptions.map((option, index) => (
             <TouchableOpacity
               key={index}
               style={styles.optionCard}

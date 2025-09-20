@@ -1513,7 +1513,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
           </View>
         ) : showAmbiguousChoice ? (
           <AmbiguousChoiceCard
-            options={ambiguousOptions}
+            options={Array.isArray(ambiguousOptions) ? ambiguousOptions : []}
             onSelect={handleAmbiguousChoice}
             onClose={() => setShowAmbiguousChoice(false)}
             input={ambiguousInput}
