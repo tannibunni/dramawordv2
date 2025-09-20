@@ -740,12 +740,39 @@ export class WordService {
     try {
       console.log(`🔍 中文翻译到目标语言: ${word} -> ${targetLanguage}`);
       
+      // 对于日文翻译，使用句子翻译API以获得更好的结果
+      if (targetLanguage === 'ja') {
+        console.log(`🔍 使用句子翻译API进行日文翻译: ${word}`);
+        
+        const response = await fetch(`${API_BASE_URL}/direct-translate/direct-translate`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            text: word.trim(),
+            targetLanguage: targetLanguage,
+            uiLanguage: 'zh-CN'
+          })
+        });
+        
+        if (!response.ok) {
+          throw new WordServiceError(`句子翻译失败: ${response.status}`, response.status);
+        }
+        
+        const result = await response.json();
+        if (result.success && result.data && result.data.translation) {
+          return { success: true, candidates: [result.data.translation] };
+        } else {
+          console.log(`⚠️ 句子翻译失败，降级到单词翻译API`);
+        }
+      }
+      
+      // 使用单词翻译API（对其他语言或日文翻译失败时的降级）
       const response = await fetch(`${API_BASE_URL}/words/translate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           word: word.trim(),
-          targetLanguage: targetLanguage // 新增目标语言参数
+          targetLanguage: targetLanguage
         })
       });
       
