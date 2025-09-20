@@ -38,6 +38,9 @@ export const directTranslate = async (req: Request, res: Response): Promise<void
         }
         
         logger.info(`✅ Azure翻译成功: ${text} -> ${translationResult.data.japaneseText}`);
+        
+        // 标记翻译来源为Azure
+        translationResult.translationSource = 'azure_translation';
       } else {
         // 使用通用翻译服务处理其他语言
         logger.info(`🔍 尝试通用翻译: ${text} -> ${targetLanguage}`);
@@ -53,6 +56,9 @@ export const directTranslate = async (req: Request, res: Response): Promise<void
         }
         
         logger.info(`✅ 通用翻译成功: ${text} -> ${translationResult.data.translatedText}`);
+        
+        // 标记翻译来源为Azure
+        translationResult.translationSource = 'azure_translation';
       }
     } catch (translationError) {
       logger.error(`❌ 翻译失败，使用降级方案: ${translationError.message}`);
@@ -100,6 +106,9 @@ export const directTranslate = async (req: Request, res: Response): Promise<void
         }
         
         logger.info(`✅ 降级翻译成功: ${text} -> ${fallbackResult.translatedText}`);
+        
+        // 标记翻译来源为Google
+        translationResult.translationSource = 'google_translation';
       } catch (googleError) {
         logger.error(`❌ Google翻译也失败: ${googleError.message}`);
         throw new Error('所有翻译服务都不可用');
@@ -127,11 +136,12 @@ export const directTranslate = async (req: Request, res: Response): Promise<void
             }
           ],
           audioUrl: translationResult.data.audioUrl || '', // 显示发音
-          correctedWord: text, // 原句作为correctedWord
+          correctedWord: translationResult.data.japaneseText, // 显示翻译结果
           slangMeaning: null,
           phraseExplanation: null,
           originalText: text, // 原文本字段
-          translation: translationResult.data.japaneseText // 翻译结果存储在translation字段
+          translation: translationResult.data.japaneseText, // 翻译结果存储在translation字段
+          translationSource: translationResult.translationSource || 'azure_translation' // 翻译来源
         }
       };
       logger.info(`✅ 日文翻译完成: ${text} -> ${translationResult.data.japaneseText}`);
@@ -153,11 +163,12 @@ export const directTranslate = async (req: Request, res: Response): Promise<void
             }
           ],
           audioUrl: '', // 其他语言暂无发音
-          correctedWord: text, // 原句作为correctedWord
+          correctedWord: translationResult.data.translatedText, // 显示翻译结果
           slangMeaning: null,
           phraseExplanation: null,
           originalText: text, // 原文本字段
-          translation: translationResult.data.translatedText // 翻译结果存储在translation字段
+          translation: translationResult.data.translatedText, // 翻译结果存储在translation字段
+          translationSource: translationResult.translationSource || 'azure_translation' // 翻译来源
         }
       };
       logger.info(`✅ ${targetLanguage}翻译完成: ${text} -> ${translationResult.data.translatedText}`);
