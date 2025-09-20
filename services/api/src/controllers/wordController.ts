@@ -1798,13 +1798,14 @@ export const translateChineseToEnglish = async (req: Request, res: Response) => 
         }
       } catch (azureError) {
         logger.error(`❌ Azure翻译服务不可用: ${azureError.message}`);
-        // 降级到OpenAI
-        candidates = await generateTranslationWithOpenAI(searchTerm, targetLang);
+        // 直接使用Google翻译作为降级
+        logger.info(`🔄 Azure服务不可用，直接使用Google翻译: ${searchTerm} -> ${targetLang}`);
+        candidates = await generateTranslationWithGoogle(searchTerm, targetLang);
         
-        // 如果OpenAI也失败，使用Google翻译作为最后降级
+        // 如果Google翻译也失败，尝试OpenAI
         if (!candidates || candidates.length === 0) {
-          logger.info(`🔄 Azure和OpenAI都失败，尝试Google翻译降级: ${searchTerm} -> ${targetLang}`);
-          candidates = await generateTranslationWithGoogle(searchTerm, targetLang);
+          logger.info(`🔄 Google翻译失败，尝试OpenAI降级: ${searchTerm} -> ${targetLang}`);
+          candidates = await generateTranslationWithOpenAI(searchTerm, targetLang);
         }
       }
     } else {
