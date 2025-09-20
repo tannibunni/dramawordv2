@@ -92,11 +92,12 @@ export class UnifiedQueryService {
         // 创建WordData对象
         const wordData = {
           word: input,
+          correctedWord: mergedResult.candidates[0] || '', // 显示翻译结果
           translation: mergedResult.candidates[0] || '',
           candidates: mergedResult.candidates,
           definitions: [{
             partOfSpeech: 'translation',
-            definition: mergedResult.candidates[0] || '',
+            definition: input, // 显示原文
             examples: []
           }],
           language: targetLanguage,
