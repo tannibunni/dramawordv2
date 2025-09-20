@@ -1783,40 +1783,18 @@ export const translateChineseToEnglish = async (req: Request, res: Response) => 
     let translationSource = 'ai_generated'; // 默认来源
     
     if (targetLang === 'ja') {
-      // 步骤1: 尝试Azure翻译
-      logger.info(`🌏 步骤1: 尝试Azure翻译服务: ${searchTerm} -> 日语`);
-      try {
-        const { AzureTranslationService } = await import('../services/azureTranslationService');
-        const azureService = AzureTranslationService.getInstance();
-        const azureResult = await azureService.translateToJapanese(searchTerm);
-        
-        if (azureResult.success && azureResult.translatedText) {
-          candidates = [azureResult.translatedText];
-          translationSource = 'azure_translation';
-          logger.info(`✅ Azure翻译成功: ${searchTerm} -> ${azureResult.translatedText}`);
-        } else {
-          logger.error(`❌ Azure翻译失败: ${azureResult.error}`);
-          candidates = [];
-        }
-      } catch (azureError) {
-        logger.error(`❌ Azure翻译服务不可用: ${azureError.message}`);
-        candidates = [];
+      // 步骤1: 使用Google翻译
+      logger.info(`🌏 步骤1: 使用Google翻译: ${searchTerm} -> 日语`);
+      candidates = await generateTranslationWithGoogle(searchTerm, targetLang);
+      
+      if (candidates && candidates.length > 0) {
+        translationSource = 'google_translation';
+        logger.info(`✅ Google翻译成功: ${searchTerm} -> ${candidates.join(', ')}`);
       }
       
-      // 步骤2: 如果Azure失败，尝试Google翻译
+      // 步骤2: 如果Google失败，尝试OpenAI
       if (!candidates || candidates.length === 0) {
-        logger.info(`🔄 步骤2: Azure失败，尝试Google翻译: ${searchTerm} -> ${targetLang}`);
-        candidates = await generateTranslationWithGoogle(searchTerm, targetLang);
-        
-        if (candidates && candidates.length > 0) {
-          translationSource = 'google_translation';
-          logger.info(`✅ Google翻译成功: ${searchTerm} -> ${candidates.join(', ')}`);
-        }
-      }
-      
-      // 步骤3: 如果Google也失败，最后尝试OpenAI
-      if (!candidates || candidates.length === 0) {
-        logger.info(`🔄 步骤3: Google失败，最后尝试OpenAI: ${searchTerm} -> ${targetLang}`);
+        logger.info(`🔄 步骤2: Google失败，尝试OpenAI: ${searchTerm} -> ${targetLang}`);
         candidates = await generateTranslationWithOpenAI(searchTerm, targetLang);
         
         if (candidates && candidates.length > 0) {
@@ -1832,6 +1810,11 @@ export const translateChineseToEnglish = async (req: Request, res: Response) => 
       if (!candidates || candidates.length === 0) {
         logger.info(`🔄 OpenAI失败，尝试Google翻译降级: ${searchTerm} -> ${targetLang}`);
         candidates = await generateTranslationWithGoogle(searchTerm, targetLang);
+        
+        if (candidates && candidates.length > 0) {
+          translationSource = 'google_translation';
+          logger.info(`✅ Google翻译降级成功: ${searchTerm} -> ${candidates.join(', ')}`);
+        }
       }
     }
 

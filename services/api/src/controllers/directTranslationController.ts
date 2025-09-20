@@ -1,6 +1,5 @@
-// 直接翻译控制器 - 使用Azure翻译服务
+// 直接翻译控制器 - 使用Google翻译+OpenAI罗马音
 import { Request, Response } from 'express';
-import { JapaneseTranslationService } from '../services/japaneseTranslationService';
 import { JapanesePronunciationService } from '../services/japanesePronunciationService';
 import { CloudWord } from '../models/CloudWord';
 import { logger } from '../utils/logger';
@@ -19,100 +18,55 @@ export const directTranslate = async (req: Request, res: Response): Promise<void
 
     logger.info(`🔍 直接翻译请求: ${text}, UI语言: ${uiLanguage}, 目标语言: ${targetLanguage}`);
 
-    // 根据目标语言选择翻译服务
+    // 使用Google翻译+OpenAI罗马音方案
     let translationResult;
     try {
-      if (targetLanguage === 'ja') {
-        // 使用Azure日文翻译服务
-        logger.info(`🔍 尝试Azure日文翻译: ${text}`);
-        logger.info(`🔍 Azure环境变量检查: AZURE_TRANSLATOR_ENDPOINT=${process.env.AZURE_TRANSLATOR_ENDPOINT ? '已配置' : '未配置'}, AZURE_TRANSLATOR_KEY=${process.env.AZURE_TRANSLATOR_KEY ? '已配置' : '未配置'}`);
-        
-        const japaneseService = JapaneseTranslationService.getInstance();
-        logger.info(`🔍 JapaneseTranslationService实例创建成功`);
-        
-        translationResult = await japaneseService.translateToJapanese(text);
-        logger.info(`🔍 Azure翻译调用完成:`, translationResult);
-        
-        if (!translationResult.success || !translationResult.data) {
-          throw new Error(translationResult.error || 'Azure翻译失败');
-        }
-        
-        logger.info(`✅ Azure翻译成功: ${text} -> ${translationResult.data.japaneseText}`);
-        
-        // 标记翻译来源为Azure
-        translationResult.translationSource = 'azure_translation';
-      } else {
-        // 使用通用翻译服务处理其他语言
-        logger.info(`🔍 尝试通用翻译: ${text} -> ${targetLanguage}`);
-        
-        const { AzureTranslationService } = await import('../services/azureTranslationService');
-        const azureService = AzureTranslationService.getInstance();
-        
-        translationResult = await azureService.translateText(text, targetLanguage);
-        logger.info(`🔍 通用翻译调用完成:`, translationResult);
-        
-        if (!translationResult.success || !translationResult.data) {
-          throw new Error(translationResult.error || '通用翻译失败');
-        }
-        
-        logger.info(`✅ 通用翻译成功: ${text} -> ${translationResult.data.translatedText}`);
-        
-        // 标记翻译来源为Azure
-        translationResult.translationSource = 'azure_translation';
-      }
-    } catch (translationError) {
-      logger.error(`❌ 翻译失败，使用降级方案: ${translationError.message}`);
+      logger.info(`🔍 使用Google翻译+OpenAI罗马音: ${text} -> ${targetLanguage}`);
       
-      // 降级方案：使用Google翻译
-      try {
-        logger.info(`🔍 尝试Google翻译降级: ${text}`);
-        const { translationService } = await import('../services/translationService');
-        logger.info(`🔍 降级翻译目标语言: ${targetLanguage}`);
-        
-        const fallbackResult = await translationService.translateText(text, targetLanguage, 'auto');
-        logger.info(`🔍 Google翻译结果:`, fallbackResult);
-        
-        if (!fallbackResult.success || !fallbackResult.translatedText) {
-          throw new Error('Google翻译服务不可用');
-        }
-        
-        // 构建降级结果
-        const translatedText = fallbackResult.translatedText;
-        
-        if (targetLanguage === 'ja') {
-          // 日文翻译使用专业发音服务
-          const pronunciationService = JapanesePronunciationService.getInstance();
-          const pronunciationInfo = await pronunciationService.getPronunciationInfo(translatedText);
-          
-          translationResult = {
-            success: true,
-            data: {
-              japaneseText: translatedText,
-              romaji: pronunciationInfo.romaji,
-              hiragana: pronunciationInfo.hiragana,
-              sourceLanguage: 'auto',
-              audioUrl: pronunciationInfo.audioUrl
-            }
-          };
-        } else {
-          // 其他语言使用通用结果
-          translationResult = {
-            success: true,
-            data: {
-              translatedText: translatedText,
-              sourceLanguage: 'auto'
-            }
-          };
-        }
-        
-        logger.info(`✅ 降级翻译成功: ${text} -> ${fallbackResult.translatedText}`);
-        
-        // 标记翻译来源为Google
-        translationResult.translationSource = 'google_translation';
-      } catch (googleError) {
-        logger.error(`❌ Google翻译也失败: ${googleError.message}`);
-        throw new Error('所有翻译服务都不可用');
+      // 使用Google翻译
+      const { translationService } = await import('../services/translationService');
+      const translationResponse = await translationService.translateText(text, targetLanguage, 'auto');
+      logger.info(`🔍 Google翻译结果:`, translationResponse);
+      
+      if (!translationResponse.success || !translationResponse.translatedText) {
+        throw new Error('Google翻译服务不可用');
       }
+      
+      const translatedText = translationResponse.translatedText;
+      
+      if (targetLanguage === 'ja') {
+        // 日文翻译使用专业发音服务
+        const pronunciationService = JapanesePronunciationService.getInstance();
+        const pronunciationInfo = await pronunciationService.getPronunciationInfo(translatedText);
+        
+        translationResult = {
+          success: true,
+          data: {
+            japaneseText: translatedText,
+            romaji: pronunciationInfo.romaji,
+            hiragana: pronunciationInfo.hiragana,
+            sourceLanguage: 'auto',
+            audioUrl: pronunciationInfo.audioUrl
+          },
+          translationSource: 'google_translation'
+        };
+      } else {
+        // 其他语言使用通用结果
+        translationResult = {
+          success: true,
+          data: {
+            translatedText: translatedText,
+            sourceLanguage: 'auto'
+          },
+          translationSource: 'google_translation'
+        };
+      }
+      
+      logger.info(`✅ Google翻译成功: ${text} -> ${translatedText}`);
+      
+    } catch (error) {
+      logger.error(`❌ 翻译失败: ${error.message}`);
+      throw new Error('翻译服务不可用');
     }
 
     // 构建返回数据 - 根据目标语言构建不同的结果
