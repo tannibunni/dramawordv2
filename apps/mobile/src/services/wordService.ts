@@ -736,7 +736,7 @@ export class WordService {
   }
 
   // 中文翻译到指定目标语言，返回 1-3 个目标语言释义
-  async translateChineseToTargetLanguage(word: string, targetLanguage: string): Promise<{ success: boolean; candidates: string[]; error?: string; source?: string }> {
+  async translateChineseToTargetLanguage(word: string, targetLanguage: string): Promise<{ success: boolean; candidates: string[]; error?: string; source?: string; wordData?: any }> {
     try {
       console.log(`🔍 中文翻译到目标语言: ${word} -> ${targetLanguage}`);
       
@@ -763,7 +763,19 @@ export class WordService {
           return { 
             success: true, 
             candidates: [result.data.translation],
-            source: 'azure_translation' // 句子翻译API使用Azure
+            source: 'azure_translation', // 句子翻译API使用Azure
+            wordData: {
+              word: word.trim(),
+              correctedWord: result.data.translation, // 显示翻译结果
+              translation: result.data.translation,
+              definitions: [{
+                partOfSpeech: 'translation',
+                definition: word.trim(), // 显示原文
+                examples: []
+              }],
+              language: targetLanguage,
+              translationSource: 'azure_translation'
+            }
           };
         } else {
           console.log(`⚠️ 句子翻译失败，降级到单词翻译API`);

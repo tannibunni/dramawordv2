@@ -89,7 +89,17 @@ export class UnifiedQueryService {
       } else if (hasTranslationResults) {
         // 只有翻译结果
         const mergedResult = this.mergeTranslationResults(translationResults);
-        // 创建WordData对象
+        
+        // 检查是否有完整的wordData（来自direct-translate API）
+        const wordDataResult = translationResults.find(result => result.wordData);
+        if (wordDataResult && wordDataResult.wordData) {
+          return {
+            type: 'translation',
+            data: wordDataResult.wordData
+          };
+        }
+        
+        // 否则创建WordData对象
         const wordData = {
           word: input,
           correctedWord: mergedResult.candidates[0] || '', // 显示翻译结果
