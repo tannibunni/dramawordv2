@@ -45,7 +45,6 @@ import adminRoutes from './routes/adminRoutes';
 import batchProcessingRoutes from './routes/batchProcessing';
 import smartSyncRoutes from './routes/smartSync';
 import inviteRoutes from './routes/invite';
-import jotobaRoutes from './routes/jotobaRoutes';
 import directTranslationRoutes from './routes/directTranslationRoutes';
 import CacheMonitoringService from './services/cacheMonitoringService';
 import { logger } from './utils/logger';
@@ -100,7 +99,6 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/batch', batchProcessingRoutes);
 app.use('/api/smart-sync', smartSyncRoutes);
 app.use('/api/invite', inviteRoutes);
-app.use('/api/jotoba', jotobaRoutes);
 app.use('/api/direct-translate', directTranslationRoutes);
 
 // 健康检查端点

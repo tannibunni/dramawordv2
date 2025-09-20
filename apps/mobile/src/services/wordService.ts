@@ -763,7 +763,7 @@ export class WordService {
           return { 
             success: true, 
             candidates: [result.data.translation],
-            source: 'azure_translation', // 句子翻译API使用Azure
+            source: 'google_translation', // 句子翻译API使用Google
             wordData: {
               word: word.trim(),
               correctedWord: result.data.translation, // 显示翻译结果
@@ -774,7 +774,7 @@ export class WordService {
                 examples: []
               }],
               language: targetLanguage,
-              translationSource: 'azure_translation'
+              translationSource: 'google_translation'
             }
           };
         } else {

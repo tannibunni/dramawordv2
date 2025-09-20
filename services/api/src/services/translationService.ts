@@ -77,22 +77,7 @@ export class TranslationService {
    */
   async translateJapaneseDefinition(japaneseWord: string, targetLanguage: string): Promise<TranslationResult> {
     try {
-      // 先尝试从Jotoba获取英文释义
-      const jotobaResult = await this.getJotobaDefinition(japaneseWord);
-      if (jotobaResult.success && jotobaResult.definition) {
-        // 如果目标语言是中文，翻译英文释义
-        if (targetLanguage === 'zh') {
-          return await this.translateText(jotobaResult.definition, 'zh', 'en');
-        } else {
-          // 目标语言是英文，直接返回
-          return {
-            success: true,
-            translatedText: jotobaResult.definition
-          };
-        }
-      }
-
-      // 如果Jotoba失败，直接翻译日语词汇
+      // 直接翻译日语词汇
       return await this.translateText(japaneseWord, targetLanguage, 'ja');
 
     } catch (error) {
@@ -177,66 +162,6 @@ export class TranslationService {
     return sentenceIndicators.some(indicator => text.includes(indicator)) || text.length > 10;
   }
 
-  /**
-   * 从Jotoba获取英文释义
-   */
-  private async getJotobaDefinition(japaneseWord: string): Promise<{ success: boolean; definition?: string; error?: string }> {
-    try {
-      logger.info(`🔍 从Jotoba获取英文释义: ${japaneseWord}`);
-      
-      const response = await axios.post('https://jotoba.de/api/search', {
-        query: japaneseWord,
-        language: 'english',
-        no_english: false,
-        page_size: 1
-      }, {
-        timeout: 10000,
-        headers: {
-          'Content-Type': 'application/json',
-          'User-Agent': 'DramaWord/1.0'
-        }
-      });
-
-      logger.info(`🔍 Jotoba API响应状态: ${response.status}`);
-      
-      if (response.status !== 200) {
-        return {
-          success: false,
-          error: `Jotoba API returned status ${response.status}`
-        };
-      }
-
-      const data = response.data;
-      logger.info(`🔍 Jotoba API响应数据:`, JSON.stringify(data, null, 2));
-
-      if (data && Array.isArray(data) && data.length > 0) {
-        const word = data[0];
-        if (word.senses && word.senses.length > 0) {
-          const sense = word.senses[0];
-          if (sense.glosses && sense.glosses.length > 0) {
-            logger.info(`✅ Jotoba获取释义成功: ${japaneseWord} -> ${sense.glosses[0]}`);
-            return {
-              success: true,
-              definition: sense.glosses[0]
-            };
-          }
-        }
-      }
-
-      logger.warn(`⚠️ Jotoba未找到释义: ${japaneseWord}`);
-      return {
-        success: false,
-        error: 'No definition found in Jotoba'
-      };
-
-    } catch (error) {
-      logger.error(`❌ Jotoba查询失败: ${japaneseWord}`, error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Jotoba查询失败'
-      };
-    }
-  }
 
   /**
    * 清理缓存

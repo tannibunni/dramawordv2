@@ -10,13 +10,6 @@ export interface PronunciationInfo {
   pitchAccent?: string; // 音调信息
 }
 
-interface JotobaResponse {
-  words?: Array<{
-    reading?: string;
-    kana?: string;
-    pitch_accent?: string;
-  }>;
-}
 
 export class JapanesePronunciationService {
   private static instance: JapanesePronunciationService;
@@ -46,20 +39,6 @@ export class JapanesePronunciationService {
       // 尝试多种方法获取发音信息
       let pronunciationInfo: PronunciationInfo;
 
-      // 方法1: 跳过Jotoba API（服务不可用），直接使用OpenAI
-      // Jotoba API 当前返回404，暂时禁用
-      // if (this.isLikelyWord(japaneseText)) {
-      //   try {
-      //     pronunciationInfo = await this.getFromJotoba(japaneseText);
-      //     if (pronunciationInfo.romaji) {
-      //       logger.info(`✅ Jotoba获取发音成功: ${japaneseText} -> ${pronunciationInfo.romaji}`);
-      //       this.cache.set(cacheKey, pronunciationInfo);
-      //       return pronunciationInfo;
-      //     }
-      //   } catch (error) {
-      //     logger.warn(`⚠️ Jotoba获取发音失败: ${error.message}`);
-      //   }
-      // }
 
       // 方法1: 使用OpenAI生成罗马音（主要方法）
       try {
@@ -94,84 +73,6 @@ export class JapanesePronunciationService {
     return text.length <= 10 && !text.includes(' ');
   }
 
-  /**
-   * 使用Jotoba API获取发音信息
-   */
-  private async getFromJotoba(japaneseText: string): Promise<PronunciationInfo> {
-    try {
-      logger.info(`🔍 调用Jotoba API获取发音信息: ${japaneseText}`);
-      
-      const response = await axios.post('https://jotoba.de/api/search', {
-        query: japaneseText,
-        language: 'english',
-        no_english: false,
-        page_size: 1
-      }, {
-        timeout: 10000,
-        headers: {
-          'Content-Type': 'application/json',
-          'User-Agent': 'DramaWord/1.0'
-        }
-      });
-
-      logger.info(`🔍 Jotoba API响应状态: ${response.status}`);
-      
-      if (response.status !== 200) {
-        throw new Error(`Jotoba API returned status ${response.status}`);
-      }
-
-      const data = response.data;
-      logger.info(`🔍 Jotoba API响应数据:`, JSON.stringify(data, null, 2));
-      
-      // 检查响应格式 - Jotoba API返回的是数组格式
-      if (Array.isArray(data) && data.length > 0) {
-        const word = data[0];
-        
-        // 提取罗马音
-        let romaji = '';
-        if (word.reading) {
-          romaji = word.reading;
-        } else if (word.kana) {
-          // 如果有假名，转换为罗马音
-          const wanakana = require('wanakana');
-          romaji = wanakana.toRomaji(word.kana);
-        }
-
-        // 提取假名
-        let hiragana = '';
-        let katakana = '';
-        if (word.kana) {
-          hiragana = word.kana;
-        }
-
-        const result = {
-          romaji: romaji,
-          hiragana: hiragana,
-          katakana: katakana,
-          audioUrl: this.generateAudioUrl(japaneseText),
-          pitchAccent: word.pitch_accent || undefined
-        };
-        
-        logger.info(`✅ Jotoba API获取发音成功: ${japaneseText} -> ${result.romaji}`);
-        return result;
-      }
-
-      // 如果没有找到结果，返回基本结构
-      logger.warn(`⚠️ Jotoba API未找到结果: ${japaneseText}`);
-      return {
-        romaji: '',
-        hiragana: '',
-        katakana: '',
-        audioUrl: this.generateAudioUrl(japaneseText),
-        pitchAccent: undefined
-      };
-      
-    } catch (error) {
-      logger.error(`❌ Jotoba API调用失败: ${japaneseText}`, error);
-      // 不抛出错误，让调用方使用降级方案
-      throw new Error(`Jotoba API error: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    }
-  }
 
   /**
    * 使用OpenAI生成罗马音
