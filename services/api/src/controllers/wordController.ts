@@ -21,9 +21,9 @@ if (!apiKey) {
   // 不要退出进程，让应用继续运行，但记录错误
 }
 
-const openai = new OpenAI({
+const openai = apiKey ? new OpenAI({
   apiKey: apiKey,
-});
+}) : null;
 
 // 内存缓存，用于提高性能
 const wordCache = new Map<string, any>();
@@ -1800,10 +1800,22 @@ export const translateChineseToEnglish = async (req: Request, res: Response) => 
         logger.error(`❌ Azure翻译服务不可用: ${azureError.message}`);
         // 降级到OpenAI
         candidates = await generateTranslationWithOpenAI(searchTerm, targetLang);
+        
+        // 如果OpenAI也失败，使用Google翻译作为最后降级
+        if (!candidates || candidates.length === 0) {
+          logger.info(`🔄 Azure和OpenAI都失败，尝试Google翻译降级: ${searchTerm} -> ${targetLang}`);
+          candidates = await generateTranslationWithGoogle(searchTerm, targetLang);
+        }
       }
     } else {
       // 使用OpenAI翻译其他语言
       candidates = await generateTranslationWithOpenAI(searchTerm, targetLang);
+      
+      // 如果OpenAI失败，使用Google翻译作为降级
+      if (!candidates || candidates.length === 0) {
+        logger.info(`🔄 OpenAI失败，尝试Google翻译降级: ${searchTerm} -> ${targetLang}`);
+        candidates = await generateTranslationWithGoogle(searchTerm, targetLang);
+      }
     }
 
     // 4. fallback: 常见词典（仅对英文）
@@ -2114,8 +2126,46 @@ function generateChineseAudioUrl(word: string, language: string = 'zh'): string 
 }
 
 // 使用OpenAI生成翻译的辅助函数
+async function generateTranslationWithGoogle(searchTerm: string, targetLang: string): Promise<string[]> {
+  try {
+    logger.info(`🌐 使用Google翻译: ${searchTerm} -> ${targetLang}`);
+    
+    const encodedText = encodeURIComponent(searchTerm);
+    const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=zh&tl=${targetLang}&dt=t&q=${encodedText}`;
+    
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+      }
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Google翻译API返回状态: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    if (data && data[0] && data[0][0] && data[0][0][0]) {
+      const translatedText = data[0][0][0];
+      logger.info(`✅ Google翻译成功: ${searchTerm} -> ${translatedText}`);
+      return [translatedText];
+    } else {
+      throw new Error('Google翻译返回格式无效');
+    }
+    
+  } catch (error) {
+    logger.error(`❌ Google翻译失败: ${error}`);
+    return [];
+  }
+}
+
 async function generateTranslationWithOpenAI(searchTerm: string, targetLang: string): Promise<string[]> {
   try {
+    if (!openai) {
+      logger.warn(`⚠️ OpenAI客户端未初始化，跳过OpenAI翻译: ${searchTerm}`);
+      return [];
+    }
+    
     logger.info(`🤖 使用OpenAI翻译: ${searchTerm} -> ${targetLang}`);
     
     const targetLanguageName = getLanguageName(targetLang);
