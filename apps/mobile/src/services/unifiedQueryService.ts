@@ -36,7 +36,7 @@ export class UnifiedQueryService {
   /**
    * 统一查询入口
    */
-  async query(input: string, uiLanguage: string = 'en-US'): Promise<QueryResult | AmbiguousResult> {
+  async query(input: string, uiLanguage: string = 'en-US', targetLanguage: string = 'ja'): Promise<QueryResult | AmbiguousResult> {
     try {
       console.log(`🔍 统一查询: "${input}"`);
 
@@ -50,7 +50,7 @@ export class UnifiedQueryService {
 
       // 检查是否为英文句子，如果是则直接翻译
       if (analysis.type === 'english_sentence') {
-        const directResult = await directTranslationService.translateEnglishSentence(input, uiLanguage);
+        const directResult = await directTranslationService.translateEnglishSentence(input, uiLanguage, targetLanguage);
         if (directResult.success && directResult.data) {
           return {
             type: 'translation',
@@ -62,7 +62,7 @@ export class UnifiedQueryService {
       // 并行执行查询
       const [dictionaryResults, translationResults] = await Promise.all([
         this.queryDictionary(suggestions.dictionary),
-        this.queryTranslation(suggestions.translation, uiLanguage)
+        this.queryTranslation(suggestions.translation, uiLanguage, targetLanguage)
       ]);
 
       // 判断结果类型
@@ -132,7 +132,7 @@ export class UnifiedQueryService {
   /**
    * 查询翻译
    */
-  private async queryTranslation(queries: string[], uiLanguage: string): Promise<any[]> {
+  private async queryTranslation(queries: string[], uiLanguage: string, targetLanguage: string): Promise<any[]> {
     if (queries.length === 0) {
       return [];
     }
@@ -142,14 +142,14 @@ export class UnifiedQueryService {
         queries.map(async (query) => {
           if (!query) return { success: false, error: '空查询' };
           
-          // 尝试中文翻译
-          const chineseResult = await wordService.translateChineseToJapanese(query);
+          // 尝试中文翻译到目标语言
+          const chineseResult = await wordService.translateChineseToTargetLanguage(query, targetLanguage);
           if (chineseResult.success) {
             return chineseResult;
           }
 
-          // 尝试英文翻译
-          const englishResult = await wordService.translateEnglishToJapanese(query);
+          // 尝试英文翻译到目标语言
+          const englishResult = await wordService.translateEnglishToTargetLanguage(query, targetLanguage);
           if (englishResult.success) {
             return englishResult;
           }

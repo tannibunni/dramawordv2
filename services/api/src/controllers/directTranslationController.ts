@@ -7,7 +7,7 @@ import { logger } from '../utils/logger';
 
 export const directTranslate = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { text, uiLanguage = 'en-US' } = req.body;
+    const { text, uiLanguage = 'en-US', targetLanguage = 'ja' } = req.body;
 
     if (!text || typeof text !== 'string') {
       res.status(400).json({
@@ -17,59 +17,87 @@ export const directTranslate = async (req: Request, res: Response): Promise<void
       return;
     }
 
-    logger.info(`🔍 直接翻译请求: ${text}, UI语言: ${uiLanguage}`);
+    logger.info(`🔍 直接翻译请求: ${text}, UI语言: ${uiLanguage}, 目标语言: ${targetLanguage}`);
 
-    // 使用Azure日文翻译服务
+    // 根据目标语言选择翻译服务
     let translationResult;
     try {
-      logger.info(`🔍 尝试Azure翻译: ${text}`);
-      logger.info(`🔍 Azure环境变量检查: AZURE_TRANSLATOR_ENDPOINT=${process.env.AZURE_TRANSLATOR_ENDPOINT ? '已配置' : '未配置'}, AZURE_TRANSLATOR_KEY=${process.env.AZURE_TRANSLATOR_KEY ? '已配置' : '未配置'}`);
-      
-      const japaneseService = JapaneseTranslationService.getInstance();
-      logger.info(`🔍 JapaneseTranslationService实例创建成功`);
-      
-      translationResult = await japaneseService.translateToJapanese(text);
-      logger.info(`🔍 Azure翻译调用完成:`, translationResult);
-      
-      if (!translationResult.success || !translationResult.data) {
-        throw new Error(translationResult.error || 'Azure翻译失败');
+      if (targetLanguage === 'ja') {
+        // 使用Azure日文翻译服务
+        logger.info(`🔍 尝试Azure日文翻译: ${text}`);
+        logger.info(`🔍 Azure环境变量检查: AZURE_TRANSLATOR_ENDPOINT=${process.env.AZURE_TRANSLATOR_ENDPOINT ? '已配置' : '未配置'}, AZURE_TRANSLATOR_KEY=${process.env.AZURE_TRANSLATOR_KEY ? '已配置' : '未配置'}`);
+        
+        const japaneseService = JapaneseTranslationService.getInstance();
+        logger.info(`🔍 JapaneseTranslationService实例创建成功`);
+        
+        translationResult = await japaneseService.translateToJapanese(text);
+        logger.info(`🔍 Azure翻译调用完成:`, translationResult);
+        
+        if (!translationResult.success || !translationResult.data) {
+          throw new Error(translationResult.error || 'Azure翻译失败');
+        }
+        
+        logger.info(`✅ Azure翻译成功: ${text} -> ${translationResult.data.japaneseText}`);
+      } else {
+        // 使用通用翻译服务处理其他语言
+        logger.info(`🔍 尝试通用翻译: ${text} -> ${targetLanguage}`);
+        
+        const { AzureTranslationService } = await import('../services/azureTranslationService');
+        const azureService = AzureTranslationService.getInstance();
+        
+        translationResult = await azureService.translateText(text, targetLanguage);
+        logger.info(`🔍 通用翻译调用完成:`, translationResult);
+        
+        if (!translationResult.success || !translationResult.data) {
+          throw new Error(translationResult.error || '通用翻译失败');
+        }
+        
+        logger.info(`✅ 通用翻译成功: ${text} -> ${translationResult.data.translatedText}`);
       }
-      
-      logger.info(`✅ Azure翻译成功: ${text} -> ${translationResult.data.japaneseText}`);
-    } catch (azureError) {
-      logger.error(`❌ Azure翻译失败，使用降级方案: ${azureError.message}`);
+    } catch (translationError) {
+      logger.error(`❌ 翻译失败，使用降级方案: ${translationError.message}`);
       
       // 降级方案：使用Google翻译
       try {
         logger.info(`🔍 尝试Google翻译降级: ${text}`);
         const { translationService } = await import('../services/translationService');
-        const targetLanguage = uiLanguage === 'zh-CN' ? 'zh' : 'ja';
-        logger.info(`🔍 目标语言: ${targetLanguage}`);
+        logger.info(`🔍 降级翻译目标语言: ${targetLanguage}`);
         
-        const fallbackResult = await translationService.translateText(text, targetLanguage, 'en');
+        const fallbackResult = await translationService.translateText(text, targetLanguage, 'auto');
         logger.info(`🔍 Google翻译结果:`, fallbackResult);
         
         if (!fallbackResult.success || !fallbackResult.translatedText) {
           throw new Error('Google翻译服务不可用');
         }
         
-        // 构建降级结果 - 使用专业发音服务
-        const japaneseText = fallbackResult.translatedText;
+        // 构建降级结果
+        const translatedText = fallbackResult.translatedText;
         
-        // 使用专业发音服务获取完整发音信息
-        const pronunciationService = JapanesePronunciationService.getInstance();
-        const pronunciationInfo = await pronunciationService.getPronunciationInfo(japaneseText);
-        
-        translationResult = {
-          success: true,
-          data: {
-            japaneseText: japaneseText,
-            romaji: pronunciationInfo.romaji,
-            hiragana: pronunciationInfo.hiragana,
-            sourceLanguage: 'en',
-            audioUrl: pronunciationInfo.audioUrl
-          }
-        };
+        if (targetLanguage === 'ja') {
+          // 日文翻译使用专业发音服务
+          const pronunciationService = JapanesePronunciationService.getInstance();
+          const pronunciationInfo = await pronunciationService.getPronunciationInfo(translatedText);
+          
+          translationResult = {
+            success: true,
+            data: {
+              japaneseText: translatedText,
+              romaji: pronunciationInfo.romaji,
+              hiragana: pronunciationInfo.hiragana,
+              sourceLanguage: 'auto',
+              audioUrl: pronunciationInfo.audioUrl
+            }
+          };
+        } else {
+          // 其他语言使用通用结果
+          translationResult = {
+            success: true,
+            data: {
+              translatedText: translatedText,
+              sourceLanguage: 'auto'
+            }
+          };
+        }
         
         logger.info(`✅ 降级翻译成功: ${text} -> ${fallbackResult.translatedText}`);
       } catch (googleError) {
@@ -78,35 +106,66 @@ export const directTranslate = async (req: Request, res: Response): Promise<void
       }
     }
 
-    // 构建返回数据 - Azure句子翻译显示日文翻译
-    const result = {
-      success: true,
-      data: {
-        word: text, // 词卡标题显示用户搜索的原句
-        language: 'ja', // 改为日文，因为显示翻译结果
-        phonetic: translationResult.data.romaji || '', // 显示罗马音
-        kana: translationResult.data.hiragana || '', // 显示假名
-        romaji: translationResult.data.romaji || '', // 显示罗马音
-        definitions: [
-          {
-            partOfSpeech: 'sentence',
-            definition: text, // 释义显示原句
-            examples: [] // 不显示例句
-          }
-        ],
-        audioUrl: translationResult.data.audioUrl || '', // 显示发音
-        correctedWord: text, // 原句作为correctedWord
-        slangMeaning: null,
-        phraseExplanation: null,
-        originalText: text, // 原文本字段
-        translation: translationResult.data.japaneseText // 翻译结果存储在translation字段（不显示）
-      }
-    };
-
-    logger.info(`✅ 直接翻译完成: ${text} -> ${translationResult.data.japaneseText}`);
+    // 构建返回数据 - 根据目标语言构建不同的结果
+    let result;
+    
+    if (targetLanguage === 'ja') {
+      // 日文翻译结果
+      result = {
+        success: true,
+        data: {
+          word: text, // 词卡标题显示用户搜索的原句
+          language: 'ja', // 目标语言
+          phonetic: translationResult.data.romaji || '', // 显示罗马音
+          kana: translationResult.data.hiragana || '', // 显示假名
+          romaji: translationResult.data.romaji || '', // 显示罗马音
+          definitions: [
+            {
+              partOfSpeech: 'sentence',
+              definition: text, // 释义显示原句
+              examples: [] // 不显示例句
+            }
+          ],
+          audioUrl: translationResult.data.audioUrl || '', // 显示发音
+          correctedWord: text, // 原句作为correctedWord
+          slangMeaning: null,
+          phraseExplanation: null,
+          originalText: text, // 原文本字段
+          translation: translationResult.data.japaneseText // 翻译结果存储在translation字段
+        }
+      };
+      logger.info(`✅ 日文翻译完成: ${text} -> ${translationResult.data.japaneseText}`);
+    } else {
+      // 其他语言翻译结果
+      result = {
+        success: true,
+        data: {
+          word: text, // 词卡标题显示用户搜索的原句
+          language: targetLanguage, // 目标语言
+          phonetic: '', // 其他语言暂无音标
+          kana: '', // 其他语言暂无假名
+          romaji: '', // 其他语言暂无罗马音
+          definitions: [
+            {
+              partOfSpeech: 'sentence',
+              definition: text, // 释义显示原句
+              examples: [] // 不显示例句
+            }
+          ],
+          audioUrl: '', // 其他语言暂无发音
+          correctedWord: text, // 原句作为correctedWord
+          slangMeaning: null,
+          phraseExplanation: null,
+          originalText: text, // 原文本字段
+          translation: translationResult.data.translatedText // 翻译结果存储在translation字段
+        }
+      };
+      logger.info(`✅ ${targetLanguage}翻译完成: ${text} -> ${translationResult.data.translatedText}`);
+    }
     
     // 存储翻译结果到CloudWords
-    await saveTranslationToCloudWords(text, translationResult.data.japaneseText, uiLanguage);
+    const translatedText = targetLanguage === 'ja' ? translationResult.data.japaneseText : translationResult.data.translatedText;
+    await saveTranslationToCloudWords(text, translatedText, uiLanguage);
     
     res.json(result);
 

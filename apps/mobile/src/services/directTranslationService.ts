@@ -36,14 +36,14 @@ export class DirectTranslationService {
   }
 
   /**
-   * 直接翻译英文句子到日语
+   * 直接翻译英文句子到目标语言
    */
-  async translateEnglishSentence(englishSentence: string, uiLanguage: string = 'en-US'): Promise<DirectTranslationResult> {
+  async translateEnglishSentence(englishSentence: string, uiLanguage: string = 'en-US', targetLanguage: string = 'ja'): Promise<DirectTranslationResult> {
     try {
       console.log(`🔍 直接翻译英文句子: ${englishSentence}`);
 
       // 检查缓存
-      const cacheKey = `direct_${englishSentence}_${uiLanguage}`;
+      const cacheKey = `direct_${englishSentence}_${uiLanguage}_${targetLanguage}`;
       if (this.cache.has(cacheKey)) {
         console.log(`✅ 从缓存获取直接翻译结果: ${englishSentence}`);
         return this.cache.get(cacheKey)!;
@@ -54,7 +54,7 @@ export class DirectTranslationService {
 
       // 调用后端直接翻译API
       console.log(`🔍 调用后端翻译API: ${API_BASE_URL}/direct-translate/direct-translate`);
-      console.log(`🔍 请求参数:`, { text: englishSentence, uiLanguage: uiLanguage });
+      console.log(`🔍 请求参数:`, { text: englishSentence, uiLanguage: uiLanguage, targetLanguage: targetLanguage });
       
       const response = await fetch(`${API_BASE_URL}/direct-translate/direct-translate`, {
         method: 'POST',
@@ -63,7 +63,8 @@ export class DirectTranslationService {
         },
         body: JSON.stringify({
           text: englishSentence,
-          uiLanguage: uiLanguage
+          uiLanguage: uiLanguage,
+          targetLanguage: targetLanguage
         })
       });
 

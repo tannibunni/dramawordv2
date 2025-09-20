@@ -805,6 +805,45 @@ export class WordService {
     }
   }
 
+  // 英文翻译到目标语言，返回 1-3 个目标语言候选词
+  async translateEnglishToTargetLanguage(word: string, targetLanguage: string): Promise<{ success: boolean; candidates: string[]; error?: string }> {
+    try {
+      console.log(`🔍 英文翻译到${targetLanguage}: ${word}`);
+      
+      const response = await fetch(`${API_BASE_URL}/words/translate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          word: word.trim(),
+          targetLanguage: targetLanguage
+        })
+      });
+      
+      if (!response.ok) {
+        throw new WordServiceError(`翻译失败: ${response.status}`, response.status);
+      }
+      
+      const result = await response.json();
+      if (result.success) {
+        // 从返回的数据中提取目标语言释义作为候选词
+        const candidates: string[] = [];
+        if (result.data && result.data.definitions) {
+          result.data.definitions.forEach((def: any) => {
+            if (def.definition) {
+              candidates.push(def.definition);
+            }
+          });
+        }
+        return { success: true, candidates: candidates };
+      } else {
+        return { success: false, candidates: [], error: result.error || '翻译失败' };
+      }
+    } catch (error) {
+      console.error(`❌ 英文翻译到${targetLanguage}错误:`, error);
+      return { success: false, candidates: [], error: error instanceof Error ? error.message : '未知错误' };
+    }
+  }
+
   // 中文翻译到日语，返回 1-3 个日语候选词
   async translateChineseToJapanese(word: string): Promise<{ success: boolean; candidates: string[]; error?: string }> {
     try {

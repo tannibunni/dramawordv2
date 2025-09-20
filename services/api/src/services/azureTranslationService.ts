@@ -72,6 +72,70 @@ export class AzureTranslationService {
   }
 
   /**
+   * 翻译文本到指定目标语言
+   */
+  async translateText(text: string, targetLanguage: string): Promise<AzureTranslationResult> {
+    try {
+      const cacheKey = `translate_${text}_${targetLanguage}`;
+      
+      // 检查缓存
+      if (this.cache.has(cacheKey)) {
+        logger.info(`✅ 从缓存获取翻译结果: ${text} -> ${targetLanguage}`);
+        return this.cache.get(cacheKey);
+      }
+
+      // 检测源语言
+      const sourceLanguage = this.detectLanguage(text);
+      logger.info(`🔍 检测到源语言: ${sourceLanguage} for "${text}" -> ${targetLanguage}`);
+
+      // 调用Azure翻译API
+      const response = await this.translatorClient.path('/translate').post({
+        body: [
+          {
+            text: text
+          }
+        ],
+        queryParameters: {
+          'api-version': '3.0',
+          from: sourceLanguage,
+          to: targetLanguage
+        }
+      });
+
+      if (response.status !== 200) {
+        throw new Error(`Azure Translator API returned status ${response.status}`);
+      }
+
+      const result = response.body as any;
+      if (!result || !result[0] || !result[0].translations || !result[0].translations[0]) {
+        throw new Error('Invalid response from Azure Translator API');
+      }
+
+      const translatedText = result[0].translations[0].text;
+      const detectedLanguage = result[0].detectedLanguage?.language || sourceLanguage;
+
+      const translationResult: AzureTranslationResult = {
+        success: true,
+        translatedText,
+        sourceLanguage: detectedLanguage
+      };
+
+      // 缓存结果
+      this.cache.set(cacheKey, translationResult);
+      
+      logger.info(`✅ 翻译成功: "${text}" (${detectedLanguage}) -> "${translatedText}" (${targetLanguage})`);
+      return translationResult;
+
+    } catch (error) {
+      logger.error(`❌ 翻译失败: ${text} -> ${targetLanguage}`, error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : '翻译失败'
+      };
+    }
+  }
+
+  /**
    * 翻译文本到日文
    */
   async translateToJapanese(text: string): Promise<AzureTranslationResult> {

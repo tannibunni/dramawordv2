@@ -497,7 +497,10 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     try {
       // 使用统一查询服务处理所有输入类型
       console.log(`🔍 使用统一查询服务处理: ${word}`);
-      const queryResult = await unifiedQueryService.query(word, appLanguage || 'en-US');
+      // 获取目标语言代码
+      const targetLanguageCode = SUPPORTED_LANGUAGES[selectedLanguage].code;
+      console.log(`🔍 目标语言: ${targetLanguageCode}`);
+      const queryResult = await unifiedQueryService.query(word, appLanguage || 'en-US', targetLanguageCode);
       
       if (queryResult.type === 'translation') {
         // 直接翻译结果
