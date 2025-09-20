@@ -1789,11 +1789,12 @@ export const translateChineseToEnglish = async (req: Request, res: Response) => 
         const japaneseService = JapaneseTranslationService.getInstance();
         const translationResult = await japaneseService.translateToJapanese(searchTerm);
         
-        if (translationResult.success && translationResult.data) {
+        if (translationResult.success && translationResult.data && translationResult.data.japaneseText) {
           candidates = [translationResult.data.japaneseText];
           logger.info(`✅ Azure翻译成功: ${searchTerm} -> ${translationResult.data.japaneseText}`);
         } else {
           logger.error(`❌ Azure翻译失败: ${translationResult.error}`);
+          logger.error(`📊 翻译结果详情:`, JSON.stringify(translationResult, null, 2));
           candidates = [];
         }
       } catch (azureError) {
