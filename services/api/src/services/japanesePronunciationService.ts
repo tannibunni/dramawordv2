@@ -46,21 +46,22 @@ export class JapanesePronunciationService {
       // 尝试多种方法获取发音信息
       let pronunciationInfo: PronunciationInfo;
 
-      // 方法1: 使用Jotoba API（如果文本是单词）
-      if (this.isLikelyWord(japaneseText)) {
-        try {
-          pronunciationInfo = await this.getFromJotoba(japaneseText);
-          if (pronunciationInfo.romaji) {
-            logger.info(`✅ Jotoba获取发音成功: ${japaneseText} -> ${pronunciationInfo.romaji}`);
-            this.cache.set(cacheKey, pronunciationInfo);
-            return pronunciationInfo;
-          }
-        } catch (error) {
-          logger.warn(`⚠️ Jotoba获取发音失败: ${error.message}`);
-        }
-      }
+      // 方法1: 跳过Jotoba API（服务不可用），直接使用OpenAI
+      // Jotoba API 当前返回404，暂时禁用
+      // if (this.isLikelyWord(japaneseText)) {
+      //   try {
+      //     pronunciationInfo = await this.getFromJotoba(japaneseText);
+      //     if (pronunciationInfo.romaji) {
+      //       logger.info(`✅ Jotoba获取发音成功: ${japaneseText} -> ${pronunciationInfo.romaji}`);
+      //       this.cache.set(cacheKey, pronunciationInfo);
+      //       return pronunciationInfo;
+      //     }
+      //   } catch (error) {
+      //     logger.warn(`⚠️ Jotoba获取发音失败: ${error.message}`);
+      //   }
+      // }
 
-      // 方法2: 使用OpenAI生成罗马音
+      // 方法1: 使用OpenAI生成罗马音（主要方法）
       try {
         pronunciationInfo = await this.getFromOpenAI(japaneseText);
         if (pronunciationInfo.romaji) {
@@ -72,7 +73,7 @@ export class JapanesePronunciationService {
         logger.warn(`⚠️ OpenAI获取发音失败: ${error.message}`);
       }
 
-      // 方法3: 使用wanakana降级方案
+      // 方法2: 使用wanakana降级方案
       pronunciationInfo = await this.getFromWanakana(japaneseText);
       logger.info(`✅ Wanakana降级方案: ${japaneseText} -> ${pronunciationInfo.romaji}`);
       
