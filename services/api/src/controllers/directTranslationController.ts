@@ -56,7 +56,8 @@ export const directTranslate = async (req: Request, res: Response): Promise<void
           success: true,
           data: {
             translatedText: translatedText,
-            sourceLanguage: 'auto'
+            sourceLanguage: 'auto',
+            audioUrl: generateAudioUrlForLanguage(translatedText, targetLanguage)
           },
           translationSource: 'google_translation'
         };
@@ -116,7 +117,7 @@ export const directTranslate = async (req: Request, res: Response): Promise<void
               examples: [] // 不显示例句
             }
           ],
-          audioUrl: generateAudioUrlForLanguage(translationResult.data.translatedText, targetLanguage), // 生成对应语言的发音
+          audioUrl: translationResult.data.audioUrl || '', // 使用翻译结果中的音频URL
           correctedWord: translationResult.data.translatedText, // 显示翻译结果
           slangMeaning: null,
           phraseExplanation: null,
