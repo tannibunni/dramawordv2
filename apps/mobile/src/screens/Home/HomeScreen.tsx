@@ -741,12 +741,30 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
             // 翻译失败时继续正常搜索流程
           }
         }
-      } else if (isPinyin(word) && appLanguage === 'en-US' && selectedLanguage !== 'CHINESE') {
-        // 英文界面下输入拼音，且目标语言不是中文，显示中文候选词弹窗
-        console.log(`🔍 英文界面输入拼音，显示中文候选词: ${word}`);
-        console.log(`🔍 isPinyin(${word}): ${isPinyin(word)}`);
-        console.log(`🔍 appLanguage: ${appLanguage}, selectedLanguage: ${selectedLanguage}`);
-        console.log(`🔍 进入拼音搜索分支`);
+      } else if (isPinyin(word) && appLanguage === 'en-US') {
+        if (selectedLanguage === 'CHINESE') {
+          // 英文界面下输入拼音，目标语言是中文，直接翻译
+          console.log(`🔍 英文界面+中文目标语言，输入当作拼音处理: ${word}`);
+          console.log(`🔍 appLanguage: ${appLanguage}, selectedLanguage: ${selectedLanguage}`);
+          console.log(`🔍 进入拼音翻译分支`);
+          
+          // 使用统一查询服务处理拼音输入
+          const targetLanguageCode = SUPPORTED_LANGUAGES[selectedLanguage].code;
+          const queryResult = await unifiedQueryService.query(word, appLanguage || 'en-US', targetLanguageCode);
+          
+          if (queryResult.type === 'translation') {
+            console.log(`✅ 拼音翻译成功:`, queryResult.data);
+            setSearchResult(queryResult.data);
+            setSearchText('');
+            setIsLoading(false);
+            return;
+          }
+        } else {
+          // 英文界面下输入拼音，且目标语言不是中文，显示中文候选词弹窗
+          console.log(`🔍 英文界面输入拼音，显示中文候选词: ${word}`);
+          console.log(`🔍 isPinyin(${word}): ${isPinyin(word)}`);
+          console.log(`🔍 appLanguage: ${appLanguage}, selectedLanguage: ${selectedLanguage}`);
+          console.log(`🔍 进入拼音搜索分支`);
         
         // 检查缓存
         if (pinyinCache[word.toLowerCase()]) {
@@ -795,6 +813,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
           setIsLoading(false);
           return;
         }
+      }
       }
       
       // 使用当前选择的目标语言进行搜索

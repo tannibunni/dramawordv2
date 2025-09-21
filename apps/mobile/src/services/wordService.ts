@@ -740,6 +740,36 @@ export class WordService {
     try {
       console.log(`🔍 中文翻译到目标语言: ${word} -> ${targetLanguage}`);
       
+      // 对于中文目标语言，使用中文词汇查询API（OpenAI zh-CN.json）
+      if (targetLanguage === 'zh') {
+        console.log(`🔍 使用中文词汇查询API: ${word}`);
+        
+        const response = await fetch(`${API_BASE_URL}/words/chinese-details`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            word: word.trim(),
+            uiLanguage: 'en-US'
+          })
+        });
+        
+        if (!response.ok) {
+          throw new WordServiceError(`中文词汇查询失败: ${response.status}`, response.status);
+        }
+        
+        const result = await response.json();
+        if (result.success && result.data) {
+          return { 
+            success: true, 
+            candidates: [result.data.word],
+            source: 'openai_chinese', // 使用OpenAI中文查询
+            wordData: result.data
+          };
+        } else {
+          console.log(`⚠️ 中文词汇查询失败，降级到单词翻译API`);
+        }
+      }
+      
       // 对于日文翻译，使用句子翻译API以获得更好的结果
       if (targetLanguage === 'ja') {
         console.log(`🔍 使用句子翻译API进行日文翻译: ${word}`);
