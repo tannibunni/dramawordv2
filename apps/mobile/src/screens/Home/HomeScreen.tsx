@@ -905,21 +905,41 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       const cachedResult = await wordService.getWordDetail(searchWord, targetLanguage, appLanguage);
       if (cachedResult) {
         console.log('✅ 从缓存获取到历史词数据:', cachedResult);
-        setSearchResult(cachedResult);
-        setIsLoading(false);
-        return;
+        
+        // 检查缓存数据是否完整（翻译结果是否完整）
+        const isTranslationComplete = cachedResult.correctedWord && 
+                                    cachedResult.correctedWord !== cachedResult.word &&
+                                    cachedResult.translation;
+        
+        if (isTranslationComplete) {
+          console.log('✅ 缓存数据完整，直接使用');
+          setSearchResult(cachedResult);
+          setIsLoading(false);
+          return;
+        } else {
+          console.log('⚠️ 缓存数据不完整，重新翻译');
+        }
       }
       
-      // 缓存中没有数据，才发送新的搜索请求
-      console.log('📡 缓存无数据，发送新的搜索请求');
-      const result = await wordService.searchWord(searchWord, targetLanguage, appLanguage);
-      console.log('🔍 搜索结果:', result);
-      if (result.success && result.data) {
-        console.log('🔍 设置 searchResult:', result.data);
-        setSearchResult(result.data);
+      // 缓存中没有数据或数据不完整，使用统一查询服务重新翻译
+      console.log('📡 缓存无数据或数据不完整，使用统一查询服务重新翻译');
+      const queryResult = await unifiedQueryService.query(searchWord, appLanguage || 'en-US', targetLanguage);
+      
+      if (queryResult.type === 'translation') {
+        console.log('✅ 统一查询返回翻译结果:', queryResult.data);
+        setSearchResult(queryResult.data);
+        
+        // 更新搜索历史
+        const translationResult = queryResult.data.correctedWord || queryResult.data.translation || '';
+        await wordService.saveSearchHistory(searchWord, translationResult);
       } else {
-        console.error('❌ 查询失败:', result.error);
-        Alert.alert(t('query_failed', appLanguage), t('get_word_detail_failed', appLanguage));
+        console.error('❌ 统一查询失败，降级到传统搜索');
+        const result = await wordService.searchWord(searchWord, targetLanguage, appLanguage);
+        if (result.success && result.data) {
+          setSearchResult(result.data);
+        } else {
+          Alert.alert(t('query_failed', appLanguage), t('get_word_detail_failed', appLanguage));
+        }
       }
     } catch (error) {
       console.error('❌ 获取单词详情失败:', error);

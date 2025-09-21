@@ -176,7 +176,7 @@ export const directTranslate = async (req: Request, res: Response): Promise<void
     
     // 存储翻译结果到CloudWords
     const translatedText = targetLanguage === 'ja' ? translationResult.data.japaneseText : translationResult.data.translatedText;
-    await saveTranslationToCloudWords(text, translatedText, uiLanguage);
+    await saveTranslationToCloudWords(text, result.data, uiLanguage, targetLanguage);
     
     res.json(result);
 
@@ -457,24 +457,33 @@ function generateAudioUrl(japaneseText: string): string {
 /**
  * 保存翻译结果到CloudWords
  */
-async function saveTranslationToCloudWords(originalText: string, translatedText: string, uiLanguage: string): Promise<void> {
+async function saveTranslationToCloudWords(originalText: string, wordData: any, uiLanguage: string, targetLanguage: string): Promise<void> {
   try {
-    logger.info(`💾 保存翻译结果到CloudWords: ${originalText} -> ${translatedText}`);
+    logger.info(`💾 保存翻译结果到CloudWords: ${originalText} -> ${wordData.correctedWord}`);
     
     // 检查是否已存在
     const existingWord = await CloudWord.findOne({ 
       word: originalText.toLowerCase(), 
-      language: 'en', 
+      language: targetLanguage, 
       uiLanguage: uiLanguage 
     });
     
     if (existingWord) {
-      // 更新搜索次数
+      // 更新搜索次数和完整数据
       await CloudWord.updateOne(
         { _id: existingWord._id },
         { 
           $inc: { searchCount: 1 },
-          $set: { lastSearched: new Date() }
+          $set: { 
+            lastSearched: new Date(),
+            correctedWord: wordData.correctedWord,
+            phonetic: wordData.phonetic,
+            pinyin: wordData.pinyin,
+            audioUrl: wordData.audioUrl,
+            translation: wordData.translation,
+            translationSource: wordData.translationSource,
+            definitions: wordData.definitions
+          }
         }
       );
       logger.info(`✅ 更新现有CloudWord: ${originalText}`);
@@ -484,28 +493,32 @@ async function saveTranslationToCloudWords(originalText: string, translatedText:
     // 创建新的CloudWord记录
     const cloudWord = new CloudWord({
       word: originalText.toLowerCase(),
-      language: 'en',
+      language: targetLanguage,
       uiLanguage: uiLanguage,
-      definitions: [
+      phonetic: wordData.phonetic || '',
+      pinyin: wordData.pinyin || '',
+      kana: wordData.kana || '',
+      romaji: wordData.romaji || '',
+      definitions: wordData.definitions || [
         {
           partOfSpeech: 'sentence',
           definition: originalText,
           examples: []
         }
       ],
-      audioUrl: generateAudioUrl(originalText),
-      correctedWord: originalText,
+      audioUrl: wordData.audioUrl || '',
+      correctedWord: wordData.correctedWord || originalText,
+      slangMeaning: wordData.slangMeaning || null,
+      phraseExplanation: wordData.phraseExplanation || null,
       searchCount: 1,
       lastSearched: new Date(),
       // 添加翻译相关字段
-      translation: translatedText,
-      phonetic: '', // 英文句子不需要罗马音
-      kana: '',
-      romaji: ''
+      translation: wordData.translation || wordData.correctedWord,
+      translationSource: wordData.translationSource || 'google_translation'
     });
     
     await cloudWord.save();
-    logger.info(`✅ 创建新CloudWord: ${originalText} -> ${translatedText}`);
+    logger.info(`✅ 创建新CloudWord: ${originalText} -> ${wordData.correctedWord}`);
     
   } catch (error) {
     logger.error(`❌ 保存翻译结果到CloudWords失败:`, error);
