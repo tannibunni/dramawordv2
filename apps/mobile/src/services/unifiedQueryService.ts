@@ -39,15 +39,27 @@ export class UnifiedQueryService {
       console.log(`🔍 统一查询: "${input}"`);
 
       // 分析输入类型
-      const analysis = analyzeInput(input);
+      const analysis = analyzeInput(input, targetLanguage);
       console.log(`🔍 输入分析结果:`, analysis);
 
       // 获取查询建议
-      const suggestions = getQuerySuggestions(analysis);
+      const suggestions = getQuerySuggestions(analysis, targetLanguage);
       console.log(`🔍 查询建议:`, suggestions);
 
       // 检查是否为英文句子，如果是则直接翻译
       if (analysis.type === 'english_sentence') {
+        const directResult = await directTranslationService.translateEnglishSentence(input, uiLanguage, targetLanguage);
+        if (directResult.success && directResult.data) {
+          return {
+            type: 'translation',
+            data: directResult.data
+          };
+        }
+      }
+
+      // EN界面下，如果目标语言是中文，英文单词应该直接翻译而不是查词典
+      if (uiLanguage === 'en-US' && targetLanguage === 'zh' && analysis.type === 'english') {
+        console.log(`🔍 EN界面+中文目标语言，英文单词直接翻译: ${input}`);
         const directResult = await directTranslationService.translateEnglishSentence(input, uiLanguage, targetLanguage);
         if (directResult.success && directResult.data) {
           return {

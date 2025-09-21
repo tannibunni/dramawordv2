@@ -16,7 +16,7 @@ export interface InputAnalysis {
 /**
  * 检测输入类型和提供建议
  */
-export function analyzeInput(input: string): InputAnalysis {
+export function analyzeInput(input: string, targetLanguage?: string): InputAnalysis {
   const trimmed = input.trim();
   
   if (!trimmed) {
@@ -91,8 +91,8 @@ export function analyzeInput(input: string): InputAnalysis {
           romaji: trimmed
         }
       };
-    } else if (isRomaji) {
-      // 尝试转换为假名
+    } else if (isRomaji && targetLanguage === 'ja') {
+      // 只有当目标语言是日语时，才将英文识别为罗马音
       try {
         const kana = wanakana.toHiragana(trimmed);
         const kanji = wanakana.toKatakana(trimmed);
@@ -117,6 +117,7 @@ export function analyzeInput(input: string): InputAnalysis {
         };
       }
     } else {
+      // 其他情况都当作英文处理
       return {
         type: 'english',
         confidence: 0.8,
@@ -216,7 +217,7 @@ function isLikelyRomaji(input: string): boolean {
 /**
  * 获取查询建议
  */
-export function getQuerySuggestions(analysis: InputAnalysis): {
+export function getQuerySuggestions(analysis: InputAnalysis, targetLanguage?: string): {
   dictionary: string[];
   translation: string[];
 } {
@@ -256,8 +257,14 @@ export function getQuerySuggestions(analysis: InputAnalysis): {
       break;
 
     case 'english':
-      // 英文：翻译
-      suggestions.translation.push(analysis.suggestions.romaji || '');
+      // 英文：根据目标语言决定处理方式
+      if (targetLanguage === 'zh') {
+        // 目标语言是中文时，优先翻译
+        suggestions.translation.push(analysis.suggestions.romaji || '');
+      } else {
+        // 其他语言时，也优先翻译
+        suggestions.translation.push(analysis.suggestions.romaji || '');
+      }
       break;
 
     case 'english_sentence':
