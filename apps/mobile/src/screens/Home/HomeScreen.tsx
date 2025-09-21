@@ -226,7 +226,6 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
 
   // 处理搜索输入变化，添加防抖和状态管理
   const handleInputChange = (text: string) => {
-    console.log('🔍 搜索输入变化:', text);
     setSearchText(text);
     
     // 如果输入为空，清理相关状态
@@ -336,8 +335,6 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       
       const response = await wordService.getRecentWords(page, 30);
       
-      console.log('🔍 从wordService获取的最近查词数据:', response.data);
-      console.log('🔍 分页信息:', response.pagination);
       
       // 前端去重逻辑，确保没有重复单词
       const uniqueWords = response.data.reduce((acc: RecentWord[], current) => {
@@ -348,8 +345,6 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         return acc;
       }, []);
       
-      console.log('🔍 去重后的最近查词数据:', uniqueWords);
-      console.log('🔍 去重后数据长度:', uniqueWords.length);
       
       if (append) {
         setRecentWords(prev => [...prev, ...uniqueWords]);
@@ -382,7 +377,6 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   const isPinyin = (text: string) => {
     // 只包含小写字母和空格，不包含大写字母
     const result = /^[a-z\s]+$/.test(text) && !/[A-Z]/.test(text);
-    console.log(`🔍 isPinyin("${text}"): ${result} (regex1: ${/^[a-z\s]+$/.test(text)}, regex2: ${!/[A-Z]/.test(text)})`);
     return result;
   };
 
@@ -496,10 +490,8 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     
     try {
       // 使用统一查询服务处理所有输入类型
-      console.log(`🔍 使用统一查询服务处理: ${word}`);
       // 获取目标语言代码
       const targetLanguageCode = SUPPORTED_LANGUAGES[selectedLanguage].code;
-      console.log(`🔍 目标语言: ${targetLanguageCode}`);
       const queryResult = await unifiedQueryService.query(word, appLanguage || 'en-US', targetLanguageCode);
       
       if (queryResult.type === 'translation') {
@@ -1560,7 +1552,6 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                   </View>
                 ) : recentWords.length > 0 ? (
                   recentWords.map((word) => {
-                    console.log('🔍 渲染最近查词项:', word);
                     return (
                       <TouchableOpacity
                         key={word.id}

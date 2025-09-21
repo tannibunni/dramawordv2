@@ -257,12 +257,7 @@ const WordCardContent: React.FC<WordCardContentProps> = ({ wordData, onPlayAudio
           {wordData.language && (
             <View style={styles.languageTagContainer}>
               {(() => {
-                console.log('🔍 语言标签调试:', { 
-                  wordDataLanguage: wordData.language, 
-                  appLanguage: appLanguage 
-                });
                 const languageLabel = getLanguageLabel(wordData.language, appLanguage);
-                console.log('🔍 语言标签结果:', languageLabel);
                 return (
                   <View style={styles.languageTag}>
                     <Text style={styles.languageFlag}>{languageLabel.flag}</Text>
@@ -374,9 +369,7 @@ const WordCardContent: React.FC<WordCardContentProps> = ({ wordData, onPlayAudio
                       const example = ex as any; // 类型断言
                       if (wordData.language === 'ja') {
                         // 日语：显示日语例句
-                        console.log(`🔍 例句调试 - 语言: ${wordData.language}, 例句数据:`, example);
                         const result = example.japanese || example.english || '';
-                        console.log(`🔍 日语例句结果: "${result}"`);
                         return result;
                       } else if (wordData.language === 'ko') {
                         // 韩语：显示韩语例句
@@ -573,9 +566,7 @@ const WordCardContent: React.FC<WordCardContentProps> = ({ wordData, onPlayAudio
                       const example = ex as any; // 类型断言
                       if (wordData.language === 'ja') {
                         // 日语：显示日语例句
-                        console.log(`🔍 例句调试 - 语言: ${wordData.language}, 例句数据:`, example);
                         const result = example.japanese || example.english || '';
-                        console.log(`🔍 日语例句结果: "${result}"`);
                         return result;
                       } else if (wordData.language === 'ko') {
                         // 韩语：显示韩语例句

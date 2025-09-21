@@ -49,11 +49,6 @@ const WordCard: React.FC<WordCardProps> = ({
   onFeedbackSubmitted,
 }) => {
   const { appLanguage } = useAppLanguage();
-  // 添加调试信息
-  console.log('WordCard 渲染 wordData:', wordData, 'definitions:', wordData.definitions);
-  console.log('🔍 wordData.word:', wordData?.word);
-  console.log('🔍 wordData.definitions:', wordData?.definitions);
-  console.log('🔍 wordData.definitions.length:', wordData?.definitions?.length);
   
   // 检查是否有多个例句
   const hasMultipleExamples = wordData.definitions.some(def => def.examples && def.examples.length > 1);
@@ -84,14 +79,6 @@ const WordCard: React.FC<WordCardProps> = ({
     
     // 如果内容高度超过卡片内容区域的最大高度，则需要滚动
     const needsScroll = totalContentHeight > CARD_CONTENT_MAX_HEIGHT;
-    
-    console.log('🔍 内容高度计算:', {
-      totalContentHeight,
-      maxHeight: CARD_CONTENT_MAX_HEIGHT,
-      needsScroll,
-      definitionsCount: wordData.definitions.length,
-      totalExamples: wordData.definitions.reduce((sum, def) => sum + (def.examples?.length || 0), 0)
-    });
     
     return needsScroll;
   })();
