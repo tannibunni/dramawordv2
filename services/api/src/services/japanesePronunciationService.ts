@@ -40,16 +40,22 @@ export class JapanesePronunciationService {
       let pronunciationInfo: PronunciationInfo;
 
 
-      // 方法1: 使用OpenAI生成罗马音（主要方法）
-      try {
-        pronunciationInfo = await this.getFromOpenAI(japaneseText);
-        if (pronunciationInfo.romaji) {
-          logger.info(`✅ OpenAI获取发音成功: ${japaneseText} -> ${pronunciationInfo.romaji}`);
-          this.cache.set(cacheKey, pronunciationInfo);
-          return pronunciationInfo;
+      // 方法1: 检查OpenAI API密钥是否配置
+      const hasOpenAIKey = process.env.OPENAI_API_KEY;
+      
+      if (hasOpenAIKey) {
+        try {
+          pronunciationInfo = await this.getFromOpenAI(japaneseText);
+          if (pronunciationInfo.romaji) {
+            logger.info(`✅ OpenAI获取发音成功: ${japaneseText} -> ${pronunciationInfo.romaji}`);
+            this.cache.set(cacheKey, pronunciationInfo);
+            return pronunciationInfo;
+          }
+        } catch (error) {
+          logger.warn(`⚠️ OpenAI获取发音失败: ${error.message}`);
         }
-      } catch (error) {
-        logger.warn(`⚠️ OpenAI获取发音失败: ${error.message}`);
+      } else {
+        logger.info(`⚠️ OpenAI API密钥未配置，跳过OpenAI发音服务`);
       }
 
       // 方法2: 使用wanakana降级方案
