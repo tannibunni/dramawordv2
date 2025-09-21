@@ -768,6 +768,8 @@ export class WordService {
               word: word.trim(),
               correctedWord: result.data.translation, // 显示翻译结果
               translation: result.data.translation,
+              phonetic: result.data.phonetic || result.data.romaji || '', // 添加罗马音
+              audioUrl: result.data.audioUrl || '', // 添加音频URL
               definitions: [{
                 partOfSpeech: 'translation',
                 definition: word.trim(), // 显示原文

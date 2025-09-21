@@ -7,6 +7,7 @@ export interface DirectTranslationResult {
     word: string;
     language: string;
     phonetic: string;
+    romaji?: string;  // 添加罗马音字段
     kana?: string;
     definitions: Array<{
       partOfSpeech: string;
@@ -20,6 +21,9 @@ export interface DirectTranslationResult {
     correctedWord: string;
     slangMeaning: null;
     phraseExplanation: null;
+    originalText?: string;  // 添加原文本字段
+    translation?: string;   // 添加翻译字段
+    translationSource?: string;  // 添加翻译来源字段
   };
   error?: string;
 }
