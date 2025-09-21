@@ -116,7 +116,7 @@ export const directTranslate = async (req: Request, res: Response): Promise<void
               examples: [] // 不显示例句
             }
           ],
-          audioUrl: '', // 其他语言暂无发音
+          audioUrl: generateAudioUrlForLanguage(translationResult.data.translatedText, targetLanguage), // 生成对应语言的发音
           correctedWord: translationResult.data.translatedText, // 显示翻译结果
           slangMeaning: null,
           phraseExplanation: null,
@@ -464,5 +464,18 @@ async function saveTranslationToCloudWords(originalText: string, translatedText:
   } catch (error) {
     logger.error(`❌ 保存翻译结果到CloudWords失败:`, error);
     // 不抛出错误，避免影响翻译功能
+  }
+}
+
+/**
+ * 生成对应语言的TTS音频URL
+ */
+function generateAudioUrlForLanguage(text: string, targetLanguage: string): string {
+  try {
+    const encodedText = encodeURIComponent(text);
+    return `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodedText}&tl=${targetLanguage}&client=tw-ob`;
+  } catch (error) {
+    logger.error(`❌ 生成${targetLanguage}音频URL失败:`, error);
+    return '';
   }
 }
