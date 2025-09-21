@@ -189,8 +189,17 @@ const WordSearchScreen: React.FC = () => {
                   onPress={() => handleRecentWordPress(word)}
                   disabled={isLoading}
                 >
-                  <Text style={styles.wordText}>{word.word}</Text>
-                  <Text style={styles.wordTranslation}>{word.translation}</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+                    <Ionicons name="time-outline" size={16} color={colors.neutral[400]} style={{ marginRight: 8 }} />
+                    <Text style={styles.wordText} numberOfLines={1} ellipsizeMode="tail">
+                      <Text style={{ fontWeight: 'bold', color: colors.text.primary }}>
+                        {word.word}
+                      </Text>
+                      <Text style={{ fontWeight: 'normal', color: colors.text.secondary }}>
+                        {' - '}{word.translation}
+                      </Text>
+                    </Text>
+                  </View>
                 </TouchableOpacity>
               ))
             ) : (

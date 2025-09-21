@@ -509,15 +509,15 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         setSearchText('');
         
         // 保存搜索历史
-        const definition = queryResult.data.definitions && queryResult.data.definitions[0]?.definition ? queryResult.data.definitions[0].definition : t('no_definition', appLanguage);
-        await wordService.saveSearchHistory(word, definition);
+        const translationResult = queryResult.data.correctedWord || queryResult.data.translation || '';
+        await wordService.saveSearchHistory(word, translationResult);
         setRecentWords(prev => {
           const filtered = prev.filter(w => w.word !== word);
           return [
             {
               id: Date.now().toString(),
               word: word,
-              translation: definition,
+              translation: translationResult,
               timestamp: Date.now(),
             },
             ...filtered
