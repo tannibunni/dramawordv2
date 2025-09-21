@@ -102,7 +102,7 @@ export const directTranslate = async (req: Request, res: Response): Promise<void
           romaji: translationResult.data.romaji || '', // 显示罗马音
           definitions: [
             {
-              partOfSpeech: 'sentence',
+              partOfSpeech: getPartOfSpeech(text, targetLanguage),
               definition: text, // 释义显示原句
               examples: [] // 不显示例句
             }
@@ -130,7 +130,7 @@ export const directTranslate = async (req: Request, res: Response): Promise<void
           romaji: '', // 中文无罗马音
           definitions: [
             {
-              partOfSpeech: 'sentence',
+              partOfSpeech: getPartOfSpeech(text, targetLanguage),
               definition: text, // 释义显示原句
               examples: [] // 不显示例句
             }
@@ -157,7 +157,7 @@ export const directTranslate = async (req: Request, res: Response): Promise<void
           romaji: '', // 其他语言暂无罗马音
           definitions: [
             {
-              partOfSpeech: 'sentence',
+              partOfSpeech: getPartOfSpeech(text, targetLanguage),
               definition: text, // 释义显示原句
               examples: [] // 不显示例句
             }
@@ -501,7 +501,7 @@ async function saveTranslationToCloudWords(originalText: string, wordData: any, 
       romaji: wordData.romaji || '',
       definitions: wordData.definitions || [
         {
-          partOfSpeech: 'sentence',
+          partOfSpeech: getPartOfSpeech(originalText, targetLanguage),
           definition: originalText,
           examples: []
         }
@@ -523,6 +523,38 @@ async function saveTranslationToCloudWords(originalText: string, wordData: any, 
   } catch (error) {
     logger.error(`❌ 保存翻译结果到CloudWords失败:`, error);
     // 不抛出错误，避免影响翻译功能
+  }
+}
+
+/**
+ * 智能判断词性
+ */
+function getPartOfSpeech(text: string, targetLanguage: string): string {
+  // 简单判断：如果包含空格，可能是句子或短语
+  if (text.includes(' ')) {
+    return 'phrase';
+  }
+  
+  // 根据目标语言设置默认词性
+  switch (targetLanguage) {
+    case 'zh':
+      // 中文：大多数单词是名词
+      return '名词';
+    case 'ja':
+      // 日语：大多数单词是名词
+      return '名詞';
+    case 'ko':
+      // 韩语：大多数单词是名词
+      return '명사';
+    case 'fr':
+      // 法语：大多数单词是名词
+      return 'nom';
+    case 'es':
+      // 西班牙语：大多数单词是名词
+      return 'sustantivo';
+    default:
+      // 默认英文词性
+      return 'noun';
   }
 }
 
