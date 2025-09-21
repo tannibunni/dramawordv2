@@ -37,6 +37,7 @@ export interface WordData {
   phraseExplanation?: string;  // 短语解释 (统一为字符串)
   translation?: string;        // 翻译结果（用于句子翻译）
   translationSource?: string;  // 翻译来源 (azure_translation, google_translation, openai_translation, etc.)
+  onCandidateSelect?: (candidate: string) => void; // 候选词选择回调
 }
 
 // 服务层使用的扩展接口 (用于API响应)

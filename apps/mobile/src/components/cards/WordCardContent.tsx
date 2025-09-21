@@ -286,8 +286,12 @@ const WordCardContent: React.FC<WordCardContentProps> = ({ wordData, onPlayAudio
                       candidate === (wordData.translation || wordData.correctedWord || wordData.word) && styles.selectedCandidate
                     ]}
                     onPress={() => {
-                      // 这里可以添加选择候选词的逻辑
+                      // 选择候选词的逻辑
                       console.log(`选择了候选词: ${candidate}`);
+                      // 更新wordData中的翻译结果
+                      if (wordData.onCandidateSelect) {
+                        wordData.onCandidateSelect(candidate);
+                      }
                     }}
                   >
                     <Text style={[

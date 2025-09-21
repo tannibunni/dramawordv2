@@ -497,7 +497,37 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       if (queryResult.type === 'translation') {
         // 直接翻译结果
         console.log(`✅ 统一查询返回翻译结果:`, queryResult.data);
-        setSearchResult(queryResult.data);
+        
+        // 添加候选词选择回调
+        const resultWithCallback = {
+          ...queryResult.data,
+          onCandidateSelect: (selectedCandidate: string) => {
+            console.log(`用户选择了候选词: ${selectedCandidate}`);
+            // 更新搜索结果，使用选中的候选词
+            setSearchResult((prev: any) => prev ? {
+              ...prev,
+              correctedWord: selectedCandidate,
+              translation: selectedCandidate
+            } : null);
+            
+            // 更新搜索历史
+            wordService.saveSearchHistory(word, selectedCandidate);
+            setRecentWords(prev => {
+              const filtered = prev.filter(w => w.word !== word);
+              return [
+                {
+                  id: Date.now().toString(),
+                  word: word,
+                  translation: selectedCandidate,
+                  timestamp: Date.now(),
+                },
+                ...filtered
+              ];
+            });
+          }
+        };
+        
+        setSearchResult(resultWithCallback);
         setSearchText('');
         
         // 保存搜索历史
@@ -913,7 +943,23 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         
         if (isTranslationComplete) {
           console.log('✅ 缓存数据完整，直接使用');
-          setSearchResult(cachedResult);
+          
+          // 添加候选词选择回调
+          const resultWithCallback = {
+            ...cachedResult,
+            onCandidateSelect: (selectedCandidate: string) => {
+              console.log(`用户选择了候选词: ${selectedCandidate}`);
+              setSearchResult((prev: any) => prev ? {
+                ...prev,
+                correctedWord: selectedCandidate,
+                translation: selectedCandidate
+              } : null);
+              
+              wordService.saveSearchHistory(searchWord, selectedCandidate);
+            }
+          };
+          
+          setSearchResult(resultWithCallback);
           setIsLoading(false);
           return;
         } else {
@@ -927,7 +973,23 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       
       if (queryResult.type === 'translation') {
         console.log('✅ 统一查询返回翻译结果:', queryResult.data);
-        setSearchResult(queryResult.data);
+        
+        // 添加候选词选择回调
+        const resultWithCallback = {
+          ...queryResult.data,
+          onCandidateSelect: (selectedCandidate: string) => {
+            console.log(`用户选择了候选词: ${selectedCandidate}`);
+            setSearchResult((prev: any) => prev ? {
+              ...prev,
+              correctedWord: selectedCandidate,
+              translation: selectedCandidate
+            } : null);
+            
+            wordService.saveSearchHistory(searchWord, selectedCandidate);
+          }
+        };
+        
+        setSearchResult(resultWithCallback);
         
         // 更新搜索历史
         const translationResult = queryResult.data.correctedWord || queryResult.data.translation || '';
@@ -936,7 +998,21 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         console.error('❌ 统一查询失败，降级到传统搜索');
         const result = await wordService.searchWord(searchWord, targetLanguage, appLanguage);
         if (result.success && result.data) {
-          setSearchResult(result.data);
+          // 为传统搜索结果也添加候选词选择回调
+          const resultWithCallback = {
+            ...result.data,
+            onCandidateSelect: (selectedCandidate: string) => {
+              console.log(`用户选择了候选词: ${selectedCandidate}`);
+              setSearchResult((prev: any) => prev ? {
+                ...prev,
+                correctedWord: selectedCandidate,
+                translation: selectedCandidate
+              } : null);
+              
+              wordService.saveSearchHistory(searchWord, selectedCandidate);
+            }
+          };
+          setSearchResult(resultWithCallback);
         } else {
           Alert.alert(t('query_failed', appLanguage), t('get_word_detail_failed', appLanguage));
         }
