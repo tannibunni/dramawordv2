@@ -1,6 +1,7 @@
-// 直接翻译控制器 - 使用Google翻译+OpenAI罗马音
+// 直接翻译控制器 - 使用Google翻译+OpenAI罗马音/拼音
 import { Request, Response } from 'express';
 import { JapanesePronunciationService } from '../services/japanesePronunciationService';
+import { ChinesePronunciationService } from '../services/chinesePronunciationService';
 import { CloudWord } from '../models/CloudWord';
 import { logger } from '../utils/logger';
 
@@ -47,6 +48,22 @@ export const directTranslate = async (req: Request, res: Response): Promise<void
             hiragana: pronunciationInfo.hiragana,
             sourceLanguage: 'auto',
             audioUrl: pronunciationInfo.audioUrl
+          },
+          translationSource: 'google_translation'
+        };
+      } else if (targetLanguage === 'zh') {
+        // 中文翻译使用专业发音服务
+        const pronunciationService = ChinesePronunciationService.getInstance();
+        const pronunciationInfo = await pronunciationService.getPronunciationInfo(translatedText);
+        
+        translationResult = {
+          success: true,
+          data: {
+            translatedText: translatedText,
+            sourceLanguage: 'auto',
+            audioUrl: pronunciationInfo.audioUrl,
+            pinyin: pronunciationInfo.pinyin,
+            toneMarks: pronunciationInfo.toneMarks
           },
           translationSource: 'google_translation'
         };
@@ -100,6 +117,34 @@ export const directTranslate = async (req: Request, res: Response): Promise<void
         }
       };
       logger.info(`✅ 日文翻译完成: ${text} -> ${translationResult.data.japaneseText}`);
+    } else if (targetLanguage === 'zh') {
+      // 中文翻译结果
+      result = {
+        success: true,
+        data: {
+          word: text, // 词卡标题显示用户搜索的原句
+          language: 'zh', // 目标语言
+          phonetic: translationResult.data.pinyin || '', // 显示拼音
+          pinyin: translationResult.data.pinyin || '', // 显示拼音
+          kana: '', // 中文无假名
+          romaji: '', // 中文无罗马音
+          definitions: [
+            {
+              partOfSpeech: 'sentence',
+              definition: text, // 释义显示原句
+              examples: [] // 不显示例句
+            }
+          ],
+          audioUrl: translationResult.data.audioUrl || '', // 使用翻译结果中的音频URL
+          correctedWord: translationResult.data.translatedText, // 显示翻译结果
+          slangMeaning: null,
+          phraseExplanation: null,
+          originalText: text, // 原文本字段
+          translation: translationResult.data.translatedText, // 翻译结果存储在translation字段
+          translationSource: translationResult.translationSource || 'google_translation' // 翻译来源
+        }
+      };
+      logger.info(`✅ 中文翻译完成: ${text} -> ${translationResult.data.translatedText}`);
     } else {
       // 其他语言翻译结果
       result = {
@@ -123,7 +168,7 @@ export const directTranslate = async (req: Request, res: Response): Promise<void
           phraseExplanation: null,
           originalText: text, // 原文本字段
           translation: translationResult.data.translatedText, // 翻译结果存储在translation字段
-          translationSource: translationResult.translationSource || 'azure_translation' // 翻译来源
+          translationSource: translationResult.translationSource || 'google_translation' // 翻译来源
         }
       };
       logger.info(`✅ ${targetLanguage}翻译完成: ${text} -> ${translationResult.data.translatedText}`);
