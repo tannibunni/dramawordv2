@@ -744,13 +744,9 @@ export class WordService {
       if (targetLanguage === 'zh') {
         console.log(`🔍 使用中文词汇查询API: ${word}`);
         
-        const response = await fetch(`${API_BASE_URL}/words/chinese-details`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ 
-            word: word.trim(),
-            uiLanguage: 'en-US'
-          })
+        const response = await fetch(`${API_BASE_URL}/words/chinese/${encodeURIComponent(word.trim())}?uiLanguage=en-US`, {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' }
         });
         
         if (!response.ok) {
