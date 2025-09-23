@@ -55,108 +55,343 @@ export function analyzeInput(input: string, targetLanguage?: string): InputAnaly
     otherRatio
   });
 
-  // 判断输入类型
-  if (chineseRatio > 0.7) {
-    // 主要是中文字符，可能是中文或日语汉字
-    return {
-      type: 'chinese',
-      confidence: chineseRatio,
-      suggestions: {
-        kanji: trimmed
-      }
-    };
-  }
+  // 语言环境隔离：根据目标语言应用不同的识别规则
+  return analyzeByTargetLanguage(trimmed, {
+    chineseChars,
+    kanaChars,
+    englishChars,
+    otherChars,
+    chineseRatio,
+    kanaRatio,
+    englishRatio,
+    otherRatio
+  }, targetLanguage);
 
+}
+
+/**
+ * 根据目标语言分析输入类型（语言环境隔离）
+ */
+function analyzeByTargetLanguage(
+  input: string, 
+  stats: {
+    chineseChars: number;
+    kanaChars: number;
+    englishChars: number;
+    otherChars: number;
+    chineseRatio: number;
+    kanaRatio: number;
+    englishRatio: number;
+    otherRatio: number;
+  },
+  targetLanguage?: string
+): InputAnalysis {
+  const { chineseChars, kanaChars, englishChars, otherChars, chineseRatio, kanaRatio, englishRatio, otherRatio } = stats;
+
+  // 日语环境 (JA) - 优先识别日语相关输入
+  if (targetLanguage === 'ja') {
+    return analyzeForJapaneseEnvironment(input, stats);
+  }
+  
+  // 中文环境 (CN) - 优先识别中文相关输入
+  if (targetLanguage === 'zh') {
+    return analyzeForChineseEnvironment(input, stats);
+  }
+  
+  // 其他语言环境 - 使用通用规则
+  return analyzeForOtherLanguages(input, stats);
+}
+
+/**
+ * 日语环境分析规则
+ * 规则：罗马音 → 日语词，中英文 → 翻译成日语，日语词 → 日语词典查询
+ */
+function analyzeForJapaneseEnvironment(
+  input: string,
+  stats: {
+    chineseChars: number;
+    kanaChars: number;
+    englishChars: number;
+    otherChars: number;
+    chineseRatio: number;
+    kanaRatio: number;
+    englishRatio: number;
+    otherRatio: number;
+  }
+): InputAnalysis {
+  const { chineseChars, kanaChars, englishChars, chineseRatio, kanaRatio, englishRatio, otherRatio } = stats;
+
+  // 1. 日语假名 - 最高优先级
   if (kanaRatio > 0.7) {
-    // 主要是假名字符
     return {
       type: 'japanese_kana',
       confidence: kanaRatio,
       suggestions: {
-        kana: trimmed
+        kana: input
       }
     };
   }
 
+  // 2. 日语汉字 - 第二优先级
+  if (chineseRatio > 0.7) {
+    return {
+      type: 'japanese_kanji',
+      confidence: chineseRatio,
+      suggestions: {
+        kanji: input
+      }
+    };
+  }
+
+  // 3. 英文字符 - 可能是罗马音或英文
   if (englishRatio > 0.7 && otherRatio < 0.3) {
-    // 主要是英文字符，可能是英文、罗马音或拼音
-    const isRomaji = isLikelyRomaji(trimmed);
-    const isPinyin = isLikelyPinyin(trimmed);
-    const isEnglishSentenceInput = isEnglishSentence(trimmed);
+    const isEnglishSentenceInput = isEnglishSentence(input);
     
     if (isEnglishSentenceInput) {
-      // 英文句子，直接翻译
+      // 英文句子，翻译成日语
       return {
         type: 'english_sentence',
         confidence: 0.9,
         suggestions: {
-          romaji: trimmed
+          romaji: input
         }
       };
-    } else if (isPinyin && targetLanguage === 'zh') {
-      // 当目标语言是中文时，将英文识别为拼音
-      return {
-        type: 'pinyin',
-        confidence: 0.8,
-        suggestions: {
-          pinyin: trimmed
+    } else {
+      // 检查是否为罗马音
+      const isRomaji = isLikelyRomaji(input);
+      
+      if (isRomaji) {
+        // 罗马音，转换为日语
+        try {
+          const kana = wanakana.toHiragana(input);
+          const kanji = wanakana.toKatakana(input);
+          
+          return {
+            type: 'romaji',
+            confidence: 0.8,
+            suggestions: {
+              kana,
+              kanji,
+              romaji: input
+            }
+          };
+        } catch (error) {
+          console.log(`❌ 罗马音转换失败: ${error}`);
+          return {
+            type: 'english',
+            confidence: 0.6,
+            suggestions: {
+              romaji: input
+            }
+          };
         }
-      };
-    } else if (isRomaji && targetLanguage === 'ja') {
-      // 只有当目标语言是日语时，才将英文识别为罗马音
-      try {
-        const kana = wanakana.toHiragana(trimmed);
-        const kanji = wanakana.toKatakana(trimmed);
-        
-        return {
-          type: 'romaji',
-          confidence: 0.8,
-          suggestions: {
-            kana,
-            kanji,
-            romaji: trimmed
-          }
-        };
-      } catch (error) {
-        console.log(`❌ 罗马音转换失败: ${error}`);
+      } else {
+        // 英文单词，翻译成日语
         return {
           type: 'english',
-          confidence: 0.6,
+          confidence: 0.8,
           suggestions: {
-            romaji: trimmed
+            romaji: input
           }
         };
       }
+    }
+  }
+
+  // 4. 混合类型 - 中英混合，翻译成日语
+  if (chineseChars > 0 && englishChars > 0) {
+    return {
+      type: 'mixed',
+      confidence: 0.5,
+      suggestions: {
+        kanji: input,
+        romaji: input
+      }
+    };
+  }
+
+  // 5. 默认 - 翻译成日语
+  return {
+    type: 'english',
+    confidence: 0.5,
+    suggestions: {
+      romaji: input
+    }
+  };
+}
+
+/**
+ * 中文环境分析规则
+ * 规则：拼音 → 中文词，中文词语和句子 → 中文分析，英文 → 翻译成中文
+ */
+function analyzeForChineseEnvironment(
+  input: string,
+  stats: {
+    chineseChars: number;
+    kanaChars: number;
+    englishChars: number;
+    otherChars: number;
+    chineseRatio: number;
+    kanaRatio: number;
+    englishRatio: number;
+    otherRatio: number;
+  }
+): InputAnalysis {
+  const { chineseChars, kanaChars, englishChars, chineseRatio, kanaRatio, englishRatio, otherRatio } = stats;
+
+  // 1. 中文字符 - 最高优先级
+  if (chineseRatio > 0.7) {
+    return {
+      type: 'chinese',
+      confidence: chineseRatio,
+      suggestions: {
+        kanji: input
+      }
+    };
+  }
+
+  // 2. 英文字符 - 可能是拼音或英文
+  if (englishRatio > 0.7 && otherRatio < 0.3) {
+    const isEnglishSentenceInput = isEnglishSentence(input);
+    
+    if (isEnglishSentenceInput) {
+      // 英文句子，翻译成中文
+      return {
+        type: 'english_sentence',
+        confidence: 0.9,
+        suggestions: {
+          pinyin: input
+        }
+      };
     } else {
-      // 其他情况都当作英文处理
+      // 检查是否为拼音
+      const isPinyin = isLikelyPinyin(input);
+      
+      if (isPinyin) {
+        // 拼音，转换为中文
+        return {
+          type: 'pinyin',
+          confidence: 0.8,
+          suggestions: {
+            pinyin: input
+          }
+        };
+      } else {
+        // 英文单词，翻译成中文
+        return {
+          type: 'english',
+          confidence: 0.8,
+          suggestions: {
+            pinyin: input
+          }
+        };
+      }
+    }
+  }
+
+  // 3. 混合类型 - 中英混合，中文分析
+  if (chineseChars > 0 && englishChars > 0) {
+    return {
+      type: 'mixed',
+      confidence: 0.5,
+      suggestions: {
+        kanji: input,
+        pinyin: input
+      }
+    };
+  }
+
+  // 4. 默认 - 翻译成中文
+  return {
+    type: 'english',
+    confidence: 0.5,
+    suggestions: {
+      pinyin: input
+    }
+  };
+}
+
+/**
+ * 其他语言环境分析规则（通用规则）
+ */
+function analyzeForOtherLanguages(
+  input: string,
+  stats: {
+    chineseChars: number;
+    kanaChars: number;
+    englishChars: number;
+    otherChars: number;
+    chineseRatio: number;
+    kanaRatio: number;
+    englishRatio: number;
+    otherRatio: number;
+  }
+): InputAnalysis {
+  const { chineseChars, kanaChars, englishChars, chineseRatio, kanaRatio, englishRatio, otherRatio } = stats;
+
+  // 1. 中文字符
+  if (chineseRatio > 0.7) {
+    return {
+      type: 'chinese',
+      confidence: chineseRatio,
+      suggestions: {
+        kanji: input
+      }
+    };
+  }
+
+  // 2. 假名字符
+  if (kanaRatio > 0.7) {
+    return {
+      type: 'japanese_kana',
+      confidence: kanaRatio,
+      suggestions: {
+        kana: input
+      }
+    };
+  }
+
+  // 3. 英文字符
+  if (englishRatio > 0.7 && otherRatio < 0.3) {
+    const isEnglishSentenceInput = isEnglishSentence(input);
+    
+    if (isEnglishSentenceInput) {
+      return {
+        type: 'english_sentence',
+        confidence: 0.9,
+        suggestions: {
+          romaji: input
+        }
+      };
+    } else {
       return {
         type: 'english',
         confidence: 0.8,
         suggestions: {
-          romaji: trimmed
+          romaji: input
         }
       };
     }
   }
 
-  // 混合类型
+  // 4. 混合类型
   if (chineseChars > 0 && kanaChars > 0) {
     return {
       type: 'mixed',
       confidence: 0.5,
       suggestions: {
-        kanji: trimmed,
-        kana: trimmed
+        kanji: input,
+        kana: input
       }
     };
   }
 
-  // 默认按英文处理
+  // 5. 默认
   return {
     type: 'english',
-    confidence: 0.3,
+    confidence: 0.5,
     suggestions: {
-      romaji: trimmed
+      romaji: input
     }
   };
 }
@@ -176,7 +411,8 @@ function isEnglishSentence(input: string): boolean {
     'have ', 'has ', 'had ', 'do ', 'does ', 'did ', 'will ', 'would ', 'can ', 'could ',
     'like ', 'love ', 'want ', 'need ', 'go ', 'come ', 'see ', 'know ', 'think ', 'feel ',
     'a ', 'an ', 'the ', 'and ', 'or ', 'but ', 'in ', 'on ', 'at ', 'to ', 'for ', 'of ',
-    'with ', 'by ', 'from ', 'up ', 'down ', 'out ', 'off ', 'over ', 'under ', 'through '
+    'with ', 'by ', 'from ', 'up ', 'down ', 'out ', 'off ', 'over ', 'under ', 'through ',
+    'hello ', 'world ', 'good ', 'bad ', 'nice ', 'beautiful ', 'wonderful ', 'amazing '
   ];
   
   const lowerInput = input.toLowerCase();
@@ -206,7 +442,9 @@ function isLikelyPinyin(input: string): boolean {
     'the', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by',
     'is', 'are', 'was', 'were', 'be', 'been', 'have', 'has', 'had', 'do', 'does', 'did',
     'will', 'would', 'could', 'should', 'may', 'might', 'can', 'must', 'shall',
-    'hello', 'world', 'good', 'bad', 'yes', 'no', 'please', 'thank', 'you'
+    'rice', 'food', 'water', 'house', 'car', 'book', 'time', 'day', 'night', 'year',
+    'hello', 'world', 'good', 'bad', 'nice', 'beautiful', 'wonderful', 'amazing',
+    'thank', 'please', 'sorry', 'yes', 'no', 'ok', 'okay', 'fine', 'great', 'cool'
   ];
   
   const inputWords = input.toLowerCase().split(/\s+/);
@@ -268,7 +506,10 @@ function isLikelyRomaji(input: string): boolean {
   const commonEnglishWords = [
     'the', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by',
     'is', 'are', 'was', 'were', 'be', 'been', 'have', 'has', 'had', 'do', 'does', 'did',
-    'will', 'would', 'could', 'should', 'may', 'might', 'can', 'must', 'shall'
+    'will', 'would', 'could', 'should', 'may', 'might', 'can', 'must', 'shall',
+    'rice', 'food', 'water', 'house', 'car', 'book', 'time', 'day', 'night', 'year',
+    'hello', 'world', 'good', 'bad', 'nice', 'beautiful', 'wonderful', 'amazing',
+    'thank', 'please', 'sorry', 'yes', 'no', 'ok', 'okay', 'fine', 'great', 'cool'
   ];
 
   const lowerInput = input.toLowerCase();
