@@ -1,7 +1,7 @@
 // 输入类型检测工具
 import * as wanakana from 'wanakana';
 
-export type InputType = 'chinese' | 'japanese_kanji' | 'japanese_kana' | 'english' | 'english_sentence' | 'romaji' | 'mixed';
+export type InputType = 'chinese' | 'japanese_kanji' | 'japanese_kana' | 'english' | 'english_sentence' | 'romaji' | 'pinyin' | 'mixed';
 
 export interface InputAnalysis {
   type: InputType;
@@ -10,6 +10,7 @@ export interface InputAnalysis {
     kana?: string;
     kanji?: string;
     romaji?: string;
+    pinyin?: string;
   };
 }
 
@@ -78,8 +79,9 @@ export function analyzeInput(input: string, targetLanguage?: string): InputAnaly
   }
 
   if (englishRatio > 0.7 && otherRatio < 0.3) {
-    // 主要是英文字符，可能是英文或罗马音
+    // 主要是英文字符，可能是英文、罗马音或拼音
     const isRomaji = isLikelyRomaji(trimmed);
+    const isPinyin = isLikelyPinyin(trimmed);
     const isEnglishSentenceInput = isEnglishSentence(trimmed);
     
     if (isEnglishSentenceInput) {
@@ -89,6 +91,15 @@ export function analyzeInput(input: string, targetLanguage?: string): InputAnaly
         confidence: 0.9,
         suggestions: {
           romaji: trimmed
+        }
+      };
+    } else if (isPinyin && targetLanguage === 'zh') {
+      // 当目标语言是中文时，将英文识别为拼音
+      return {
+        type: 'pinyin',
+        confidence: 0.8,
+        suggestions: {
+          pinyin: trimmed
         }
       };
     } else if (isRomaji && targetLanguage === 'ja') {
@@ -170,6 +181,70 @@ function isEnglishSentence(input: string): boolean {
   
   const lowerInput = input.toLowerCase();
   return englishSentenceIndicators.some(indicator => lowerInput.includes(indicator));
+}
+
+/**
+ * 判断字符串是否可能是拼音
+ */
+function isLikelyPinyin(input: string): boolean {
+  // 拼音特征：
+  // 1. 只包含小写字母和空格
+  // 2. 不包含大写字母
+  // 3. 长度适中（2-50字符）
+  // 4. 不包含明显的英文单词模式
+  
+  if (!/^[a-z\s]+$/.test(input)) {
+    return false;
+  }
+  
+  if (input.length < 2 || input.length > 50) {
+    return false;
+  }
+  
+  // 检查是否包含明显的英文单词模式
+  const commonEnglishWords = [
+    'the', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by',
+    'is', 'are', 'was', 'were', 'be', 'been', 'have', 'has', 'had', 'do', 'does', 'did',
+    'will', 'would', 'could', 'should', 'may', 'might', 'can', 'must', 'shall',
+    'hello', 'world', 'good', 'bad', 'yes', 'no', 'please', 'thank', 'you'
+  ];
+  
+  const inputWords = input.toLowerCase().split(/\s+/);
+  for (const word of inputWords) {
+    if (commonEnglishWords.includes(word)) {
+      return false;
+    }
+  }
+  
+  // 检查是否包含拼音特征
+  const pinyinPatterns = [
+    /^[a-z]+[aeiou][a-z]*$/, // 单音节拼音
+    /^[a-z]+[aeiou][a-z]*\s+[a-z]+[aeiou][a-z]*$/, // 双音节拼音
+    /^[a-z]+[aeiou][a-z]*\s+[a-z]+[aeiou][a-z]*\s+[a-z]+[aeiou][a-z]*$/, // 三音节拼音
+  ];
+  
+  // 检查是否匹配拼音模式
+  const matchesPinyinPattern = pinyinPatterns.some(pattern => pattern.test(input));
+  
+  // 额外的拼音特征检查：包含常见的拼音声母和韵母组合
+  const pinyinConsonants = ['b', 'p', 'm', 'f', 'd', 't', 'n', 'l', 'g', 'k', 'h', 'j', 'q', 'x', 'z', 'c', 's', 'zh', 'ch', 'sh', 'r', 'y', 'w'];
+  const pinyinVowels = ['a', 'o', 'e', 'i', 'u', 'ü', 'ai', 'ei', 'ui', 'ao', 'ou', 'iu', 'ie', 'üe', 'er', 'an', 'en', 'in', 'un', 'ün', 'ang', 'eng', 'ing', 'ong'];
+  
+  let hasPinyinFeatures = false;
+  
+  for (const word of inputWords) {
+    // 检查是否包含拼音声母
+    const hasConsonant = pinyinConsonants.some(consonant => word.startsWith(consonant));
+    // 检查是否包含拼音韵母
+    const hasVowel = pinyinVowels.some(vowel => word.includes(vowel));
+    
+    if (hasConsonant || hasVowel) {
+      hasPinyinFeatures = true;
+      break;
+    }
+  }
+  
+  return matchesPinyinPattern || hasPinyinFeatures;
 }
 
 /**
@@ -270,6 +345,11 @@ export function getQuerySuggestions(analysis: InputAnalysis, targetLanguage?: st
     case 'english_sentence':
       // 英文句子：直接翻译
       suggestions.translation.push(analysis.suggestions.romaji || '');
+      break;
+
+    case 'pinyin':
+      // 拼音：直接翻译
+      suggestions.translation.push(analysis.suggestions.pinyin || '');
       break;
 
     case 'mixed':
