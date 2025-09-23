@@ -252,26 +252,27 @@ function analyzeForChineseEnvironment(
 
   // 2. 英文字符 - 可能是拼音或英文
   if (englishRatio > 0.7 && otherRatio < 0.3) {
-    const isEnglishSentenceInput = isEnglishSentence(input);
+    // 在中文环境中，优先检查拼音
+    const isPinyin = isLikelyPinyin(input);
     
-    if (isEnglishSentenceInput) {
-      // 英文句子，翻译成中文
+    if (isPinyin) {
+      // 拼音，转换为中文
       return {
-        type: 'english_sentence',
-        confidence: 0.9,
+        type: 'pinyin',
+        confidence: 0.8,
         suggestions: {
           pinyin: input
         }
       };
     } else {
-      // 检查是否为拼音
-      const isPinyin = isLikelyPinyin(input);
+      // 检查是否为英文句子
+      const isEnglishSentenceInput = isEnglishSentence(input);
       
-      if (isPinyin) {
-        // 拼音，转换为中文
+      if (isEnglishSentenceInput) {
+        // 英文句子，翻译成中文
         return {
-          type: 'pinyin',
-          confidence: 0.8,
+          type: 'english_sentence',
+          confidence: 0.9,
           suggestions: {
             pinyin: input
           }
