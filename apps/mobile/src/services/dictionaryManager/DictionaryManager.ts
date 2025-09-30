@@ -1,8 +1,11 @@
 // 词库管理器
 import { LocalDictionaryProvider, LocalQueryResult, DictionaryInfo } from '../localDictionary/types';
 import { CCEDICTProvider } from '../localDictionary/providers/CCEDICTProvider';
+import { JapaneseDictionaryProvider } from '../localDictionary/providers/JapaneseDictionaryProvider';
+import { KoreanDictionaryProvider } from '../localDictionary/providers/KoreanDictionaryProvider';
 import { DictionaryDownloader, DictionarySource } from '../localDictionary/downloader/DictionaryDownloader';
 import { DictionaryStorage } from '../localDictionary/storage/DictionaryStorage';
+import { MultilingualQueryResult } from '../localDictionary/types/multilingual';
 
 export class DictionaryManager {
   private static instance: DictionaryManager;
@@ -31,6 +34,14 @@ export class DictionaryManager {
     // 注册CC-CEDICT提供者
     const ccedictProvider = new CCEDICTProvider();
     this.providers.set('ccedict', ccedictProvider);
+    
+    // 注册日语词典提供者
+    const japaneseProvider = new JapaneseDictionaryProvider();
+    this.providers.set('jmdict', japaneseProvider);
+    
+    // 注册韩语词典提供者
+    const koreanProvider = new KoreanDictionaryProvider();
+    this.providers.set('korean', koreanProvider);
     
     console.log('✅ 词库提供者初始化完成');
   }
@@ -70,6 +81,80 @@ export class DictionaryManager {
    */
   getProvider(name: string): LocalDictionaryProvider | undefined {
     return this.providers.get(name);
+  }
+
+  /**
+   * 多语言查询
+   */
+  async queryMultilingual(input: string, targetLanguage: string, uiLanguage: string = 'en-US'): Promise<MultilingualQueryResult> {
+    try {
+      if (!this.isInitialized) {
+        await this.initialize();
+      }
+
+      // 根据目标语言选择提供者
+      let provider: LocalDictionaryProvider | undefined;
+      
+      switch (targetLanguage) {
+        case 'zh':
+          provider = this.getProvider('ccedict');
+          break;
+        case 'ja':
+          provider = this.getProvider('jmdict');
+          break;
+        case 'ko':
+          provider = this.getProvider('korean');
+          break;
+        default:
+          return {
+            success: false,
+            candidates: [],
+            totalCount: 0,
+            queryTime: 0
+          };
+      }
+
+      if (!provider) {
+        return {
+          success: false,
+          candidates: [],
+          totalCount: 0,
+          queryTime: 0
+        };
+      }
+
+      // 检查提供者是否支持多语言查询
+      if ('lookupMultilingual' in provider) {
+        return await (provider as any).lookupMultilingual(input, uiLanguage);
+      } else {
+        // 回退到普通查询
+        const result = await provider.lookup(input);
+        return {
+          success: result.success,
+          candidates: result.candidates.map(c => ({
+            word: c.word,
+            translation: c.translation,
+            phonetic: c.pinyin || c.romaji,
+            kana: c.kana,
+            romaji: c.romaji,
+            pinyin: c.pinyin,
+            partOfSpeech: c.partOfSpeech,
+            confidence: c.confidence,
+            source: c.source
+          })),
+          totalCount: result.totalCount,
+          queryTime: result.queryTime
+        };
+      }
+    } catch (error) {
+      console.error('❌ 多语言词库查询失败:', error);
+      return {
+        success: false,
+        candidates: [],
+        totalCount: 0,
+        queryTime: 0
+      };
+    }
   }
 
   /**

@@ -33,6 +33,7 @@ export class DictionaryDownloader {
    */
   getSupportedSources(): DictionarySource[] {
     return [
+      // 中文词库
       {
         name: 'CC-CEDICT',
         url: 'https://www.mdbg.net/chinese/export/cedict/cedict_1_0_ts_utf-8_mdbg.txt.gz',
@@ -50,6 +51,35 @@ export class DictionaryDownloader {
         language: 'zh',
         version: '1.0',
         size: 2000000
+      },
+      // 日语词库
+      {
+        name: 'JMdict',
+        url: 'http://ftp.edrdg.org/pub/Nihongo/JMdict_e.gz',
+        filename: 'jmdict.xml',
+        description: '日英字典 (JMdict)',
+        language: 'ja',
+        version: '2024.1',
+        size: 50000000 // 约50MB
+      },
+      {
+        name: 'JMnedict',
+        url: 'http://ftp.edrdg.org/pub/Nihongo/JMnedict.xml.gz',
+        filename: 'jmnedict.xml',
+        description: '日文人名地名字典',
+        language: 'ja',
+        version: '2024.1',
+        size: 10000000 // 约10MB
+      },
+      // 韩语词库
+      {
+        name: 'Korean-English Dictionary',
+        url: 'https://github.com/tannibunni/dramawordv2/raw/main/dictionaries/korean_dict.json',
+        filename: 'korean_dict.json',
+        description: '韩英字典',
+        language: 'ko',
+        version: '2024.1',
+        size: 5000000 // 约5MB
       }
     ];
   }
