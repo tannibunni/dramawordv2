@@ -293,14 +293,28 @@ export class EnglishUIEnvironment implements LanguageEnvironment {
   }
   
   async queryLocalDictionary(input: string, analysis: InputAnalysis): Promise<UnifiedQueryResult> {
-    // TODO: 实现本地词库查询逻辑
     console.log(`🔍 本地词库查询: ${input} (${analysis.type})`);
     
-    // 暂时返回空结果，后续实现
-    return {
-      success: false,
-      candidates: []
-    };
+    try {
+      const { HybridQueryService } = await import('../hybridQueryService');
+      const hybridService = HybridQueryService.getInstance();
+      
+      const result = await hybridService.query(input, this.uiLanguage, this.targetLanguage, {
+        enableLocalDictionary: true,
+        enableOnlineTranslation: false,
+        localFirst: true,
+        maxCandidates: 10,
+        minConfidence: 0.3
+      });
+      
+      return result;
+    } catch (error) {
+      console.error('❌ 本地词库查询失败:', error);
+      return {
+        success: false,
+        candidates: []
+      };
+    }
   }
   
   async queryOnlineTranslation(input: string, analysis: InputAnalysis): Promise<UnifiedQueryResult> {
@@ -318,41 +332,18 @@ export class EnglishUIEnvironment implements LanguageEnvironment {
     console.log(`🔍 混合查询: ${input} (${analysis.type})`);
     
     try {
-      // 先尝试本地词库
-      const localResult = await this.queryLocalDictionary(input, analysis);
+      const { HybridQueryService } = await import('../hybridQueryService');
+      const hybridService = HybridQueryService.getInstance();
       
-      if (localResult.success && localResult.candidates.length > 0) {
-        return {
-          success: true,
-          candidates: localResult.candidates.map(c => {
-            if (typeof c === 'string') {
-              return c;
-            } else {
-              const candidate = c as LocalQueryCandidate;
-              return candidate.chinese || candidate.japanese || candidate.english || '';
-            }
-          }),
-          source: 'local_dictionary',
-          wordData: localResult
-        };
-      }
+      const result = await hybridService.query(input, this.uiLanguage, this.targetLanguage, {
+        enableLocalDictionary: true,
+        enableOnlineTranslation: true,
+        localFirst: true,
+        maxCandidates: 10,
+        minConfidence: 0.3
+      });
       
-      // 本地词库没有结果，尝试在线翻译
-      const onlineResult = await this.queryOnlineTranslation(input, analysis);
-      
-      if (onlineResult.success && onlineResult.candidates.length > 0) {
-        return {
-          success: true,
-          candidates: onlineResult.candidates,
-          source: onlineResult.source || 'online_translation',
-          wordData: onlineResult.wordData
-        };
-      }
-      
-      return {
-        success: false,
-        candidates: []
-      };
+      return result;
     } catch (error) {
       console.error('❌ 混合查询失败:', error);
       return {
