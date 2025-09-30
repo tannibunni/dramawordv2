@@ -229,19 +229,41 @@ export class DictionaryManager {
    */
   async downloadDictionary(sourceName: string): Promise<boolean> {
     try {
-      const sources = this.downloader.getSupportedSources();
-      const source = sources.find(s => s.name === sourceName);
+      // 映射词库名称到语言ID
+      const languageMap: { [key: string]: string } = {
+        'CC-CEDICT': 'ccedict',
+        'JMdict': 'jmdict',
+        'Korean Dictionary': 'korean'
+      };
       
-      if (!source) {
+      const languageId = languageMap[sourceName];
+      if (!languageId) {
         throw new Error(`不支持的词库源: ${sourceName}`);
       }
 
-      const result = await this.downloader.downloadDictionary(source);
+      console.log(`📥 开始下载词库: ${sourceName} (${languageId})`);
+      
+      // 调用后端API下载词库
+      const response = await fetch(`/api/dictionary/download/${languageId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      
+      if (!response.ok) {
+        console.error(`❌ 词库下载失败: ${response.status}`);
+        return false;
+      }
+      
+      const result = await response.json();
       if (result.success) {
         console.log(`✅ 词库下载成功: ${sourceName}`);
+        
+        // 解析词库
+        await this.parseDictionary(languageId);
+        
         return true;
       } else {
-        console.error(`❌ 词库下载失败: ${sourceName}`, result.error);
+        console.error(`❌ 词库下载失败: ${result.error}`);
         return false;
       }
     } catch (error) {
@@ -251,43 +273,36 @@ export class DictionaryManager {
   }
 
   /**
-   * 解析词库文件
+   * 解析词库
    */
-  async parseDictionary(dictionaryName: string): Promise<boolean> {
+  private async parseDictionary(languageId: string): Promise<boolean> {
     try {
-      const provider = this.getProvider(dictionaryName);
-      if (!provider) {
-        throw new Error(`未找到词库提供者: ${dictionaryName}`);
+      console.log(`🔄 开始解析词库: ${languageId}`);
+      
+      const response = await fetch(`/api/dictionary/parse/${languageId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      
+      if (!response.ok) {
+        console.error(`❌ 词库解析失败: ${response.status}`);
+        return false;
       }
-
-      // 检查是否需要更新
-      if (provider instanceof CCEDICTProvider) {
-        const needsUpdate = await provider.needsUpdate();
-        if (!needsUpdate) {
-          console.log(`✅ 词库已是最新版本: ${dictionaryName}`);
-          return true;
-        }
-
-        // 读取文件内容
-        const content = await this.storage.readDictionaryFile('ccedict.txt');
-        if (!content) {
-          throw new Error('无法读取词库文件');
-        }
-
-        // 解析文件
-        const success = await provider.parseDictionaryFile(content);
-        if (success) {
-          console.log(`✅ 词库解析成功: ${dictionaryName}`);
-        }
-        return success;
+      
+      const result = await response.json();
+      if (result.success) {
+        console.log(`✅ 词库解析成功: ${languageId}, 条目数: ${result.data.entriesCount}`);
+        return true;
+      } else {
+        console.error(`❌ 词库解析失败: ${result.error}`);
+        return false;
       }
-
-      return false;
     } catch (error) {
-      console.error(`❌ 解析词库失败: ${dictionaryName}`, error);
+      console.error(`❌ 解析词库异常: ${languageId}`, error);
       return false;
     }
   }
+
 
   /**
    * 获取词库信息
@@ -368,6 +383,34 @@ export class DictionaryManager {
     } catch (error) {
       console.error('❌ 清理存储失败:', error);
       return 0;
+    }
+  }
+
+  /**
+   * 获取词库状态
+   */
+  async getDictionaryStatus(): Promise<any> {
+    try {
+      const response = await fetch('/api/dictionary/status', {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      
+      if (!response.ok) {
+        console.error(`❌ 获取词库状态失败: ${response.status}`);
+        return null;
+      }
+      
+      const result = await response.json();
+      if (result.success) {
+        console.log(`✅ 词库状态获取成功: ${result.data.availableCount}/${result.data.totalCount} 个词库可用`);
+        return result.data;
+      }
+      
+      return null;
+    } catch (error) {
+      console.error('❌ 获取词库状态失败:', error);
+      return null;
     }
   }
 }

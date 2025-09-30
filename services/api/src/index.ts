@@ -46,6 +46,7 @@ import batchProcessingRoutes from './routes/batchProcessing';
 import smartSyncRoutes from './routes/smartSync';
 import inviteRoutes from './routes/invite';
 import directTranslationRoutes from './routes/directTranslationRoutes';
+import dictionaryRoutes from './routes/dictionaryRoutes';
 import CacheMonitoringService from './services/cacheMonitoringService';
 import { logger } from './utils/logger';
 import { OpenAI } from 'openai';
@@ -100,6 +101,7 @@ app.use('/api/batch', batchProcessingRoutes);
 app.use('/api/smart-sync', smartSyncRoutes);
 app.use('/api/invite', inviteRoutes);
 app.use('/api/direct-translate', directTranslationRoutes);
+app.use('/api/dictionary', dictionaryRoutes);
 
 // 健康检查端点
 app.get('/health', (req, res) => {
