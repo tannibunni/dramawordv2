@@ -3,6 +3,8 @@ import { DictionaryManager } from '../dictionaryManager/DictionaryManager';
 import { LanguageEnvironmentFactory } from '../languageEnvironment';
 import { UnifiedQueryResult } from '../languageEnvironment/types';
 import { LocalQueryResult } from '../localDictionary/types';
+import { MultilingualQueryResult } from '../localDictionary/types/multilingual';
+import { SmartHybridQueryStrategy, CloudWordsIntegration } from './HybridQueryStrategy';
 
 export interface HybridQueryOptions {
   enableLocalDictionary: boolean;
@@ -16,10 +18,12 @@ export class HybridQueryService {
   private static instance: HybridQueryService;
   private dictionaryManager: DictionaryManager;
   private environmentFactory: LanguageEnvironmentFactory;
+  private strategy: SmartHybridQueryStrategy;
 
   constructor() {
     this.dictionaryManager = DictionaryManager.getInstance();
     this.environmentFactory = LanguageEnvironmentFactory.getInstance();
+    this.strategy = new SmartHybridQueryStrategy();
   }
 
   static getInstance(): HybridQueryService {
@@ -30,7 +34,7 @@ export class HybridQueryService {
   }
 
   /**
-   * 混合查询
+   * 智能混合查询
    */
   async query(
     input: string, 
@@ -41,33 +45,39 @@ export class HybridQueryService {
     const startTime = Date.now();
     
     try {
-      const defaultOptions: HybridQueryOptions = {
-        enableLocalDictionary: true,
-        enableOnlineTranslation: true,
-        localFirst: true,
-        maxCandidates: 10,
-        minConfidence: 0.3
-      };
+      console.log(`🔍 智能混合查询: "${input}" (${uiLanguage} -> ${targetLanguage})`);
 
-      const finalOptions = { ...defaultOptions, ...options };
-      
-      console.log(`🔍 混合查询: "${input}" (${uiLanguage} -> ${targetLanguage})`);
+      // 1. 检查本地词库可用性
+      const hasLocalDictionary = await this.dictionaryManager.isDictionaryAvailable(
+        this.getDictionaryProviderName(targetLanguage)
+      );
 
-      let localResult: LocalQueryResult | null = null;
+      // 2. 决定查询策略
+      const queryStrategy = this.strategy.determineStrategy(
+        input, 
+        targetLanguage, 
+        uiLanguage, 
+        hasLocalDictionary
+      );
+
+      console.log(`📋 查询策略: ${queryStrategy.reason}`);
+
+      let localResult: MultilingualQueryResult | null = null;
       let onlineResult: UnifiedQueryResult | null = null;
+      let cloudWordsResult: any | null = null;
 
-      // 1. 本地词库查询
-      if (finalOptions.enableLocalDictionary) {
+      // 3. 执行本地词库查询
+      if (queryStrategy.useLocalDictionary) {
         try {
-          localResult = await this.queryLocalDictionary(input, targetLanguage);
+          localResult = await this.queryLocalMultilingualDictionary(input, targetLanguage, uiLanguage);
           console.log(`📚 本地词库查询结果: ${localResult.candidates.length} 个候选词`);
         } catch (error) {
           console.error('❌ 本地词库查询失败:', error);
         }
       }
 
-      // 2. 在线翻译查询
-      if (finalOptions.enableOnlineTranslation) {
+      // 4. 执行在线翻译查询
+      if (queryStrategy.useOnlineTranslation) {
         try {
           onlineResult = await this.queryOnlineTranslation(input, uiLanguage, targetLanguage);
           console.log(`🌐 在线翻译查询结果: ${onlineResult.candidates.length} 个候选词`);
@@ -76,14 +86,38 @@ export class HybridQueryService {
         }
       }
 
-      // 3. 合并结果
-      const mergedResult = this.mergeResults(localResult, onlineResult, finalOptions);
+      // 5. 决定CloudWords集成策略
+      const cloudWordsStrategy = this.strategy.determineCloudWordsStrategy(
+        localResult, 
+        onlineResult, 
+        targetLanguage
+      );
+
+      console.log(`☁️ CloudWords策略: ${cloudWordsStrategy.mergeStrategy}`);
+
+      // 6. 查询CloudWords (OpenAI)
+      if (cloudWordsStrategy.shouldQueryCloudWords) {
+        try {
+          cloudWordsResult = await this.queryCloudWords(input, targetLanguage, uiLanguage);
+          console.log(`🤖 CloudWords查询结果: ${cloudWordsResult ? '成功' : '失败'}`);
+        } catch (error) {
+          console.error('❌ CloudWords查询失败:', error);
+        }
+      }
+
+      // 7. 合并结果
+      const mergedResult = this.strategy.mergeResults(
+        localResult, 
+        onlineResult, 
+        cloudWordsResult, 
+        cloudWordsStrategy
+      );
       
-      console.log(`✅ 混合查询完成: ${mergedResult.candidates.length} 个候选词`);
+      console.log(`✅ 智能混合查询完成: ${mergedResult.candidates.length} 个候选词`);
       return mergedResult;
 
     } catch (error) {
-      console.error('❌ 混合查询失败:', error);
+      console.error('❌ 智能混合查询失败:', error);
       return {
         success: false,
         candidates: [],
@@ -94,7 +128,31 @@ export class HybridQueryService {
   }
 
   /**
-   * 本地词库查询
+   * 多语言本地词库查询
+   */
+  private async queryLocalMultilingualDictionary(
+    input: string, 
+    targetLanguage: string,
+    uiLanguage: string
+  ): Promise<MultilingualQueryResult> {
+    try {
+      const result = await this.dictionaryManager.queryMultilingual(input, targetLanguage, uiLanguage);
+      
+      if (result.success) {
+        console.log(`✅ 多语言本地词库查询成功: ${result.candidates.length} 个候选词`);
+      } else {
+        console.log('❌ 多语言本地词库查询失败');
+      }
+      
+      return result;
+    } catch (error) {
+      console.error('❌ 多语言本地词库查询异常:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * 本地词库查询 (兼容性方法)
    */
   private async queryLocalDictionary(
     input: string, 
@@ -286,6 +344,50 @@ export class HybridQueryService {
         totalLocalEntries: 0,
         storageSize: 0
       };
+    }
+  }
+
+  /**
+   * CloudWords查询 (OpenAI)
+   */
+  private async queryCloudWords(
+    input: string,
+    targetLanguage: string,
+    uiLanguage: string
+  ): Promise<any | null> {
+    try {
+      // 这里应该调用后端API查询CloudWords
+      // 暂时返回null，实际实现需要调用后端
+      console.log(`🤖 CloudWords查询: "${input}" (${targetLanguage})`);
+      
+      // TODO: 实现CloudWords查询逻辑
+      // const response = await fetch(`/api/cloudwords/query`, {
+      //   method: 'POST',
+      //   headers: { 'Content-Type': 'application/json' },
+      //   body: JSON.stringify({ input, targetLanguage, uiLanguage })
+      // });
+      // return await response.json();
+      
+      return null;
+    } catch (error) {
+      console.error('❌ CloudWords查询失败:', error);
+      return null;
+    }
+  }
+
+  /**
+   * 获取词库提供者名称
+   */
+  private getDictionaryProviderName(targetLanguage: string): string {
+    switch (targetLanguage) {
+      case 'zh':
+        return 'ccedict';
+      case 'ja':
+        return 'jmdict';
+      case 'ko':
+        return 'korean';
+      default:
+        return 'ccedict';
     }
   }
 
