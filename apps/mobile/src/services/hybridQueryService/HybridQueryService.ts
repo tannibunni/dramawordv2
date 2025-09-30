@@ -86,22 +86,31 @@ export class HybridQueryService {
         }
       }
 
-      // 5. 决定CloudWords集成策略
+      // 5. 先查询CloudWords (优先使用已有数据)
+      try {
+        cloudWordsResult = await this.queryCloudWords(input, targetLanguage, uiLanguage);
+        console.log(`☁️ CloudWords查询结果: ${cloudWordsResult ? '成功' : '失败'}`);
+      } catch (error) {
+        console.error('❌ CloudWords查询失败:', error);
+      }
+
+      // 6. 决定CloudWords集成策略
       const cloudWordsStrategy = this.strategy.determineCloudWordsStrategy(
         localResult, 
         onlineResult, 
+        cloudWordsResult,
         targetLanguage
       );
 
       console.log(`☁️ CloudWords策略: ${cloudWordsStrategy.mergeStrategy}`);
 
-      // 6. 查询CloudWords (OpenAI)
-      if (cloudWordsStrategy.shouldQueryCloudWords) {
+      // 7. 如果需要OpenAI补充，再次查询
+      if (cloudWordsStrategy.shouldQueryCloudWords && !cloudWordsResult) {
         try {
           cloudWordsResult = await this.queryCloudWords(input, targetLanguage, uiLanguage);
-          console.log(`🤖 CloudWords查询结果: ${cloudWordsResult ? '成功' : '失败'}`);
+          console.log(`🤖 OpenAI补充查询结果: ${cloudWordsResult ? '成功' : '失败'}`);
         } catch (error) {
-          console.error('❌ CloudWords查询失败:', error);
+          console.error('❌ OpenAI补充查询失败:', error);
         }
       }
 
@@ -348,7 +357,7 @@ export class HybridQueryService {
   }
 
   /**
-   * CloudWords查询 (OpenAI)
+   * CloudWords查询 (优先查询已有数据)
    */
   private async queryCloudWords(
     input: string,
@@ -356,21 +365,81 @@ export class HybridQueryService {
     uiLanguage: string
   ): Promise<any | null> {
     try {
-      // 这里应该调用后端API查询CloudWords
-      // 暂时返回null，实际实现需要调用后端
-      console.log(`🤖 CloudWords查询: "${input}" (${targetLanguage})`);
+      console.log(`☁️ CloudWords查询: "${input}" (${targetLanguage})`);
       
-      // TODO: 实现CloudWords查询逻辑
-      // const response = await fetch(`/api/cloudwords/query`, {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({ input, targetLanguage, uiLanguage })
-      // });
-      // return await response.json();
+      // 1. 先查询CloudWords中是否已有数据
+      const existingData = await this.queryExistingCloudWords(input, targetLanguage);
+      if (existingData) {
+        console.log(`✅ 找到CloudWords已有数据: ${existingData.word}`);
+        return existingData;
+      }
       
-      return null;
+      // 2. 如果没有现有数据，调用OpenAI生成新数据
+      console.log(`🤖 CloudWords无现有数据，调用OpenAI生成`);
+      return await this.generateNewCloudWordsData(input, targetLanguage, uiLanguage);
+      
     } catch (error) {
       console.error('❌ CloudWords查询失败:', error);
+      return null;
+    }
+  }
+
+  /**
+   * 查询CloudWords中现有的数据
+   */
+  private async queryExistingCloudWords(
+    input: string,
+    targetLanguage: string
+  ): Promise<any | null> {
+    try {
+      // TODO: 实现CloudWords查询API
+      // const response = await fetch(`/api/cloudwords/search`, {
+      //   method: 'POST',
+      //   headers: { 'Content-Type': 'application/json' },
+      //   body: JSON.stringify({ 
+      //     word: input, 
+      //     targetLanguage,
+      //     includeExamples: true 
+      //   })
+      // });
+      // const data = await response.json();
+      // return data.success ? data.data : null;
+      
+      // 暂时返回null，表示没有现有数据
+      return null;
+    } catch (error) {
+      console.error('❌ 查询现有CloudWords数据失败:', error);
+      return null;
+    }
+  }
+
+  /**
+   * 生成新的CloudWords数据 (OpenAI)
+   */
+  private async generateNewCloudWordsData(
+    input: string,
+    targetLanguage: string,
+    uiLanguage: string
+  ): Promise<any | null> {
+    try {
+      // TODO: 实现OpenAI生成API
+      // const response = await fetch(`/api/cloudwords/generate`, {
+      //   method: 'POST',
+      //   headers: { 'Content-Type': 'application/json' },
+      //   body: JSON.stringify({ 
+      //     input, 
+      //     targetLanguage, 
+      //     uiLanguage,
+      //     includeExamples: true 
+      //   })
+      // });
+      // const data = await response.json();
+      // return data.success ? data.data : null;
+      
+      // 暂时返回null，表示生成失败
+      return null;
+    } catch (error) {
+      console.error('❌ 生成新CloudWords数据失败:', error);
       return null;
     }
   }

@@ -25,7 +25,7 @@ export interface QueryStrategy {
 export interface CloudWordsIntegration {
   shouldQueryCloudWords: boolean;
   shouldStoreToCloudWords: boolean;
-  mergeStrategy: 'local_definition_openai_examples' | 'openai_full' | 'local_full';
+  mergeStrategy: 'cloudwords_complete' | 'local_definition_openai_examples' | 'openai_full' | 'local_full';
 }
 
 export class SmartHybridQueryStrategy implements HybridQueryStrategy {
@@ -67,10 +67,20 @@ export class SmartHybridQueryStrategy implements HybridQueryStrategy {
   determineCloudWordsStrategy(
     localResult: MultilingualQueryResult | null,
     onlineResult: UnifiedQueryResult | null,
+    cloudWordsResult: any | null,
     targetLanguage: string
   ): CloudWordsIntegration {
     
-    // 如果有本地词库结果，只需要OpenAI补充例句
+    // 如果CloudWords已有完整数据，直接使用
+    if (cloudWordsResult && this.isCloudWordsComplete(cloudWordsResult)) {
+      return {
+        shouldQueryCloudWords: false, // 不需要再查询
+        shouldStoreToCloudWords: false, // 不需要存储
+        mergeStrategy: 'cloudwords_complete'
+      };
+    }
+    
+    // 如果有本地词库结果，需要OpenAI补充例句
     if (localResult && localResult.success && localResult.candidates.length > 0) {
       return {
         shouldQueryCloudWords: true,
@@ -97,6 +107,19 @@ export class SmartHybridQueryStrategy implements HybridQueryStrategy {
   }
 
   /**
+   * 检查CloudWords数据是否完整
+   */
+  private isCloudWordsComplete(cloudWordsResult: any): boolean {
+    return cloudWordsResult && 
+           cloudWordsResult.word && 
+           cloudWordsResult.translation && 
+           cloudWordsResult.definitions && 
+           cloudWordsResult.definitions.length > 0 &&
+           cloudWordsResult.definitions[0].examples &&
+           cloudWordsResult.definitions[0].examples.length > 0;
+  }
+
+  /**
    * 合并查询结果
    */
   mergeResults(
@@ -105,6 +128,11 @@ export class SmartHybridQueryStrategy implements HybridQueryStrategy {
     cloudWordsResult: any | null,
     strategy: CloudWordsIntegration
   ): UnifiedQueryResult {
+    
+    if (strategy.mergeStrategy === 'cloudwords_complete') {
+      // CloudWords完整数据，直接使用
+      return this.useCloudWordsResult(cloudWordsResult);
+    }
     
     if (strategy.mergeStrategy === 'local_definition_openai_examples') {
       // 本地释义 + OpenAI例句
@@ -176,6 +204,27 @@ export class SmartHybridQueryStrategy implements HybridQueryStrategy {
         }],
         allTranslations: candidates[0]?.allTranslations
       }
+    };
+  }
+
+  /**
+   * 使用CloudWords完整结果
+   */
+  private useCloudWordsResult(cloudWordsResult: any | null): UnifiedQueryResult {
+    if (!cloudWordsResult) {
+      return {
+        success: false,
+        candidates: [],
+        source: 'none'
+      };
+    }
+
+    return {
+      success: true,
+      candidates: [cloudWordsResult.correctedWord || cloudWordsResult.translation],
+      source: 'cloudwords',
+      confidence: 1.0, // CloudWords数据最可靠
+      wordData: cloudWordsResult
     };
   }
 
