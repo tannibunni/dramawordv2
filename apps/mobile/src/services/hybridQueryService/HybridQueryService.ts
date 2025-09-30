@@ -392,20 +392,22 @@ export class HybridQueryService {
     targetLanguage: string
   ): Promise<any | null> {
     try {
-      // TODO: 实现CloudWords查询API
-      // const response = await fetch(`/api/cloudwords/search`, {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({ 
-      //     word: input, 
-      //     targetLanguage,
-      //     includeExamples: true 
-      //   })
-      // });
-      // const data = await response.json();
-      // return data.success ? data.data : null;
+      const response = await fetch(`/api/words/cloud/${encodeURIComponent(input)}?language=${targetLanguage}`, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' }
+      });
       
-      // 暂时返回null，表示没有现有数据
+      if (!response.ok) {
+        console.log(`⚠️ CloudWords查询失败: ${response.status}`);
+        return null;
+      }
+      
+      const data = await response.json();
+      if (data.success && data.data) {
+        console.log(`✅ CloudWords查询成功: ${data.data.word}`);
+        return data.data;
+      }
+      
       return null;
     } catch (error) {
       console.error('❌ 查询现有CloudWords数据失败:', error);
@@ -422,21 +424,27 @@ export class HybridQueryService {
     uiLanguage: string
   ): Promise<any | null> {
     try {
-      // TODO: 实现OpenAI生成API
-      // const response = await fetch(`/api/cloudwords/generate`, {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({ 
-      //     input, 
-      //     targetLanguage, 
-      //     uiLanguage,
-      //     includeExamples: true 
-      //   })
-      // });
-      // const data = await response.json();
-      // return data.success ? data.data : null;
+      const response = await fetch(`/api/words/search`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          word: input, 
+          language: targetLanguage, 
+          uiLanguage
+        })
+      });
       
-      // 暂时返回null，表示生成失败
+      if (!response.ok) {
+        console.log(`⚠️ OpenAI生成失败: ${response.status}`);
+        return null;
+      }
+      
+      const data = await response.json();
+      if (data.success && data.data) {
+        console.log(`✅ OpenAI生成成功: ${data.data.word}`);
+        return data.data;
+      }
+      
       return null;
     } catch (error) {
       console.error('❌ 生成新CloudWords数据失败:', error);
