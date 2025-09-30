@@ -14,6 +14,7 @@ import { colors } from '../../constants/colors';
 import { useAppLanguage } from '../../context/AppLanguageContext';
 import { APP_LANGUAGES, AppLanguage, t, TranslationKey } from '../../constants/translations';
 import { SUPPORTED_LANGUAGES } from '../../constants/config';
+import OfflineDictionarySection from './OfflineDictionarySection';
 
 interface AppLanguageSelectorProps {
   visible: boolean;
@@ -307,6 +308,11 @@ const AppLanguageSelector: React.FC<AppLanguageSelectorProps> = ({
                     : `${selectedLanguages.length} languages selected`
                   }
                 </Text>
+
+                {/* 离线词库下载部分 */}
+                <OfflineDictionarySection 
+                  selectedLanguages={selectedLanguages}
+                />
 
                 {/* 确定按钮 */}
                 <View style={styles.confirmButtonContainer}>
