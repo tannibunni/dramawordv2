@@ -2,6 +2,11 @@
 import { analyzeInput, getQuerySuggestions, InputAnalysis } from '../utils/inputDetector';
 import { wordService } from './wordService';
 import { directTranslationService, DirectTranslationResult } from './directTranslationService';
+import { 
+  LanguageEnvironmentFactory, 
+  LanguageEnvironment, 
+  UnifiedQueryResult
+} from './languageEnvironment';
 
 export interface QueryResult {
   type: 'dictionary' | 'translation' | 'ambiguous';
@@ -23,6 +28,11 @@ export interface AmbiguousResult {
 
 export class UnifiedQueryService {
   private static instance: UnifiedQueryService;
+  private environmentFactory: LanguageEnvironmentFactory;
+
+  constructor() {
+    this.environmentFactory = LanguageEnvironmentFactory.getInstance();
+  }
 
   static getInstance(): UnifiedQueryService {
     if (!UnifiedQueryService.instance) {
@@ -32,100 +42,102 @@ export class UnifiedQueryService {
   }
 
   /**
+   * 转换语言环境结果为查询结果
+   */
+  private convertLanguageResultToQueryResult(
+    result: UnifiedQueryResult, 
+    input: string, 
+    targetLanguage: string
+  ): QueryResult | AmbiguousResult {
+    if (!result.success || !result.candidates || result.candidates.length === 0) {
+      return {
+        type: 'translation',
+        data: {
+          word: input,
+          correctedWord: input,
+          translation: '',
+          translationSource: 'none',
+          candidates: [],
+          language: targetLanguage
+        }
+      };
+    }
+
+    if (result.candidates.length === 1) {
+      // 单个结果
+      return {
+        type: 'translation',
+        data: {
+          word: input,
+          correctedWord: result.candidates[0],
+          translation: result.candidates[0],
+          translationSource: result.source || 'unknown',
+          candidates: result.candidates,
+          language: targetLanguage
+        }
+      };
+    } else {
+      // 多个结果，返回歧义选择
+      return {
+        type: 'ambiguous',
+        options: result.candidates.map((candidate: string) => ({
+          type: 'translation' as const,
+          title: candidate,
+          description: `翻译结果: ${candidate}`,
+          data: {
+            word: input,
+            correctedWord: candidate,
+            translation: candidate,
+            translationSource: result.source || 'unknown',
+            candidates: [candidate],
+            language: targetLanguage
+          }
+        }))
+      };
+    }
+  }
+
+  /**
    * 统一查询入口
    */
   async query(input: string, uiLanguage: string = 'en-US', targetLanguage: string = 'ja'): Promise<QueryResult | AmbiguousResult> {
     try {
-      console.log(`🔍 统一查询: "${input}"`);
+      console.log(`🔍 统一查询: "${input}" (UI: ${uiLanguage}, Target: ${targetLanguage})`);
 
-      // 分析输入类型
-      const analysis = analyzeInput(input, targetLanguage);
+      // 1. 获取语言环境
+      const environment = this.environmentFactory.createEnvironment(uiLanguage, targetLanguage);
+      
+      // 2. 分析输入
+      const analysis = environment.analyzeInput(input);
       console.log(`🔍 输入分析结果:`, analysis);
 
-      // 获取查询建议
-      const suggestions = getQuerySuggestions(analysis, targetLanguage);
-      console.log(`🔍 查询建议:`, suggestions);
+      // 3. 选择查询策略
+      const strategy = environment.selectQueryStrategy(input, analysis);
+      console.log(`🔍 查询策略:`, strategy);
 
-      // 检查是否为英文句子，如果是则直接翻译
-      if (analysis.type === 'english_sentence') {
-        const directResult = await directTranslationService.translateEnglishSentence(input, uiLanguage, targetLanguage);
-        if (directResult.success && directResult.data) {
-          return {
-            type: 'translation',
-            data: directResult.data
-          };
-        }
+      // 4. 执行查询
+      let result: UnifiedQueryResult;
+      
+      switch (strategy) {
+        case 'local_only':
+          result = await environment.queryLocalDictionary(input, analysis);
+          break;
+        case 'online_only':
+          result = await environment.queryOnlineTranslation(input, analysis);
+          break;
+        case 'hybrid':
+          result = await environment.queryHybrid(input, analysis);
+          break;
+        default:
+          throw new Error(`Unknown query strategy: ${strategy}`);
       }
 
-      // EN界面下，如果目标语言是中文，英文单词应该直接翻译而不是查词典
-      if (uiLanguage === 'en-US' && targetLanguage === 'zh' && analysis.type === 'english') {
-        console.log(`🔍 EN界面+中文目标语言，英文单词直接翻译: ${input}`);
-        const directResult = await directTranslationService.translateEnglishSentence(input, uiLanguage, targetLanguage);
-        if (directResult.success && directResult.data) {
-          return {
-            type: 'translation',
-            data: directResult.data
-          };
-        }
-      }
-
-      // 执行翻译查询
-      const translationResults = await this.queryTranslation(suggestions.translation, uiLanguage, targetLanguage);
-
-      // 判断结果类型
-      const hasTranslationResults = translationResults.some(result => result.success && result.candidates && result.candidates.length > 0);
-
-      console.log(`🔍 查询结果:`, {
-        hasTranslationResults,
-        translationCount: translationResults.filter(r => r.success).length
-      });
-
-      // 处理结果
-      if (hasTranslationResults) {
-        // 只有翻译结果
-        const mergedResult = this.mergeTranslationResults(translationResults);
-        
-        // 检查是否有完整的wordData（来自direct-translate API）
-        const wordDataResult = translationResults.find(result => result.wordData);
-        if (wordDataResult && wordDataResult.wordData) {
-          return {
-            type: 'translation',
-            data: wordDataResult.wordData
-          };
-        }
-        
-        // 否则创建WordData对象
-        const wordData = {
-          word: input,
-          correctedWord: mergedResult.candidates[0] || '', // 显示翻译结果
-          translation: mergedResult.candidates[0] || '',
-          candidates: mergedResult.candidates,
-          definitions: [{
-            partOfSpeech: 'translation',
-            definition: input, // 显示原文
-            examples: []
-          }],
-          language: targetLanguage,
-          translationSource: mergedResult.source
-        };
-        return {
-          type: 'translation',
-          data: wordData
-        };
-      } else {
-        // 没有结果
-        return {
-          type: 'dictionary',
-          data: []
-        };
-      }
+      // 5. 转换结果格式
+      return this.convertLanguageResultToQueryResult(result, input, targetLanguage);
 
     } catch (error) {
-      console.error(`❌ 统一查询失败: ${input}`, error);
-      return {
-        type: 'dictionary',
-        data: []
-      };
+      console.error('❌ 统一查询失败:', error);
+      throw error;
     }
   }
 
