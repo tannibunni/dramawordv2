@@ -24,6 +24,8 @@ export interface RecentWord {
   translation: string;
   timestamp: number;
   candidates?: string[]; // 新增
+  pinyin?: string; // 拼音
+  englishDefinition?: string; // 英文释义
 }
 
 export interface PaginationInfo {
@@ -372,7 +374,7 @@ export class WordService {
   }
 
   // 保存查词记录（支持本地/云端）
-  async saveSearchHistory(word: string, definition: string, candidates?: string[]): Promise<boolean> {
+  async saveSearchHistory(word: string, definition: string, candidates?: string[], pinyin?: string, englishDefinition?: string): Promise<boolean> {
     const token = await getUserToken();
     
     // 检查是否为游客模式（有token但没有userInfo）
@@ -390,7 +392,9 @@ export class WordService {
           word,
           translation: definition,
           timestamp: Date.now(),
-          ...(candidates ? { candidates } : {})
+          ...(candidates ? { candidates } : {}),
+          ...(pinyin ? { pinyin } : {}),
+          ...(englishDefinition ? { englishDefinition } : {})
         }, ...history.filter(w => w.word !== word)];
         await AsyncStorage.setItem(SEARCH_HISTORY_KEY, JSON.stringify(history));
         console.log('✅ 游客模式：搜索历史已保存到本地');

@@ -195,9 +195,21 @@ const WordSearchScreen: React.FC = () => {
                       <Text style={{ fontWeight: 'bold', color: colors.text.primary }}>
                         {word.word}
                       </Text>
-                      <Text style={{ fontWeight: 'normal', color: colors.text.secondary }}>
-                        {' - '}{word.translation}
-                      </Text>
+                      {word.pinyin && (
+                        <Text style={{ fontWeight: 'normal', color: colors.text.secondary }}>
+                          {' - '}{word.pinyin}
+                        </Text>
+                      )}
+                      {word.englishDefinition && (
+                        <Text style={{ fontWeight: 'normal', color: colors.text.tertiary }}>
+                          {' - '}{word.englishDefinition}
+                        </Text>
+                      )}
+                      {!word.pinyin && !word.englishDefinition && (
+                        <Text style={{ fontWeight: 'normal', color: colors.text.secondary }}>
+                          {' - '}{word.translation}
+                        </Text>
+                      )}
                     </Text>
                   </View>
                 </TouchableOpacity>

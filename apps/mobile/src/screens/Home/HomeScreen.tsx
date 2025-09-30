@@ -532,7 +532,9 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         
         // 保存搜索历史
         const translationResult = queryResult.data.correctedWord || queryResult.data.translation || '';
-        await wordService.saveSearchHistory(word, translationResult);
+        const pinyin = queryResult.data.pinyin || queryResult.data.phonetic || '';
+        const englishDefinition = queryResult.data.definitions?.[0]?.definition || '';
+        await wordService.saveSearchHistory(word, translationResult, undefined, pinyin, englishDefinition);
         setRecentWords(prev => {
           const filtered = prev.filter(w => w.word !== word);
           return [
@@ -541,6 +543,8 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
               word: word,
               translation: translationResult,
               timestamp: Date.now(),
+              pinyin: pinyin,
+              englishDefinition: englishDefinition,
             },
             ...filtered
           ];
@@ -576,7 +580,8 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
           
           // 保存搜索历史
           const definition = wordData.definitions[0]?.definition || t('no_definition', appLanguage);
-          await wordService.saveSearchHistory(word, definition);
+          const phonetic = wordData.phonetic || wordData.kana || '';
+          await wordService.saveSearchHistory(word, definition, undefined, phonetic, definition);
           setRecentWords(prev => {
             const filtered = prev.filter(w => w.word !== word);
             return [
@@ -585,6 +590,8 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                 word: word,
                 translation: definition,
                 timestamp: Date.now(),
+                pinyin: phonetic,
+                englishDefinition: definition,
               },
               ...filtered
             ];
@@ -1012,7 +1019,9 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         
         // 更新搜索历史
         const translationResult = queryResult.data.correctedWord || queryResult.data.translation || '';
-        await wordService.saveSearchHistory(searchWord, translationResult);
+        const pinyin = queryResult.data.pinyin || queryResult.data.phonetic || '';
+        const englishDefinition = queryResult.data.definitions?.[0]?.definition || '';
+        await wordService.saveSearchHistory(searchWord, translationResult, undefined, pinyin, englishDefinition);
       } else {
         console.error('❌ 统一查询失败，降级到传统搜索');
         const result = await wordService.searchWord(searchWord, targetLanguage, appLanguage);
@@ -1680,9 +1689,21 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                             <Text style={{ fontWeight: 'bold', color: colors.text.primary }}>
                               {word.word}
                             </Text>
-                            <Text style={{ fontWeight: 'normal', color: colors.text.secondary }}>
-                              {' - '}{word.translation}
-                            </Text>
+                            {word.pinyin && (
+                              <Text style={{ fontWeight: 'normal', color: colors.text.secondary }}>
+                                {' - '}{word.pinyin}
+                              </Text>
+                            )}
+                            {word.englishDefinition && (
+                              <Text style={{ fontWeight: 'normal', color: colors.text.tertiary }}>
+                                {' - '}{word.englishDefinition}
+                              </Text>
+                            )}
+                            {!word.pinyin && !word.englishDefinition && (
+                              <Text style={{ fontWeight: 'normal', color: colors.text.secondary }}>
+                                {' - '}{word.translation}
+                              </Text>
+                            )}
                           </Text>
                         </View>
                       </TouchableOpacity>
