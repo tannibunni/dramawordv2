@@ -134,7 +134,7 @@ export const getChineseWordDetails = async (req: Request, res: Response) => {
           english: ex.english
         }))
       })),
-      audioUrl: generateChineseAudioUrl(wordData.pinyin || wordData.word, 'zh'),
+      audioUrl: generateChineseAudioUrl(wordData.word, 'zh'),
       slangMeaning: null,
       phraseExplanation: null,
       correctedWord: wordData.word,
@@ -2158,6 +2158,7 @@ export const wordController = {
 function generateChineseAudioUrl(word: string, language: string = 'zh'): string {
   try {
     // 使用Google TTS发音
+    // 对于中文，需要URL编码以确保正确传输
     const encodedWord = encodeURIComponent(word);
     return `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodedWord}&tl=${language}&client=tw-ob`;
   } catch (error) {
