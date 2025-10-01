@@ -27,6 +27,7 @@ interface DictionaryStatus {
   size: number;
   lastUpdated?: Date;
   error?: string;
+  retryCount?: number;
 }
 
 const OfflineDictionarySection: React.FC<OfflineDictionarySectionProps> = ({
@@ -94,9 +95,12 @@ const OfflineDictionarySection: React.FC<OfflineDictionarySectionProps> = ({
           downloading: true,
           progress: 0,
           error: undefined,
+          retryCount: 0,
         }
       }));
 
+      console.log(`📥 开始下载词库: ${dictionaryName} (${languageCode})`);
+      
       // 开始下载
       const success = await dictionaryManager.downloadDictionary(dictionaryName);
       
@@ -110,8 +114,11 @@ const OfflineDictionarySection: React.FC<OfflineDictionarySectionProps> = ({
             downloading: false,
             progress: 100,
             error: undefined,
+            retryCount: 0,
           }
         }));
+        
+        console.log(`✅ 词库下载成功: ${dictionaryName}`);
         
         Alert.alert(
           appLanguage === 'zh-CN' ? '下载成功' : 'Download Successful',
@@ -122,33 +129,62 @@ const OfflineDictionarySection: React.FC<OfflineDictionarySectionProps> = ({
         );
       } else {
         // 下载失败
+        const errorMessage = appLanguage === 'zh-CN' ? '下载失败，请检查网络连接' : 'Download failed, please check your internet connection';
+        
         setDictionaryStatuses(prev => ({
           ...prev,
           [languageCode]: {
             ...prev[languageCode],
             downloading: false,
-            error: appLanguage === 'zh-CN' ? '下载失败' : 'Download failed',
+            error: errorMessage,
+            retryCount: (prev[languageCode]?.retryCount || 0) + 1,
           }
         }));
+        
+        console.error(`❌ 词库下载失败: ${dictionaryName}`);
         
         Alert.alert(
           appLanguage === 'zh-CN' ? '下载失败' : 'Download Failed',
           appLanguage === 'zh-CN' 
-            ? '请检查网络连接后重试' 
-            : 'Please check your internet connection and try again',
-          [{ text: appLanguage === 'zh-CN' ? '确定' : 'OK' }]
+            ? '词库下载失败，请检查网络连接后重试' 
+            : 'Dictionary download failed, please check your internet connection and try again',
+          [
+            { text: appLanguage === 'zh-CN' ? '取消' : 'Cancel', style: 'cancel' },
+            { 
+              text: appLanguage === 'zh-CN' ? '重试' : 'Retry', 
+              onPress: () => handleDownloadDictionary(languageCode)
+            }
+          ]
         );
       }
     } catch (error) {
-      console.error('下载词库失败:', error);
+      console.error('❌ 下载词库异常:', error);
+      
+      const errorMessage = error instanceof Error 
+        ? (appLanguage === 'zh-CN' ? `下载出错: ${error.message}` : `Download error: ${error.message}`)
+        : (appLanguage === 'zh-CN' ? '下载出错' : 'Download error');
+      
       setDictionaryStatuses(prev => ({
         ...prev,
         [languageCode]: {
           ...prev[languageCode],
           downloading: false,
-          error: appLanguage === 'zh-CN' ? '下载出错' : 'Download error',
+          error: errorMessage,
+          retryCount: (prev[languageCode]?.retryCount || 0) + 1,
         }
       }));
+      
+      Alert.alert(
+        appLanguage === 'zh-CN' ? '下载出错' : 'Download Error',
+        errorMessage,
+        [
+          { text: appLanguage === 'zh-CN' ? '取消' : 'Cancel', style: 'cancel' },
+          { 
+            text: appLanguage === 'zh-CN' ? '重试' : 'Retry', 
+            onPress: () => handleDownloadDictionary(languageCode)
+          }
+        ]
+      );
     }
   };
 
@@ -219,7 +255,17 @@ const OfflineDictionarySection: React.FC<OfflineDictionarySectionProps> = ({
         )}
 
         {status.error && (
-          <Text style={styles.errorText}>{status.error}</Text>
+          <View style={styles.errorContainer}>
+            <Text style={styles.errorText}>{status.error}</Text>
+            {status.retryCount && status.retryCount > 0 && (
+              <Text style={styles.retryCountText}>
+                {appLanguage === 'zh-CN' 
+                  ? `重试次数: ${status.retryCount}` 
+                  : `Retry count: ${status.retryCount}`
+                }
+              </Text>
+            )}
+          </View>
         )}
 
         {!status.available && !status.downloading && (
@@ -381,10 +427,18 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary[500],
     borderRadius: 2,
   },
+  errorContainer: {
+    marginTop: 4,
+  },
   errorText: {
     fontSize: 12,
     color: colors.error[500],
-    marginTop: 4,
+  },
+  retryCountText: {
+    fontSize: 11,
+    color: colors.text.secondary,
+    marginTop: 2,
+    fontStyle: 'italic',
   },
   downloadButton: {
     flexDirection: 'row',

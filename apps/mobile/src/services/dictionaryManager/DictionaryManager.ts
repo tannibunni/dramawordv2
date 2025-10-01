@@ -6,6 +6,7 @@ import { KoreanDictionaryProvider } from '../localDictionary/providers/KoreanDic
 import { DictionaryDownloader, DictionarySource } from '../localDictionary/downloader/DictionaryDownloader';
 import { DictionaryStorage } from '../localDictionary/storage/DictionaryStorage';
 import { MultilingualQueryResult } from '../localDictionary/types/multilingual';
+import { API_BASE_URL } from '../../constants/config';
 
 export class DictionaryManager {
   private static instance: DictionaryManager;
@@ -228,48 +229,73 @@ export class DictionaryManager {
    * 下载词库
    */
   async downloadDictionary(sourceName: string): Promise<boolean> {
-    try {
-      // 映射词库名称到语言ID
-      const languageMap: { [key: string]: string } = {
-        'CC-CEDICT': 'ccedict',
-        'JMdict': 'jmdict',
-        'Korean Dictionary': 'korean'
-      };
-      
-      const languageId = languageMap[sourceName];
-      if (!languageId) {
-        throw new Error(`不支持的词库源: ${sourceName}`);
-      }
+    const maxRetries = 3;
+    let lastError: Error | null = null;
+    
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        // 映射词库名称到语言ID
+        const languageMap: { [key: string]: string } = {
+          'CC-CEDICT': 'ccedict',
+          'JMdict': 'jmdict',
+          'Korean Dictionary': 'korean'
+        };
+        
+        const languageId = languageMap[sourceName];
+        if (!languageId) {
+          throw new Error(`不支持的词库源: ${sourceName}`);
+        }
 
-      console.log(`📥 开始下载词库: ${sourceName} (${languageId})`);
-      
-      // 调用后端API下载词库
-      const response = await fetch(`/api/dictionary/download/${languageId}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' }
-      });
-      
-      if (!response.ok) {
-        console.error(`❌ 词库下载失败: ${response.status}`);
-        return false;
-      }
-      
-      const result = await response.json();
-      if (result.success) {
-        console.log(`✅ 词库下载成功: ${sourceName}`);
+        console.log(`📥 开始下载词库: ${sourceName} (${languageId}) - 尝试 ${attempt}/${maxRetries}`);
         
-        // 解析词库
-        await this.parseDictionary(languageId);
+        // 调用后端API下载词库
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 300000); // 5分钟超时
         
-        return true;
-      } else {
-        console.error(`❌ 词库下载失败: ${result.error}`);
-        return false;
+        try {
+          const response = await fetch(`${API_BASE_URL}/dictionary/download/${languageId}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            signal: controller.signal
+          });
+          
+          clearTimeout(timeoutId);
+          
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+          }
+          
+          const result = await response.json();
+          if (result.success) {
+            console.log(`✅ 词库下载成功: ${sourceName}`);
+            
+            // 解析词库
+            await this.parseDictionary(languageId);
+            
+            return true;
+          } else {
+            throw new Error(`服务器错误: ${result.error}`);
+          }
+        } catch (fetchError) {
+          clearTimeout(timeoutId);
+          throw fetchError;
+        }
+        
+      } catch (error) {
+        lastError = error instanceof Error ? error : new Error(String(error));
+        console.error(`❌ 下载词库失败 (尝试 ${attempt}/${maxRetries}): ${sourceName}`, lastError);
+        
+        // 如果不是最后一次尝试，等待一段时间后重试
+        if (attempt < maxRetries) {
+          const delay = Math.pow(2, attempt) * 1000; // 指数退避: 2s, 4s, 8s
+          console.log(`⏳ 等待 ${delay}ms 后重试...`);
+          await new Promise(resolve => setTimeout(resolve, delay));
+        }
       }
-    } catch (error) {
-      console.error(`❌ 下载词库失败: ${sourceName}`, error);
-      return false;
     }
+    
+    console.error(`❌ 词库下载最终失败: ${sourceName}`, lastError);
+    return false;
   }
 
   /**
