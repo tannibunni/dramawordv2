@@ -417,7 +417,7 @@ export class DictionaryManager {
    */
   async getDictionaryStatus(): Promise<any> {
     try {
-      const response = await fetch('/api/dictionary/status', {
+      const response = await fetch(`${API_BASE_URL}/dictionary/status`, {
         method: 'GET',
         headers: { 'Content-Type': 'application/json' }
       });
