@@ -113,10 +113,10 @@ export const InitialLanguageModal: React.FC<InitialLanguageModalProps> = ({
         activeOpacity={0.7}
       >
         <Text style={{ fontSize: 28, color: 'black', fontWeight: 'bold', textAlign: 'center' }}>
-          {language.flag} {language.name}
+          {language.flag || '🏳️'} {language.name || 'Unknown'}
         </Text>
         <Text style={{ fontSize: 20, color: 'black', marginTop: 8 }}>
-          {language.nativeName} ({language.code.toUpperCase()})
+          {language.nativeName || 'Unknown'} ({language.code?.toUpperCase() || 'UNKNOWN'})
         </Text>
         
         {/* 选中状态显示打钩图标 */}
