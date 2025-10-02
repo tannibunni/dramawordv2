@@ -346,7 +346,7 @@ const styles = StyleSheet.create({
   },
   modalContent: {
     width: '90%',
-    maxHeight: '85%',
+    maxHeight: '90%',
     backgroundColor: colors.background.secondary,
     borderRadius: 20,
     overflow: 'hidden',
@@ -368,7 +368,8 @@ const styles = StyleSheet.create({
     padding: 4,
   },
   languageList: {
-    maxHeight: 400,
+    flex: 1,
+    minHeight: 500,
   },
   languageItem: {
     flexDirection: 'row',
@@ -456,7 +457,8 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   learningContent: {
-    height: 400,
+    flex: 1,
+    minHeight: 500,
   },
   learningScrollContent: {
     padding: 10,
