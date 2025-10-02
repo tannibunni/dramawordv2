@@ -305,7 +305,7 @@ export class DictionaryManager {
     try {
       console.log(`🔄 开始解析词库: ${languageId}`);
       
-      const response = await fetch(`/api/dictionary/parse/${languageId}`, {
+      const response = await fetch(`${API_BASE_URL}/dictionary/parse/${languageId}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' }
       });
