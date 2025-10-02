@@ -103,11 +103,18 @@ export const downloadDictionary = async (req: Request, res: Response): Promise<v
       timeout: 300000 // 5分钟超时
     });
     
-    // 写入文件
-    const writer = fs.createWriteStream(filePath);
-    (response.data as any).pipe(writer);
+    // 如果是gzip文件，需要解压
+    let writeStream;
+    if (source.url.endsWith('.gz')) {
+      const gunzipStream = zlib.createGunzip();
+      writeStream = fs.createWriteStream(filePath);
+      (response.data as any).pipe(gunzipStream).pipe(writeStream);
+    } else {
+      writeStream = fs.createWriteStream(filePath);
+      (response.data as any).pipe(writeStream);
+    }
     
-    writer.on('finish', () => {
+    writeStream.on('finish', () => {
       logger.info(`✅ 词库下载完成: ${source.name}`);
       res.json({
         success: true,
@@ -120,7 +127,7 @@ export const downloadDictionary = async (req: Request, res: Response): Promise<v
       });
     });
     
-    writer.on('error', (error) => {
+    writeStream.on('error', (error) => {
       logger.error(`❌ 词库下载失败: ${source.name}`, error);
       res.status(500).json({
         success: false,
