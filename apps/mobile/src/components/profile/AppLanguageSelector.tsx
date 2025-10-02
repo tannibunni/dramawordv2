@@ -248,12 +248,11 @@ const AppLanguageSelector: React.FC<AppLanguageSelectorProps> = ({
 
           {/* 学习语言设置 */}
           {activeTab === 'learning' && (
-            <>
-              <ScrollView 
-                style={styles.learningContent}
-                showsVerticalScrollIndicator={true}
-                contentContainerStyle={styles.learningScrollContent}
-              >
+            <ScrollView 
+              style={styles.learningContent}
+              showsVerticalScrollIndicator={true}
+              contentContainerStyle={styles.learningScrollContent}
+            >
                 <Text style={styles.learningDescription}>
                   {appLanguage === 'zh-CN' 
                     ? '选择你正在学习的语言' 
@@ -330,10 +329,7 @@ const AppLanguageSelector: React.FC<AppLanguageSelectorProps> = ({
                     </Text>
                   </TouchableOpacity>
                 </View>
-              </ScrollView>
-
-
-            </>
+            </ScrollView>
           )}
         </View>
       </View>
@@ -460,7 +456,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   learningContent: {
-    flex: 1,
+    height: 400,
   },
   learningScrollContent: {
     padding: 10,
