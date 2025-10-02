@@ -25,13 +25,13 @@ const DICTIONARY_SOURCES = {
     language: 'ja',
     format: 'xml'
   },
-  korean: {
-    name: 'Korean Dictionary',
-    url: 'https://github.com/tannibunni/dramawordv2/raw/main/dictionaries/korean_dict.json',
-    filename: 'korean_dict.json',
-    language: 'ko',
-    format: 'json'
-  }
+  // korean: {
+  //   name: 'Korean Dictionary',
+  //   url: 'https://github.com/tannibunni/dramawordv2/raw/main/dictionaries/korean_dict.json',
+  //   filename: 'korean_dict.json',
+  //   language: 'ko',
+  //   format: 'json'
+  // }
 };
 
 // 词库状态检查
