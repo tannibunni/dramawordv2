@@ -135,10 +135,95 @@ export class DictionaryStorage {
   ): Promise<string | null> {
     try {
       const filePath = this.getDictionaryPath(dictionaryName);
-      const content = await FileSystem.readAsStringAsync(filePath, { encoding });
-      return content;
+      console.log(`🔍 尝试读取文件: ${filePath}`);
+      
+      // 首先检查文件是否存在和权限
+      const fileInfo = await FileSystem.getInfoAsync(filePath);
+      console.log(`📁 文件信息:`, { 
+        exists: fileInfo.exists, 
+        size: fileInfo.size, 
+        uri: fileInfo.uri,
+        isDirectory: fileInfo.isDirectory 
+      });
+      
+      if (!fileInfo.exists) {
+        console.log(`❌ 文件不存在: ${filePath}`);
+        return null;
+      }
+      
+      if (fileInfo.isDirectory) {
+        console.log(`❌ 路径是目录而不是文件: ${filePath}`);
+        return null;
+      }
+      
+      // 尝试读取文件内容 - 使用多种策略处理权限问题
+      let content: string | null = null;
+      let lastError: any = null;
+      
+      // 策略1: 直接读取
+      try {
+        content = await FileSystem.readAsStringAsync(filePath, { encoding });
+        console.log(`✅ 直接读取成功，内容长度: ${content.length}`);
+        return content;
+      } catch (readError) {
+        console.log(`❌ 直接读取失败:`, readError);
+        lastError = readError;
+      }
+      
+      // 策略2: 使用fileInfo.uri读取
+      try {
+        const fileInfo = await FileSystem.getInfoAsync(filePath);
+        if (fileInfo.uri && fileInfo.uri !== filePath) {
+          console.log(`🔄 尝试使用fileInfo.uri读取: ${fileInfo.uri}`);
+          content = await FileSystem.readAsStringAsync(fileInfo.uri, { encoding });
+          console.log(`✅ URI读取成功，内容长度: ${content.length}`);
+          return content;
+        }
+      } catch (uriError) {
+        console.log(`❌ URI读取失败:`, uriError);
+        lastError = uriError;
+      }
+      
+      // 策略3: 尝试复制文件到新位置再读取
+      try {
+        console.log(`🔄 尝试复制文件到新位置解决权限问题...`);
+        const newFilePath = `${filePath}.copy`;
+        
+        // 先删除可能存在的副本
+        const copyInfo = await FileSystem.getInfoAsync(newFilePath);
+        if (copyInfo.exists) {
+          await FileSystem.deleteAsync(newFilePath);
+        }
+        
+        // 复制文件
+        await FileSystem.copyAsync({
+          from: filePath,
+          to: newFilePath
+        });
+        
+        console.log(`📁 文件已复制，尝试读取副本...`);
+        content = await FileSystem.readAsStringAsync(newFilePath, { encoding });
+        
+        // 读取成功后，删除副本
+        await FileSystem.deleteAsync(newFilePath);
+        
+        console.log(`✅ 复制读取成功，内容长度: ${content.length}`);
+        return content;
+      } catch (copyError) {
+        console.log(`❌ 复制读取失败:`, copyError);
+        lastError = copyError;
+      }
+      
+      // 所有策略都失败，抛出最后一个错误
+      console.log(`❌ 所有读取策略都失败，最后的错误:`, lastError);
+      throw lastError || new Error('无法读取文件');
+      
     } catch (error) {
-      console.error(`❌ 读取词库文件失败: ${dictionaryName}`, error);
+      console.error(`❌ 读取词库文件失败: ${dictionaryName}`, {
+        error: error,
+        message: error instanceof Error ? error.message : 'Unknown error',
+        filePath: this.getDictionaryPath(dictionaryName)
+      });
       return null;
     }
   }
