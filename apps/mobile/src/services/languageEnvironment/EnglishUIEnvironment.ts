@@ -478,12 +478,32 @@ export class EnglishUIEnvironment implements LanguageEnvironment {
       const result = await response.json();
       
       if (result.success && result.data) {
+        const translation = result.data.correctedWord || result.data.translation;
+        
+        // 如果翻译结果是中文，尝试获取拼音和英文释义
+        let enrichedWordData = result.data;
+        if (this.targetLanguage === 'zh' && translation && this.isChineseText(translation)) {
+          console.log(`🔍 检测到中文翻译结果，尝试获取拼音和英文释义: ${translation}`);
+          try {
+            const enrichedData = await this.enrichChineseTranslation(translation, input);
+            if (enrichedData) {
+              enrichedWordData = {
+                ...result.data,
+                ...enrichedData
+              };
+              console.log(`✅ 成功增强中文翻译结果，添加拼音和释义`);
+            }
+          } catch (enrichError) {
+            console.log(`⚠️ 增强中文翻译结果失败:`, enrichError);
+          }
+        }
+        
         return {
           success: true,
-          candidates: [result.data.correctedWord || result.data.translation],
+          candidates: [translation],
           source: 'google_translate',
           confidence: 0.85,
-          wordData: result.data
+          wordData: enrichedWordData
         };
       }
 
@@ -606,5 +626,54 @@ export class EnglishUIEnvironment implements LanguageEnvironment {
     ];
     
     return romajiPatterns.some(pattern => pattern.test(input));
+  }
+
+  /**
+   * 检查文本是否包含中文字符
+   */
+  private isChineseText(text: string): boolean {
+    return /[\u4e00-\u9fff]/.test(text);
+  }
+
+  /**
+   * 为中文翻译结果获取拼音和英文释义
+   */
+  private async enrichChineseTranslation(chineseText: string, originalInput: string): Promise<any> {
+    try {
+      console.log(`🔍 调用中文词汇API获取详细信息: ${chineseText}`);
+      
+      const response = await fetch(`${API_BASE_URL}/words/chinese/${encodeURIComponent(chineseText)}?uiLanguage=${this.uiLanguage}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
+
+      if (!response.ok) {
+        console.log(`⚠️ 中文词汇API调用失败: ${response.status}`);
+        return null;
+      }
+
+      const result = await response.json();
+      
+      if (result.success && result.data) {
+        console.log(`✅ 成功获取中文词汇详细信息:`, {
+          pinyin: result.data.phonetic,
+          definitions: result.data.definitions?.length || 0
+        });
+        
+        return {
+          pinyin: result.data.phonetic,
+          phonetic: result.data.phonetic,
+          definitions: result.data.definitions || [],
+          language: 'zh'
+        };
+      }
+      
+      return null;
+    } catch (error) {
+      console.log(`❌ 获取中文词汇详细信息失败:`, error);
+      return null;
+    }
   }
 }
