@@ -115,53 +115,46 @@ export class DictionaryDownloader {
       if (downloadResult.status === 200) {
         console.log(`✅ 词库下载成功: ${source.name}`);
         
-        // 如果下载的是压缩文件，需要解压
-        if (source.url.endsWith('.gz')) {
-          console.log(`📦 检测到gzip文件，尝试解压...`);
-          try {
-            // 对于iOS模拟器，直接重命名可能更安全
-            // 有时候gzip文件可能已经被自动解压了
-            const fileInfo = await FileSystem.getInfoAsync(downloadResult.uri);
-            console.log(`📁 下载文件信息:`, { size: fileInfo.size, uri: fileInfo.uri });
-            
-            // 先删除目标文件（如果存在）
-            const finalInfo = await FileSystem.getInfoAsync(finalFilePath);
-            if (finalInfo.exists) {
-              await FileSystem.deleteAsync(finalFilePath);
-            }
-            
-            // 移动/重命名文件到最终位置
-            await FileSystem.moveAsync({
-              from: downloadResult.uri,
-              to: finalFilePath
-            });
-            
-            console.log(`✅ 文件已移动到最终位置: ${finalFilePath}`);
-            
-            // 验证最终文件是否可读
-            const finalFileInfo = await FileSystem.getInfoAsync(finalFilePath);
-            console.log(`📁 最终文件信息:`, { 
-              exists: finalFileInfo.exists, 
-              size: finalFileInfo.size,
-              uri: finalFileInfo.uri 
-            });
-            
-          } catch (moveError) {
-            console.log(`❌ 文件移动失败，尝试直接读取:`, moveError);
-            // 如果移动失败，直接使用下载的URI
-          }
-        } else {
-          // 非压缩文件，直接移动
+        // 准备文件移动到最终位置
+        let finalFileUri = downloadResult.uri; // 默认使用下载的URI
+        
+        // 先删除目标文件（如果存在）
+        const finalInfo = await FileSystem.getInfoAsync(finalFilePath);
+        if (finalInfo.exists) {
+          await FileSystem.deleteAsync(finalFilePath);
+        }
+        
+        // 移动文件到最终位置
+        try {
           await FileSystem.moveAsync({
             from: downloadResult.uri,
             to: finalFilePath
           });
+          
+          console.log(`✅ 文件已移动到最终位置: ${finalFilePath}`);
+          
+          // 验证最终文件并获取其URI
+          const finalFileInfo = await FileSystem.getInfoAsync(finalFilePath);
+          console.log(`📁 最终文件信息:`, { 
+            exists: finalFileInfo.exists, 
+            size: finalFileInfo.size,
+            uri: finalFileInfo.uri 
+          });
+          
+          // 使用最终文件的URI作为备用读取URI
+          if (finalFileInfo.exists && finalFileInfo.uri) {
+            finalFileUri = finalFileInfo.uri;
+          }
+          
+        } catch (moveError) {
+          console.log(`❌ 文件移动失败，保留原始URI:`, moveError);
+          // 如果移动失败，继续使用原始下载URI
         }
         
         return {
           success: true,
           filePath: finalFilePath,
-          originalUri: downloadResult.uri, // 保留原始下载URI用于读取
+          originalUri: finalFileUri, // 使用最终文件的URI作为备用
           downloadedSize: downloadResult.headers?.['content-length'] ? 
             parseInt(downloadResult.headers['content-length']) : undefined
         };

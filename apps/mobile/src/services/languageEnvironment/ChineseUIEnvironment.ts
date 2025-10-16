@@ -10,6 +10,11 @@ import {
   UnifiedQueryResult,
   InputType 
 } from './types';
+import { API_CONFIG } from '../../config/api';
+import { DictionaryManager } from '../dictionaryManager/DictionaryManager';
+import { CCEDICTProvider } from '../localDictionary/providers/CCEDICTProvider';
+
+const API_BASE_URL = API_CONFIG.BASE_URL;
 
 export class ChineseUIEnvironment implements LanguageEnvironment {
   readonly uiLanguage = 'zh-CN' as const;
@@ -285,25 +290,9 @@ export class ChineseUIEnvironment implements LanguageEnvironment {
   }
   
   selectQueryStrategy(input: string, analysis: InputAnalysis): QueryStrategy {
-    // 根据输入类型和目标语言选择查询策略
-    switch (analysis.type) {
-      case 'chinese':
-        // 中文字符输入混合查询
-        return 'hybrid';
-      case 'japanese_kana':
-      case 'japanese_kanji':
-        // 日文字符输入混合查询
-        return 'hybrid';
-      case 'romaji':
-        // 罗马音输入优先本地词库
-        return 'local_only';
-      case 'english':
-        // 英文输入混合查询
-        return 'hybrid';
-      default:
-        // 默认混合查询
-        return 'hybrid';
-    }
+    // 🔧 本地词典已禁用，统一使用在线翻译
+    // 所有输入类型都使用在线翻译+OpenAI增强
+    return 'online_only';
   }
   
   async queryLocalDictionary(input: string, analysis: InputAnalysis): Promise<UnifiedQueryResult> {
@@ -334,12 +323,166 @@ export class ChineseUIEnvironment implements LanguageEnvironment {
   async queryOnlineTranslation(input: string, analysis: InputAnalysis): Promise<UnifiedQueryResult> {
     console.log(`🔍 在线翻译查询: ${input} (${analysis.type})`);
     
-    // TODO: 实现在线翻译查询逻辑
-    // 暂时返回空结果，后续实现
-    return {
-      success: false,
-      candidates: []
-    };
+    try {
+      // 🔧 对于拼音输入，优先使用离线CC-CEDICT词典
+      if (analysis.type === 'pinyin' && this.targetLanguage === 'zh') {
+        const pinyinQuery = input.toLowerCase().replace(/\s+/g, '');
+        
+        // 🔧 Step 1: 尝试使用离线CC-CEDICT词典
+        try {
+          const ccedictProvider = new CCEDICTProvider();
+          const isAvailable = await ccedictProvider.isAvailable();
+          
+          if (isAvailable) {
+            console.log(`📚 使用离线CC-CEDICT词典查询拼音: ${input} -> ${pinyinQuery}`);
+            const offlineResult = await ccedictProvider.lookupByPinyin(pinyinQuery, 10);
+            
+            if (offlineResult.success && offlineResult.candidates.length > 0) {
+              console.log(`✅ 离线词典返回 ${offlineResult.candidates.length} 个候选词`);
+              
+              // 转换为统一格式
+              return {
+                success: true,
+                candidates: offlineResult.candidates.map((c: any) => ({
+                  chinese: c.word,
+                  english: c.translation
+                })),
+                source: 'offline_ccedict',
+                confidence: 1.0,
+                isPinyinResult: true,
+                wordData: {
+                  word: input,
+                  correctedWord: offlineResult.candidates[0].word,
+                  translation: offlineResult.candidates[0].word,
+                  pinyin: input,
+                  definitions: offlineResult.candidates.map((c: any) => ({
+                    definition: c.translation,
+                    examples: []
+                  })),
+                  candidates: offlineResult.candidates.map((c: any) => ({
+                    chinese: c.word,
+                    english: c.translation
+                  }))
+                }
+              };
+            } else {
+              console.log(`⚠️ 离线词典未找到结果，降级到在线API`);
+            }
+          } else {
+            console.log(`⚠️ 离线词典不可用，使用在线API`);
+          }
+        } catch (offlineError) {
+          console.log(`⚠️ 离线词典查询失败，降级到在线API:`, offlineError);
+        }
+        
+        // 🔧 Step 2: 降级到在线API（OpenAI生成）
+        console.log(`📌 使用在线拼音候选词API: ${input} -> ${pinyinQuery}`);
+        const response = await fetch(`${API_BASE_URL}/pinyin/candidates/${encodeURIComponent(pinyinQuery)}`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          }
+        });
+
+        if (!response.ok) {
+          throw new Error(`Pinyin API error: ${response.status}`);
+        }
+
+        const result = await response.json();
+        
+        if (result.success && result.data && result.data.candidates && result.data.candidates.length > 0) {
+          // 🔧 过滤掉拼音不匹配的候选词（修复后端API返回无关结果的问题）
+          const normalizedInputPinyin = input.toLowerCase().replace(/\s+/g, '');
+          
+          const validCandidates = result.data.candidates.filter((candidate: any) => {
+            if (!candidate.chinese || !candidate.english) {
+              return false;
+            }
+            
+            // 如果候选词有pinyin字段，进行精确匹配验证
+            if (candidate.pinyin) {
+              const normalizedCandidatePinyin = candidate.pinyin.toLowerCase().replace(/\s+/g, '');
+              return normalizedCandidatePinyin === normalizedInputPinyin;
+            }
+            
+            // 如果没有pinyin字段，进行基本的合理性检查
+            // 检查中文词长度是否合理（拼音通常对应1-4个汉字）
+            const chineseLength = candidate.chinese.length;
+            const inputSyllables = normalizedInputPinyin.length / 2; // 粗略估算音节数
+            
+            // 基本合理性检查：中文词长度应该在合理范围内
+            return chineseLength >= 1 && chineseLength <= 6 && chineseLength >= Math.floor(inputSyllables * 0.5);
+          });
+          
+          if (validCandidates.length === 0) {
+            return {
+              success: false,
+              candidates: []
+            };
+          }
+          
+          // 🔧 为拼音候选词创建特殊格式：包含中文和英文释义
+          return {
+            success: true,
+            candidates: validCandidates,  // 保存过滤后的候选词对象
+            source: 'pinyin_api',
+            confidence: 0.9,
+            isPinyinResult: true,  // 标记为拼音结果
+            wordData: {
+              word: input,
+              correctedWord: validCandidates[0].chinese,
+              translation: validCandidates[0].chinese,
+              pinyin: input,
+              definitions: validCandidates.map((c: any) => ({
+                definition: c.english,
+                examples: []
+              })),
+              candidates: validCandidates
+            }
+          };
+        }
+      }
+      
+      // 对于其他类型输入，使用直接翻译API
+      const response = await fetch(`${API_BASE_URL}/direct-translate/direct-translate`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          text: input,
+          uiLanguage: this.uiLanguage,
+          targetLanguage: this.targetLanguage
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`Translation API error: ${response.status}`);
+      }
+
+      const result = await response.json();
+      
+      if (result.success && result.data) {
+        return {
+          success: true,
+          candidates: [result.data.correctedWord || result.data.translation],
+          source: 'google_translate',
+          confidence: 0.85,
+          wordData: result.data
+        };
+      }
+
+      return {
+        success: false,
+        candidates: []
+      };
+    } catch (error) {
+      console.error(`❌ 在线翻译查询失败:`, error);
+      return {
+        success: false,
+        candidates: []
+      };
+    }
   }
   
   async queryHybrid(input: string, analysis: InputAnalysis): Promise<UnifiedQueryResult> {

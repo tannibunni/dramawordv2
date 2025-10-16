@@ -62,10 +62,11 @@ export interface HybridQueryResult {
 // 统一的查询结果类型
 export interface UnifiedQueryResult {
   success: boolean;
-  candidates: string[];
+  candidates: string[] | any[];  // 可以是字符串数组或对象数组（拼音结果）
   source?: string;
   confidence?: number;
   wordData?: any;
+  isPinyinResult?: boolean;  // 标记是否为拼音查询结果
 }
 
 export interface QueryResult {
