@@ -659,13 +659,27 @@ export class EnglishUIEnvironment implements LanguageEnvironment {
       if (result.success && result.data) {
         console.log(`✅ 成功获取中文词汇详细信息:`, {
           pinyin: result.data.phonetic,
-          definitions: result.data.definitions?.length || 0
+          definitions: result.data.definitions?.length || 0,
+          audioUrl: result.data.audioUrl
         });
+        
+        // 构建完整的定义，包含原始英文输入
+        const enrichedDefinitions = result.data.definitions || [];
+        
+        // 如果没有定义，创建一个包含原始英文的定义
+        if (enrichedDefinitions.length === 0 && originalInput) {
+          enrichedDefinitions.push({
+            partOfSpeech: '',
+            definition: originalInput,
+            examples: []
+          });
+        }
         
         return {
           pinyin: result.data.phonetic,
           phonetic: result.data.phonetic,
-          definitions: result.data.definitions || [],
+          definitions: enrichedDefinitions,
+          audioUrl: result.data.audioUrl,
           language: 'zh'
         };
       }
