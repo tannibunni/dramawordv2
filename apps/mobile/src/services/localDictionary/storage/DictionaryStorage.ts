@@ -170,17 +170,37 @@ export class DictionaryStorage {
         lastError = readError;
       }
       
-      // 策略2: 使用fileInfo.uri读取
+      // 策略2: 使用fileInfo.uri读取 
       try {
-        const fileInfo = await FileSystem.getInfoAsync(filePath);
-        if (fileInfo.uri && fileInfo.uri !== filePath) {
-          console.log(`🔄 尝试使用fileInfo.uri读取: ${fileInfo.uri}`);
-          content = await FileSystem.readAsStringAsync(fileInfo.uri, { encoding });
-          console.log(`✅ URI读取成功，内容长度: ${content.length}`);
+        const newFileInfo = await FileSystem.getInfoAsync(filePath);
+        console.log(`🔍 重新获取文件信息:`, newFileInfo);
+        
+        if (newFileInfo.uri) {
+          console.log(`🔄 尝试使用fileInfo.uri读取: ${newFileInfo.uri}`);
+          try {
+            content = await FileSystem.readAsStringAsync(newFileInfo.uri, { encoding });
+            console.log(`✅ URI读取成功，内容长度: ${content.length}`);
+            return content;
+          } catch (uriError) {
+            console.log(`❌ 使用fileInfo.uri读取失败:`, uriError);
+            lastError = uriError;
+          }
+        }
+        
+        // 尝试使用原始路径但添加不同参数
+        console.log(`🔄 尝试不同编码参数读取: ${filePath}`);
+        try {
+          content = await FileSystem.readAsStringAsync(filePath, { 
+            encoding: encoding === 'utf8' ? 'utf8' : 'base64'
+          });
+          console.log(`✅ 参数调整读取成功，内容长度: ${content.length}`);
           return content;
+        } catch (paramError) {
+          console.log(`❌ 参数调整读取失败:`, paramError);
+          lastError = paramError;
         }
       } catch (uriError) {
-        console.log(`❌ URI读取失败:`, uriError);
+        console.log(`❌ 策略2完全失败:`, uriError);
         lastError = uriError;
       }
       
@@ -224,6 +244,42 @@ export class DictionaryStorage {
         message: error instanceof Error ? error.message : 'Unknown error',
         filePath: this.getDictionaryPath(dictionaryName)
       });
+      return null;
+    }
+  }
+
+  /**
+   * 读取词库文件 - 带备用URI支持
+   */
+  async readDictionaryFileWithFallback(
+    dictionaryName: string, 
+    fallbackUri: string | null,
+    encoding: 'utf8' | 'base64' = 'utf8'
+  ): Promise<string | null> {
+    try {
+      // 首先尝试正常读取
+      const normalContent = await this.readDictionaryFile(dictionaryName, encoding);
+      if (normalContent) {
+        console.log(`✅ 正常读取成功: ${dictionaryName}`);
+        return normalContent;
+      }
+
+      // 如果正常读取失败且提供了备用URI，尝试读取备用URI
+      if (fallbackUri) {
+        console.log(`🔄 正常读取失败，尝试使用备用URI: ${fallbackUri}`);
+        try {
+          const fallbackContent = await FileSystem.readAsStringAsync(fallbackUri, { encoding });
+          console.log(`✅ 备用URI读取成功，内容长度: ${fallbackContent.length}`);
+          return fallbackContent;
+        } catch (fallbackError) {
+          console.log(`❌ 备用URI读取失败:`, fallbackError);
+        }
+      }
+
+      console.log(`❌ 所有读取方式都失败: ${dictionaryName}`);
+      return null;
+    } catch (error) {
+      console.error(`❌ 读取词库文件失败 (带备用): ${dictionaryName}`, error);
       return null;
     }
   }

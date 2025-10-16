@@ -13,6 +13,7 @@ export class CCEDICTProvider implements LocalDictionaryProvider {
   private storage: DictionaryStorage;
   private downloader: DictionaryDownloader;
   private isInitialized = false;
+  private originalDownloadUri: string | null = null; // 存储原始下载URI
 
   constructor() {
     this.storage = DictionaryStorage.getInstance();
@@ -50,7 +51,7 @@ export class CCEDICTProvider implements LocalDictionaryProvider {
         if (hasFile) {
           console.log('📚 发现CCEDICT文件，尝试读取和解析...');
           
-          const content = await this.storage.readDictionaryFile('ccedict.txt');
+          const content = await this.storage.readDictionaryFileWithFallback('ccedict.txt', this.originalDownloadUri);
           if (content && content.length > 0) {
             console.log(`📄 文件内容长度: ${content.length} 字符`);
             const parseSuccess = await this.parseDictionaryFile(content);
@@ -79,11 +80,14 @@ export class CCEDICTProvider implements LocalDictionaryProvider {
                 console.log('📥 开始重新下载CCEDICT词典文件...', { url: ccedictSource.url, filename: ccedictSource.filename });
                 const downloadResult = await this.downloader.downloadDictionary(ccedictSource);
                 
-                console.log('📥 重新下载结果:', { success: downloadResult.success, error: downloadResult.error });
+                console.log('📥 重新下载结果:', { success: downloadResult.success, error: downloadResult.error, originalUri: downloadResult.originalUri });
                 
                 if (downloadResult.success) {
+                  // 存储原始下载URI
+                  this.originalDownloadUri = downloadResult.originalUri || null;
+                  
                   console.log('✅ 重新下载成功，尝试解析...');
-                  const newContent = await this.storage.readDictionaryFile('ccedict.txt');
+                  const newContent = await this.storage.readDictionaryFileWithFallback('ccedict.txt', this.originalDownloadUri);
                   if (newContent && newContent.length > 0) {
                     console.log(`📄 重新下载文件内容长度: ${newContent.length} 字符`);
                     const parseSuccess = await this.parseDictionaryFile(newContent);
@@ -120,11 +124,14 @@ export class CCEDICTProvider implements LocalDictionaryProvider {
               console.log('📥 开始下载CCEDICT词典文件...', { url: ccedictSource.url, filename: ccedictSource.filename });
               const downloadResult = await this.downloader.downloadDictionary(ccedictSource);
               
-              console.log('📥 下载结果:', { success: downloadResult.success, error: downloadResult.error });
+              console.log('📥 下载结果:', { success: downloadResult.success, error: downloadResult.error, originalUri: downloadResult.originalUri });
               
               if (downloadResult.success) {
+                // 存储原始下载URI
+                this.originalDownloadUri = downloadResult.originalUri || null;
+                
                 console.log('✅ CCEDICT文件下载成功，开始解析...');
-                const content = await this.storage.readDictionaryFile('ccedict.txt');
+                const content = await this.storage.readDictionaryFileWithFallback('ccedict.txt', this.originalDownloadUri);
                 if (content) {
                   console.log(`📄 文件内容长度: ${content.length} 字符，开始解析...`);
                   const parseSuccess = await this.parseDictionaryFile(content);

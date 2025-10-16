@@ -50,6 +50,7 @@ export interface DictionaryInfo {
 export interface DictionaryDownloadResult {
   success: boolean;
   filePath?: string;
+  originalUri?: string; // 原始下载URI，用于读取权限问题
   error?: string;
   downloadedSize?: number;
   totalSize?: number;

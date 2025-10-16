@@ -161,6 +161,7 @@ export class DictionaryDownloader {
         return {
           success: true,
           filePath: finalFilePath,
+          originalUri: downloadResult.uri, // 保留原始下载URI用于读取
           downloadedSize: downloadResult.headers?.['content-length'] ? 
             parseInt(downloadResult.headers['content-length']) : undefined
         };
