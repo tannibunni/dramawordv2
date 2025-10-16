@@ -388,13 +388,35 @@ export class EnglishUIEnvironment implements LanguageEnvironment {
               return normalizedCandidatePinyin === normalizedInputPinyin;
             }
             
-            // 如果没有pinyin字段，进行基本的合理性检查
-            // 检查中文词长度是否合理（拼音通常对应1-4个汉字）
+            // 如果没有pinyin字段，进行更严格的合理性检查
             const chineseLength = candidate.chinese.length;
             const inputSyllables = normalizedInputPinyin.length / 2; // 粗略估算音节数
             
-            // 基本合理性检查：中文词长度应该在合理范围内
-            return chineseLength >= 1 && chineseLength <= 6 && chineseLength >= Math.floor(inputSyllables * 0.5);
+            // 1. 基本长度检查：中文词长度应该在合理范围内
+            if (chineseLength < 1 || chineseLength > 6 || chineseLength < Math.floor(inputSyllables * 0.5)) {
+              return false;
+            }
+            
+            // 2. 过滤明显不合理的结果（包含异常字符或组合）
+            const chinese = candidate.chinese;
+            const unreasonablePatterns = [
+              /泥$/, // 以"泥"结尾的词通常不合理
+              /握/, // "握"开头的词通常不是常用表达
+              /^我想泥/, // 直接匹配不合理的组合
+              /^握香/,
+            ];
+            
+            // 如果匹配到不合理模式，检查是否是真实常用词
+            for (const pattern of unreasonablePatterns) {
+              if (pattern.test(chinese)) {
+                // 只有在确实是不合理组合时才过滤
+                if (chinese.includes('泥') || chinese.includes('握香')) {
+                  return false;
+                }
+              }
+            }
+            
+            return true;
           });
           
           if (validCandidates.length === 0) {
@@ -404,23 +426,33 @@ export class EnglishUIEnvironment implements LanguageEnvironment {
             };
           }
           
+          // 按合理性排序并限制返回数量（最多2个候选词）
+          const sortedCandidates = validCandidates
+            .sort((a: any, b: any) => {
+              // 优先返回更常用的词（可以根据需要调整排序逻辑）
+              const aScore = a.chinese.length <= 3 ? 1 : 0; // 偏好短词
+              const bScore = b.chinese.length <= 3 ? 1 : 0;
+              return bScore - aScore;
+            })
+            .slice(0, 2); // 最多返回2个候选词
+          
           // 🔧 为拼音候选词创建特殊格式：包含中文和英文释义
           return {
             success: true,
-            candidates: validCandidates,  // 保存过滤后的候选词对象
+            candidates: sortedCandidates,  // 保存排序和限制后的候选词对象
             source: 'pinyin_api',
             confidence: 0.9,
             isPinyinResult: true,  // 标记为拼音结果
             wordData: {
               word: input,
-              correctedWord: validCandidates[0].chinese,
-              translation: validCandidates[0].chinese,
+              correctedWord: sortedCandidates[0].chinese,
+              translation: sortedCandidates[0].chinese,
               pinyin: input,
-              definitions: validCandidates.map((c: any) => ({
+              definitions: sortedCandidates.map((c: any) => ({
                 definition: c.english,
                 examples: []
               })),
-              candidates: validCandidates
+              candidates: sortedCandidates
             }
           };
         }

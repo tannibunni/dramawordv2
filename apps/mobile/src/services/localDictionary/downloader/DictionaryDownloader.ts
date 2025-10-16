@@ -124,6 +124,17 @@ export class DictionaryDownloader {
           await FileSystem.deleteAsync(finalFilePath);
         }
         
+        // 先验证下载的文件是否可读
+        let downloadFileReadable = false;
+        try {
+          console.log(`🔍 验证下载文件可读性: ${downloadResult.uri}`);
+          const testRead = await FileSystem.readAsStringAsync(downloadResult.uri, { encoding: 'utf8' });
+          console.log(`✅ 下载文件可读性验证成功，内容长度: ${testRead.length}`);
+          downloadFileReadable = true;
+        } catch (readTestError) {
+          console.log(`❌ 下载文件可读性验证失败:`, readTestError);
+        }
+        
         // 移动文件到最终位置
         try {
           await FileSystem.moveAsync({
@@ -133,7 +144,7 @@ export class DictionaryDownloader {
           
           console.log(`✅ 文件已移动到最终位置: ${finalFilePath}`);
           
-          // 验证最终文件并获取其URI
+          // 获取最终文件信息
           const finalFileInfo = await FileSystem.getInfoAsync(finalFilePath);
           console.log(`📁 最终文件信息:`, { 
             exists: finalFileInfo.exists, 
@@ -141,14 +152,24 @@ export class DictionaryDownloader {
             uri: finalFileInfo.uri 
           });
           
-          // 使用最终文件的URI作为备用读取URI
-          if (finalFileInfo.exists && finalFileInfo.uri) {
-            finalFileUri = finalFileInfo.uri;
+          // 设置备用URI：如果原始文件可读，保留原始URI；否则使用最终文件URI
+          if (downloadFileReadable) {
+            // 尝试从最终位置读取来验证
+            try {
+              await FileSystem.readAsStringAsync(finalFilePath, { encoding: 'utf8' });
+              finalFileUri = finalFileInfo.uri || finalFilePath;
+              console.log(`✅ 使用最终文件URI: ${finalFileUri}`);
+            } catch (finalReadError) {
+              console.log(`❌ 最终位置文件不可读，保留原始下载URI作为备用: ${downloadResult.uri}`);
+              finalFileUri = downloadResult.uri;
+            }
+          } else {
+            finalFileUri = finalFileInfo.uri || finalFilePath;
           }
           
         } catch (moveError) {
           console.log(`❌ 文件移动失败，保留原始URI:`, moveError);
-          // 如果移动失败，继续使用原始下载URI
+          finalFileUri = downloadResult.uri;
         }
         
         return {
