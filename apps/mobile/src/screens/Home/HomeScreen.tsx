@@ -1594,7 +1594,12 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                     autoCapitalize="none"
                     autoCorrect={false}
                     editable={!isLoading}
-                    onFocus={() => console.log('🔍 搜索框获得焦点')}
+                    onFocus={() => {
+                      console.log('🔍 搜索框获得焦点');
+                      // 获得焦点时清理拼音建议状态
+                      setShowPinyinSuggestions(false);
+                      setPinyinSuggestions([]);
+                    }}
                     onBlur={() => console.log('🔍 搜索框失去焦点')}
                   />
                   {searchText.length > 0 && (
@@ -1620,7 +1625,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
           <SuggestionList
             suggestions={pinyinSuggestions}
             onSelect={handlePinyinSuggestionSelect}
-            visible={showPinyinSuggestions}
+            visible={showPinyinSuggestions && searchText.trim().length > 0}
           />
         </View>
         
