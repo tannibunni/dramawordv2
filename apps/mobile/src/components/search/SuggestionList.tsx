@@ -74,13 +74,15 @@ const SuggestionList: React.FC<SuggestionListProps> = ({
 const styles = StyleSheet.create({
   container: {
     position: 'absolute',
-    top: 0,
+    top: 4, // 与搜索框底部有4px间距
     left: 16,
     right: 16,
-    backgroundColor: colors.background.primary,
-    borderRadius: 12,
+    backgroundColor: colors.background.secondary, // 与搜索框相同的背景色
+    borderRadius: 16, // 与搜索框相同的圆角
     maxHeight: 300,
-    shadowColor: '#000',
+    borderWidth: 1,
+    borderColor: colors.border.light, // 与搜索框相同的边框色
+    shadowColor: colors.primary[200], // 与搜索框相同的阴影色
     shadowOffset: {
       width: 0,
       height: 4,
@@ -95,6 +97,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: colors.border.light,
+    backgroundColor: colors.background.secondary, // 与容器背景色一致
   },
   headerText: {
     fontSize: 14,
@@ -108,9 +111,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingVertical: 14, // 与搜索框的paddingVertical一致
     borderBottomWidth: 1,
     borderBottomColor: colors.border.light,
+    backgroundColor: colors.background.secondary, // 与搜索框背景色一致
   },
   suggestionContent: {
     flex: 1,
