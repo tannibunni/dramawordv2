@@ -295,7 +295,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
             id: `${pinyinText}-${index}`,
             chinese: option.data.correctedWord || option.data.translation,
             english: option.data.definitions?.[0]?.definition || '',
-            pinyin: pinyinText,
+            pinyin: option.data.pinyin || option.data.phonetic || pinyinText,
             audioUrl: option.data.audioUrl,
           }));
           
@@ -308,7 +308,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
             id: `${pinyinText}-single`,
             chinese: queryResult.data.correctedWord || queryResult.data.translation,
             english: queryResult.data.definitions?.[0]?.definition || '',
-            pinyin: pinyinText,
+            pinyin: queryResult.data.pinyin || queryResult.data.phonetic || pinyinText,
             audioUrl: queryResult.data.audioUrl,
           };
           
