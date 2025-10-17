@@ -73,19 +73,22 @@ const SuggestionList: React.FC<SuggestionListProps> = ({
 
 const styles = StyleSheet.create({
   container: {
+    position: 'absolute',
+    top: 0,
+    left: 16,
+    right: 16,
     backgroundColor: colors.background.primary,
     borderRadius: 12,
-    marginTop: 8,
-    marginHorizontal: 16,
     maxHeight: 300,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
-      height: 2,
+      height: 4,
     },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 8,
+    zIndex: 1000,
   },
   header: {
     paddingHorizontal: 16,

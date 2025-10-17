@@ -1613,12 +1613,14 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
           </View>
         </View>
         
-        {/* Pleco风格的拼音建议列表 */}
-        <SuggestionList
-          suggestions={pinyinSuggestions}
-          onSelect={handlePinyinSuggestionSelect}
-          visible={showPinyinSuggestions}
-        />
+        {/* 悬浮的拼音建议列表容器 */}
+        <View style={styles.suggestionContainer}>
+          <SuggestionList
+            suggestions={pinyinSuggestions}
+            onSelect={handlePinyinSuggestionSelect}
+            visible={showPinyinSuggestions}
+          />
+        </View>
         
         {/* 内容区：有查词结果时只显示卡片，否则显示最近查词 */}
         {enToChCandidates.length > 0 ? (
@@ -2183,6 +2185,10 @@ const styles = StyleSheet.create({
     paddingBottom: 16,
     backgroundColor: colors.background.primary,
     zIndex: 2,
+  },
+  suggestionContainer: {
+    position: 'relative',
+    zIndex: 1000,
   },
   searchBox: {
     flexDirection: 'row',
