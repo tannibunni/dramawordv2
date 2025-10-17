@@ -905,14 +905,38 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
           setSearchText('');
         }
       } else if (option.type === 'translation') {
-        // 翻译结果：显示候选词弹窗
-        if (option.data && option.data.length > 0) {
-          if (selectedLanguage === 'JAPANESE') {
-            setEnToJaCandidates(option.data);
-            setEnToJaQuery(ambiguousInput);
+        // 翻译结果：直接查询被选中的词
+        console.log(`🔍 处理翻译类型的歧义选择:`, option.data);
+        
+        // 检查option.data是否已经包含完整的wordData信息
+        if (option.data && option.data.correctedWord && option.data.definitions) {
+          // option.data已经是完整的wordData，直接使用
+          console.log(`✅ 使用完整的词卡数据: ${option.data.correctedWord}`);
+          setSearchResult(option.data);
+          setSearchText('');
+        } else if (option.data && typeof option.data === 'string') {
+          // option.data是一个词，需要查询详细信息
+          console.log(`🔍 查询被选中的词: ${option.data}`);
+          const safeAppLanguage = appLanguage || 'en-US';
+          const result = await wordService.getChineseWordDetails(option.data, safeAppLanguage);
+          
+          if (result.success && result.data) {
+            setSearchResult(result.data);
+            setSearchText('');
           } else {
-            setEnToChCandidates(option.data);
-            setEnToChQuery(ambiguousInput);
+            Alert.alert('查询失败', '无法获取词汇详情，请重试');
+          }
+        } else {
+          // 处理旧格式：option.data是候选词数组
+          console.log(`⚠️ 使用旧格式的候选词数组`);
+          if (option.data && option.data.length > 0) {
+            if (selectedLanguage === 'JAPANESE') {
+              setEnToJaCandidates(option.data);
+              setEnToJaQuery(ambiguousInput);
+            } else {
+              setEnToChCandidates(option.data);
+              setEnToChQuery(ambiguousInput);
+            }
           }
         }
       }
