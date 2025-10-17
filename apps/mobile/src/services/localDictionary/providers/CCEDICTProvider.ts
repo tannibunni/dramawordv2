@@ -41,6 +41,11 @@ export class CCEDICTProvider implements LocalDictionaryProvider {
       const count = await this.sqliteManager.getEntryCount();
       console.log(`🔍 CCEDICT数据库词条数量: ${count}`);
       
+      // 🔧 如果词条数量少于100，认为词典不可用（完整的CC-CEDICT应该有数万词条）
+      if (count < 100) {
+        console.log(`⚠️ CCEDICT数据库词条数量太少 (${count} < 100)，认为词典不可用`);
+      }
+      
       if (count === 0) {
         console.log('⚠️ CCEDICT数据库为空，检查是否需要下载和导入词典文件');
         
@@ -157,7 +162,8 @@ export class CCEDICTProvider implements LocalDictionaryProvider {
         }
       }
       
-      return count > 0;
+      // 🔧 返回词条数量是否大于等于100（完整的CC-CEDICT应该有数万词条）
+      return count >= 100;
     } catch (error) {
       console.error('❌ 检查CC-CEDICT词库可用性失败:', error);
       return false;
