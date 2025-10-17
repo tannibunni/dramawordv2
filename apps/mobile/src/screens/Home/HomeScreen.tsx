@@ -279,9 +279,8 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       try {
         console.log('🔍 开始实时拼音查询:', pinyinText);
         
-        // 🔧 暂时跳过CC-CEDICT检查，直接进行拼音查询
-        // TODO: 修复CC-CEDICT模块导入问题后重新启用
-        console.log('🔍 开始拼音查询（跳过CC-CEDICT检查）');
+        // 🔧 只显示离线词典的结果，不显示在线API结果
+        console.log('🔍 拼音查询：只显示离线词典结果');
         
         // 获取目标语言代码
         const targetLanguageCode = SUPPORTED_LANGUAGES[selectedLanguage].code;
@@ -293,8 +292,9 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
           targetLanguageCode
         );
         
-        if (queryResult.type === 'ambiguous') {
-          // 有多个候选词，显示建议列表
+        // 🔧 检查结果来源，只显示离线词典结果
+        if (queryResult.type === 'ambiguous' && queryResult.source === 'offline_dictionary') {
+          // 离线词典有多个候选词，显示建议列表
           const suggestions = queryResult.options.map((option, index) => ({
             id: `${pinyinText}-${index}`,
             chinese: option.data.correctedWord || option.data.translation,
@@ -303,11 +303,11 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
             audioUrl: option.data.audioUrl,
           }));
           
-          console.log('✅ 拼音查询成功，找到候选词:', suggestions.length);
+          console.log('✅ 离线词典查询成功，找到候选词:', suggestions.length);
           setPinyinSuggestions(suggestions);
           setShowPinyinSuggestions(true);
-        } else if (queryResult.type === 'translation') {
-          // 只有一个结果，直接显示
+        } else if (queryResult.type === 'translation' && queryResult.source === 'offline_dictionary') {
+          // 离线词典只有一个结果，直接显示
           const suggestion = {
             id: `${pinyinText}-single`,
             chinese: queryResult.data.correctedWord || queryResult.data.translation,
@@ -316,12 +316,12 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
             audioUrl: queryResult.data.audioUrl,
           };
           
-          console.log('✅ 拼音查询成功，找到唯一候选词:', suggestion.chinese);
+          console.log('✅ 离线词典查询成功，找到唯一候选词:', suggestion.chinese);
           setPinyinSuggestions([suggestion]);
           setShowPinyinSuggestions(true);
         } else {
-          // 没有找到结果
-          console.log('⚠️ 拼音查询无结果');
+          // 离线词典无结果或使用在线API，不显示建议
+          console.log('⚠️ 离线词典无结果，不显示建议，请点击搜索按钮');
           setPinyinSuggestions([]);
           setShowPinyinSuggestions(false);
         }
