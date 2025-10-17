@@ -33,15 +33,15 @@ export class DictionaryDownloader {
    */
   getSupportedSources(): DictionarySource[] {
     return [
-      // 中文词库 - 使用未压缩版本避免gzip解压问题
+      // 中文词库 - 使用CC-CEDICT官方镜像
       {
         name: 'CC-CEDICT',
-        url: 'https://raw.githubusercontent.com/skishore/makemeahanzi/master/cedict_ts.u8',
+        url: 'https://www.mdbg.net/chinese/export/cedict/cedict_1_0_ts_utf-8_mdbg.txt',
         filename: 'ccedict.txt',
         description: '中英文字典 (CC-CEDICT)',
         language: 'zh',
         version: '1.0',
-        size: 10000000 // 约10MB (未压缩)
+        size: 10000000 // 约10MB (未压缩TXT版本)
       },
       // 日语词库
       {
