@@ -204,8 +204,8 @@ export class CCEDICTProvider implements LocalDictionaryProvider {
         };
       }
 
-      // 执行查询
-      const entries = await this.sqliteManager.searchEntries(input, 20);
+      // 执行查询 - 使用拼音精确查询
+      const entries = await this.sqliteManager.searchEntriesByPinyin(input, 20);
       
       const candidates = entries.map(entry => ({
         word: entry.word,

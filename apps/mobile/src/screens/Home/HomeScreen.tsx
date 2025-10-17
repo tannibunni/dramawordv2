@@ -98,6 +98,8 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     audioUrl?: string;
   }>>([]);
   const [showPinyinSuggestions, setShowPinyinSuggestions] = useState(false);
+  // 防抖定时器
+  const pinyinDebounceTimer = useRef<NodeJS.Timeout | null>(null);
   const { selectedLanguage, getCurrentLanguageConfig, setSelectedLanguage } = useLanguage();
   const { appLanguage } = useAppLanguage();
   
@@ -265,20 +267,27 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     }
   };
 
-  // 处理拼音输入，实时查询候选词
-  const handlePinyinInput = async (pinyinText: string) => {
-    try {
-      console.log('🔍 开始实时拼音查询:', pinyinText);
-      
-      // 获取目标语言代码
-      const targetLanguageCode = SUPPORTED_LANGUAGES[selectedLanguage].code;
-      
-      // 使用统一查询服务查询拼音
-      const queryResult = await unifiedQueryService.query(
-        pinyinText, 
-        appLanguage || 'en-US', 
-        targetLanguageCode
-      );
+  // 处理拼音输入，实时查询候选词（带防抖）
+  const handlePinyinInput = (pinyinText: string) => {
+    // 清除之前的定时器
+    if (pinyinDebounceTimer.current) {
+      clearTimeout(pinyinDebounceTimer.current);
+    }
+    
+    // 设置新的防抖定时器（300ms延迟）
+    pinyinDebounceTimer.current = setTimeout(async () => {
+      try {
+        console.log('🔍 开始实时拼音查询:', pinyinText);
+        
+        // 获取目标语言代码
+        const targetLanguageCode = SUPPORTED_LANGUAGES[selectedLanguage].code;
+        
+        // 使用统一查询服务查询拼音
+        const queryResult = await unifiedQueryService.query(
+          pinyinText, 
+          appLanguage || 'en-US', 
+          targetLanguageCode
+        );
       
       if (queryResult.type === 'ambiguous') {
         // 有多个候选词，显示建议列表
@@ -312,11 +321,12 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         setPinyinSuggestions([]);
         setShowPinyinSuggestions(false);
       }
-    } catch (error) {
-      console.error('❌ 实时拼音查询失败:', error);
-      setPinyinSuggestions([]);
-      setShowPinyinSuggestions(false);
-    }
+      } catch (error) {
+        console.error('❌ 实时拼音查询失败:', error);
+        setPinyinSuggestions([]);
+        setShowPinyinSuggestions(false);
+      }
+    }, 300); // 300ms防抖延迟
   };
 
   // 处理拼音建议选择

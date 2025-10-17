@@ -176,23 +176,27 @@ export class SQLiteManager {
 
   /**
    * 🔧 通过拼音精确查询词条（用于输入法候选词）
-   * 拼音必须完全匹配（忽略空格和大小写）
+   * 拼音必须完全匹配（忽略空格、声调和大小写）
    */
   async searchEntriesByPinyin(pinyin: string, limit: number = 10): Promise<DictionaryEntry[]> {
     if (!this.db) {
       throw new Error('数据库未初始化');
     }
 
-    // 标准化拼音：移除空格、转小写
-    const normalizedPinyin = pinyin.toLowerCase().replace(/\s+/g, '');
+    // 标准化拼音：移除空格、声调数字、转小写
+    const normalizedPinyin = pinyin.toLowerCase().replace(/\s+/g, '').replace(/[0-9]/g, '');
 
-    // 精确匹配：pinyin字段去除空格后完全相等
+    // 精确匹配：pinyin字段去除空格和声调后完全相等
     const results = await this.db.getAllAsync(`
       SELECT * FROM ${this.config.tables.entries}
-      WHERE REPLACE(LOWER(pinyin), ' ', '') = ?
+      WHERE REPLACE(REPLACE(LOWER(pinyin), ' ', ''), '0', '') = ?
+         OR REPLACE(REPLACE(LOWER(pinyin), ' ', ''), '1', '') = ?
+         OR REPLACE(REPLACE(LOWER(pinyin), ' ', ''), '2', '') = ?
+         OR REPLACE(REPLACE(LOWER(pinyin), ' ', ''), '3', '') = ?
+         OR REPLACE(REPLACE(LOWER(pinyin), ' ', ''), '4', '') = ?
       ORDER BY frequency DESC, word ASC
       LIMIT ?
-    `, [normalizedPinyin, limit]);
+    `, [normalizedPinyin, normalizedPinyin, normalizedPinyin, normalizedPinyin, normalizedPinyin, limit]);
 
     return results as DictionaryEntry[];
   }
