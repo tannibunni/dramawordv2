@@ -281,7 +281,8 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         
         // 🔧 首先检查CC-CEDICT离线词典是否可用
         try {
-          const { CCEDICTProvider } = require('../services/localDictionary/providers/CCEDICTProvider');
+          const CCEDICTModule = require('../services/localDictionary/providers/CCEDICTProvider');
+          const CCEDICTProvider = CCEDICTModule.CCEDICTProvider;
           const ccedictProvider = new CCEDICTProvider();
           const isOfflineAvailable = await ccedictProvider.isAvailable();
           
