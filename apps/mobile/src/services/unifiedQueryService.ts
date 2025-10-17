@@ -87,16 +87,18 @@ export class UnifiedQueryService {
           type: 'ambiguous',
           options: pinyinCandidates.map((candidate: any) => ({
             type: 'translation' as const,
-            title: `${candidate.chinese} - ${candidate.english}`,  // 显示格式：医生 - doctor
+            title: `${candidate.chinese} - ${candidate.english}`,  // 显示格式：杯子 - cup
             description: `拼音: ${input}`,
             data: {
               word: input,
               correctedWord: candidate.chinese,
               translation: candidate.chinese,
               translationSource: result.source || 'pinyin_api',
-              candidates: pinyinCandidates.map((c: any) => c.chinese),  // 🔧 确保candidates是字符串数组
+              candidates: pinyinCandidates,  // 🔧 保留完整的候选词对象数组，包含audioUrl
               language: targetLanguage,
               pinyin: input,
+              phonetic: input,  // 添加phonetic字段
+              audioUrl: candidate.audioUrl,  // 🔧 添加audioUrl
               definitions: [{
                 definition: candidate.english,
                 examples: []

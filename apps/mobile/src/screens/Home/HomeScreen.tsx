@@ -962,7 +962,10 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         if (option.data && option.data.correctedWord && option.data.definitions) {
           // option.data已经是完整的wordData，直接使用
           console.log(`✅ 使用完整的词卡数据: ${option.data.correctedWord}`);
-          setSearchResult(option.data);
+          
+          // 🔧 移除candidates字段，避免显示候选词按钮（用户已经通过歧义选择选择了词）
+          const { candidates, ...wordDataWithoutCandidates } = option.data;
+          setSearchResult(wordDataWithoutCandidates);
           setSearchText('');
         } else if (option.data && typeof option.data === 'string') {
           // option.data是一个词，需要查询详细信息
