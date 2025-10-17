@@ -288,38 +288,39 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
           appLanguage || 'en-US', 
           targetLanguageCode
         );
-      
-      if (queryResult.type === 'ambiguous') {
-        // 有多个候选词，显示建议列表
-        const suggestions = queryResult.options.map((option, index) => ({
-          id: `${pinyinText}-${index}`,
-          chinese: option.data.correctedWord || option.data.translation,
-          english: option.data.definitions?.[0]?.definition || '',
-          pinyin: pinyinText,
-          audioUrl: option.data.audioUrl,
-        }));
         
-        console.log('✅ 拼音查询成功，找到候选词:', suggestions.length);
-        setPinyinSuggestions(suggestions);
-        setShowPinyinSuggestions(true);
-      } else if (queryResult.type === 'translation') {
-        // 只有一个结果，直接显示
-        const suggestion = {
-          id: `${pinyinText}-single`,
-          chinese: queryResult.data.correctedWord || queryResult.data.translation,
-          english: queryResult.data.definitions?.[0]?.definition || '',
-          pinyin: pinyinText,
-          audioUrl: queryResult.data.audioUrl,
-        };
-        
-        console.log('✅ 拼音查询成功，找到唯一候选词:', suggestion.chinese);
-        setPinyinSuggestions([suggestion]);
-        setShowPinyinSuggestions(true);
-      } else {
-        // 没有找到结果
-        console.log('⚠️ 拼音查询无结果');
-        setPinyinSuggestions([]);
-        setShowPinyinSuggestions(false);
+        if (queryResult.type === 'ambiguous') {
+          // 有多个候选词，显示建议列表
+          const suggestions = queryResult.options.map((option, index) => ({
+            id: `${pinyinText}-${index}`,
+            chinese: option.data.correctedWord || option.data.translation,
+            english: option.data.definitions?.[0]?.definition || '',
+            pinyin: pinyinText,
+            audioUrl: option.data.audioUrl,
+          }));
+          
+          console.log('✅ 拼音查询成功，找到候选词:', suggestions.length);
+          setPinyinSuggestions(suggestions);
+          setShowPinyinSuggestions(true);
+        } else if (queryResult.type === 'translation') {
+          // 只有一个结果，直接显示
+          const suggestion = {
+            id: `${pinyinText}-single`,
+            chinese: queryResult.data.correctedWord || queryResult.data.translation,
+            english: queryResult.data.definitions?.[0]?.definition || '',
+            pinyin: pinyinText,
+            audioUrl: queryResult.data.audioUrl,
+          };
+          
+          console.log('✅ 拼音查询成功，找到唯一候选词:', suggestion.chinese);
+          setPinyinSuggestions([suggestion]);
+          setShowPinyinSuggestions(true);
+        } else {
+          // 没有找到结果
+          console.log('⚠️ 拼音查询无结果');
+          setPinyinSuggestions([]);
+          setShowPinyinSuggestions(false);
+        }
       } catch (error) {
         console.error('❌ 实时拼音查询失败:', error);
         setPinyinSuggestions([]);
