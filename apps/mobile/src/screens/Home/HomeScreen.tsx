@@ -280,18 +280,25 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         console.log('🔍 开始实时拼音查询:', pinyinText);
         
         // 🔧 首先检查CC-CEDICT离线词典是否可用
-        const { CCEDICTProvider } = await import('../services/localDictionary/providers/CCEDICTProvider');
-        const ccedictProvider = new CCEDICTProvider();
-        const isOfflineAvailable = await ccedictProvider.isAvailable();
-        
-        if (!isOfflineAvailable) {
-          console.log('⚠️ CC-CEDICT离线词典不可用，不显示拼音建议');
+        try {
+          const { CCEDICTProvider } = await import('../services/localDictionary/providers/CCEDICTProvider');
+          const ccedictProvider = new CCEDICTProvider();
+          const isOfflineAvailable = await ccedictProvider.isAvailable();
+          
+          if (!isOfflineAvailable) {
+            console.log('⚠️ CC-CEDICT离线词典不可用，不显示拼音建议');
+            setPinyinSuggestions([]);
+            setShowPinyinSuggestions(false);
+            return;
+          }
+          
+          console.log('✅ CC-CEDICT离线词典可用，开始查询拼音建议');
+        } catch (importError) {
+          console.log('⚠️ 无法导入CC-CEDICT模块，不显示拼音建议:', importError);
           setPinyinSuggestions([]);
           setShowPinyinSuggestions(false);
           return;
         }
-        
-        console.log('✅ CC-CEDICT离线词典可用，开始查询拼音建议');
         
         // 获取目标语言代码
         const targetLanguageCode = SUPPORTED_LANGUAGES[selectedLanguage].code;
