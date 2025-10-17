@@ -1957,7 +1957,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                           <Ionicons name="time-outline" size={18} color={colors.neutral[400]} style={{ marginRight: 8 }} />
                           <Text style={styles.recentWordText} numberOfLines={1} ellipsizeMode="tail">
                             <Text style={{ fontWeight: 'bold', color: colors.text.primary }}>
-                              {word.word}
+                              {word.translation || word.word}
                             </Text>
                             {word.pinyin && (
                               <Text style={{ fontWeight: 'normal', color: colors.text.secondary }}>
@@ -1969,9 +1969,9 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                                 {' - '}{word.englishDefinition}
                               </Text>
                             )}
-                            {!word.pinyin && !word.englishDefinition && (
+                            {!word.pinyin && !word.englishDefinition && word.word !== word.translation && (
                               <Text style={{ fontWeight: 'normal', color: colors.text.secondary }}>
-                                {' - '}{word.translation}
+                                {' - '}{word.word}
                               </Text>
                             )}
                           </Text>
