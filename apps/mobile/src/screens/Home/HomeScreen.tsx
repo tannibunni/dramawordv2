@@ -320,7 +320,6 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         console.log('⚠️ 拼音查询无结果');
         setPinyinSuggestions([]);
         setShowPinyinSuggestions(false);
-      }
       } catch (error) {
         console.error('❌ 实时拼音查询失败:', error);
         setPinyinSuggestions([]);
