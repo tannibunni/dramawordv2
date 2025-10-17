@@ -2,6 +2,7 @@
 import * as FileSystem from 'expo-file-system';
 import { DictionaryDownloadResult } from '../types';
 import { DictionaryStorage } from '../storage/DictionaryStorage';
+import pako from 'pako';
 
 export interface DictionarySource {
   name: string;
@@ -33,15 +34,15 @@ export class DictionaryDownloader {
    */
   getSupportedSources(): DictionarySource[] {
     return [
-      // 中文词库 - 使用CC-CEDICT官方镜像
+      // 中文词库 - 使用CC-CEDICT官方.gz压缩版（唯一可用的版本）
       {
         name: 'CC-CEDICT',
-        url: 'https://www.mdbg.net/chinese/export/cedict/cedict_1_0_ts_utf-8_mdbg.txt',
+        url: 'https://www.mdbg.net/chinese/export/cedict/cedict_1_0_ts_utf-8_mdbg.txt.gz',
         filename: 'ccedict.txt',
         description: '中英文字典 (CC-CEDICT)',
         language: 'zh',
         version: '1.0',
-        size: 10000000 // 约10MB (未压缩TXT版本)
+        size: 4000000 // 约4MB (压缩后)
       },
       // 日语词库
       {
@@ -105,11 +106,37 @@ export class DictionaryDownloader {
       if (downloadResult.status === 200) {
         console.log(`✅ 词库下载成功: ${source.name}`);
         
-        // 🔧 验证下载文件可读性（在cacheDirectory中）
-        console.log(`🔍 验证缓存文件可读性: ${downloadResult.uri}`);
+        // 🔧 检查是否为.gz文件，需要解压
+        const isGzFile = source.url.endsWith('.gz');
+        
         try {
-          const cacheContent = await FileSystem.readAsStringAsync(downloadResult.uri, { encoding: 'utf8' });
-          console.log(`✅ 缓存文件可读，内容长度: ${cacheContent.length} 字符`);
+          let finalContent: string;
+          
+          if (isGzFile) {
+            // .gz文件：读取为base64，解压，然后解码为UTF-8
+            console.log(`📦 检测到.gz压缩文件，开始解压...`);
+            const base64Content = await FileSystem.readAsStringAsync(downloadResult.uri, { encoding: 'base64' });
+            console.log(`✅ 读取压缩文件，大小: ${base64Content.length} 字符(base64)`);
+            
+            // 将base64转为Uint8Array
+            const binaryString = atob(base64Content);
+            const bytes = new Uint8Array(binaryString.length);
+            for (let i = 0; i < binaryString.length; i++) {
+              bytes[i] = binaryString.charCodeAt(i);
+            }
+            
+            // 使用pako解压
+            console.log(`🔧 使用pako解压缩...`);
+            const decompressed = pako.inflate(bytes, { to: 'string' });
+            console.log(`✅ 解压成功，内容长度: ${decompressed.length} 字符`);
+            
+            finalContent = decompressed;
+          } else {
+            // 普通文本文件：直接读取
+            console.log(`📄 读取文本文件...`);
+            finalContent = await FileSystem.readAsStringAsync(downloadResult.uri, { encoding: 'utf8' });
+            console.log(`✅ 读取成功，内容长度: ${finalContent.length} 字符`);
+          }
           
           // 先删除目标文件（如果存在）
           const finalInfo = await FileSystem.getInfoAsync(finalFilePath);
@@ -118,9 +145,9 @@ export class DictionaryDownloader {
             await FileSystem.deleteAsync(finalFilePath);
           }
           
-          // 🔧 直接写入内容到documentDirectory（避免move/copy的权限问题）
+          // 🔧 写入内容到documentDirectory
           console.log(`📝 写入内容到最终位置: ${finalFilePath}`);
-          await FileSystem.writeAsStringAsync(finalFilePath, cacheContent, { encoding: 'utf8' });
+          await FileSystem.writeAsStringAsync(finalFilePath, finalContent, { encoding: 'utf8' });
           
           // 验证写入成功
           const finalFileInfo = await FileSystem.getInfoAsync(finalFilePath);
@@ -142,12 +169,12 @@ export class DictionaryDownloader {
             success: true,
             filePath: finalFilePath,
             originalUri: finalFileInfo.uri || finalFilePath,
-            downloadedSize: cacheContent.length
+            downloadedSize: finalContent.length
           };
           
-        } catch (readError) {
-          console.error(`❌ 缓存文件不可读:`, readError);
-          throw new Error(`下载的文件无法读取: ${readError}`);
+        } catch (error) {
+          console.error(`❌ 处理下载文件失败:`, error);
+          throw new Error(`处理下载文件失败: ${error}`);
         }
         
       } else {
