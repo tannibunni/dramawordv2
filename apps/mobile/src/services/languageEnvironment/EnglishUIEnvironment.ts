@@ -437,22 +437,31 @@ export class EnglishUIEnvironment implements LanguageEnvironment {
             .slice(0, 2); // 最多返回2个候选词
           
           // 🔧 为拼音候选词创建特殊格式：包含中文和英文释义
+          // 为每个候选词生成audioUrl
+          const candidatesWithAudio = sortedCandidates.map((c: any) => ({
+            ...c,
+            audioUrl: `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(c.chinese)}&tl=zh&client=tw-ob`
+          }));
+
           return {
             success: true,
-            candidates: sortedCandidates,  // 保存排序和限制后的候选词对象
+            candidates: candidatesWithAudio,  // 保存包含audioUrl的候选词对象
             source: 'pinyin_api',
             confidence: 0.9,
             isPinyinResult: true,  // 标记为拼音结果
             wordData: {
               word: input,
-              correctedWord: sortedCandidates[0].chinese,
-              translation: sortedCandidates[0].chinese,
+              correctedWord: candidatesWithAudio[0].chinese,
+              translation: candidatesWithAudio[0].chinese,
               pinyin: input,
-              definitions: sortedCandidates.map((c: any) => ({
+              phonetic: input, // 添加phonetic字段
+              audioUrl: candidatesWithAudio[0].audioUrl, // 添加audioUrl
+              language: 'zh',
+              definitions: candidatesWithAudio.map((c: any) => ({
                 definition: c.english,
                 examples: []
               })),
-              candidates: sortedCandidates
+              candidates: candidatesWithAudio
             }
           };
         }

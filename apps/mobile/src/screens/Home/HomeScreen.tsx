@@ -471,6 +471,79 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     await performSearch(word);
   };
 
+  // 创建候选词选择回调函数
+  const createCandidateSelectHandler = (originalWord: string, candidates: any[]) => {
+    return async (selectedCandidate: string) => {
+      console.log(`用户选择了候选词: ${selectedCandidate}`);
+      
+      // 如果候选词列表中包含了完整的候选词对象（带audioUrl），直接使用
+      const candidateObj = candidates?.find((c: any) => 
+        typeof c === 'object' && c.chinese === selectedCandidate
+      );
+      
+      if (candidateObj && candidateObj.audioUrl) {
+        // 使用候选词对象中的数据，包括audioUrl
+        console.log(`✅ 使用候选词对象数据: ${selectedCandidate}`);
+        setSearchResult((prev: any) => prev ? {
+          ...prev,
+          correctedWord: selectedCandidate,
+          translation: selectedCandidate,
+          audioUrl: candidateObj.audioUrl,
+          phonetic: candidateObj.pinyin || prev.phonetic,
+          definitions: [{
+            definition: candidateObj.english,
+            examples: [],
+            partOfSpeech: ''
+          }]
+        } : null);
+      } else {
+        // 重新查询被选中的词
+        console.log(`🔍 重新查询被选中的词: ${selectedCandidate}`);
+        setIsLoading(true);
+        try {
+          const safeAppLanguage = appLanguage || 'en-US';
+          const result = await wordService.getChineseWordDetails(selectedCandidate, safeAppLanguage);
+          
+          if (result.success && result.data) {
+            setSearchResult(result.data);
+          } else {
+            // 如果查询失败，至少更新显示
+            setSearchResult((prev: any) => prev ? {
+              ...prev,
+              correctedWord: selectedCandidate,
+              translation: selectedCandidate
+            } : null);
+          }
+        } catch (error) {
+          console.error('查询候选词失败:', error);
+          // 查询失败时，至少更新显示
+          setSearchResult((prev: any) => prev ? {
+            ...prev,
+            correctedWord: selectedCandidate,
+            translation: selectedCandidate
+          } : null);
+        } finally {
+          setIsLoading(false);
+        }
+      }
+      
+      // 更新搜索历史
+      wordService.saveSearchHistory(originalWord, selectedCandidate);
+      setRecentWords(prev => {
+        const filtered = prev.filter(w => w.word !== originalWord);
+        return [
+          {
+            id: Date.now().toString(),
+            word: originalWord,
+            translation: selectedCandidate,
+            timestamp: Date.now(),
+          },
+          ...filtered
+        ];
+      });
+    };
+  };
+
   // 执行实际的搜索逻辑
   const performSearch = async (word: string) => {
     setIsLoading(true);
@@ -501,30 +574,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         // 添加候选词选择回调
         const resultWithCallback = {
           ...queryResult.data,
-          onCandidateSelect: (selectedCandidate: string) => {
-            console.log(`用户选择了候选词: ${selectedCandidate}`);
-            // 更新搜索结果，使用选中的候选词
-            setSearchResult((prev: any) => prev ? {
-              ...prev,
-              correctedWord: selectedCandidate,
-              translation: selectedCandidate
-            } : null);
-            
-            // 更新搜索历史
-            wordService.saveSearchHistory(word, selectedCandidate);
-            setRecentWords(prev => {
-              const filtered = prev.filter(w => w.word !== word);
-              return [
-                {
-                  id: Date.now().toString(),
-                  word: word,
-                  translation: selectedCandidate,
-                  timestamp: Date.now(),
-                },
-                ...filtered
-              ];
-            });
-          }
+          onCandidateSelect: createCandidateSelectHandler(word, queryResult.data.candidates)
         };
         
         setSearchResult(resultWithCallback);
@@ -997,16 +1047,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
           // 添加候选词选择回调
           const resultWithCallback = {
             ...cachedResult,
-            onCandidateSelect: (selectedCandidate: string) => {
-              console.log(`用户选择了候选词: ${selectedCandidate}`);
-              setSearchResult((prev: any) => prev ? {
-                ...prev,
-                correctedWord: selectedCandidate,
-                translation: selectedCandidate
-              } : null);
-              
-              wordService.saveSearchHistory(searchWord, selectedCandidate);
-            }
+            onCandidateSelect: createCandidateSelectHandler(searchWord, cachedResult.candidates)
           };
           
           setSearchResult(resultWithCallback);
@@ -1027,16 +1068,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         // 添加候选词选择回调
         const resultWithCallback = {
           ...queryResult.data,
-          onCandidateSelect: (selectedCandidate: string) => {
-            console.log(`用户选择了候选词: ${selectedCandidate}`);
-            setSearchResult((prev: any) => prev ? {
-              ...prev,
-              correctedWord: selectedCandidate,
-              translation: selectedCandidate
-            } : null);
-            
-            wordService.saveSearchHistory(searchWord, selectedCandidate);
-          }
+          onCandidateSelect: createCandidateSelectHandler(searchWord, queryResult.data.candidates)
         };
         
         setSearchResult(resultWithCallback);
@@ -1053,16 +1085,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
           // 为传统搜索结果也添加候选词选择回调
           const resultWithCallback = {
             ...result.data,
-            onCandidateSelect: (selectedCandidate: string) => {
-              console.log(`用户选择了候选词: ${selectedCandidate}`);
-              setSearchResult((prev: any) => prev ? {
-                ...prev,
-                correctedWord: selectedCandidate,
-                translation: selectedCandidate
-              } : null);
-              
-              wordService.saveSearchHistory(searchWord, selectedCandidate);
-            }
+            onCandidateSelect: createCandidateSelectHandler(searchWord, result.data.candidates)
           };
           setSearchResult(resultWithCallback);
         } else {
