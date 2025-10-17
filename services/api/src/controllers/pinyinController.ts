@@ -77,44 +77,49 @@ async function generatePinyinCandidatesWithAI(pinyin: string): Promise<Array<{ch
     apiKey: process.env.OPENAI_API_KEY,
   });
 
-  const prompt = `请为拼音 "${pinyin}" 生成8-10个最常用的中文词汇候选词，按使用频率从高到低排序。
+  const prompt = `请为拼音 "${pinyin}" 生成真实存在的中文词汇候选词，按使用频率从高到低排序。
 
 返回JSON格式：
 {
   "candidates": [
     {"chinese": "最常用词汇", "english": "英文释义", "frequency": 100},
     {"chinese": "次常用词汇", "english": "英文释义", "frequency": 95},
-    {"chinese": "第三常用词汇", "english": "英文释义", "frequency": 90},
-    ...
+    {"chinese": "第三常用词汇", "english": "英文释义", "frequency": 90}
   ]
 }
 
-要求：
-1. **优先返回日常生活中最常用的词汇**（如"电池"battery比"滇池"Dianchi Lake更常用）
-2. 按真实使用频率排序：日常词汇 > 专有名词 > 生僻词
-3. 优先返回完整词汇，不是单字
-4. 英文释义要准确简洁
-5. frequency按100-60递减
-6. 只返回JSON，不要其他内容
-7. **重要：只返回发音完全匹配 "${pinyin}" 的词汇，不要返回其他发音的词**
-8. **必须返回8-10个候选词，不要只返回2-3个**
+**重要要求**：
+1. **只返回真实存在的、确实常用的词汇，不要无中生有**
+2. **有多少返回多少，不要强制凑数量**（可能只有2-3个，也可能有8-10个）
+3. 优先返回日常生活中最常用的词汇（如"电池"battery比"滇池"Dianchi Lake更常用）
+4. 按真实使用频率排序：日常词汇 > 专有名词 > 生僻词
+5. 优先返回完整词汇（2-3个字），不要返回单字
+6. 英文释义要准确简洁
+7. frequency按100-60递减（常用词100，不常用词60-70）
+8. 只返回JSON，不要其他内容
+9. **只返回发音完全匹配 "${pinyin}" 的词汇**
 
-例如：
-- "dian chi" 应该返回：
+正确示例：
+- "dian chi" 应该返回（只有真实存在的词）：
   * "电池" (battery, 100) - 最常用
-  * "电驰" (electric speed, 80)
-  * "滇池" (Dianchi Lake, 60) - 专有名词，较少用
+  * "滇池" (Dianchi Lake, 70) - 地名，较少用
   
-- "shu ru" 应该返回：
-  * "输入" (input, 100) - 最常用
-  * "输出" (output, 90) - 注意：这个是错的，"输出"是"shu chu"
+- "bei zi" 应该返回：
+  * "杯子" (cup, 100) - 最常用
+  * "被子" (quilt, 95) - 也很常用
+  * "背子" (vest, 70) - 古装服饰
   
 - "luo ji" 应该返回：
   * "逻辑" (logic, 100) - 最常用
-  * "罗技" (Logitech, 85)
-  * "落机" (landing, 70)
+  * "罗技" (Logitech, 80) - 品牌名
+  * "落寂" (lonely, 75) - 书面语
 
-**不要返回发音不匹配的词，比如 "shu ru" 不应该返回 "书籍" (shu ji)**`;
+错误示例（不要这样做）：
+- ❌ 不要返回发音不匹配的词："shu ru" 不应该返回 "书籍" (shu ji)
+- ❌ 不要编造不存在的词："dian chi" 不应该返回 "电驰" (这个词不常用/不存在)
+- ❌ 不要强制凑够数量：如果只有2个真实常用词，就只返回2个
+
+请只返回真实存在的词汇！`;
 
   try {
     const completion = await openai.chat.completions.create({
