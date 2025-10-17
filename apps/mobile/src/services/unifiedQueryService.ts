@@ -63,6 +63,51 @@ export class UnifiedQueryService {
       };
     }
 
+    // 🔧 拼音结果特殊处理：candidates 是对象数组 {chinese, english}
+    if (result.isPinyinResult && Array.isArray(result.candidates)) {
+      const pinyinCandidates = result.candidates as any[];
+      
+      if (pinyinCandidates.length === 1) {
+        // 单个拼音结果
+        return {
+          type: 'translation',
+          data: {
+            word: input,
+            correctedWord: pinyinCandidates[0].chinese,
+            translation: pinyinCandidates[0].chinese,
+            translationSource: result.source || 'pinyin_api',
+            candidates: [pinyinCandidates[0].chinese],  // 🔧 确保candidates是字符串数组
+            language: targetLanguage,
+            ...result.wordData
+          }
+        };
+      } else {
+        // 多个拼音候选词，显示为选项列表
+        return {
+          type: 'ambiguous',
+          options: pinyinCandidates.map((candidate: any) => ({
+            type: 'translation' as const,
+            title: `${candidate.chinese} - ${candidate.english}`,  // 显示格式：医生 - doctor
+            description: `拼音: ${input}`,
+            data: {
+              word: input,
+              correctedWord: candidate.chinese,
+              translation: candidate.chinese,
+              translationSource: result.source || 'pinyin_api',
+              candidates: pinyinCandidates.map((c: any) => c.chinese),  // 🔧 确保candidates是字符串数组
+              language: targetLanguage,
+              pinyin: input,
+              definitions: [{
+                definition: candidate.english,
+                examples: []
+              }]
+            }
+          }))
+        };
+      }
+    }
+
+    // 普通翻译结果处理
     if (result.candidates.length === 1) {
       // 单个结果
       return {
@@ -73,7 +118,9 @@ export class UnifiedQueryService {
           translation: result.candidates[0],
           translationSource: result.source || 'unknown',
           candidates: result.candidates,
-          language: targetLanguage
+          language: targetLanguage,
+          // 🔧 包含增强的wordData信息（拼音、audioUrl、definitions等）
+          ...result.wordData
         }
       };
     } else {
