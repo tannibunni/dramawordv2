@@ -25,6 +25,7 @@ import { wordService, RecentWord } from '../../services/wordService';
 import { unifiedQueryService } from '../../services/unifiedQueryService';
 import { AmbiguousChoiceCard } from '../../components/cards/AmbiguousChoiceCard';
 import WordCard from '../../components/cards/WordCard';
+import SuggestionList from '../../components/search/SuggestionList';
 import { useShowList } from '../../context/ShowListContext';
 import { useVocabulary } from '../../context/VocabularyContext';
 import { TMDBService, TMDBShow } from '../../services/tmdbService';
@@ -88,6 +89,15 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   const [ambiguousInput, setAmbiguousInput] = useState<string>(''); // 新增：歧义输入
   const [pinyinCandidates, setPinyinCandidates] = useState<string[]>([]); // 新增：拼音候选词
   const [pinyinQuery, setPinyinQuery] = useState<string>('');
+  // 新增：Pleco风格的拼音建议
+  const [pinyinSuggestions, setPinyinSuggestions] = useState<Array<{
+    id: string;
+    chinese: string;
+    english: string;
+    pinyin: string;
+    audioUrl?: string;
+  }>>([]);
+  const [showPinyinSuggestions, setShowPinyinSuggestions] = useState(false);
   const { selectedLanguage, getCurrentLanguageConfig, setSelectedLanguage } = useLanguage();
   const { appLanguage } = useAppLanguage();
   
@@ -238,6 +248,144 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       setEnToChQuery('');
       setPinyinCandidates([]);
       setPinyinQuery('');
+      // 清理拼音建议
+      setPinyinSuggestions([]);
+      setShowPinyinSuggestions(false);
+    } else {
+      // 检查是否是拼音输入（包含空格或声调）
+      const isPinyinInput = /^[a-z\s]+$/.test(text.toLowerCase()) && text.includes(' ');
+      if (isPinyinInput) {
+        console.log('🔍 检测到拼音输入，开始实时查询:', text);
+        handlePinyinInput(text);
+      } else {
+        // 非拼音输入，隐藏建议
+        setShowPinyinSuggestions(false);
+        setPinyinSuggestions([]);
+      }
+    }
+  };
+
+  // 处理拼音输入，实时查询候选词
+  const handlePinyinInput = async (pinyinText: string) => {
+    try {
+      console.log('🔍 开始实时拼音查询:', pinyinText);
+      
+      // 获取目标语言代码
+      const targetLanguageCode = SUPPORTED_LANGUAGES[selectedLanguage].code;
+      
+      // 使用统一查询服务查询拼音
+      const queryResult = await unifiedQueryService.query(
+        pinyinText, 
+        appLanguage || 'en-US', 
+        targetLanguageCode
+      );
+      
+      if (queryResult.type === 'ambiguous') {
+        // 有多个候选词，显示建议列表
+        const suggestions = queryResult.options.map((option, index) => ({
+          id: `${pinyinText}-${index}`,
+          chinese: option.data.correctedWord || option.data.translation,
+          english: option.data.definitions?.[0]?.definition || '',
+          pinyin: pinyinText,
+          audioUrl: option.data.audioUrl,
+        }));
+        
+        console.log('✅ 拼音查询成功，找到候选词:', suggestions.length);
+        setPinyinSuggestions(suggestions);
+        setShowPinyinSuggestions(true);
+      } else if (queryResult.type === 'translation') {
+        // 只有一个结果，直接显示
+        const suggestion = {
+          id: `${pinyinText}-single`,
+          chinese: queryResult.data.correctedWord || queryResult.data.translation,
+          english: queryResult.data.definitions?.[0]?.definition || '',
+          pinyin: pinyinText,
+          audioUrl: queryResult.data.audioUrl,
+        };
+        
+        console.log('✅ 拼音查询成功，找到唯一候选词:', suggestion.chinese);
+        setPinyinSuggestions([suggestion]);
+        setShowPinyinSuggestions(true);
+      } else {
+        // 没有找到结果
+        console.log('⚠️ 拼音查询无结果');
+        setPinyinSuggestions([]);
+        setShowPinyinSuggestions(false);
+      }
+    } catch (error) {
+      console.error('❌ 实时拼音查询失败:', error);
+      setPinyinSuggestions([]);
+      setShowPinyinSuggestions(false);
+    }
+  };
+
+  // 处理拼音建议选择
+  const handlePinyinSuggestionSelect = async (suggestion: {
+    id: string;
+    chinese: string;
+    english: string;
+    pinyin: string;
+    audioUrl?: string;
+  }) => {
+    console.log('🎯 用户选择了拼音建议:', suggestion.chinese);
+    
+    // 隐藏建议列表
+    setShowPinyinSuggestions(false);
+    setPinyinSuggestions([]);
+    
+    // 清空搜索框
+    setSearchText('');
+    
+    // 创建完整的词卡数据
+    const wordData = {
+      word: suggestion.pinyin,
+      correctedWord: suggestion.chinese,
+      translation: suggestion.chinese,
+      language: 'zh',
+      phonetic: suggestion.pinyin,
+      pinyin: suggestion.pinyin,
+      audioUrl: suggestion.audioUrl,
+      definitions: [{
+        definition: suggestion.english,
+        examples: []
+      }],
+      translationSource: 'pinyin_suggestion',
+      searchCount: 1,
+      lastSearched: new Date(),
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+    
+    // 显示词卡
+    setSearchResult(wordData);
+    
+    // 保存到搜索历史
+    try {
+      await wordService.saveSearchHistory(
+        suggestion.pinyin,
+        suggestion.chinese,
+        undefined,
+        suggestion.pinyin,
+        suggestion.english
+      );
+      
+      // 更新本地历史记录显示
+      setRecentWords(prev => {
+        const filtered = prev.filter(w => w.word !== suggestion.pinyin);
+        return [
+          {
+            id: Date.now().toString(),
+            word: suggestion.pinyin,
+            translation: suggestion.chinese,
+            timestamp: Date.now(),
+          },
+          ...filtered
+        ];
+      });
+      
+      console.log('✅ 拼音建议选择已保存到历史记录');
+    } catch (error) {
+      console.error('❌ 保存拼音建议选择到历史记录失败:', error);
     }
   };
 
@@ -1454,6 +1602,14 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
             </View>
           </View>
         </View>
+        
+        {/* Pleco风格的拼音建议列表 */}
+        <SuggestionList
+          suggestions={pinyinSuggestions}
+          onSelect={handlePinyinSuggestionSelect}
+          visible={showPinyinSuggestions}
+        />
+        
         {/* 内容区：有查词结果时只显示卡片，否则显示最近查词 */}
         {enToChCandidates.length > 0 ? (
           <View style={styles.wordCardWrapper}>
