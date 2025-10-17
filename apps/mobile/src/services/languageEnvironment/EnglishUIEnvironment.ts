@@ -24,6 +24,46 @@ export class EnglishUIEnvironment implements LanguageEnvironment {
     this.targetLanguage = targetLanguage;
   }
   
+  /**
+   * 为中文词生成拼音（简单映射）
+   */
+  private generatePinyinForChinese(chinese: string): string | null {
+    // 简单的拼音映射表（常用字符）
+    const pinyinMap: { [key: string]: string } = {
+      '间': 'jian',
+      '谍': 'die',
+      '减': 'jian',
+      '肥': 'fei',
+      '少': 'shao',
+      '杯': 'bei',
+      '子': 'zi',
+      '背': 'bei',
+      '国': 'guo',
+      '家': 'jia',
+      '际': 'ji',
+      '面': 'mian',
+      '包': 'bao',
+      '棉': 'mian',
+      '袍': 'pao',
+      '我': 'wo',
+      '爱': 'ai',
+      '你': 'ni',
+      '吃': 'chi',
+      '苹': 'ping',
+      '果': 'guo',
+      '米': 'mi',
+      '饭': 'fan'
+    };
+    
+    try {
+      const pinyinArray = chinese.split('').map(char => pinyinMap[char]).filter(Boolean);
+      return pinyinArray.length === chinese.length ? pinyinArray.join(' ') : null;
+    } catch (error) {
+      console.log(`❌ 生成拼音失败: ${chinese}`, error);
+      return null;
+    }
+  }
+  
   analyzeInput(input: string): InputAnalysis {
     const trimmed = input.trim();
     
@@ -388,7 +428,24 @@ export class EnglishUIEnvironment implements LanguageEnvironment {
               return normalizedCandidatePinyin === normalizedInputPinyin;
             }
             
-            // 如果没有pinyin字段，进行更严格的合理性检查
+            // 🔧 如果没有pinyin字段，使用前端拼音匹配验证
+            const chinese = candidate.chinese;
+            const expectedPinyin = this.generatePinyinForChinese(chinese);
+            
+            if (expectedPinyin) {
+              const normalizedExpectedPinyin = expectedPinyin.toLowerCase().replace(/\s+/g, '');
+              const isMatch = normalizedExpectedPinyin === normalizedInputPinyin;
+              
+              if (!isMatch) {
+                console.log(`❌ 拼音不匹配: "${chinese}" -> "${expectedPinyin}" ≠ "${input}"`);
+                return false;
+              }
+              
+              console.log(`✅ 拼音匹配: "${chinese}" -> "${expectedPinyin}" = "${input}"`);
+              return true;
+            }
+            
+            // 如果无法生成拼音，进行基本的合理性检查
             const chineseLength = candidate.chinese.length;
             const inputSyllables = normalizedInputPinyin.length / 2; // 粗略估算音节数
             
@@ -398,7 +455,6 @@ export class EnglishUIEnvironment implements LanguageEnvironment {
             }
             
             // 2. 过滤明显不合理的结果（包含异常字符或组合）
-            const chinese = candidate.chinese;
             const unreasonablePatterns = [
               /泥$/, // 以"泥"结尾的词通常不合理
               /握/, // "握"开头的词通常不是常用表达
