@@ -388,6 +388,8 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
             word: suggestion.pinyin,
             translation: suggestion.chinese,
             timestamp: Date.now(),
+            pinyin: suggestion.pinyin,
+            englishDefinition: suggestion.english,
           },
           ...filtered
         ];
@@ -1653,7 +1655,9 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                     setSearchText('');
                     // 将中文查词加入最近查词历史
                     const definition = result.data.definitions && result.data.definitions[0]?.definition ? result.data.definitions[0].definition : t('no_definition', 'zh-CN');
-                    await wordService.saveSearchHistory(chinese, definition);
+                    const pinyin = result.data.pinyin || result.data.phonetic || '';
+                    const englishDefinition = result.data.definitions?.[0]?.definition || '';
+                    await wordService.saveSearchHistory(chinese, definition, undefined, pinyin, englishDefinition);
                     setRecentWords(prev => {
                       const filtered = prev.filter(w => w.word !== chinese);
                       return [
@@ -1662,6 +1666,8 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                           word: chinese,
                           translation: definition,
                           timestamp: Date.now(),
+                          pinyin: pinyin,
+                          englishDefinition: englishDefinition,
                         },
                         ...filtered
                       ];
