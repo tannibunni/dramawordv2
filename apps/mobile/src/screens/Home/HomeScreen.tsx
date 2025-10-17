@@ -292,6 +292,16 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
           targetLanguageCode
         );
         
+        // 🔧 调试：查看查询结果的具体内容
+        console.log('🔍 查询结果详情:', {
+          type: queryResult.type,
+          source: queryResult.source,
+          hasOptions: !!queryResult.options,
+          optionsLength: queryResult.options?.length,
+          hasData: !!queryResult.data,
+          dataKeys: queryResult.data ? Object.keys(queryResult.data) : []
+        });
+        
         // 🔧 检查结果来源，只显示离线词典结果
         if (queryResult.type === 'ambiguous' && queryResult.source === 'offline_ccedict') {
           // 离线词典有多个候选词，显示建议列表
