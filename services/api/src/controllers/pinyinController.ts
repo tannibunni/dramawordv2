@@ -77,28 +77,42 @@ async function generatePinyinCandidatesWithAI(pinyin: string): Promise<Array<{ch
     apiKey: process.env.OPENAI_API_KEY,
   });
 
-  const prompt = `请为拼音 "${pinyin}" 生成3-5个最常用的中文词汇候选词，按使用频率排序。
+  const prompt = `请为拼音 "${pinyin}" 生成8-10个最常用的中文词汇候选词，按使用频率从高到低排序。
 
 返回JSON格式：
 {
   "candidates": [
     {"chinese": "最常用词汇", "english": "英文释义", "frequency": 100},
-    {"chinese": "次常用词汇", "english": "英文释义", "frequency": 90},
-    {"chinese": "第三常用词汇", "english": "英文释义", "frequency": 80}
+    {"chinese": "次常用词汇", "english": "英文释义", "frequency": 95},
+    {"chinese": "第三常用词汇", "english": "英文释义", "frequency": 90},
+    ...
   ]
 }
 
 要求：
-1. 优先返回完整词汇，不是单字
-2. 英文释义要准确简洁
-3. frequency按100-60递减
-4. 只返回JSON，不要其他内容
-5. **重要：只返回发音完全匹配 "${pinyin}" 的词汇，不要返回其他发音的词**
+1. **优先返回日常生活中最常用的词汇**（如"电池"battery比"滇池"Dianchi Lake更常用）
+2. 按真实使用频率排序：日常词汇 > 专有名词 > 生僻词
+3. 优先返回完整词汇，不是单字
+4. 英文释义要准确简洁
+5. frequency按100-60递减
+6. 只返回JSON，不要其他内容
+7. **重要：只返回发音完全匹配 "${pinyin}" 的词汇，不要返回其他发音的词**
+8. **必须返回8-10个候选词，不要只返回2-3个**
 
 例如：
-- "shu ru" 应该返回 "输入" (input), "输出" (output) - 都是 shu ru 发音
-- "luo ji" 应该返回 "逻辑" (logic), "落机" (landing), "罗技" (Logitech) - 都是 luo ji 发音
-- "ni hao" 应该返回 "你好" (hello), "泥好" (mud good) - 都是 ni hao 发音
+- "dian chi" 应该返回：
+  * "电池" (battery, 100) - 最常用
+  * "电驰" (electric speed, 80)
+  * "滇池" (Dianchi Lake, 60) - 专有名词，较少用
+  
+- "shu ru" 应该返回：
+  * "输入" (input, 100) - 最常用
+  * "输出" (output, 90) - 注意：这个是错的，"输出"是"shu chu"
+  
+- "luo ji" 应该返回：
+  * "逻辑" (logic, 100) - 最常用
+  * "罗技" (Logitech, 85)
+  * "落机" (landing, 70)
 
 **不要返回发音不匹配的词，比如 "shu ru" 不应该返回 "书籍" (shu ji)**`;
 
@@ -201,6 +215,40 @@ export const getAllPinyinMappings = async (req: Request, res: Response) => {
     });
   } catch (error) {
     console.error('获取所有拼音映射错误:', error);
+    res.status(500).json({
+      success: false,
+      error: '服务器内部错误'
+    });
+  }
+};
+
+// 删除拼音映射（用于重新生成候选词）
+export const deletePinyinMapping = async (req: Request, res: Response) => {
+  try {
+    const { pinyin } = req.params;
+    
+    if (!pinyin) {
+      return res.status(400).json({
+        success: false,
+        error: '拼音参数不能为空'
+      });
+    }
+
+    const result = await PinyinMapping.deleteOne({ pinyin: pinyin.toLowerCase() });
+    
+    if (result.deletedCount > 0) {
+      res.json({
+        success: true,
+        message: `拼音映射 "${pinyin}" 已删除，下次查询时将重新生成`
+      });
+    } else {
+      res.status(404).json({
+        success: false,
+        error: `拼音映射 "${pinyin}" 不存在`
+      });
+    }
+  } catch (error) {
+    console.error('删除拼音映射错误:', error);
     res.status(500).json({
       success: false,
       error: '服务器内部错误'

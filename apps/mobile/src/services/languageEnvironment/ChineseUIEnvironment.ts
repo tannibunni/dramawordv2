@@ -499,7 +499,7 @@ export class ChineseUIEnvironment implements LanguageEnvironment {
             };
           }
           
-          // 按合理性排序并限制返回数量（最多2个候选词）
+          // 按合理性排序并限制返回数量（最多8个候选词）
           const sortedCandidates = validCandidates
             .sort((a: any, b: any) => {
               // 优先返回更常用的词（可以根据需要调整排序逻辑）
@@ -507,7 +507,7 @@ export class ChineseUIEnvironment implements LanguageEnvironment {
               const bScore = b.chinese.length <= 3 ? 1 : 0;
               return bScore - aScore;
             })
-            .slice(0, 2); // 最多返回2个候选词
+            .slice(0, 8); // 最多返回8个候选词
           
           // 🔧 为拼音候选词创建特殊格式：包含中文和英文释义
           // 为每个候选词生成audioUrl
