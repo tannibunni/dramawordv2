@@ -36,7 +36,7 @@ export class DictionaryDownloader {
       // 中文词库 - 使用未压缩版本避免gzip解压问题
       {
         name: 'CC-CEDICT',
-        url: 'https://cdn.jsdelivr.net/gh/skishore/makemeahanzi@master/cedict_ts.u8',
+        url: 'https://raw.githubusercontent.com/skishore/makemeahanzi/master/cedict_ts.u8',
         filename: 'ccedict.txt',
         description: '中英文字典 (CC-CEDICT)',
         language: 'zh',
