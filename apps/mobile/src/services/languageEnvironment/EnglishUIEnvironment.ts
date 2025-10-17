@@ -654,14 +654,41 @@ export class EnglishUIEnvironment implements LanguageEnvironment {
       }
     }
     
-    // 检查拼音模式
+    // 检查拼音模式 - 更全面的模式匹配
     const pinyinPatterns = [
+      // 单字拼音
       /^[a-z]+[aeiou][a-z]*$/,
+      // 双字拼音
       /^[a-z]+[aeiou][a-z]*\s+[a-z]+[aeiou][a-z]*$/,
-      /^[a-z]+[aeiou][a-z]*\s+[a-z]+[aeiou][a-z]*\s+[a-z]+[aeiou][a-z]*$/
+      // 三字拼音
+      /^[a-z]+[aeiou][a-z]*\s+[a-z]+[aeiou][a-z]*\s+[a-z]+[aeiou][a-z]*$/,
+      // 四字拼音
+      /^[a-z]+[aeiou][a-z]*\s+[a-z]+[aeiou][a-z]*\s+[a-z]+[aeiou][a-z]*\s+[a-z]+[aeiou][a-z]*$/,
+      // 五字拼音
+      /^[a-z]+[aeiou][a-z]*\s+[a-z]+[aeiou][a-z]*\s+[a-z]+[aeiou][a-z]*\s+[a-z]+[aeiou][a-z]*\s+[a-z]+[aeiou][a-z]*$/
     ];
     
-    return pinyinPatterns.some(pattern => pattern.test(input));
+    // 如果匹配拼音模式，直接返回true
+    if (pinyinPatterns.some(pattern => pattern.test(input))) {
+      return true;
+    }
+    
+    // 额外的拼音特征检查
+    // 检查是否包含常见的拼音音节
+    const commonPinyinSyllables = [
+      'wo', 'ni', 'ta', 'wo', 'men', 'ni', 'men', 'ta', 'men',
+      'xi', 'huan', 'ai', 'hao', 'bu', 'shi', 'ma', 'de', 'le',
+      'zai', 'you', 'mei', 'you', 'shen', 'me', 'zen', 'me', 'wei', 'shen', 'me',
+      'duo', 'shao', 'ji', 'dian', 'na', 'li', 'zhe', 'li', 'na', 'er'
+    ];
+    
+    // 如果输入包含多个常见拼音音节，很可能是拼音
+    const syllableCount = inputWords.filter(word => commonPinyinSyllables.includes(word)).length;
+    if (syllableCount >= 2) {
+      return true;
+    }
+    
+    return false;
   }
   
   private isLikelyRomaji(input: string): boolean {
