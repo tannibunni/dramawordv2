@@ -293,7 +293,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         );
         
         // 🔧 检查结果来源，只显示离线词典结果
-        if (queryResult.type === 'ambiguous' && queryResult.source === 'offline_dictionary') {
+        if (queryResult.type === 'ambiguous' && queryResult.source === 'offline_ccedict') {
           // 离线词典有多个候选词，显示建议列表
           const suggestions = queryResult.options.map((option, index) => ({
             id: `${pinyinText}-${index}`,
@@ -306,7 +306,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
           console.log('✅ 离线词典查询成功，找到候选词:', suggestions.length);
           setPinyinSuggestions(suggestions);
           setShowPinyinSuggestions(true);
-        } else if (queryResult.type === 'translation' && queryResult.source === 'offline_dictionary') {
+        } else if (queryResult.type === 'translation' && queryResult.source === 'offline_ccedict') {
           // 离线词典只有一个结果，直接显示
           const suggestion = {
             id: `${pinyinText}-single`,
