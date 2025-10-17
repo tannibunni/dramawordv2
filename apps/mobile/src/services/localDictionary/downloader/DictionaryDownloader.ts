@@ -33,24 +33,15 @@ export class DictionaryDownloader {
    */
   getSupportedSources(): DictionarySource[] {
     return [
-      // 中文词库
+      // 中文词库 - 使用未压缩版本避免gzip解压问题
       {
         name: 'CC-CEDICT',
-        url: 'https://www.mdbg.net/chinese/export/cedict/cedict_1_0_ts_utf-8_mdbg.txt.gz',
+        url: 'https://cdn.jsdelivr.net/gh/skishore/makemeahanzi@master/cedict_ts.u8',
         filename: 'ccedict.txt',
         description: '中英文字典 (CC-CEDICT)',
         language: 'zh',
         version: '1.0',
-        size: 2000000 // 约2MB
-      },
-      {
-        name: 'CC-CEDICT-UTF8',
-        url: 'https://www.mdbg.net/chinese/export/cedict/cedict_1_0_ts_utf-8_mdbg.txt',
-        filename: 'ccedict_utf8.txt',
-        description: '中英文字典 (UTF-8版本)',
-        language: 'zh',
-        version: '1.0',
-        size: 2000000
+        size: 10000000 // 约10MB (未压缩)
       },
       // 日语词库
       {
@@ -101,12 +92,11 @@ export class DictionaryDownloader {
         };
       }
 
-      // 开始下载 - 先下载到临时文件
-      const tempFileName = `${source.filename}.tmp`;
-      const tempFilePath = this.storage.getDictionaryPath(tempFileName);
+      // 🔧 解决方案：下载到cacheDirectory（有完整读写权限），然后复制到documentDirectory
+      const tempFilePath = `${FileSystem.cacheDirectory}${source.filename}.tmp`;
       const finalFilePath = this.storage.getDictionaryPath(source.filename);
       
-      console.log(`📥 下载到临时文件: ${tempFilePath}`);
+      console.log(`📥 下载文件到缓存目录: ${tempFilePath}`);
       const downloadResult = await FileSystem.downloadAsync(
         source.url,
         tempFilePath
@@ -115,36 +105,24 @@ export class DictionaryDownloader {
       if (downloadResult.status === 200) {
         console.log(`✅ 词库下载成功: ${source.name}`);
         
-        // 准备文件移动到最终位置
-        let finalFileUri = downloadResult.uri; // 默认使用下载的URI
-        
-        // 先删除目标文件（如果存在）
-        const finalInfo = await FileSystem.getInfoAsync(finalFilePath);
-        if (finalInfo.exists) {
-          await FileSystem.deleteAsync(finalFilePath);
-        }
-        
-        // 先验证下载的文件是否可读
-        let downloadFileReadable = false;
+        // 🔧 验证下载文件可读性（在cacheDirectory中）
+        console.log(`🔍 验证缓存文件可读性: ${downloadResult.uri}`);
         try {
-          console.log(`🔍 验证下载文件可读性: ${downloadResult.uri}`);
-          const testRead = await FileSystem.readAsStringAsync(downloadResult.uri, { encoding: 'utf8' });
-          console.log(`✅ 下载文件可读性验证成功，内容长度: ${testRead.length}`);
-          downloadFileReadable = true;
-        } catch (readTestError) {
-          console.log(`❌ 下载文件可读性验证失败:`, readTestError);
-        }
-        
-        // 移动文件到最终位置
-        try {
-          await FileSystem.moveAsync({
-            from: downloadResult.uri,
-            to: finalFilePath
-          });
+          const cacheContent = await FileSystem.readAsStringAsync(downloadResult.uri, { encoding: 'utf8' });
+          console.log(`✅ 缓存文件可读，内容长度: ${cacheContent.length} 字符`);
           
-          console.log(`✅ 文件已移动到最终位置: ${finalFilePath}`);
+          // 先删除目标文件（如果存在）
+          const finalInfo = await FileSystem.getInfoAsync(finalFilePath);
+          if (finalInfo.exists) {
+            console.log(`🔄 删除旧文件: ${finalFilePath}`);
+            await FileSystem.deleteAsync(finalFilePath);
+          }
           
-          // 获取最终文件信息
+          // 🔧 直接写入内容到documentDirectory（避免move/copy的权限问题）
+          console.log(`📝 写入内容到最终位置: ${finalFilePath}`);
+          await FileSystem.writeAsStringAsync(finalFilePath, cacheContent, { encoding: 'utf8' });
+          
+          // 验证写入成功
           const finalFileInfo = await FileSystem.getInfoAsync(finalFilePath);
           console.log(`📁 最终文件信息:`, { 
             exists: finalFileInfo.exists, 
@@ -152,33 +130,26 @@ export class DictionaryDownloader {
             uri: finalFileInfo.uri 
           });
           
-          // 设置备用URI：如果原始文件可读，保留原始URI；否则使用最终文件URI
-          if (downloadFileReadable) {
-            // 尝试从最终位置读取来验证
-            try {
-              await FileSystem.readAsStringAsync(finalFilePath, { encoding: 'utf8' });
-              finalFileUri = finalFileInfo.uri || finalFilePath;
-              console.log(`✅ 使用最终文件URI: ${finalFileUri}`);
-            } catch (finalReadError) {
-              console.log(`❌ 最终位置文件不可读，保留原始下载URI作为备用: ${downloadResult.uri}`);
-              finalFileUri = downloadResult.uri;
-            }
-          } else {
-            finalFileUri = finalFileInfo.uri || finalFilePath;
+          // 清理缓存文件
+          try {
+            await FileSystem.deleteAsync(downloadResult.uri);
+            console.log(`🗑️ 已清理缓存文件`);
+          } catch (cleanupError) {
+            console.log(`⚠️ 清理缓存文件失败（可忽略）:`, cleanupError);
           }
           
-        } catch (moveError) {
-          console.log(`❌ 文件移动失败，保留原始URI:`, moveError);
-          finalFileUri = downloadResult.uri;
+          return {
+            success: true,
+            filePath: finalFilePath,
+            originalUri: finalFileInfo.uri || finalFilePath,
+            downloadedSize: cacheContent.length
+          };
+          
+        } catch (readError) {
+          console.error(`❌ 缓存文件不可读:`, readError);
+          throw new Error(`下载的文件无法读取: ${readError}`);
         }
         
-        return {
-          success: true,
-          filePath: finalFilePath,
-          originalUri: finalFileUri, // 使用最终文件的URI作为备用
-          downloadedSize: downloadResult.headers?.['content-length'] ? 
-            parseInt(downloadResult.headers['content-length']) : undefined
-        };
       } else {
         throw new Error(`下载失败，状态码: ${downloadResult.status}`);
       }
