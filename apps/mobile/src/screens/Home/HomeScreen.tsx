@@ -967,6 +967,32 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
           const { candidates, ...wordDataWithoutCandidates } = option.data;
           setSearchResult(wordDataWithoutCandidates);
           setSearchText('');
+          
+          // 🔧 保存搜索历史记录
+          try {
+            const translationResult = option.data.correctedWord || option.data.translation || '';
+            const pinyin = option.data.pinyin || option.data.phonetic || '';
+            const englishDefinition = option.data.definitions?.[0]?.definition || '';
+            
+            console.log(`💾 保存歧义选择搜索历史: ${ambiguousInput} -> ${translationResult}`);
+            await wordService.saveSearchHistory(ambiguousInput, translationResult, undefined, pinyin, englishDefinition);
+            
+            // 更新本地历史记录显示
+            setRecentWords(prev => {
+              const filtered = prev.filter(w => w.word !== ambiguousInput);
+              return [
+                {
+                  id: Date.now().toString(),
+                  word: ambiguousInput,
+                  translation: translationResult,
+                  timestamp: Date.now(),
+                },
+                ...filtered
+              ];
+            });
+          } catch (error) {
+            console.error('保存歧义选择搜索历史失败:', error);
+          }
         } else if (option.data && typeof option.data === 'string') {
           // option.data是一个词，需要查询详细信息
           console.log(`🔍 查询被选中的词: ${option.data}`);
@@ -976,6 +1002,32 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
           if (result.success && result.data) {
             setSearchResult(result.data);
             setSearchText('');
+            
+            // 🔧 保存搜索历史记录
+            try {
+              const translationResult = result.data.correctedWord || result.data.translation || '';
+              const pinyin = result.data.pinyin || result.data.phonetic || '';
+              const englishDefinition = result.data.definitions?.[0]?.definition || '';
+              
+              console.log(`💾 保存歧义选择搜索历史: ${ambiguousInput} -> ${translationResult}`);
+              await wordService.saveSearchHistory(ambiguousInput, translationResult, undefined, pinyin, englishDefinition);
+              
+              // 更新本地历史记录显示
+              setRecentWords(prev => {
+                const filtered = prev.filter(w => w.word !== ambiguousInput);
+                return [
+                  {
+                    id: Date.now().toString(),
+                    word: ambiguousInput,
+                    translation: translationResult,
+                    timestamp: Date.now(),
+                  },
+                  ...filtered
+                ];
+              });
+            } catch (error) {
+              console.error('保存歧义选择搜索历史失败:', error);
+            }
           } else {
             Alert.alert('查询失败', '无法获取词汇详情，请重试');
           }
