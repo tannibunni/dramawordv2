@@ -374,16 +374,18 @@ export class CCEDICTProvider implements LocalDictionaryProvider {
           continue;
         }
 
-        // 解析CC-CEDICT格式: 中文 拼音 [词性] /英文释义/
+        // 解析CC-CEDICT格式: 繁体 简体 [拼音] /英文释义/
+        // 示例: 電池 电池 [dian4 chi2] /battery/
         const match = line.match(/^(\S+)\s+(\S+)\s+\[([^\]]+)\]\s+\/(.+)\/$/);
         if (match) {
-          const [, chinese, pinyin, partOfSpeech, translation] = match;
+          const [, traditional, simplified, pinyin, translation] = match;
           
+          // 优先使用简体字作为词条
           entries.push({
-            word: chinese,
+            word: simplified,
             translation: translation,
             pinyin: pinyin,
-            partOfSpeech: partOfSpeech,
+            partOfSpeech: '',  // CC-CEDICT不包含词性信息
             frequency: 0
           });
 
