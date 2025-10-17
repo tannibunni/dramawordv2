@@ -13,6 +13,7 @@ import {
 import { API_CONFIG } from '../../config/api';
 import { DictionaryManager } from '../dictionaryManager/DictionaryManager';
 import { CCEDICTProvider } from '../localDictionary/providers/CCEDICTProvider';
+import { DirectTranslationService } from '../directTranslationService';
 
 const API_BASE_URL = API_CONFIG.BASE_URL;
 
@@ -398,7 +399,36 @@ export class EnglishUIEnvironment implements LanguageEnvironment {
           console.log(`⚠️ 离线词典查询失败，降级到在线API:`, offlineError);
         }
         
-        // 🔧 Step 2: 降级到在线API（OpenAI生成）
+        // 🔧 Step 2: 判断是否为句子，选择不同的API
+        const isSentence = input.split(/\s+/).length >= 3; // 3个或以上单词认为是句子
+        
+        if (isSentence) {
+          // 对于句子，使用句子翻译API
+          console.log(`📌 检测到句子，使用句子翻译API: ${input}`);
+          try {
+            const directTranslationService = DirectTranslationService.getInstance();
+            const translationResult = await directTranslationService.translateEnglishSentence(input, this.uiLanguage, this.targetLanguage);
+            
+            if (translationResult.success && translationResult.data) {
+              console.log(`✅ 句子翻译成功: ${input} -> ${translationResult.data.correctedWord}`);
+              
+              return {
+                success: true,
+                candidates: [{
+                  chinese: translationResult.data.correctedWord,
+                  english: translationResult.data.definitions?.[0]?.definition || input,
+                  pinyin: translationResult.data.pinyin || input,
+                  audioUrl: translationResult.data.audioUrl
+                }],
+                source: 'sentence_translation'
+              };
+            }
+          } catch (sentenceError) {
+            console.log(`⚠️ 句子翻译失败，降级到拼音候选词API:`, sentenceError);
+          }
+        }
+        
+        // 🔧 Step 3: 降级到拼音候选词API（用于词语）
         console.log(`📌 使用在线拼音候选词API: ${input} -> ${pinyinQuery}`);
         const response = await fetch(`${API_BASE_URL}/pinyin/candidates/${encodeURIComponent(pinyinQuery)}`, {
           method: 'GET',
