@@ -461,7 +461,8 @@ export class CCEDICTProvider implements LocalDictionaryProvider {
 
         // 解析CC-CEDICT格式: 繁体 简体 [拼音] /英文释义/
         // 示例: 電池 电池 [dian4 chi2] /battery/
-        // 支持数字、字母、特殊字符（如 "110", "3C", "%"）
+        // ⚠️ CRITICAL: 使用.+?（非贪婪匹配）支持所有字符（数字、字母、特殊字符如 "110", "3C", "%"）
+        // 🔧 Metro缓存强制刷新标记: v2.0
         const match = line.match(/^(.+?)\s+(.+?)\s+\[([^\]]+)\]\s+\/(.+)\/$/);
         if (match) {
           const [, traditional, simplified, pinyin, translation] = match;

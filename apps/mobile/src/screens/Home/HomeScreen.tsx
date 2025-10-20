@@ -107,6 +107,10 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   // 升级弹窗相关状态
   const [upgradeModalVisible, setUpgradeModalVisible] = useState(false);
   const [lockedFeature, setLockedFeature] = useState<FeatureType | null>(null);
+  
+  // CC-CEDICT下载状态
+  const [isDownloadingCCEDICT, setIsDownloadingCCEDICT] = useState(false);
+  const [downloadProgress, setDownloadProgress] = useState(0);
 
   // 🔧 当用户选择中文作为目标语言时，提示下载CC-CEDICT词库
   useEffect(() => {
@@ -133,8 +137,59 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                   text: appLanguage === 'zh-CN' ? '立即下载' : 'Download Now',
                   onPress: async () => {
                     console.log('🔄 用户确认下载CC-CEDICT词典...');
-                    // 触发下载
-                    await ccedictProvider.isAvailable();
+                    setIsDownloadingCCEDICT(true);
+                    setDownloadProgress(0);
+                    
+                    try {
+                      // 模拟下载进度（因为实际下载很快）
+                      const progressInterval = setInterval(() => {
+                        setDownloadProgress(prev => {
+                          if (prev >= 90) {
+                            clearInterval(progressInterval);
+                            return 90;
+                          }
+                          return prev + 10;
+                        });
+                      }, 300);
+                      
+                      // 触发下载
+                      const isAvailable = await ccedictProvider.isAvailable();
+                      
+                      clearInterval(progressInterval);
+                      setDownloadProgress(100);
+                      
+                      // 延迟关闭，让用户看到100%
+                      setTimeout(() => {
+                        setIsDownloadingCCEDICT(false);
+                        
+                        if (isAvailable) {
+                          Alert.alert(
+                            appLanguage === 'zh-CN' ? '下载成功' : 'Download Complete',
+                            appLanguage === 'zh-CN' 
+                              ? 'CC-CEDICT离线词典下载成功！\n现在可以离线查询12万+中文词汇。' 
+                              : 'CC-CEDICT offline dictionary downloaded successfully!\nYou can now search 120,000+ Chinese words offline.',
+                            [{ text: appLanguage === 'zh-CN' ? '知道了' : 'OK' }]
+                          );
+                        } else {
+                          Alert.alert(
+                            appLanguage === 'zh-CN' ? '下载失败' : 'Download Failed',
+                            appLanguage === 'zh-CN' 
+                              ? '离线词典下载失败，请稍后重试或检查网络连接。' 
+                              : 'Failed to download offline dictionary. Please try again later or check your network connection.',
+                            [{ text: appLanguage === 'zh-CN' ? '知道了' : 'OK' }]
+                          );
+                        }
+                      }, 500);
+                    } catch (error) {
+                      setIsDownloadingCCEDICT(false);
+                      Alert.alert(
+                        appLanguage === 'zh-CN' ? '下载出错' : 'Download Error',
+                        appLanguage === 'zh-CN' 
+                          ? `下载过程中出现错误：${error}` 
+                          : `An error occurred during download: ${error}`,
+                        [{ text: appLanguage === 'zh-CN' ? '知道了' : 'OK' }]
+                      );
+                    }
                   }
                 }
               ]
@@ -1593,6 +1648,58 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
           <Animated.View style={{ transform: [{ scale: checkScale }] }}>
             <Ionicons name="checkmark-circle" size={90} color="#2ecc71" />
           </Animated.View>
+        </View>
+      )}
+      
+      {/* CC-CEDICT下载进度条 */}
+      {isDownloadingCCEDICT && (
+        <View style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          zIndex: 999,
+          backgroundColor: 'rgba(0,0,0,0.7)',
+          justifyContent: 'center',
+          alignItems: 'center',
+        }}>
+          <View style={{
+            backgroundColor: 'white',
+            borderRadius: 16,
+            padding: 24,
+            width: '80%',
+            alignItems: 'center',
+          }}>
+            <Text style={{
+              fontSize: 18,
+              fontWeight: 'bold',
+              marginBottom: 16,
+              color: colors.text.primary,
+            }}>
+              {appLanguage === 'zh-CN' ? '下载离线词典' : 'Downloading Dictionary'}
+            </Text>
+            <View style={{
+              width: '100%',
+              height: 8,
+              backgroundColor: colors.background.secondary,
+              borderRadius: 4,
+              overflow: 'hidden',
+              marginBottom: 12,
+            }}>
+              <View style={{
+                width: `${downloadProgress}%`,
+                height: '100%',
+                backgroundColor: colors.primary[500],
+              }} />
+            </View>
+            <Text style={{
+              fontSize: 14,
+              color: colors.text.secondary,
+            }}>
+              {downloadProgress}%
+            </Text>
+          </View>
         </View>
       )}
       {/* 庆祝弹窗动画 */}
