@@ -49,6 +49,8 @@ export class EnglishUIEnvironment implements LanguageEnvironment {
       '我': 'wo',
       '爱': 'ai',
       '你': 'ni',
+      '眉': 'mei',
+      '毛': 'mao',
       '吃': 'chi',
       '苹': 'ping',
       '果': 'guo',
