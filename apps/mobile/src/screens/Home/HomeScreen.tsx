@@ -114,12 +114,18 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
 
   // 🔧 当用户选择中文作为目标语言时，提示下载CC-CEDICT词库
   useEffect(() => {
+    // 使用单例避免重复下载
+    let ccedictProviderInstance: CCEDICTProvider | null = null;
+    
     const promptCCEDICTDownload = async () => {
       if (selectedLanguage === 'CHINESE') {
         console.log('🔍 检测到目标语言为中文，检查CC-CEDICT词库...');
         try {
-          const ccedictProvider = new CCEDICTProvider();
-          const isAvailable = await ccedictProvider.isAvailable();
+          // 重用实例
+          if (!ccedictProviderInstance) {
+            ccedictProviderInstance = new CCEDICTProvider();
+          }
+          const isAvailable = await ccedictProviderInstance.isAvailable();
           
           if (!isAvailable) {
             // 显示下载提示弹窗
@@ -152,8 +158,8 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                         });
                       }, 300);
                       
-                      // 触发下载
-                      const isAvailable = await ccedictProvider.isAvailable();
+                      // 触发下载（重用实例）
+                      const isAvailable = await ccedictProviderInstance.isAvailable();
                       
                       clearInterval(progressInterval);
                       setDownloadProgress(100);
