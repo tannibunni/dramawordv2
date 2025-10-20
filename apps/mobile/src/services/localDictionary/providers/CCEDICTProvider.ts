@@ -31,7 +31,7 @@ export class CCEDICTProvider implements LocalDictionaryProvider {
   }
 
   /**
-   * 检查词库是否可用
+   * 检查词库是否可用（不触发下载）
    */
   async isAvailable(): Promise<boolean> {
     try {
@@ -49,195 +49,87 @@ export class CCEDICTProvider implements LocalDictionaryProvider {
         return true;
       }
       
-      // 如果词条数量少于10000，检查是否需要重新下载和解析
-      if (count < 10000) {
-        console.log(`⚠️ CCEDICT数据库词条数量不足 (${count} < 10000)`);
-        
-        // 检查是否正在下载或解析中（避免重复触发）
-        if (this.isDownloading) {
-          console.log('⏳ 已有下载任务进行中，跳过重复下载');
-          return false;
-        }
-        
-        console.log('🔄 尝试下载和解析CC-CEDICT词典...');
-        this.isDownloading = true;
-        
-        try {
-          // 清空数据库
-          await this.sqliteManager.clearEntries();
-          
-          // 删除旧文件（如果存在）
-          try {
-            await this.storage.deleteDictionaryFile('ccedict.txt');
-          } catch (deleteError) {
-            console.log('⚠️ 删除旧文件失败（可能不存在）:', deleteError);
-          }
-          
-          // 下载词典
-          const sources = this.downloader.getSupportedSources();
-          const ccedictSource = sources.find(source => source.name === 'CC-CEDICT');
-          
-          if (ccedictSource) {
-            console.log('📥 开始下载CC-CEDICT词典文件...');
-            const downloadResult = await this.downloader.downloadDictionary(ccedictSource);
-            
-            if (downloadResult.success) {
-              this.originalDownloadUri = downloadResult.originalUri || null;
-              
-              console.log('✅ 下载成功，开始解析...');
-              const content = await this.storage.readDictionaryFileWithFallback('ccedict.txt', this.originalDownloadUri);
-              
-              if (content && content.length > 0) {
-                console.log(`📄 文件内容长度: ${content.length} 字符`);
-                const parseSuccess = await this.parseDictionaryFile(content);
-                
-                if (parseSuccess) {
-                  const newCount = await this.sqliteManager.getEntryCount();
-                  console.log(`✅ 下载和解析完成，新词条数量: ${newCount}`);
-                  this.isDownloading = false;
-                  return newCount >= 10000;
-                } else {
-                  console.log('❌ 解析失败');
-                }
-              } else {
-                console.log('❌ 无法读取文件内容');
-              }
-            } else {
-              console.log('❌ 下载失败:', downloadResult.error);
-            }
-          } else {
-            console.log('❌ 找不到CC-CEDICT下载源');
-          }
-        } catch (error) {
-          console.error('❌ 下载和解析失败:', error);
-        } finally {
-          this.isDownloading = false;
-        }
-        
-        return false;
-      }
-      
-      if (count === 0) {
-        console.log('⚠️ CCEDICT数据库为空，检查是否需要下载和导入词典文件');
-        
-        // 检查是否有词典文件
-        const hasFile = await this.storage.checkDictionaryExists('ccedict.txt');
-        console.log(`📁 CCEDICT文件是否存在: ${hasFile}`);
-        
-        if (hasFile) {
-          console.log('📚 发现CCEDICT文件，尝试读取和解析...');
-          
-          const content = await this.storage.readDictionaryFileWithFallback('ccedict.txt', this.originalDownloadUri);
-          if (content && content.length > 0) {
-            console.log(`📄 文件内容长度: ${content.length} 字符`);
-            const parseSuccess = await this.parseDictionaryFile(content);
-            if (parseSuccess) {
-              const newCount = await this.sqliteManager.getEntryCount();
-              console.log(`✅ 解析完成，新词条数量: ${newCount}`);
-              return newCount > 0;
-            } else {
-              console.log('❌ 解析CCEDICT文件失败');
-            }
-          } else {
-            console.log('❌ 无法读取CCEDICT文件内容或文件为空，可能是权限问题');
-            console.log('🔄 尝试删除损坏的文件并重新下载...');
-            
-            // 尝试删除损坏的文件并重新下载
-            try {
-              await this.storage.deleteDictionaryFile('ccedict.txt');
-              console.log('✅ 已删除损坏的文件');
-              
-              // 重新下载
-              console.log('⚠️ 文件无法读取，尝试重新下载...');
-              const sources = this.downloader.getSupportedSources();
-              const ccedictSource = sources.find(source => source.name === 'CC-CEDICT');
-              
-              if (ccedictSource) {
-                console.log('📥 开始重新下载CCEDICT词典文件...', { url: ccedictSource.url, filename: ccedictSource.filename });
-                const downloadResult = await this.downloader.downloadDictionary(ccedictSource);
-                
-                console.log('📥 重新下载结果:', { success: downloadResult.success, error: downloadResult.error, originalUri: downloadResult.originalUri });
-                
-                if (downloadResult.success) {
-                  // 存储原始下载URI
-                  this.originalDownloadUri = downloadResult.originalUri || null;
-                  
-                  console.log('✅ 重新下载成功，尝试解析...');
-                  const newContent = await this.storage.readDictionaryFileWithFallback('ccedict.txt', this.originalDownloadUri);
-                  if (newContent && newContent.length > 0) {
-                    console.log(`📄 重新下载文件内容长度: ${newContent.length} 字符`);
-                    const parseSuccess = await this.parseDictionaryFile(newContent);
-                    if (parseSuccess) {
-                      const newCount = await this.sqliteManager.getEntryCount();
-                      console.log(`✅ 重新下载和解析完成，新词条数量: ${newCount}`);
-                      return newCount > 0;
-                    } else {
-                      console.log('❌ 重新下载的文件解析失败');
-                    }
-                  } else {
-                    console.log('❌ 重新下载后仍然无法读取文件内容');
-                  }
-                } else {
-                  console.log('❌ 重新下载失败:', downloadResult.error);
-                }
-              } else {
-                console.log('❌ 找不到CCEDICT下载源');
-              }
-            } catch (deleteError) {
-              console.log('❌ 删除和重新下载失败:', deleteError);
-            }
-          }
-        } else {
-          console.log('⚠️ CCEDICT文件不存在，尝试自动下载...');
-          try {
-            console.log('🔍 获取支持的词典源...');
-            const sources = this.downloader.getSupportedSources();
-            console.log(`📋 找到 ${sources.length} 个支持的词典源`);
-            
-            const ccedictSource = sources.find(source => source.name === 'CC-CEDICT');
-            
-            if (ccedictSource) {
-              console.log('📥 开始下载CCEDICT词典文件...', { url: ccedictSource.url, filename: ccedictSource.filename });
-              const downloadResult = await this.downloader.downloadDictionary(ccedictSource);
-              
-              console.log('📥 下载结果:', { success: downloadResult.success, error: downloadResult.error, originalUri: downloadResult.originalUri });
-              
-              if (downloadResult.success) {
-                // 存储原始下载URI
-                this.originalDownloadUri = downloadResult.originalUri || null;
-                
-                console.log('✅ CCEDICT文件下载成功，开始解析...');
-                const content = await this.storage.readDictionaryFileWithFallback('ccedict.txt', this.originalDownloadUri);
-                if (content) {
-                  console.log(`📄 文件内容长度: ${content.length} 字符，开始解析...`);
-                  const parseSuccess = await this.parseDictionaryFile(content);
-                  if (parseSuccess) {
-                    const newCount = await this.sqliteManager.getEntryCount();
-                    console.log(`✅ 自动下载和解析完成，新词条数量: ${newCount}`);
-                    return newCount > 0;
-                  } else {
-                    console.log('❌ 解析文件失败');
-                  }
-                } else {
-                  console.log('❌ 下载后无法读取文件内容');
-                }
-              } else {
-                console.log('❌ CCEDICT文件下载失败:', downloadResult.error);
-              }
-            } else {
-              console.log('❌ 找不到CCEDICT下载源，可用源:', sources.map(s => s.name));
-            }
-          } catch (downloadError) {
-            console.log('❌ 自动下载CCEDICT失败:', downloadError);
-          }
-        }
-      }
-      
-      // 🔧 返回词条数量是否大于等于100（完整的CC-CEDICT应该有数万词条）
-      return count >= 100;
+      // 词条数量不足，但不自动下载，由调用者决定是否下载
+      console.log(`⚠️ CCEDICT数据库词条数量不足 (${count} < 10000)，需要下载`);
+      return false;
     } catch (error) {
       console.error('❌ 检查CC-CEDICT词库可用性失败:', error);
       return false;
+    }
+  }
+
+  /**
+   * 🔧 手动下载和解析CC-CEDICT词典
+   */
+  async downloadAndParse(): Promise<boolean> {
+    // 检查是否正在下载
+    if (this.isDownloading) {
+      console.log('⏳ 已有下载任务进行中，跳过重复下载');
+      return false;
+    }
+    
+    console.log('🔄 开始下载和解析CC-CEDICT词典...');
+    this.isDownloading = true;
+    
+    try {
+      if (!this.isInitialized) {
+        await this.initialize();
+      }
+      
+      // 清空数据库
+      await this.sqliteManager.clearEntries();
+      
+      // 删除旧文件（如果存在）
+      try {
+        await this.storage.deleteDictionaryFile('ccedict.txt');
+      } catch (deleteError) {
+        console.log('⚠️ 删除旧文件失败（可能不存在）:', deleteError);
+      }
+      
+      // 下载词典
+      const sources = this.downloader.getSupportedSources();
+      const ccedictSource = sources.find(source => source.name === 'CC-CEDICT');
+      
+      if (!ccedictSource) {
+        console.log('❌ 找不到CC-CEDICT下载源');
+        return false;
+      }
+      
+      console.log('📥 开始下载CC-CEDICT词典文件...');
+      const downloadResult = await this.downloader.downloadDictionary(ccedictSource);
+      
+      if (!downloadResult.success) {
+        console.log('❌ 下载失败:', downloadResult.error);
+        return false;
+      }
+      
+      this.originalDownloadUri = downloadResult.originalUri || null;
+      console.log('✅ 下载成功，开始解析...');
+      
+      const content = await this.storage.readDictionaryFileWithFallback('ccedict.txt', this.originalDownloadUri);
+      
+      if (!content || content.length === 0) {
+        console.log('❌ 无法读取文件内容');
+        return false;
+      }
+      
+      console.log(`📄 文件内容长度: ${content.length} 字符`);
+      const parseSuccess = await this.parseDictionaryFile(content);
+      
+      if (!parseSuccess) {
+        console.log('❌ 解析失败');
+        return false;
+      }
+      
+      const newCount = await this.sqliteManager.getEntryCount();
+      console.log(`✅ 下载和解析完成，新词条数量: ${newCount}`);
+      return newCount >= 10000;
+      
+    } catch (error) {
+      console.error('❌ 下载和解析失败:', error);
+      return false;
+    } finally {
+      this.isDownloading = false;
     }
   }
 

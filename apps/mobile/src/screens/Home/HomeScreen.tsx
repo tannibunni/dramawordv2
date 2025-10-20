@@ -158,8 +158,8 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                         });
                       }, 300);
                       
-                      // 触发下载（重用实例）
-                      const isAvailable = await ccedictProviderInstance.isAvailable();
+                      // 触发下载（重用实例，调用downloadAndParse方法）
+                      const success = await ccedictProviderInstance.downloadAndParse();
                       
                       clearInterval(progressInterval);
                       setDownloadProgress(100);
@@ -168,7 +168,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                       setTimeout(() => {
                         setIsDownloadingCCEDICT(false);
                         
-                        if (isAvailable) {
+                        if (success) {
                           Alert.alert(
                             appLanguage === 'zh-CN' ? '下载成功' : 'Download Complete',
                             appLanguage === 'zh-CN' 
