@@ -14,6 +14,7 @@ export class CCEDICTProvider implements LocalDictionaryProvider {
   private downloader: DictionaryDownloader;
   private isInitialized = false;
   private originalDownloadUri: string | null = null; // 存储原始下载URI
+  private isDownloading = false; // 防止重复下载
 
   constructor() {
     this.storage = DictionaryStorage.getInstance();
@@ -41,55 +42,76 @@ export class CCEDICTProvider implements LocalDictionaryProvider {
       const count = await this.sqliteManager.getEntryCount();
       console.log(`🔍 CCEDICT数据库词条数量: ${count}`);
       
-      // 🔧 如果词条数量少于100，认为词典不可用（完整的CC-CEDICT应该有数万词条）
-      if (count < 100) {
-        console.log(`⚠️ CCEDICT数据库词条数量太少 (${count} < 100)，认为词典不可用`);
-        console.log('🔄 尝试重新下载和解析CC-CEDICT词典...');
+      // 🔧 完整的CC-CEDICT应该有数万词条（约12万条）
+      // 如果词条数量 >= 10000，认为词典可用
+      if (count >= 10000) {
+        console.log(`✅ CCEDICT数据库词条充足 (${count})，词典可用`);
+        return true;
+      }
+      
+      // 如果词条数量少于10000，检查是否需要重新下载和解析
+      if (count < 10000) {
+        console.log(`⚠️ CCEDICT数据库词条数量不足 (${count} < 10000)`);
         
-        // 强制重新下载和解析
+        // 检查是否正在下载或解析中（避免重复触发）
+        if (this.isDownloading) {
+          console.log('⏳ 已有下载任务进行中，跳过重复下载');
+          return false;
+        }
+        
+        console.log('🔄 尝试下载和解析CC-CEDICT词典...');
+        this.isDownloading = true;
+        
         try {
           // 清空数据库
           await this.sqliteManager.clearEntries();
           
-          // 删除旧文件
-          await this.storage.deleteDictionaryFile('ccedict.txt');
+          // 删除旧文件（如果存在）
+          try {
+            await this.storage.deleteDictionaryFile('ccedict.txt');
+          } catch (deleteError) {
+            console.log('⚠️ 删除旧文件失败（可能不存在）:', deleteError);
+          }
           
-          // 重新下载
+          // 下载词典
           const sources = this.downloader.getSupportedSources();
           const ccedictSource = sources.find(source => source.name === 'CC-CEDICT');
           
           if (ccedictSource) {
-            console.log('📥 开始重新下载CC-CEDICT词典文件...');
+            console.log('📥 开始下载CC-CEDICT词典文件...');
             const downloadResult = await this.downloader.downloadDictionary(ccedictSource);
             
             if (downloadResult.success) {
               this.originalDownloadUri = downloadResult.originalUri || null;
               
-              console.log('✅ 重新下载成功，开始解析...');
+              console.log('✅ 下载成功，开始解析...');
               const content = await this.storage.readDictionaryFileWithFallback('ccedict.txt', this.originalDownloadUri);
               
               if (content && content.length > 0) {
-                console.log(`📄 重新下载文件内容长度: ${content.length} 字符`);
+                console.log(`📄 文件内容长度: ${content.length} 字符`);
                 const parseSuccess = await this.parseDictionaryFile(content);
                 
                 if (parseSuccess) {
                   const newCount = await this.sqliteManager.getEntryCount();
-                  console.log(`✅ 重新下载和解析完成，新词条数量: ${newCount}`);
-                  return newCount >= 100;
+                  console.log(`✅ 下载和解析完成，新词条数量: ${newCount}`);
+                  this.isDownloading = false;
+                  return newCount >= 10000;
                 } else {
-                  console.log('❌ 重新解析失败');
+                  console.log('❌ 解析失败');
                 }
               } else {
-                console.log('❌ 重新下载后仍然无法读取文件内容');
+                console.log('❌ 无法读取文件内容');
               }
             } else {
-              console.log('❌ 重新下载失败:', downloadResult.error);
+              console.log('❌ 下载失败:', downloadResult.error);
             }
           } else {
             console.log('❌ 找不到CC-CEDICT下载源');
           }
         } catch (error) {
-          console.error('❌ 重新下载和解析失败:', error);
+          console.error('❌ 下载和解析失败:', error);
+        } finally {
+          this.isDownloading = false;
         }
         
         return false;
@@ -439,7 +461,8 @@ export class CCEDICTProvider implements LocalDictionaryProvider {
 
         // 解析CC-CEDICT格式: 繁体 简体 [拼音] /英文释义/
         // 示例: 電池 电池 [dian4 chi2] /battery/
-        const match = line.match(/^(\S+)\s+(\S+)\s+\[([^\]]+)\]\s+\/(.+)\/$/);
+        // 支持数字、字母、特殊字符（如 "110", "3C", "%"）
+        const match = line.match(/^(.+?)\s+(.+?)\s+\[([^\]]+)\]\s+\/(.+)\/$/);
         if (match) {
           const [, traditional, simplified, pinyin, translation] = match;
           

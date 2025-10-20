@@ -279,59 +279,39 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       try {
         console.log('🔍 开始实时拼音查询:', pinyinText);
         
-        // 🔧 只显示离线词典的结果，不显示在线API结果
-        console.log('🔍 拼音查询：只显示离线词典结果');
+        // 🔧 只查询离线词典（CC-CEDICT）
+        console.log('🔍 拼音查询：只查询离线词典（CC-CEDICT）');
         
-        // 获取目标语言代码
-        const targetLanguageCode = SUPPORTED_LANGUAGES[selectedLanguage].code;
+        // 直接查询CC-CEDICT离线词典
+        const CCEDICTModule = require('../services/localDictionary/providers/CCEDICTProvider');
+        const CCEDICTProvider = CCEDICTModule.CCEDICTProvider;
+        const ccedictProvider = new CCEDICTProvider();
         
-        // 使用统一查询服务查询拼音
-        const queryResult = await unifiedQueryService.query(
-          pinyinText, 
-          appLanguage || 'en-US', 
-          targetLanguageCode
-        );
+        // 查询离线词典
+        const offlineResult = await ccedictProvider.lookup(pinyinText);
         
-        // 🔧 调试：查看查询结果的具体内容
-        console.log('🔍 查询结果详情:', {
-          type: queryResult.type,
-          source: queryResult.source,
-          hasOptions: !!queryResult.options,
-          optionsLength: queryResult.options?.length,
-          hasData: !!queryResult.data,
-          dataKeys: queryResult.data ? Object.keys(queryResult.data) : []
+        console.log('🔍 离线词典查询结果:', {
+          success: offlineResult.success,
+          candidatesCount: offlineResult.candidates?.length || 0
         });
         
-        // 🔧 只要有候选词就显示下拉菜单，不管来源
-        if (queryResult.type === 'ambiguous' && queryResult.options && queryResult.options.length > 0) {
-          // 有多个候选词，显示建议列表
-          const suggestions = queryResult.options.map((option, index) => ({
+        // 🔧 只有离线词典有结果才显示下拉菜单
+        if (offlineResult.success && offlineResult.candidates && offlineResult.candidates.length > 0) {
+          // 将离线词典结果转换为建议列表格式
+          const suggestions = offlineResult.candidates.map((candidate, index) => ({
             id: `${pinyinText}-${index}`,
-            chinese: option.data.correctedWord || option.data.translation,
-            english: option.data.definitions?.[0]?.definition || '',
-            pinyin: option.data.pinyin || option.data.phonetic || pinyinText,
-            audioUrl: option.data.audioUrl,
+            chinese: candidate.word,
+            english: candidate.translation,
+            pinyin: candidate.pinyin,
+            audioUrl: undefined, // 离线词典暂时没有audioUrl
           }));
           
-          console.log('✅ 拼音查询成功，找到候选词:', suggestions.length, '来源:', queryResult.source || 'online');
+          console.log('✅ 离线词典查询成功，找到候选词:', suggestions.length);
           setPinyinSuggestions(suggestions);
           setShowPinyinSuggestions(true);
-        } else if (queryResult.type === 'translation' && queryResult.data) {
-          // 只有一个结果，直接显示
-          const suggestion = {
-            id: `${pinyinText}-single`,
-            chinese: queryResult.data.correctedWord || queryResult.data.translation,
-            english: queryResult.data.definitions?.[0]?.definition || '',
-            pinyin: queryResult.data.pinyin || queryResult.data.phonetic || pinyinText,
-            audioUrl: queryResult.data.audioUrl,
-          };
-          
-          console.log('✅ 拼音查询成功，找到唯一候选词:', suggestion.chinese, '来源:', queryResult.source || 'online');
-          setPinyinSuggestions([suggestion]);
-          setShowPinyinSuggestions(true);
         } else {
-          // 没有找到结果
-          console.log('⚠️ 拼音查询无结果');
+          // 离线词典无结果，不显示下拉菜单
+          console.log('⚠️ 离线词典无结果，隐藏下拉菜单，用户可点击搜索按钮调用OpenAI API');
           setPinyinSuggestions([]);
           setShowPinyinSuggestions(false);
         }
