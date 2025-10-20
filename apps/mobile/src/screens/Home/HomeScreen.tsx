@@ -107,6 +107,34 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   // 升级弹窗相关状态
   const [upgradeModalVisible, setUpgradeModalVisible] = useState(false);
   const [lockedFeature, setLockedFeature] = useState<FeatureType | null>(null);
+
+  // 🔧 当用户选择中文作为目标语言时，自动预下载CC-CEDICT词库
+  useEffect(() => {
+    const preloadCCEDICT = async () => {
+      if (selectedLanguage === 'CHINESE') {
+        console.log('🔍 检测到目标语言为中文，开始预下载CC-CEDICT词库...');
+        try {
+          const ccedictProvider = new CCEDICTProvider();
+          // 调用isAvailable()会触发自动下载逻辑
+          const isAvailable = await ccedictProvider.isAvailable();
+          if (isAvailable) {
+            console.log('✅ CC-CEDICT词库预下载成功');
+          } else {
+            console.log('⚠️ CC-CEDICT词库预下载未完成，将在首次查询时下载');
+          }
+        } catch (error) {
+          console.log('⚠️ CC-CEDICT词库预下载失败:', error);
+        }
+      }
+    };
+
+    // 延迟5秒后执行预下载，避免影响应用启动速度
+    const timer = setTimeout(() => {
+      preloadCCEDICT();
+    }, 5000);
+
+    return () => clearTimeout(timer);
+  }, [selectedLanguage]);
   
   // 设置翻译服务语言
   useEffect(() => {
