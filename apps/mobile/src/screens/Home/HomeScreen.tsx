@@ -36,6 +36,7 @@ import { useAppLanguage } from '../../context/AppLanguageContext';
 import { SUPPORTED_LANGUAGES, SupportedLanguageCode, API_BASE_URL } from '../../constants/config';
 import { shouldShowLanguageReminder, generateLanguageReminderMessage } from '../../utils/languageDetector';
 import { t } from '../../constants/translations';
+import { CCEDICTProvider } from '../../services/localDictionary/providers/CCEDICTProvider';
 // 导入功能权限控制相关组件
 import FeatureAccessService, { FeatureType } from '../../services/featureAccessService';
 import { UpgradeModal } from '../../components/common/UpgradeModal';
@@ -282,9 +283,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         // 🔧 只查询离线词典（CC-CEDICT）
         console.log('🔍 拼音查询：只查询离线词典（CC-CEDICT）');
         
-        // 直接查询CC-CEDICT离线词典
-        const CCEDICTModule = require('../services/localDictionary/providers/CCEDICTProvider');
-        const CCEDICTProvider = CCEDICTModule.CCEDICTProvider;
+        // 创建CC-CEDICT离线词典实例
         const ccedictProvider = new CCEDICTProvider();
         
         // 查询离线词典
