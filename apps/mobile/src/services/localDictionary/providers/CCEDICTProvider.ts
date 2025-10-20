@@ -44,6 +44,55 @@ export class CCEDICTProvider implements LocalDictionaryProvider {
       // 🔧 如果词条数量少于100，认为词典不可用（完整的CC-CEDICT应该有数万词条）
       if (count < 100) {
         console.log(`⚠️ CCEDICT数据库词条数量太少 (${count} < 100)，认为词典不可用`);
+        console.log('🔄 尝试重新下载和解析CC-CEDICT词典...');
+        
+        // 强制重新下载和解析
+        try {
+          // 清空数据库
+          await this.sqliteManager.clearEntries();
+          
+          // 删除旧文件
+          await this.storage.deleteDictionaryFile('ccedict.txt');
+          
+          // 重新下载
+          const sources = this.downloader.getSupportedSources();
+          const ccedictSource = sources.find(source => source.name === 'CC-CEDICT');
+          
+          if (ccedictSource) {
+            console.log('📥 开始重新下载CC-CEDICT词典文件...');
+            const downloadResult = await this.downloader.downloadDictionary(ccedictSource);
+            
+            if (downloadResult.success) {
+              this.originalDownloadUri = downloadResult.originalUri || null;
+              
+              console.log('✅ 重新下载成功，开始解析...');
+              const content = await this.storage.readDictionaryFileWithFallback('ccedict.txt', this.originalDownloadUri);
+              
+              if (content && content.length > 0) {
+                console.log(`📄 重新下载文件内容长度: ${content.length} 字符`);
+                const parseSuccess = await this.parseDictionaryFile(content);
+                
+                if (parseSuccess) {
+                  const newCount = await this.sqliteManager.getEntryCount();
+                  console.log(`✅ 重新下载和解析完成，新词条数量: ${newCount}`);
+                  return newCount >= 100;
+                } else {
+                  console.log('❌ 重新解析失败');
+                }
+              } else {
+                console.log('❌ 重新下载后仍然无法读取文件内容');
+              }
+            } else {
+              console.log('❌ 重新下载失败:', downloadResult.error);
+            }
+          } else {
+            console.log('❌ 找不到CC-CEDICT下载源');
+          }
+        } catch (error) {
+          console.error('❌ 重新下载和解析失败:', error);
+        }
+        
+        return false;
       }
       
       if (count === 0) {
@@ -366,6 +415,7 @@ export class CCEDICTProvider implements LocalDictionaryProvider {
       }
 
       console.log('🔄 开始解析CC-CEDICT文件...');
+      console.log(`📄 文件内容长度: ${content.length} 字符`);
       
       // 清空现有数据
       await this.sqliteManager.clearEntries();
@@ -373,10 +423,17 @@ export class CCEDICTProvider implements LocalDictionaryProvider {
       const lines = content.split('\n');
       const entries = [];
       let processedCount = 0;
+      let skippedCount = 0;
+      let errorCount = 0;
 
-      for (const line of lines) {
+      console.log(`📋 总行数: ${lines.length}`);
+
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        
         // 跳过注释行和空行
         if (line.startsWith('#') || line.trim() === '') {
+          skippedCount++;
           continue;
         }
 
@@ -397,22 +454,45 @@ export class CCEDICTProvider implements LocalDictionaryProvider {
 
           processedCount++;
           
-          // 批量插入，每1000条插入一次
+          // 每1000条插入一次
           if (entries.length >= 1000) {
-            await this.sqliteManager.insertEntries(entries);
-            entries.length = 0;
-            console.log(`📊 已处理 ${processedCount} 条词条...`);
+            try {
+              await this.sqliteManager.insertEntries(entries);
+              entries.length = 0;
+              console.log(`📊 已处理 ${processedCount} 条词条...`);
+            } catch (insertError) {
+              console.error(`❌ 批量插入失败 (第${processedCount}条):`, insertError);
+              errorCount++;
+              // 继续处理，不中断
+            }
           }
+        } else {
+          // 记录无法解析的行（仅前10行）
+          if (errorCount < 10) {
+            console.log(`⚠️ 无法解析行 ${i + 1}: ${line.substring(0, 100)}...`);
+          }
+          errorCount++;
         }
       }
 
       // 插入剩余词条
       if (entries.length > 0) {
-        await this.sqliteManager.insertEntries(entries);
+        try {
+          await this.sqliteManager.insertEntries(entries);
+          console.log(`📊 插入剩余 ${entries.length} 条词条`);
+        } catch (insertError) {
+          console.error(`❌ 插入剩余词条失败:`, insertError);
+          errorCount++;
+        }
       }
 
-      console.log(`✅ CC-CEDICT文件解析完成，共处理 ${processedCount} 条词条`);
-      return true;
+      console.log(`✅ CC-CEDICT文件解析完成:`);
+      console.log(`   - 总行数: ${lines.length}`);
+      console.log(`   - 跳过行数: ${skippedCount} (注释和空行)`);
+      console.log(`   - 成功解析: ${processedCount} 条词条`);
+      console.log(`   - 解析错误: ${errorCount} 行`);
+      
+      return processedCount > 0;
     } catch (error) {
       console.error('❌ 解析CC-CEDICT文件失败:', error);
       return false;
