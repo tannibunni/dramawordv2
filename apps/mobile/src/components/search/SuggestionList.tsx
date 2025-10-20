@@ -41,9 +41,9 @@ const SuggestionList: React.FC<SuggestionListProps> = ({
       <View style={styles.suggestionContent}>
         <View style={styles.suggestionText}>
           <Text style={styles.chineseText}>{item.chinese}</Text>
-          <Text style={styles.englishText}> - {item.english}</Text>
+          <Text style={styles.pinyinText}> - {typeof item.pinyin === 'string' ? item.pinyin : ''}</Text>
         </View>
-        <Text style={styles.pinyinText}>拼音: {item.pinyin}</Text>
+        <Text style={styles.englishText}>{item.english}</Text>
       </View>
       <Ionicons 
         name="chevron-forward" 
