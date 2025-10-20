@@ -108,33 +108,53 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   const [upgradeModalVisible, setUpgradeModalVisible] = useState(false);
   const [lockedFeature, setLockedFeature] = useState<FeatureType | null>(null);
 
-  // 🔧 当用户选择中文作为目标语言时，自动预下载CC-CEDICT词库
+  // 🔧 当用户选择中文作为目标语言时，提示下载CC-CEDICT词库
   useEffect(() => {
-    const preloadCCEDICT = async () => {
+    const promptCCEDICTDownload = async () => {
       if (selectedLanguage === 'CHINESE') {
-        console.log('🔍 检测到目标语言为中文，开始预下载CC-CEDICT词库...');
+        console.log('🔍 检测到目标语言为中文，检查CC-CEDICT词库...');
         try {
           const ccedictProvider = new CCEDICTProvider();
-          // 调用isAvailable()会触发自动下载逻辑
           const isAvailable = await ccedictProvider.isAvailable();
-          if (isAvailable) {
-            console.log('✅ CC-CEDICT词库预下载成功');
+          
+          if (!isAvailable) {
+            // 显示下载提示弹窗
+            Alert.alert(
+              appLanguage === 'zh-CN' ? '下载离线词典' : 'Download Offline Dictionary',
+              appLanguage === 'zh-CN' 
+                ? '为了更好的拼音查询体验，建议下载CC-CEDICT离线词典（约4MB）。\n\n下载后可离线查询12万+中文词汇，无需网络。' 
+                : 'For better pinyin search experience, we recommend downloading the CC-CEDICT offline dictionary (about 4MB).\n\nOnce downloaded, you can search 120,000+ Chinese words offline.',
+              [
+                {
+                  text: appLanguage === 'zh-CN' ? '稍后' : 'Later',
+                  style: 'cancel'
+                },
+                {
+                  text: appLanguage === 'zh-CN' ? '立即下载' : 'Download Now',
+                  onPress: async () => {
+                    console.log('🔄 用户确认下载CC-CEDICT词典...');
+                    // 触发下载
+                    await ccedictProvider.isAvailable();
+                  }
+                }
+              ]
+            );
           } else {
-            console.log('⚠️ CC-CEDICT词库预下载未完成，将在首次查询时下载');
+            console.log('✅ CC-CEDICT词库已可用');
           }
         } catch (error) {
-          console.log('⚠️ CC-CEDICT词库预下载失败:', error);
+          console.log('⚠️ 检查CC-CEDICT词库失败:', error);
         }
       }
     };
 
-    // 延迟5秒后执行预下载，避免影响应用启动速度
+    // 延迟2秒后检查，避免影响应用启动
     const timer = setTimeout(() => {
-      preloadCCEDICT();
-    }, 5000);
+      promptCCEDICTDownload();
+    }, 2000);
 
     return () => clearTimeout(timer);
-  }, [selectedLanguage]);
+  }, [selectedLanguage, appLanguage]);
   
   // 设置翻译服务语言
   useEffect(() => {
