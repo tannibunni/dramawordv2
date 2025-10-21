@@ -186,17 +186,35 @@ export class SQLiteManager {
     // 标准化拼音：移除空格、声调数字、转小写
     const normalizedPinyin = pinyin.toLowerCase().replace(/\s+/g, '').replace(/[0-9]/g, '');
 
-    // 精确匹配：pinyin字段去除空格和声调后完全相等
+    // 🔧 精确匹配：pinyin字段去除空格和所有声调数字(0-9)后完全相等
+    // SQLite不支持正则，所以需要多次REPLACE来去除所有数字
     const results = await this.db.getAllAsync(`
       SELECT * FROM ${this.config.tables.entries}
-      WHERE REPLACE(REPLACE(LOWER(pinyin), ' ', ''), '0', '') = ?
-         OR REPLACE(REPLACE(LOWER(pinyin), ' ', ''), '1', '') = ?
-         OR REPLACE(REPLACE(LOWER(pinyin), ' ', ''), '2', '') = ?
-         OR REPLACE(REPLACE(LOWER(pinyin), ' ', ''), '3', '') = ?
-         OR REPLACE(REPLACE(LOWER(pinyin), ' ', ''), '4', '') = ?
+      WHERE REPLACE(
+              REPLACE(
+                REPLACE(
+                  REPLACE(
+                    REPLACE(
+                      REPLACE(
+                        REPLACE(
+                          REPLACE(
+                            REPLACE(
+                              REPLACE(LOWER(pinyin), ' ', ''),
+                            '0', ''),
+                          '1', ''),
+                        '2', ''),
+                      '3', ''),
+                    '4', ''),
+                  '5', ''),
+                '6', ''),
+              '7', ''),
+            '8', ''),
+          '9', '') = ?
       ORDER BY frequency DESC, word ASC
       LIMIT ?
-    `, [normalizedPinyin, normalizedPinyin, normalizedPinyin, normalizedPinyin, normalizedPinyin, limit]);
+    `, [normalizedPinyin, limit]);
+
+    console.log(`🔍 拼音查询SQL: 输入="${pinyin}", 标准化="${normalizedPinyin}", 结果数量=${results.length}`);
 
     return results as DictionaryEntry[];
   }
