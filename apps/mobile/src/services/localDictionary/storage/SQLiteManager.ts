@@ -191,33 +191,22 @@ export class SQLiteManager {
 
       // 🔧 精确匹配：pinyin字段去除空格和所有声调数字(0-9)后完全相等
       // SQLite不支持正则，所以需要多次REPLACE来去除所有数字
+      // 构建嵌套的REPLACE函数链：LOWER(pinyin) -> 去空格 -> 去0-9
+      let pinyinExpr = 'LOWER(pinyin)';
+      pinyinExpr = `REPLACE(${pinyinExpr}, ' ', '')`;  // 去空格
+      for (let i = 0; i <= 9; i++) {
+        pinyinExpr = `REPLACE(${pinyinExpr}, '${i}', '')`;  // 去数字0-9
+      }
+      
       const sql = `
         SELECT * FROM ${this.config.tables.entries}
-        WHERE REPLACE(
-                REPLACE(
-                  REPLACE(
-                    REPLACE(
-                      REPLACE(
-                        REPLACE(
-                          REPLACE(
-                            REPLACE(
-                              REPLACE(
-                                REPLACE(LOWER(pinyin), ' ', ''),
-                              '0', ''),
-                            '1', ''),
-                          '2', ''),
-                        '3', ''),
-                      '4', ''),
-                    '5', ''),
-                  '6', ''),
-                '7', ''),
-              '8', ''),
-            '9', '') = ?
+        WHERE ${pinyinExpr} = ?
         ORDER BY frequency DESC, word ASC
         LIMIT ?
       `;
 
-      console.log(`🔍 [SQLiteManager] 执行SQL查询，参数: ["${normalizedPinyin}", ${limit}]`);
+      console.log(`🔍 [SQLiteManager] 执行SQL查询`);
+      console.log(`🔍 [SQLiteManager] 参数: normalizedPinyin="${normalizedPinyin}", limit=${limit}`);
 
       const results = await this.db.getAllAsync(sql, [normalizedPinyin, limit]);
 
