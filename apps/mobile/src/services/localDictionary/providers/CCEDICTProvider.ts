@@ -365,7 +365,7 @@ export class CCEDICTProvider implements LocalDictionaryProvider {
         const regex = new RegExp(regexPattern);
         
         // 🔍 调试前几行的匹配情况
-        if (i < 10 || (i >= 30 && i < 40)) {
+        if (i >= 30 && i < 40) {
           console.log(`🔍 正则表达式: ${regexPattern}`);
           console.log(`🔍 匹配结果:`, line.match(regex));
         }
