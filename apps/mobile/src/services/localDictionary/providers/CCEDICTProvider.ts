@@ -346,6 +346,11 @@ export class CCEDICTProvider implements LocalDictionaryProvider {
       for (let i = 0; i < lines.length; i++) {
         const line = lines[i];
         
+        // 🔍 调试前几行的匹配情况（在跳过之前）
+        if (i < 10) {
+          console.log(`🔍 调试行 ${i}: "${line}"`);
+        }
+        
         // 跳过注释行和空行
         if (line.startsWith('#') || line.trim() === '') {
           skippedCount++;
@@ -360,8 +365,7 @@ export class CCEDICTProvider implements LocalDictionaryProvider {
         const regex = new RegExp(regexPattern);
         
         // 🔍 调试前几行的匹配情况
-        if (i < 5) {
-          console.log(`🔍 调试行 ${i}: "${line}"`);
+        if (i < 10) {
           console.log(`🔍 正则表达式: ${regexPattern}`);
           console.log(`🔍 匹配结果:`, line.match(regex));
         }
