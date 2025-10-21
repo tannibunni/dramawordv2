@@ -330,6 +330,7 @@ export class CCEDICTProvider implements LocalDictionaryProvider {
 
       console.log('🔄 开始解析CC-CEDICT文件...');
       console.log(`📄 文件内容长度: ${content.length} 字符`);
+      console.log('🚨 CRITICAL: 新版本解析代码已加载！');
       
       // 清空现有数据
       await this.sqliteManager.clearEntries();
