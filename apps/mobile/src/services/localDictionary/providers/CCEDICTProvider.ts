@@ -357,6 +357,14 @@ export class CCEDICTProvider implements LocalDictionaryProvider {
         // 支持所有字符：数字(110)、字母+数字(3C)、特殊符号(%)、中文等
         const regexPattern = '^' + '(.+?)' + '\\s+' + '(.+?)' + '\\s+' + '\\[([^\\]]+)\\]' + '\\s+' + '\\/(.+)\\/$';
         const regex = new RegExp(regexPattern);
+        
+        // 🔍 调试前几行的匹配情况
+        if (i < 5) {
+          console.log(`🔍 调试行 ${i}: "${line}"`);
+          console.log(`🔍 正则表达式: ${regexPattern}`);
+          console.log(`🔍 匹配结果:`, line.match(regex));
+        }
+        
         const match = line.match(regex);
         if (match) {
           const [, traditional, simplified, pinyin, translation] = match;
