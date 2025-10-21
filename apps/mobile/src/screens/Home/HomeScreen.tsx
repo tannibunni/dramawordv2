@@ -159,7 +159,9 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                       }, 300);
                       
                       // 触发下载（重用实例，调用downloadAndParse方法）
+                      console.log('🔍 开始调用downloadAndParse()...');
                       const success = await ccedictProviderInstance.downloadAndParse();
+                      console.log('🔍 downloadAndParse()返回结果:', success);
                       
                       clearInterval(progressInterval);
                       setDownloadProgress(100);
