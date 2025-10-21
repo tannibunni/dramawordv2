@@ -183,15 +183,17 @@ export class SQLiteManager {
       throw new Error('数据库未初始化');
     }
 
-    // 标准化拼音：移除空格、声调数字、转小写
-    const normalizedPinyin = pinyin.toLowerCase().replace(/\s+/g, '').replace(/[0-9]/g, '');
+    try {
+      // 标准化拼音：移除空格、声调数字、转小写
+      const normalizedPinyin = pinyin.toLowerCase().replace(/\s+/g, '').replace(/[0-9]/g, '');
 
-    // 🔧 精确匹配：pinyin字段去除空格和所有声调数字(0-9)后完全相等
-    // SQLite不支持正则，所以需要多次REPLACE来去除所有数字
-    const results = await this.db.getAllAsync(`
-      SELECT * FROM ${this.config.tables.entries}
-      WHERE REPLACE(
-              REPLACE(
+      console.log(`🔍 [SQLiteManager] 拼音查询开始: 输入="${pinyin}", 标准化="${normalizedPinyin}", 限制=${limit}`);
+
+      // 🔧 精确匹配：pinyin字段去除空格和所有声调数字(0-9)后完全相等
+      // SQLite不支持正则，所以需要多次REPLACE来去除所有数字
+      const sql = `
+        SELECT * FROM ${this.config.tables.entries}
+        WHERE REPLACE(
                 REPLACE(
                   REPLACE(
                     REPLACE(
@@ -199,24 +201,37 @@ export class SQLiteManager {
                         REPLACE(
                           REPLACE(
                             REPLACE(
-                              REPLACE(LOWER(pinyin), ' ', ''),
-                            '0', ''),
-                          '1', ''),
-                        '2', ''),
-                      '3', ''),
-                    '4', ''),
-                  '5', ''),
-                '6', ''),
-              '7', ''),
-            '8', ''),
-          '9', '') = ?
-      ORDER BY frequency DESC, word ASC
-      LIMIT ?
-    `, [normalizedPinyin, limit]);
+                              REPLACE(
+                                REPLACE(LOWER(pinyin), ' ', ''),
+                              '0', ''),
+                            '1', ''),
+                          '2', ''),
+                        '3', ''),
+                      '4', ''),
+                    '5', ''),
+                  '6', ''),
+                '7', ''),
+              '8', ''),
+            '9', '') = ?
+        ORDER BY frequency DESC, word ASC
+        LIMIT ?
+      `;
 
-    console.log(`🔍 拼音查询SQL: 输入="${pinyin}", 标准化="${normalizedPinyin}", 结果数量=${results.length}`);
+      console.log(`🔍 [SQLiteManager] 执行SQL查询，参数: ["${normalizedPinyin}", ${limit}]`);
 
-    return results as DictionaryEntry[];
+      const results = await this.db.getAllAsync(sql, [normalizedPinyin, limit]);
+
+      console.log(`🔍 [SQLiteManager] 查询完成，结果数量=${results.length}`);
+      if (results.length > 0) {
+        console.log(`🔍 [SQLiteManager] 前3条结果:`, results.slice(0, 3).map((r: any) => `${r.word}[${r.pinyin}]`).join(', '));
+      }
+
+      return results as DictionaryEntry[];
+    } catch (error) {
+      console.error(`❌ [SQLiteManager] 拼音查询失败:`, error);
+      console.error(`❌ [SQLiteManager] 查询参数: pinyin="${pinyin}", limit=${limit}`);
+      throw error;
+    }
   }
 
   /**
