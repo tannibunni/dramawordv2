@@ -227,8 +227,15 @@ export class CCEDICTProvider implements LocalDictionaryProvider {
       // 标准化拼音：移除空格并转小写
       const normalizedPinyin = pinyin.toLowerCase().replace(/\s+/g, '');
 
+      console.log(`🔍 [CCEDICTProvider] 拼音查询: 输入="${pinyin}", 标准化="${normalizedPinyin}"`);
+
       // 执行精确拼音查询
       const entries = await this.sqliteManager.searchEntriesByPinyin(normalizedPinyin, limit);
+      
+      console.log(`🔍 [CCEDICTProvider] 查询结果: ${entries.length} 条词条`);
+      if (entries.length > 0) {
+        console.log(`🔍 [CCEDICTProvider] 前3条结果:`, entries.slice(0, 3).map(e => `${e.word}[${e.pinyin}]`).join(', '));
+      }
       
       const candidates = entries.map(entry => ({
         word: entry.word,
