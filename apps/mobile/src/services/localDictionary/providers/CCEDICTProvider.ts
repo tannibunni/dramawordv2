@@ -361,7 +361,7 @@ export class CCEDICTProvider implements LocalDictionaryProvider {
         // 示例: 電池 电池 [dian4 chi2] /battery/
         // ⚠️ CRITICAL FIX: 运行时动态构建正则表达式，绕过Metro缓存
         // 支持所有字符：数字(110)、字母+数字(3C)、特殊符号(%)、中文等
-        const regexPattern = '^' + '(.+?)' + '\\s+' + '(.+?)' + '\\s+' + '\\[([^\\]]+)\\]' + '\\s+' + '\\/(.+)\\/$';
+        const regexPattern = '^' + '(.+?)' + '\\s' + '(.+?)' + '\\s' + '\\[([^\\]]+)\\]' + '\\s' + '\\/(.+)\\/$';
         const regex = new RegExp(regexPattern);
         
         // 🔍 调试前几行的匹配情况
