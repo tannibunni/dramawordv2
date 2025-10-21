@@ -25,6 +25,10 @@ import { AppleCrossDeviceSyncService } from './services/appleCrossDeviceSyncServ
 import { NewDeviceDataDownloadService } from './services/newDeviceDataDownloadService';
 import { AppleLoginAutoDetectionService } from './services/appleLoginAutoDetectionService';
 import { userDataExtensionService } from './services/userDataExtensionService';
+import { DictionaryManager } from './services/dictionaryManager/DictionaryManager';
+import { HybridQueryService } from './services/hybridQueryService/HybridQueryService';
+// 注释掉测试导入，避免打包问题
+// import { runOfflineDictionaryTests } from './services/__tests__/offline-dictionary-test';
 
 // 内部组件：移除自动通知初始化
 const AppContent = () => {
@@ -66,6 +70,9 @@ const AppContent = () => {
 
            // 10. 初始化用户数据扩展服务
            await initializeUserDataExtensionService();
+
+           // 11. 初始化离线词典服务
+           await initializeOfflineDictionaryService();
       
       console.log('✅ 应用初始化完成');
     } catch (error) {
@@ -167,6 +174,39 @@ const AppContent = () => {
       console.log('✅ 用户数据扩展服务初始化完成');
     } catch (error) {
       console.error('❌ 用户数据扩展服务初始化失败:', error);
+    }
+  };
+
+  const initializeOfflineDictionaryService = async () => {
+    try {
+      console.log('📚 初始化离线词典服务...');
+      
+      // 初始化词典管理器
+      const dictionaryManager = DictionaryManager.getInstance();
+      await dictionaryManager.initialize();
+      
+      // 初始化混合查询服务
+      const hybridQueryService = HybridQueryService.getInstance();
+      await hybridQueryService.initialize();
+      
+      console.log('✅ 离线词典服务初始化完成');
+      
+      // 开发模式下运行测试（可选）
+      // 注释掉自动测试，避免打包问题
+      // 如需测试，请手动在代码中调用测试函数
+      if (__DEV__) {
+        console.log('🧪 离线词典服务已初始化，可以开始使用');
+        // setTimeout(async () => {
+        //   try {
+        //     await runOfflineDictionaryTests();
+        //   } catch (error) {
+        //     console.error('❌ 离线词典测试失败:', error);
+        //   }
+        // }, 2000);
+      }
+    } catch (error) {
+      console.error('❌ 离线词典服务初始化失败:', error);
+      // 不抛出错误，让应用继续启动，词典功能可以后续重试
     }
   };
 

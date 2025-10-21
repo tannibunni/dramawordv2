@@ -406,11 +406,12 @@ const AppLanguageSelector: React.FC<AppLanguageSelectorProps> = ({
 
           {/* 学习语言设置 */}
           {activeTab === 'learning' && (
-            <ScrollView 
-              style={styles.learningContent}
-              showsVerticalScrollIndicator={true}
-              contentContainerStyle={styles.learningScrollContent}
-            >
+            <>
+              <ScrollView 
+                style={styles.learningContent}
+                showsVerticalScrollIndicator={true}
+                contentContainerStyle={styles.learningScrollContent}
+              >
                 <Text style={styles.learningDescription}>
                   {appLanguage === 'zh-CN' 
                     ? '选择你正在学习的语言' 
@@ -469,20 +470,21 @@ const AppLanguageSelector: React.FC<AppLanguageSelectorProps> = ({
                     : `${selectedLanguages.length || 0} languages selected`
                   }
                 </Text>
+              </ScrollView>
 
-                {/* 确定按钮 */}
-                <View style={styles.confirmButtonContainer}>
-                  <TouchableOpacity
-                    style={styles.confirmButton}
-                    onPress={handleSaveLearningLanguages}
-                    activeOpacity={0.7}
-                  >
-                    <Text style={styles.confirmButtonText}>
-                      {appLanguage === 'zh-CN' ? '确定' : 'Confirm'}
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-            </ScrollView>
+              {/* 确定按钮 - 固定在窗口底部 */}
+              <View style={styles.fixedConfirmButtonContainer}>
+                <TouchableOpacity
+                  style={styles.confirmButton}
+                  onPress={handleSaveLearningLanguages}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.confirmButtonText}>
+                    {appLanguage === 'zh-CN' ? '确定' : 'Confirm'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </>
           )}
         </View>
       </View>
@@ -609,7 +611,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   learningContent: {
-    height: 700,
+    height: 500,
   },
   learningScrollContent: {
     padding: 10,
@@ -641,6 +643,13 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background.secondary,
     marginTop: 10,
   },
+  fixedConfirmButtonContainer: {
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderTopWidth: 1,
+    borderTopColor: colors.border.light,
+    backgroundColor: colors.background.secondary,
+  },
   confirmButton: {
     backgroundColor: colors.primary[500],
     borderRadius: 12,
@@ -654,7 +663,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   languageItemContainer: {
-    marginBottom: 8,
+    marginBottom: 0,
   },
   dictionaryInfoContainer: {
     backgroundColor: colors.background.tertiary,

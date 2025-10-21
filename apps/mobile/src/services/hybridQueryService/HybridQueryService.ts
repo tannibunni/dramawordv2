@@ -5,6 +5,9 @@ import { UnifiedQueryResult } from '../languageEnvironment/types';
 import { LocalQueryResult } from '../localDictionary/types';
 import { MultilingualQueryResult } from '../localDictionary/types/multilingual';
 import { SmartHybridQueryStrategy, CloudWordsIntegration } from './HybridQueryStrategy';
+import { API_CONFIG } from '../../config/api';
+
+const API_BASE_URL = API_CONFIG.BASE_URL;
 
 export interface HybridQueryOptions {
   enableLocalDictionary: boolean;
@@ -392,7 +395,7 @@ export class HybridQueryService {
     targetLanguage: string
   ): Promise<any | null> {
     try {
-      const response = await fetch(`/api/words/cloud/${encodeURIComponent(input)}?language=${targetLanguage}`, {
+      const response = await fetch(`${API_BASE_URL}/words/cloud/${encodeURIComponent(input)}?language=${targetLanguage}`, {
         method: 'GET',
         headers: { 'Content-Type': 'application/json' }
       });
@@ -424,7 +427,7 @@ export class HybridQueryService {
     uiLanguage: string
   ): Promise<any | null> {
     try {
-      const response = await fetch(`/api/words/search`, {
+      const response = await fetch(`${API_BASE_URL}/words/search`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 

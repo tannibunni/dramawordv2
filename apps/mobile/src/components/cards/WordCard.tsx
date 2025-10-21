@@ -51,7 +51,7 @@ const WordCard: React.FC<WordCardProps> = ({
   const { appLanguage } = useAppLanguage();
   
   // 检查是否有多个例句
-  const hasMultipleExamples = wordData.definitions.some(def => def.examples && def.examples.length > 1);
+  const hasMultipleExamples = wordData.definitions?.some(def => def.examples && def.examples.length > 1) || false;
   
   // 检查内容是否可能超出显示区域
   const hasScrollableContent = (() => {
@@ -62,17 +62,19 @@ const WordCard: React.FC<WordCardProps> = ({
     totalContentHeight += 80; // 单词 + 音标 + 间距
     
     // 每个释义的高度
-    wordData.definitions.forEach(def => {
-      totalContentHeight += 50; // 词性标签 + 释义 + 间距
-      if (def.examples && def.examples.length > 0) {
-        // 例句标题 + 每个例句的高度
-        totalContentHeight += 40; // 例句标题 + 间距
-        def.examples.forEach(() => {
-          totalContentHeight += 80; // 每个例句（英文 + 中文 + 间距）
-        });
-        totalContentHeight += 40; // 例句发音按钮 + 间距
-      }
-    });
+    if (wordData.definitions) {
+      wordData.definitions.forEach(def => {
+        totalContentHeight += 50; // 词性标签 + 释义 + 间距
+        if (def.examples && def.examples.length > 0) {
+          // 例句标题 + 每个例句的高度
+          totalContentHeight += 40; // 例句标题 + 间距
+          def.examples.forEach(() => {
+            totalContentHeight += 80; // 每个例句（英文 + 中文 + 间距）
+          });
+          totalContentHeight += 40; // 例句发音按钮 + 间距
+        }
+      });
+    }
     
     // 添加底部操作按钮的高度
     totalContentHeight += 60; // 底部按钮区域
@@ -86,7 +88,7 @@ const WordCard: React.FC<WordCardProps> = ({
   const [showScrollTip, setShowScrollTip] = useState(hasScrollableContent);
   const [userFeedback, setUserFeedback] = useState<'positive' | 'negative' | null>(null);
   const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false);
-  const [feedbackStats, setFeedbackStats] = useState(wordData.feedbackStats);
+  const [feedbackStats, setFeedbackStats] = useState(wordData.feedbackStats || { positive: 0, negative: 0, total: 0 });
   const translateX = useRef(new Animated.Value(0)).current;
   const translateY = useRef(new Animated.Value(0)).current;
   const cardOpacity = useRef(new Animated.Value(1)).current;
@@ -474,7 +476,7 @@ const styles = StyleSheet.create({
   card: {
     width: '100%',
     maxWidth: 375, // 增加最大宽度到400px
-    height: 640, // 增加高度到650px
+    height: 550, // 增加高度到650px
     backgroundColor: colors.background.secondary,
     borderRadius: 20,
     padding: 40, // 减少内边距到24px，给内容更多空间

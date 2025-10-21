@@ -278,30 +278,40 @@ const WordCardContent: React.FC<WordCardContentProps> = ({ wordData, onPlayAudio
             <View style={styles.candidatesContainer}>
               <Text style={styles.candidatesLabel}>选择正确的词：</Text>
               <View style={styles.candidatesList}>
-                {wordData.candidates.map((candidate, index) => (
-                  <TouchableOpacity
-                    key={candidate}
-                    style={[
-                      styles.candidateButton,
-                      candidate === (wordData.translation || wordData.correctedWord || wordData.word) && styles.selectedCandidate
-                    ]}
-                    onPress={() => {
-                      // 选择候选词的逻辑
-                      console.log(`选择了候选词: ${candidate}`);
-                      // 更新wordData中的翻译结果
-                      if (wordData.onCandidateSelect) {
-                        wordData.onCandidateSelect(candidate);
-                      }
-                    }}
-                  >
-                    <Text style={[
-                      styles.candidateText,
-                      candidate === (wordData.translation || wordData.correctedWord || wordData.word) && styles.selectedCandidateText
-                    ]}>
-                      {candidate}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
+                {wordData.candidates.map((candidate: any, index) => {
+                  // 🔧 处理拼音候选词对象格式
+                  const candidateText = typeof candidate === 'string' 
+                    ? candidate 
+                    : candidate.chinese || candidate;
+                  const candidateKey = typeof candidate === 'string' 
+                    ? candidate 
+                    : candidate.chinese || `candidate-${index}`;
+                  
+                  return (
+                    <TouchableOpacity
+                      key={candidateKey}
+                      style={[
+                        styles.candidateButton,
+                        candidateText === (wordData.translation || wordData.correctedWord || wordData.word) && styles.selectedCandidate
+                      ]}
+                      onPress={() => {
+                        // 选择候选词的逻辑
+                        console.log(`选择了候选词: ${candidateText}`);
+                        // 更新wordData中的翻译结果
+                        if (wordData.onCandidateSelect) {
+                          wordData.onCandidateSelect(candidateText);
+                        }
+                      }}
+                    >
+                      <Text style={[
+                        styles.candidateText,
+                        candidateText === (wordData.translation || wordData.correctedWord || wordData.word) && styles.selectedCandidateText
+                      ]}>
+                        {candidateText}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
               </View>
             </View>
           )}
@@ -352,7 +362,7 @@ const WordCardContent: React.FC<WordCardContentProps> = ({ wordData, onPlayAudio
           onScroll={onScroll}
           scrollEventThrottle={16}
         >
-          {wordData.definitions.map((def, idx) => (
+          {wordData.definitions?.map((def, idx) => (
             <View key={idx} style={styles.definitionBlock}>
               <View style={styles.posTagWrapper}>
                 <Text style={styles.posTag}>{getPartOfSpeechLabel(def.partOfSpeech, appLanguage)}</Text>
@@ -549,7 +559,7 @@ const WordCardContent: React.FC<WordCardContentProps> = ({ wordData, onPlayAudio
         </ScrollView>
       ) : (
         <View style={{ marginBottom: 8 }}>
-          {wordData.definitions.map((def, idx) => (
+          {wordData.definitions?.map((def, idx) => (
             <View key={idx} style={styles.definitionBlock}>
               <View style={styles.posTagWrapper}>
                 <Text style={styles.posTag}>{getPartOfSpeechLabel(def.partOfSpeech, appLanguage)}</Text>

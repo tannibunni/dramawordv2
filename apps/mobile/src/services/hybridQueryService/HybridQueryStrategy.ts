@@ -32,6 +32,8 @@ export class SmartHybridQueryStrategy implements HybridQueryStrategy {
   
   /**
    * 决定查询策略
+   * 
+   * 🔧 已禁用本地词典功能，始终使用在线翻译+OpenAI
    */
   determineStrategy(
     input: string,
@@ -40,29 +42,21 @@ export class SmartHybridQueryStrategy implements HybridQueryStrategy {
     hasLocalDictionary: boolean
   ): QueryStrategy {
     
-    // 1. 如果有本地词库，优先使用本地查询
-    if (hasLocalDictionary) {
-      return {
-        useLocalDictionary: true,
-        useOnlineTranslation: false,
-        useOpenAI: true, // 用于补充例句
-        priority: 'local_first',
-        reason: '本地词库可用，优先本地释义+OpenAI例句'
-      };
-    }
-    
-    // 2. 如果没有本地词库，使用在线翻译
+    // 🚫 本地词典功能已禁用
+    // 始终使用在线翻译（谷歌）+ OpenAI 增强
     return {
       useLocalDictionary: false,
       useOnlineTranslation: true,
-      useOpenAI: true, // 用于完整翻译
+      useOpenAI: true,
       priority: 'online_first',
-      reason: '无本地词库，使用在线翻译+OpenAI增强'
+      reason: '使用谷歌翻译+OpenAI增强（本地词典已禁用）'
     };
   }
 
   /**
    * 决定CloudWords集成策略
+   * 
+   * 🔧 本地词典已禁用，仅使用在线翻译+OpenAI
    */
   determineCloudWordsStrategy(
     localResult: MultilingualQueryResult | null,
@@ -74,31 +68,13 @@ export class SmartHybridQueryStrategy implements HybridQueryStrategy {
     // 如果CloudWords已有完整数据，直接使用
     if (cloudWordsResult && this.isCloudWordsComplete(cloudWordsResult)) {
       return {
-        shouldQueryCloudWords: false, // 不需要再查询
-        shouldStoreToCloudWords: false, // 不需要存储
+        shouldQueryCloudWords: false,
+        shouldStoreToCloudWords: false,
         mergeStrategy: 'cloudwords_complete'
       };
     }
     
-    // 如果有本地词库结果，需要OpenAI补充例句
-    if (localResult && localResult.success && localResult.candidates.length > 0) {
-      return {
-        shouldQueryCloudWords: true,
-        shouldStoreToCloudWords: false, // 不存储，因为本地已有释义
-        mergeStrategy: 'local_definition_openai_examples'
-      };
-    }
-    
-    // 如果只有在线翻译结果，需要OpenAI完整翻译并存储
-    if (onlineResult && onlineResult.success && onlineResult.candidates.length > 0) {
-      return {
-        shouldQueryCloudWords: true,
-        shouldStoreToCloudWords: true, // 存储到CloudWords
-        mergeStrategy: 'openai_full'
-      };
-    }
-    
-    // 如果都没有结果，使用OpenAI完整翻译
+    // 🚫 本地词典已禁用，始终使用 OpenAI 完整翻译并存储
     return {
       shouldQueryCloudWords: true,
       shouldStoreToCloudWords: true,
@@ -121,6 +97,8 @@ export class SmartHybridQueryStrategy implements HybridQueryStrategy {
 
   /**
    * 合并查询结果
+   * 
+   * 🔧 本地词典已禁用，仅处理在线翻译和OpenAI结果
    */
   mergeResults(
     localResult: MultilingualQueryResult | null,
@@ -134,17 +112,12 @@ export class SmartHybridQueryStrategy implements HybridQueryStrategy {
       return this.useCloudWordsResult(cloudWordsResult);
     }
     
-    if (strategy.mergeStrategy === 'local_definition_openai_examples') {
-      // 本地释义 + OpenAI例句
-      return this.mergeLocalWithOpenAI(localResult, cloudWordsResult);
-    }
-    
     if (strategy.mergeStrategy === 'openai_full') {
       // 完整的OpenAI结果
       return this.useOpenAIResult(cloudWordsResult);
     }
     
-    // 默认使用在线翻译结果
+    // 默认使用在线翻译结果（谷歌翻译）
     return this.useOnlineResult(onlineResult);
   }
 
@@ -266,38 +239,29 @@ export class SmartHybridQueryStrategy implements HybridQueryStrategy {
 
   /**
    * 判断是否需要查询CloudWords
+   * 
+   * 🔧 本地词典已禁用，始终使用OpenAI增强
    */
   shouldQueryCloudWords(
     localResult: MultilingualQueryResult | null,
     onlineResult: UnifiedQueryResult | null
   ): boolean {
-    // 如果有本地结果，需要OpenAI补充例句
-    if (localResult && localResult.success && localResult.candidates.length > 0) {
-      return true;
-    }
-    
-    // 如果只有在线结果，需要OpenAI增强
-    if (onlineResult && onlineResult.success && onlineResult.candidates.length > 0) {
-      return true;
-    }
-    
-    // 如果都没有结果，需要OpenAI翻译
+    // 🚫 本地词典已禁用
+    // 始终需要OpenAI增强翻译结果
     return true;
   }
 
   /**
    * 判断是否需要存储到CloudWords
+   * 
+   * 🔧 本地词典已禁用，始终存储OpenAI结果
    */
   shouldStoreToCloudWords(
     localResult: MultilingualQueryResult | null,
     onlineResult: UnifiedQueryResult | null
   ): boolean {
-    // 如果有本地结果，不需要存储（本地已有释义）
-    if (localResult && localResult.success && localResult.candidates.length > 0) {
-      return false;
-    }
-    
-    // 如果只有在线结果或没有结果，需要存储
+    // 🚫 本地词典已禁用
+    // 始终需要存储OpenAI翻译结果
     return true;
   }
 }
