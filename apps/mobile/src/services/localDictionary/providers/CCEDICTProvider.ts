@@ -370,6 +370,7 @@ export class CCEDICTProvider implements LocalDictionaryProvider {
           console.log(`🔍 匹配结果:`, line.match(regex));
           console.log(`🔍 行长度: ${line.length}`);
           console.log(`🔍 行字符:`, line.split('').map((c, idx) => `${idx}:${c}`).slice(0, 20).join(' '));
+          console.log(`🔍 行内容: "${line}"`);
         }
         
         const match = line.match(regex);
