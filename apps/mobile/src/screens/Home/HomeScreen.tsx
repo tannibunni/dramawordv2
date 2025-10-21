@@ -160,6 +160,15 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                       
                       // 触发下载（重用实例，调用downloadAndParse方法）
                       console.log('🔍 开始调用downloadAndParse()...');
+                      console.log('🔍 ccedictProviderInstance类型:', typeof ccedictProviderInstance);
+                      console.log('🔍 ccedictProviderInstance方法:', Object.getOwnPropertyNames(Object.getPrototypeOf(ccedictProviderInstance)));
+                      console.log('🔍 downloadAndParse方法存在吗:', typeof ccedictProviderInstance.downloadAndParse);
+                      
+                      if (typeof ccedictProviderInstance.downloadAndParse !== 'function') {
+                        console.log('❌ downloadAndParse方法不存在！');
+                        throw new Error('downloadAndParse方法不存在');
+                      }
+                      
                       const success = await ccedictProviderInstance.downloadAndParse();
                       console.log('🔍 downloadAndParse()返回结果:', success);
                       
