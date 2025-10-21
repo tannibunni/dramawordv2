@@ -368,6 +368,8 @@ export class CCEDICTProvider implements LocalDictionaryProvider {
         if (i >= 30 && i < 40) {
           console.log(`🔍 正则表达式: ${regexPattern}`);
           console.log(`🔍 匹配结果:`, line.match(regex));
+          console.log(`🔍 行长度: ${line.length}`);
+          console.log(`🔍 行字符:`, line.split('').map((c, idx) => `${idx}:${c}`).slice(0, 20).join(' '));
         }
         
         const match = line.match(regex);
