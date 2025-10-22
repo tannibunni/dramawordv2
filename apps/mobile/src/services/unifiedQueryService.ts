@@ -57,7 +57,7 @@ export class UnifiedQueryService {
           correctedWord: input,
           translation: '',
           translationSource: 'none',
-          candidates: [],
+          candidates: undefined, // 🔧 设置为undefined，不显示候选词按钮
           language: targetLanguage
         }
       };
