@@ -674,6 +674,8 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
 
   // 智能拼音分割函数
   const intelligentPinyinSplit = (pinyin: string): string => {
+    console.log('🔍 开始智能拼音分割:', pinyin);
+    
     // 常见的拼音音节模式
     const commonSyllables = [
       'ai', 'an', 'ang', 'ao', 'ba', 'bai', 'ban', 'bang', 'bao', 'bei', 'ben', 'beng', 'bi', 'bian', 'biao', 'bie', 'bin', 'bing', 'bo', 'bu',
@@ -712,6 +714,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       // 尝试匹配最长的音节
       for (const syllable of sortedSyllables) {
         if (remaining.startsWith(syllable)) {
+          console.log(`🔍 匹配到音节: "${syllable}", 剩余: "${remaining}"`);
           result += (result ? ' ' : '') + syllable;
           remaining = remaining.substring(syllable.length);
           found = true;
@@ -721,11 +724,13 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       
       // 如果没有找到匹配的音节，添加单个字符并继续
       if (!found) {
+        console.log(`🔍 未找到匹配音节，添加单个字符: "${remaining[0]}"`);
         result += (result ? ' ' : '') + remaining[0];
         remaining = remaining.substring(1);
       }
     }
     
+    console.log('🔍 智能拼音分割结果:', result);
     return result;
   };
 
