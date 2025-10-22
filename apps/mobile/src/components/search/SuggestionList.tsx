@@ -81,8 +81,8 @@ const styles = StyleSheet.create({
   container: {
     position: 'absolute',
     top: 0, // 与搜索框无缝连接
-    left: 16,
-    right: 16,
+    left: 24, // 与searchContainer的paddingHorizontal对齐
+    right: 24, // 与searchContainer的paddingHorizontal对齐
     backgroundColor: colors.background.secondary,
     borderRadius: 16, // 与搜索框相同的圆角
     // 动态计算最大高度：屏幕高度 - 搜索框高度 - 底部导航高度 - 安全区域
