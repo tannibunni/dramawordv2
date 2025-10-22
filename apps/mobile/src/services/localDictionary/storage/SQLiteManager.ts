@@ -212,6 +212,19 @@ export class SQLiteManager {
       console.log(`🔍 [SQLiteManager] 查询完成，结果数量=${results.length}`);
       if (results.length > 0) {
         console.log(`🔍 [SQLiteManager] 前3条结果:`, results.slice(0, 3).map((r: any) => `${r.word}[${r.pinyin}]`).join(', '));
+      } else {
+        // 如果没有结果，尝试查询相似的拼音
+        console.log(`🔍 [SQLiteManager] 无结果，尝试查询相似拼音...`);
+        const similarResults = await this.db.getAllAsync(`
+          SELECT * FROM ${this.config.tables.entries}
+          WHERE LOWER(pinyin) LIKE ?
+          ORDER BY frequency DESC, word ASC
+          LIMIT 5
+        `, [`%${normalizedPinyin.split(' ')[0]}%`]);
+        console.log(`🔍 [SQLiteManager] 相似拼音查询结果:`, similarResults.length);
+        if (similarResults.length > 0) {
+          console.log(`🔍 [SQLiteManager] 相似结果:`, similarResults.slice(0, 3).map((r: any) => `${r.word}[${r.pinyin}]`).join(', '));
+        }
       }
 
       return results as DictionaryEntry[];
