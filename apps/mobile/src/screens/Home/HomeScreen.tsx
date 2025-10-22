@@ -674,6 +674,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   // 智能拼音分割函数
   const intelligentPinyinSplit = (pinyin: string): string => {
     console.log('🔍 开始智能拼音分割:', pinyin);
+    console.log('🔍 输入长度:', pinyin.length);
     
     // 常见的拼音音节模式
     const commonSyllables = [
@@ -709,6 +710,8 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     
     while (remaining.length > 0) {
       let found = false;
+      
+      console.log(`🔍 当前剩余: "${remaining}", 长度: ${remaining.length}`);
       
       // 尝试匹配最长的音节
       for (const syllable of sortedSyllables) {
