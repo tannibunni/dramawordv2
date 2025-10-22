@@ -423,6 +423,10 @@ function isEnglishSentence(input: string): boolean {
 /**
  * 判断字符串是否可能是拼音
  */
+export function isPinyin(input: string): boolean {
+  return isLikelyPinyin(input);
+}
+
 function isLikelyPinyin(input: string): boolean {
   // 拼音特征：
   // 1. 只包含小写字母和空格
