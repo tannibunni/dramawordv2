@@ -174,7 +174,6 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   const [enToJaQuery, setEnToJaQuery] = useState<string>('');
   const [ambiguousOptions, setAmbiguousOptions] = useState<any[]>([]); // 新增：歧义选择选项
   const [showAmbiguousChoice, setShowAmbiguousChoice] = useState(false); // 新增：显示歧义选择
-  const [ambiguousInput, setAmbiguousInput] = useState<string>(''); // 新增：歧义输入
   const [pinyinCandidates, setPinyinCandidates] = useState<string[]>([]); // 新增：拼音候选词
   const [pinyinQuery, setPinyinQuery] = useState<string>('');
   // 新增：Pleco风格的拼音建议
