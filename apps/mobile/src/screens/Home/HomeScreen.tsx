@@ -25,6 +25,7 @@ import { wordService, RecentWord } from '../../services/wordService';
 import { unifiedQueryService } from '../../services/unifiedQueryService';
 import { AmbiguousChoiceCard } from '../../components/cards/AmbiguousChoiceCard';
 import WordCard from '../../components/cards/WordCard';
+import { InputTypeModal } from '../../components/modals/InputTypeModal';
 // import SuggestionList from '../../components/search/SuggestionList'; // 不再需要悬浮下拉菜单
 import { useShowList } from '../../context/ShowListContext';
 import { useVocabulary } from '../../context/VocabularyContext';
@@ -76,6 +77,92 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   const [celebrateBadge, setCelebrateBadge] = useState<null | number>(null);
   const badgeTargets = [10, 20, 50, 100, 200, 500, 1000];
   const prevVocabCount = useRef(vocabulary.length);
+  
+  // 🔧 模糊输入相关状态
+  const [showInputTypeModal, setShowInputTypeModal] = useState(false);
+  const [ambiguousInput, setAmbiguousInput] = useState<string>('');
+  
+  // 处理用户选择输入类型
+  const handleInputTypeSelection = async (inputType: 'pinyin' | 'english') => {
+    setShowInputTypeModal(false);
+    setIsLoading(true);
+    
+    try {
+      console.log(`🔍 用户选择输入类型: ${inputType}，输入: ${ambiguousInput}`);
+      
+      // 根据用户选择调用相应的API
+      if (inputType === 'pinyin') {
+        // 调用拼音查询API
+        await handlePinyinQuery(ambiguousInput);
+      } else {
+        // 调用英文翻译API
+        await handleEnglishQuery(ambiguousInput);
+      }
+    } catch (error) {
+      console.error('❌ 处理用户选择失败:', error);
+      Alert.alert('查询失败', '请稍后重试');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+  // 处理拼音查询
+  const handlePinyinQuery = async (input: string) => {
+    try {
+      // 调用拼音候选词API
+      const response = await fetch(`${API_BASE_URL}/pinyin/candidates/${encodeURIComponent(input)}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success && result.data && result.data.candidates && result.data.candidates.length > 0) {
+          // 显示拼音候选词
+          const suggestions = result.data.candidates.map((candidate: any, index: number) => ({
+            id: `${input}-${index}`,
+            chinese: candidate.chinese,
+            english: candidate.english,
+            pinyin: candidate.pinyin || input,
+            audioUrl: `https://translate.google.com/translate_tts?ie=UTF-8&tl=zh-cn&client=tw-ob&q=${encodeURIComponent(candidate.chinese)}`,
+          }));
+          
+          setPinyinSuggestions(suggestions);
+          setShowPinyinSuggestions(true);
+        } else {
+          Alert.alert('未找到结果', '请尝试其他拼音输入');
+        }
+      } else {
+        Alert.alert('查询失败', '请稍后重试');
+      }
+    } catch (error) {
+      console.error('❌ 拼音查询失败:', error);
+      Alert.alert('查询失败', '请稍后重试');
+    }
+  };
+  
+  // 处理英文查询
+  const handleEnglishQuery = async (input: string) => {
+    try {
+      // 调用英文翻译API
+      const targetLanguageCode = SUPPORTED_LANGUAGES[selectedLanguage].code;
+      const queryResult = await unifiedQueryService.query(input, appLanguage || 'en-US', targetLanguageCode);
+      
+      if (queryResult.type === 'translation') {
+        setSearchResult(queryResult.data);
+        setSearchText('');
+      } else if (queryResult.type === 'ambiguous') {
+        setAmbiguousOptions(queryResult.options);
+        setShowAmbiguousChoice(true);
+        setAmbiguousInput(input);
+      }
+    } catch (error) {
+      console.error('❌ 英文查询失败:', error);
+      Alert.alert('查询失败', '请稍后重试');
+    }
+  };
   const [celebratedBadges, setCelebratedBadges] = useState<Set<number>>(new Set());
   const [chToEnCandidates, setChToEnCandidates] = useState<string[]>([]); // 新增：中文查英文候选词
   const [chToEnQuery, setChToEnQuery] = useState<string>('');
@@ -997,6 +1084,18 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     setAmbiguousInput('');
     
     try {
+      // 🔧 首先检查是否为模糊输入
+      const { analyzeInput } = await import('../../utils/inputDetector');
+      const analysis = analyzeInput(word, SUPPORTED_LANGUAGES[selectedLanguage].code);
+      
+      if (analysis.type === 'ambiguous') {
+        console.log('🔍 检测到模糊输入，显示用户选择弹窗');
+        setAmbiguousInput(word);
+        setShowInputTypeModal(true);
+        setIsLoading(false);
+        return;
+      }
+      
       // 使用统一查询服务处理所有输入类型
       // 获取目标语言代码
       const targetLanguageCode = SUPPORTED_LANGUAGES[selectedLanguage].code;
@@ -2489,6 +2588,19 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       
       {/* 删除新建单词本弹窗，改为内联输入框 */}
       {/* <LanguageDebugInfo /> */}
+      
+      {/* 🔧 模糊输入类型选择弹窗 */}
+      <InputTypeModal
+        visible={showInputTypeModal}
+        input={ambiguousInput}
+        onSelectPinyin={() => handleInputTypeSelection('pinyin')}
+        onSelectEnglish={() => handleInputTypeSelection('english')}
+        onClose={() => {
+          setShowInputTypeModal(false);
+          setAmbiguousInput('');
+          setIsLoading(false);
+        }}
+      />
     </SafeAreaView>
   );
 };

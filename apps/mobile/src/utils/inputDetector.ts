@@ -1,7 +1,7 @@
 // 输入类型检测工具
 import * as wanakana from 'wanakana';
 
-export type InputType = 'chinese' | 'japanese_kanji' | 'japanese_kana' | 'english' | 'english_sentence' | 'romaji' | 'pinyin' | 'mixed';
+export type InputType = 'chinese' | 'japanese_kanji' | 'japanese_kana' | 'english' | 'english_sentence' | 'romaji' | 'pinyin' | 'mixed' | 'ambiguous';
 
 export interface InputAnalysis {
   type: InputType;
@@ -253,9 +253,27 @@ function analyzeForChineseEnvironment(
   // 2. 英文字符 - 可能是拼音或英文
   if (englishRatio > 0.7 && otherRatio < 0.3) {
     // 在中文环境中，优先检查拼音
-    const isPinyin = isLikelyPinyin(input);
+    const isPinyinInput = isLikelyPinyin(input);
+    const isEnglishSentenceInput = isEnglishSentence(input);
     
-    if (isPinyin) {
+    // 🔧 模糊输入检测：如果既像拼音又像英文，或者都不像
+    const pinyinConfidence = calculatePinyinConfidence(input);
+    const englishConfidence = calculateEnglishConfidence(input);
+    
+    // 如果两种类型的置信度都很低，或者都很高，则认为是模糊输入
+    if ((pinyinConfidence < 0.6 && englishConfidence < 0.6) || 
+        (pinyinConfidence > 0.4 && englishConfidence > 0.4)) {
+      return {
+        type: 'ambiguous',
+        confidence: 0.5,
+        suggestions: {
+          pinyin: input,
+          english: input
+        }
+      };
+    }
+    
+    if (isPinyinInput) {
       // 拼音，转换为中文
       return {
         type: 'pinyin',
@@ -264,29 +282,24 @@ function analyzeForChineseEnvironment(
           pinyin: input
         }
       };
+    } else if (isEnglishSentenceInput) {
+      // 英文句子，翻译成中文
+      return {
+        type: 'english_sentence',
+        confidence: 0.9,
+        suggestions: {
+          pinyin: input
+        }
+      };
     } else {
-      // 检查是否为英文句子
-      const isEnglishSentenceInput = isEnglishSentence(input);
-      
-      if (isEnglishSentenceInput) {
-        // 英文句子，翻译成中文
-        return {
-          type: 'english_sentence',
-          confidence: 0.9,
-          suggestions: {
-            pinyin: input
-          }
-        };
-      } else {
-        // 英文单词，翻译成中文
-        return {
-          type: 'english',
-          confidence: 0.8,
-          suggestions: {
-            pinyin: input
-          }
-        };
-      }
+      // 英文单词，翻译成中文
+      return {
+        type: 'english',
+        confidence: 0.8,
+        suggestions: {
+          pinyin: input
+        }
+      };
     }
   }
 
@@ -418,6 +431,88 @@ function isEnglishSentence(input: string): boolean {
   
   const lowerInput = input.toLowerCase();
   return englishSentenceIndicators.some(indicator => lowerInput.includes(indicator));
+}
+
+/**
+ * 计算拼音置信度
+ */
+function calculatePinyinConfidence(input: string): number {
+  let confidence = 0;
+  
+  // 基础特征检查
+  if (/^[a-z0-9\s]+$/.test(input) && input.length >= 2 && input.length <= 50) {
+    confidence += 0.3;
+  }
+  
+  // 拼音模式匹配
+  const pinyinPatterns = [
+    /^[a-z]+[aeiou][a-z]*$/, // 单音节拼音
+    /^[a-z]+[aeiou][a-z]*\s+[a-z]+[aeiou][a-z]*$/, // 双音节拼音
+    /^[a-z]+[aeiou][a-z]*\s+[a-z]+[aeiou][a-z]*\s+[a-z]+[aeiou][a-z]*$/, // 三音节拼音
+  ];
+  
+  if (pinyinPatterns.some(pattern => pattern.test(input))) {
+    confidence += 0.4;
+  }
+  
+  // 拼音声韵母检查
+  const pinyinConsonants = ['b', 'p', 'm', 'f', 'd', 't', 'n', 'l', 'g', 'k', 'h', 'j', 'q', 'x', 'z', 'c', 's', 'zh', 'ch', 'sh', 'r', 'y', 'w'];
+  const pinyinVowels = ['a', 'o', 'e', 'i', 'u', 'ü', 'ai', 'ei', 'ui', 'ao', 'ou', 'iu', 'ie', 'üe', 'er', 'an', 'en', 'in', 'un', 'ün', 'ang', 'eng', 'ing', 'ong'];
+  
+  const inputWords = input.toLowerCase().split(/\s+/);
+  let hasPinyinFeatures = false;
+  
+  for (const word of inputWords) {
+    const hasConsonant = pinyinConsonants.some(consonant => word.startsWith(consonant));
+    const hasVowel = pinyinVowels.some(vowel => word.includes(vowel));
+    
+    if (hasConsonant || hasVowel) {
+      hasPinyinFeatures = true;
+      break;
+    }
+  }
+  
+  if (hasPinyinFeatures) {
+    confidence += 0.3;
+  }
+  
+  return Math.min(confidence, 1.0);
+}
+
+/**
+ * 计算英文置信度
+ */
+function calculateEnglishConfidence(input: string): number {
+  let confidence = 0;
+  
+  // 基础特征检查
+  if (/^[a-zA-Z\s]+$/.test(input) && input.length >= 2) {
+    confidence += 0.2;
+  }
+  
+  // 英文单词检查
+  const commonEnglishWords = [
+    'the', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by',
+    'is', 'are', 'was', 'were', 'be', 'been', 'have', 'has', 'had', 'do', 'does', 'did',
+    'will', 'would', 'could', 'should', 'may', 'might', 'can', 'must', 'shall',
+    'hello', 'world', 'good', 'bad', 'nice', 'beautiful', 'wonderful', 'amazing',
+    'thank', 'please', 'sorry', 'yes', 'no', 'ok', 'okay', 'fine', 'great', 'cool'
+  ];
+  
+  const inputWords = input.toLowerCase().split(/\s+/);
+  const englishWordCount = inputWords.filter(word => commonEnglishWords.includes(word)).length;
+  const totalWords = inputWords.length;
+  
+  if (totalWords > 0) {
+    confidence += (englishWordCount / totalWords) * 0.6;
+  }
+  
+  // 英文句子特征检查
+  if (isEnglishSentence(input)) {
+    confidence += 0.2;
+  }
+  
+  return Math.min(confidence, 1.0);
 }
 
 /**
