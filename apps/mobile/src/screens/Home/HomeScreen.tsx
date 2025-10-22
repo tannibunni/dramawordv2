@@ -532,7 +532,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     // 保存到搜索历史
     try {
       await wordService.saveSearchHistory(
-        suggestion.pinyin,
+        suggestion.chinese, // 使用中文词汇作为搜索词
         suggestion.chinese,
         undefined,
         suggestion.pinyin,
@@ -541,11 +541,11 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       
       // 更新本地历史记录显示
       setRecentWords(prev => {
-        const filtered = prev.filter(w => w.word !== suggestion.pinyin);
+        const filtered = prev.filter(w => w.word !== suggestion.chinese);
         return [
           {
             id: Date.now().toString(),
-            word: suggestion.pinyin,
+            word: suggestion.chinese, // 使用中文词汇作为word
             translation: suggestion.chinese,
             timestamp: Date.now(),
             pinyin: suggestion.pinyin,
