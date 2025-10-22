@@ -5,9 +5,13 @@ import {
   TouchableOpacity,
   StyleSheet,
   FlatList,
+  Dimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../constants/colors';
+
+// 获取屏幕高度，用于计算最大高度
+const { height: screenHeight } = Dimensions.get('window');
 
 interface SuggestionItem {
   id: string;
@@ -64,8 +68,10 @@ const SuggestionList: React.FC<SuggestionListProps> = ({
         data={suggestions}
         renderItem={renderSuggestion}
         keyExtractor={(item) => item.id}
-        showsVerticalScrollIndicator={false}
+        showsVerticalScrollIndicator={true}
         style={styles.list}
+        // 添加滚动指示器样式
+        indicatorStyle="black"
       />
     </View>
   );
@@ -74,23 +80,27 @@ const SuggestionList: React.FC<SuggestionListProps> = ({
 const styles = StyleSheet.create({
   container: {
     position: 'absolute',
-    top: 4, // 与搜索框底部有4px间距
+    top: 0, // 与搜索框无缝连接
     left: 16,
     right: 16,
-    backgroundColor: colors.background.secondary, // 与搜索框相同的背景色
+    backgroundColor: colors.background.secondary,
     borderRadius: 16, // 与搜索框相同的圆角
-    maxHeight: 300,
+    // 动态计算最大高度：屏幕高度 - 搜索框高度 - 底部导航高度 - 安全区域
+    maxHeight: screenHeight * 0.6, // 限制为屏幕高度的60%
     borderWidth: 1,
-    borderColor: colors.border.light, // 与搜索框相同的边框色
-    shadowColor: colors.primary[200], // 与搜索框相同的阴影色
+    borderColor: colors.border.light,
+    shadowColor: colors.primary[200],
     shadowOffset: {
       width: 0,
-      height: 4,
+      height: 8, // 增加阴影深度
     },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-    elevation: 8,
+    shadowOpacity: 0.2,
+    shadowRadius: 16,
+    elevation: 12,
     zIndex: 1000,
+    // 添加顶部圆角，底部直角，模拟Google搜索效果
+    borderTopLeftRadius: 0,
+    borderTopRightRadius: 0,
   },
   header: {
     paddingHorizontal: 16,
@@ -105,7 +115,8 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   list: {
-    maxHeight: 240,
+    // 移除固定高度限制，让FlatList自适应
+    flexGrow: 0,
   },
   suggestionItem: {
     flexDirection: 'row',
@@ -115,6 +126,8 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: colors.border.light,
     backgroundColor: colors.background.secondary, // 与搜索框背景色一致
+    // 添加点击效果
+    minHeight: 48, // 确保最小触摸区域
   },
   suggestionContent: {
     flex: 1,
@@ -128,14 +141,22 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: colors.text.primary,
+    // 确保中文文本清晰显示
+    lineHeight: 20,
   },
   englishText: {
     fontSize: 14,
     color: colors.text.secondary,
+    lineHeight: 18,
+    // 限制英文文本长度，避免过长
+    flexShrink: 1,
   },
   pinyinText: {
     fontSize: 12,
     color: colors.text.tertiary,
+    lineHeight: 16,
+    // 确保拼音显示完整
+    flexShrink: 0,
   },
 });
 
