@@ -393,46 +393,18 @@ export class EnglishUIEnvironment implements LanguageEnvironment {
                 }
               };
             } else {
-              console.log(`⚠️ 离线词典未找到结果，降级到在线API`);
+              console.log(`⚠️ 离线词典未找到结果，降级到OpenAI`);
             }
           } else {
-            console.log(`⚠️ 离线词典不可用，使用在线API`);
+            console.log(`⚠️ 离线词典不可用，使用OpenAI`);
           }
         } catch (offlineError) {
-          console.log(`⚠️ 离线词典查询失败，降级到在线API:`, offlineError);
+          console.log(`⚠️ 离线词典查询失败，降级到OpenAI:`, offlineError);
         }
         
-        // 🔧 Step 2: 判断是否为句子，选择不同的API
-        const isSentence = input.split(/\s+/).length >= 3 && !isPinyin(input); // 3个或以上单词且不是拼音才认为是句子
-        
-        if (isSentence) {
-          // 对于句子，使用句子翻译API
-          console.log(`📌 检测到句子，使用句子翻译API: ${input}`);
-          try {
-            const directTranslationService = DirectTranslationService.getInstance();
-            const translationResult = await directTranslationService.translateEnglishSentence(input, this.uiLanguage, this.targetLanguage);
-            
-            if (translationResult.success && translationResult.data) {
-              console.log(`✅ 句子翻译成功: ${input} -> ${translationResult.data.correctedWord}`);
-              
-              return {
-                success: true,
-                candidates: [translationResult.data.correctedWord],  // 🔧 只返回字符串
-                source: 'sentence_translation',
-                wordData: {
-                  word: input,
-                  correctedWord: translationResult.data.correctedWord,
-                  translation: translationResult.data.correctedWord,
-                  phonetic: translationResult.data.pinyin || input,
-                  audioUrl: translationResult.data.audioUrl,
-                  definitions: translationResult.data.definitions || []
-                }
-              };
-            }
-          } catch (sentenceError) {
-            console.log(`⚠️ 句子翻译失败，降级到拼音候选词API:`, sentenceError);
-          }
-        }
+        // 🔧 Step 2: 统一使用OpenAI处理所有非本地词库的查询
+        console.log(`📌 本地词库无结果，使用OpenAI统一处理: ${input}`);
+        return await this.queryWithOpenAI(input, analysis);
         
         // 🔧 Step 3: 降级到拼音候选词API（用于词语）
         console.log(`📌 使用在线拼音候选词API: ${input} -> ${pinyinQuery}`);
@@ -816,6 +788,93 @@ export class EnglishUIEnvironment implements LanguageEnvironment {
     } catch (error) {
       console.log(`❌ 获取中文词汇详细信息失败:`, error);
       return null;
+    }
+  }
+
+  /**
+   * 🔧 统一使用OpenAI处理所有非本地词库的查询
+   */
+  private async queryWithOpenAI(input: string, analysis: InputAnalysis): Promise<UnifiedQueryResult> {
+    try {
+      console.log(`🤖 使用OpenAI处理查询: ${input} (${analysis.type})`);
+      
+      // 生成智能提示词
+      const prompt = this.generateOpenAIPrompt(input, analysis.type);
+      console.log(`📝 OpenAI提示词: ${prompt}`);
+      
+      // 调用OpenAI API
+      const response = await fetch(`${API_BASE_URL}/openai/chat`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          prompt: prompt,
+          model: 'gpt-4o-mini', // 使用最便宜的模型
+          max_tokens: 200
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`OpenAI API调用失败: ${response.status}`);
+      }
+
+      const result = await response.json();
+      console.log(`✅ OpenAI响应:`, result);
+
+      if (result.success && result.data) {
+        // 格式化OpenAI结果
+        const translation = result.data.translation || result.data.text || input;
+        const phonetic = result.data.phonetic || result.data.pinyin || '';
+        const definitions = result.data.definitions || [{
+          definition: translation,
+          examples: result.data.examples || []
+        }];
+
+        return {
+          success: true,
+          candidates: [translation],
+          source: 'openai',
+          confidence: 0.9,
+          wordData: {
+            word: input,
+            correctedWord: translation,
+            translation: translation,
+            phonetic: phonetic,
+            audioUrl: `https://translate.google.com/translate_tts?ie=UTF-8&tl=zh-cn&client=tw-ob&q=${encodeURIComponent(translation)}`,
+            definitions: definitions,
+            language: this.targetLanguage
+          }
+        };
+      } else {
+        throw new Error('OpenAI API返回失败');
+      }
+    } catch (error) {
+      console.error(`❌ OpenAI查询失败:`, error);
+      return {
+        success: false,
+        candidates: [],
+        source: 'openai_error'
+      };
+    }
+  }
+
+  /**
+   * 🔧 生成OpenAI智能提示词
+   */
+  private generateOpenAIPrompt(input: string, inputType: string): string {
+    switch (inputType) {
+      case 'pinyin':
+        return `将拼音"${input}"转换为中文词汇，提供3-5个常用候选词，格式：{"translation": "主要翻译", "phonetic": "拼音", "definitions": [{"definition": "释义", "examples": ["例句1", "例句2"]}]}`;
+      
+      case 'english_sentence':
+        return `将英文句子"${input}"翻译成中文，提供自然流畅的翻译，格式：{"translation": "中文翻译", "phonetic": "拼音", "definitions": [{"definition": "释义", "examples": ["例句1", "例句2"]}]}`;
+      
+      case 'english':
+        return `将英文单词"${input}"翻译成中文，提供主要释义，格式：{"translation": "中文翻译", "phonetic": "拼音", "definitions": [{"definition": "释义", "examples": ["例句1", "例句2"]}]}`;
+      
+      default:
+        return `将"${input}"翻译成中文，格式：{"translation": "中文翻译", "phonetic": "拼音", "definitions": [{"definition": "释义", "examples": ["例句1", "例句2"]}]}`;
     }
   }
 }
