@@ -430,7 +430,8 @@ function isLikelyPinyin(input: string): boolean {
   // 3. 长度适中（2-50字符）
   // 4. 不包含明显的英文单词模式
   
-  if (!/^[a-z\s]+$/.test(input)) {
+  // 支持带声调数字的拼音
+  if (!/^[a-z0-9\s]+$/.test(input)) {
     return false;
   }
   
