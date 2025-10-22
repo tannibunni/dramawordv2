@@ -25,7 +25,7 @@ import { wordService, RecentWord } from '../../services/wordService';
 import { unifiedQueryService } from '../../services/unifiedQueryService';
 import { AmbiguousChoiceCard } from '../../components/cards/AmbiguousChoiceCard';
 import WordCard from '../../components/cards/WordCard';
-import SuggestionList from '../../components/search/SuggestionList';
+// import SuggestionList from '../../components/search/SuggestionList'; // 不再需要悬浮下拉菜单
 import { useShowList } from '../../context/ShowListContext';
 import { useVocabulary } from '../../context/VocabularyContext';
 import { TMDBService, TMDBShow } from '../../services/tmdbService';
@@ -1785,16 +1785,9 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
           </View>
         </View>
         
-        {/* 悬浮的拼音建议列表容器 */}
-        <View style={styles.suggestionContainer}>
-          <SuggestionList
-            suggestions={pinyinSuggestions}
-            onSelect={handlePinyinSuggestionSelect}
-            visible={showPinyinSuggestions && searchText.trim().length > 0}
-          />
-        </View>
+        {/* 移除悬浮的拼音建议列表，改为在Recent区域显示 */}
         
-        {/* 内容区：有查词结果时只显示卡片，否则显示最近查词 */}
+        {/* 内容区：有查词结果时只显示卡片，有拼音候选词时显示候选词，否则显示最近查词 */}
         {enToChCandidates.length > 0 ? (
           <View style={styles.wordCardWrapper}>
             <View style={[styles.wordCardCustom, styles.fixedCandidateCard] }>
@@ -2100,6 +2093,44 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
               ))}
             </View>
           </View>
+        ) : showPinyinSuggestions && pinyinSuggestions.length > 0 ? (
+          <ScrollView style={styles.recentContainer} showsVerticalScrollIndicator={false}>
+            <View style={styles.recentSection}>
+              <View style={styles.recentHeader}>
+                <Text style={styles.sectionTitle}>{pinyinSuggestions.length} 个候选词</Text>
+              </View>
+              <View style={styles.wordsContainer}>
+                {pinyinSuggestions.map((suggestion, index) => (
+                  <TouchableOpacity
+                    key={suggestion.id}
+                    style={styles.recentWordItem}
+                    onPress={() => handlePinyinSuggestionSelect(suggestion)}
+                    disabled={isLoading}
+                  >
+                    <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+                      <Ionicons name="search-outline" size={18} color={colors.neutral[400]} style={{ marginRight: 8 }} />
+                      <Text style={styles.recentWordText} numberOfLines={1} ellipsizeMode="tail">
+                        <Text style={{ fontWeight: 'bold', color: colors.text.primary }}>
+                          {suggestion.chinese}
+                        </Text>
+                        {suggestion.pinyin && (
+                          <Text style={{ fontWeight: 'normal', color: colors.text.secondary }}>
+                            {' - '}{suggestion.pinyin}
+                          </Text>
+                        )}
+                        {suggestion.english && (
+                          <Text style={{ fontWeight: 'normal', color: colors.text.tertiary }}>
+                            {' - '}{suggestion.english}
+                          </Text>
+                        )}
+                      </Text>
+                    </View>
+                    <Ionicons name="chevron-forward" size={16} color={colors.text.tertiary} />
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+          </ScrollView>
         ) : (
           <ScrollView style={styles.recentContainer} showsVerticalScrollIndicator={false}>
             <View style={styles.recentSection}>
@@ -2362,12 +2393,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background.primary,
     zIndex: 2,
   },
-  suggestionContainer: {
-    position: 'relative',
-    zIndex: 10, // 降低zIndex，避免遮挡Recent内容
-    // 确保下拉菜单与搜索框无缝连接
-    marginTop: -16, // 向上偏移，与搜索框重叠
-  },
+  // suggestionContainer: 不再需要悬浮下拉菜单样式
   searchBox: {
     flexDirection: 'row',
     alignItems: 'center',
