@@ -119,7 +119,7 @@ export class UnifiedQueryService {
           correctedWord: result.candidates[0],
           translation: result.candidates[0],
           translationSource: result.source || 'unknown',
-          candidates: result.candidates,
+          candidates: result.candidates.map(c => typeof c === 'string' ? c : String(c)),
           language: targetLanguage,
           // 🔧 包含增强的wordData信息（拼音、audioUrl、definitions等）
           ...result.wordData

@@ -416,13 +416,16 @@ export class EnglishUIEnvironment implements LanguageEnvironment {
               
               return {
                 success: true,
-                candidates: [{
-                  chinese: translationResult.data.correctedWord,
-                  english: translationResult.data.definitions?.[0]?.definition || input,
-                  pinyin: translationResult.data.pinyin || input,
-                  audioUrl: translationResult.data.audioUrl
-                }],
-                source: 'sentence_translation'
+                candidates: [translationResult.data.correctedWord],  // 🔧 只返回字符串
+                source: 'sentence_translation',
+                wordData: {
+                  word: input,
+                  correctedWord: translationResult.data.correctedWord,
+                  translation: translationResult.data.correctedWord,
+                  phonetic: translationResult.data.pinyin || input,
+                  audioUrl: translationResult.data.audioUrl,
+                  definitions: translationResult.data.definitions || []
+                }
               };
             }
           } catch (sentenceError) {
