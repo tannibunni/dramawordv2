@@ -94,7 +94,7 @@ export class UnifiedQueryService {
               correctedWord: candidate.chinese,
               translation: candidate.chinese,
               translationSource: result.source || 'pinyin_api',
-              candidates: pinyinCandidates,  // 🔧 保留完整的候选词对象数组，包含audioUrl
+              candidates: pinyinCandidates.map(c => c.chinese),  // 🔧 转换为字符串数组
               language: targetLanguage,
               pinyin: input,
               phonetic: input,  // 添加phonetic字段
