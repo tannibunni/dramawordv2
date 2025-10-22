@@ -1455,6 +1455,8 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
 
   // 点击历史词
   const handleRecentWordPress = async (word: RecentWord) => {
+    console.log('🔍 用户点击历史记录词:', word.word);
+    
     // 新增：如果有 candidates，弹出候选词卡片
     if (word.candidates && word.candidates.length > 0) {
       setChToEnCandidates(word.candidates);
@@ -1464,91 +1466,37 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       return;
     }
     
-    // 使用当前选择的目标语言进行搜索
-    const searchWord = word.word.trim().toLowerCase();
+    // 直接使用历史记录中的词进行查询
+    const searchWord = word.word.trim();
     setIsLoading(true);
     setSearchResult(null);
     
     try {
-      const currentLanguageConfig = getCurrentLanguageConfig();
-      // 添加安全检查
-      if (!currentLanguageConfig) {
-        console.error('❌ 无法获取当前语言配置');
-        Alert.alert('错误', '无法获取语言配置，请重试');
-        setIsLoading(false);
-        return;
-      }
+      console.log('🔍 从历史记录查询词:', searchWord);
       
-      const targetLanguage = currentLanguageConfig.code;
-      console.log('🔍 历史词搜索参数:', { word: searchWord, targetLanguage, uiLanguage: appLanguage });
+      // 直接使用wordService.getChineseWordDetails进行查询
+      // 这会优先从缓存获取，如果没有缓存则调用API
+      const result = await wordService.getChineseWordDetails(searchWord, appLanguage || 'en-US');
       
-      // 调试：显示缓存键生成过程
-      const cacheKey = `${searchWord}_${targetLanguage}_${appLanguage}`;
-      console.log('🔍 尝试查找缓存键:', cacheKey);
-      
-      // 优先尝试从缓存获取数据，传递正确的语言参数
-      const cachedResult = await wordService.getWordDetail(searchWord, targetLanguage, appLanguage);
-      if (cachedResult) {
-        console.log('✅ 从缓存获取到历史词数据:', cachedResult);
-        
-        // 检查缓存数据是否完整（翻译结果是否完整）
-        const isTranslationComplete = cachedResult.correctedWord && 
-                                    cachedResult.correctedWord !== cachedResult.word &&
-                                    cachedResult.translation;
-        
-        if (isTranslationComplete) {
-          console.log('✅ 缓存数据完整，直接使用');
-          
-          // 添加候选词选择回调
-          const resultWithCallback = {
-            ...cachedResult,
-            onCandidateSelect: createCandidateSelectHandler(searchWord, cachedResult.candidates)
-          };
-          
-          setSearchResult(resultWithCallback);
-          setIsLoading(false);
-          return;
-        } else {
-          console.log('⚠️ 缓存数据不完整，重新翻译');
-        }
-      }
-      
-      // 缓存中没有数据或数据不完整，使用统一查询服务重新翻译
-      console.log('📡 缓存无数据或数据不完整，使用统一查询服务重新翻译');
-      const queryResult = await unifiedQueryService.query(searchWord, appLanguage || 'en-US', targetLanguage);
-      
-      if (queryResult.type === 'translation') {
-        console.log('✅ 统一查询返回翻译结果:', queryResult.data);
+      if (result.success && result.data) {
+        console.log('✅ 历史记录查询成功:', result.data);
         
         // 添加候选词选择回调
         const resultWithCallback = {
-          ...queryResult.data,
-          onCandidateSelect: createCandidateSelectHandler(searchWord, queryResult.data.candidates)
+          ...result.data,
+          onCandidateSelect: createCandidateSelectHandler(searchWord, result.data.candidates)
         };
         
         setSearchResult(resultWithCallback);
-        
-        // 更新搜索历史
-        const translationResult = queryResult.data.correctedWord || queryResult.data.translation || '';
-        const pinyin = queryResult.data.pinyin || queryResult.data.phonetic || '';
-        const englishDefinition = queryResult.data.definitions?.[0]?.definition || '';
-        await wordService.saveSearchHistory(searchWord, translationResult, undefined, pinyin, englishDefinition);
+        setSearchText('');
+        setIsLoading(false);
+        return;
       } else {
-        console.error('❌ 统一查询失败，降级到传统搜索');
-        const result = await wordService.searchWord(searchWord, targetLanguage, appLanguage);
-        if (result.success && result.data) {
-          // 为传统搜索结果也添加候选词选择回调
-          const resultWithCallback = {
-            ...result.data,
-            onCandidateSelect: createCandidateSelectHandler(searchWord, result.data.candidates)
-          };
-          setSearchResult(resultWithCallback);
-        } else {
-          Alert.alert(t('query_failed', appLanguage), t('get_word_detail_failed', appLanguage));
-        }
+        console.log('❌ 历史记录查询失败，显示错误信息');
+        Alert.alert(t('query_failed', appLanguage), t('get_word_detail_failed', appLanguage));
       }
     } catch (error) {
-      console.error('❌ 获取单词详情失败:', error);
+      console.error('❌ 历史记录查询失败:', error);
       Alert.alert(t('query_failed', appLanguage), t('network_error', appLanguage));
     } finally {
       setIsLoading(false);
