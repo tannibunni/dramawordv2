@@ -417,7 +417,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
           candidatesCount: offlineResult.candidates?.length || 0
         });
         
-        // 🔧 只有离线词典有结果才显示下拉菜单
+        // 🔧 离线词典有结果时显示下拉菜单
         if (offlineResult.success && offlineResult.candidates && offlineResult.candidates.length > 0) {
           // 将离线词典结果转换为建议列表格式
           const suggestions = offlineResult.candidates.map((candidate, index) => {
@@ -437,10 +437,45 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
           setPinyinSuggestions(suggestions);
           setShowPinyinSuggestions(true);
         } else {
-          // 离线词典无结果，不显示下拉菜单
-          console.log('⚠️ 离线词典无结果，隐藏下拉菜单，用户可点击搜索按钮调用OpenAI API');
-          setPinyinSuggestions([]);
-          setShowPinyinSuggestions(false);
+          // 离线词典无结果，尝试调用OpenAI API
+          console.log('⚠️ 离线词典无结果，尝试调用OpenAI API');
+          try {
+            const response = await fetch(`${API_BASE_URL}/api/pinyin/candidates/${encodeURIComponent(normalizedPinyin)}`);
+            if (response.ok) {
+              const result = await response.json();
+              if (result.success && result.data && result.data.candidates && result.data.candidates.length > 0) {
+                // 将OpenAI API结果转换为建议列表格式
+                const suggestions = result.data.candidates.map((candidate: any, index: number) => {
+                  // 为OpenAI API结果生成Google TTS音频URL
+                  const audioUrl = `https://translate.google.com/translate_tts?ie=UTF-8&tl=zh-cn&client=tw-ob&q=${encodeURIComponent(candidate.chinese)}`;
+                  
+                  return {
+                    id: `${pinyinText}-${index}`,
+                    chinese: candidate.chinese,
+                    english: candidate.english,
+                    pinyin: candidate.pinyin || normalizedPinyin,
+                    audioUrl: audioUrl,
+                  };
+                });
+                
+                console.log('✅ OpenAI API查询成功，找到候选词:', suggestions.length);
+                setPinyinSuggestions(suggestions);
+                setShowPinyinSuggestions(true);
+              } else {
+                console.log('⚠️ OpenAI API无结果，隐藏下拉菜单');
+                setPinyinSuggestions([]);
+                setShowPinyinSuggestions(false);
+              }
+            } else {
+              console.log('⚠️ OpenAI API调用失败，隐藏下拉菜单');
+              setPinyinSuggestions([]);
+              setShowPinyinSuggestions(false);
+            }
+          } catch (error) {
+            console.error('❌ OpenAI API调用失败:', error);
+            setPinyinSuggestions([]);
+            setShowPinyinSuggestions(false);
+          }
         }
       } catch (error) {
         console.error('❌ 实时拼音查询失败:', error);

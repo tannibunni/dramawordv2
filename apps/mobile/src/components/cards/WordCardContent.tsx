@@ -282,10 +282,14 @@ const WordCardContent: React.FC<WordCardContentProps> = ({ wordData, onPlayAudio
                   // 🔧 处理拼音候选词对象格式
                   const candidateText = typeof candidate === 'string' 
                     ? candidate 
-                    : candidate.chinese || candidate;
+                    : (typeof candidate === 'object' && candidate.chinese) 
+                      ? String(candidate.chinese)
+                      : String(candidate);
                   const candidateKey = typeof candidate === 'string' 
                     ? candidate 
-                    : candidate.chinese || `candidate-${index}`;
+                    : (typeof candidate === 'object' && candidate.chinese)
+                      ? String(candidate.chinese)
+                      : `candidate-${index}`;
                   
                   return (
                     <TouchableOpacity
@@ -426,18 +430,19 @@ const WordCardContent: React.FC<WordCardContentProps> = ({ wordData, onPlayAudio
 
                     return (
                       <View key={exIdx} style={styles.exampleContainer}>
-                        <View style={styles.exampleContent}>
-                          <View style={styles.exampleTextContainer}>
-                            <Text style={styles.exampleLabelAndText} selectable>{getExampleText()}</Text>
-                            <Text style={styles.exampleChineseText} selectable>{ex.chinese}</Text>
-                            {/* 中文例句拼音显示 */}
-                            {wordData.language === 'zh' || wordData.language === 'zh-CN' ? (
-                              ex.pinyin && (
-                                <Text style={styles.examplePinyin} selectable>{ex.pinyin}</Text>
-                              )
-                            ) : null}
-                          </View>
-                          {/* 每个例句的独立发音按钮 */}
+                        {/* 例句文本内容 */}
+                        <View style={styles.exampleTextContainer}>
+                          <Text style={styles.exampleLabelAndText} selectable>{getExampleText()}</Text>
+                          <Text style={styles.exampleChineseText} selectable>{ex.chinese}</Text>
+                          {/* 中文例句拼音显示 */}
+                          {wordData.language === 'zh' || wordData.language === 'zh-CN' ? (
+                            ex.pinyin && (
+                              <Text style={styles.examplePinyin} selectable>{ex.pinyin}</Text>
+                            )
+                          ) : null}
+                        </View>
+                        {/* 每个例句的独立发音按钮 - 放在文本下方 */}
+                        <View style={styles.exampleAudioContainer}>
                           <TouchableOpacity 
                             style={styles.exampleAudioButton}
                             onPress={() => {
@@ -626,18 +631,19 @@ const WordCardContent: React.FC<WordCardContentProps> = ({ wordData, onPlayAudio
 
                     return (
                       <View key={exIdx} style={styles.exampleContainer}>
-                        <View style={styles.exampleContent}>
-                          <View style={styles.exampleTextContainer}>
-                            <Text style={styles.exampleLabelAndText} selectable>{getExampleText()}</Text>
-                            <Text style={styles.exampleChineseText} selectable>{ex.chinese}</Text>
-                            {/* 中文例句拼音显示 */}
-                            {wordData.language === 'zh' || wordData.language === 'zh-CN' ? (
-                              ex.pinyin && (
-                                <Text style={styles.examplePinyin} selectable>{ex.pinyin}</Text>
-                              )
-                            ) : null}
-                          </View>
-                          {/* 每个例句的独立发音按钮 */}
+                        {/* 例句文本内容 */}
+                        <View style={styles.exampleTextContainer}>
+                          <Text style={styles.exampleLabelAndText} selectable>{getExampleText()}</Text>
+                          <Text style={styles.exampleChineseText} selectable>{ex.chinese}</Text>
+                          {/* 中文例句拼音显示 */}
+                          {wordData.language === 'zh' || wordData.language === 'zh-CN' ? (
+                            ex.pinyin && (
+                              <Text style={styles.examplePinyin} selectable>{ex.pinyin}</Text>
+                            )
+                          ) : null}
+                        </View>
+                        {/* 每个例句的独立发音按钮 - 放在文本下方 */}
+                        <View style={styles.exampleAudioContainer}>
                           <TouchableOpacity 
                             style={styles.exampleAudioButton}
                             onPress={() => {
@@ -909,14 +915,12 @@ const styles = StyleSheet.create({
     marginTop: 4,
     paddingLeft: 0, // 移除左缩进，让内容左对齐
   },
-  exampleContent: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-  },
   exampleTextContainer: {
-    flex: 1,
-    marginRight: 8,
+    width: '100%',
+  },
+  exampleAudioContainer: {
+    marginTop: 8,
+    alignItems: 'flex-start',
   },
   exampleTextRow: {
     flexDirection: 'row',
