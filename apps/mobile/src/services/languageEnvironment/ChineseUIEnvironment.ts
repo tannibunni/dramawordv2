@@ -741,4 +741,91 @@ export class ChineseUIEnvironment implements LanguageEnvironment {
       return null;
     }
   }
+
+  /**
+   * 🔧 统一使用OpenAI处理所有非本地词库的查询
+   */
+  private async queryWithOpenAI(input: string, analysis: InputAnalysis): Promise<UnifiedQueryResult> {
+    try {
+      console.log(`🤖 使用OpenAI处理查询: ${input} (${analysis.type})`);
+      
+      // 生成智能提示词
+      const prompt = this.generateOpenAIPrompt(input, analysis.type);
+      console.log(`📝 OpenAI提示词: ${prompt}`);
+      
+      // 调用OpenAI API
+      const response = await fetch(`${API_BASE_URL}/openai/chat`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          prompt: prompt,
+          model: 'gpt-4o-mini', // 使用最便宜的模型
+          max_tokens: 200
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`OpenAI API调用失败: ${response.status}`);
+      }
+
+      const result = await response.json();
+      console.log(`✅ OpenAI响应:`, result);
+
+      if (result.success && result.data) {
+        // 格式化OpenAI结果
+        const translation = result.data.translation || result.data.text || input;
+        const phonetic = result.data.phonetic || result.data.pinyin || '';
+        const definitions = result.data.definitions || [{
+          definition: translation,
+          examples: result.data.examples || []
+        }];
+
+        return {
+          success: true,
+          candidates: [translation],
+          source: 'openai',
+          confidence: 0.9,
+          wordData: {
+            word: input,
+            correctedWord: translation,
+            translation: translation,
+            phonetic: phonetic,
+            audioUrl: `https://translate.google.com/translate_tts?ie=UTF-8&tl=zh-cn&client=tw-ob&q=${encodeURIComponent(translation)}`,
+            definitions: definitions,
+            language: this.targetLanguage
+          }
+        };
+      } else {
+        throw new Error('OpenAI API返回失败');
+      }
+    } catch (error) {
+      console.error(`❌ OpenAI查询失败:`, error);
+      return {
+        success: false,
+        candidates: [],
+        source: 'openai_error'
+      };
+    }
+  }
+
+  /**
+   * 🔧 生成OpenAI智能提示词
+   */
+  private generateOpenAIPrompt(input: string, inputType: string): string {
+    switch (inputType) {
+      case 'pinyin':
+        return `将拼音"${input}"转换为中文词汇，提供3-5个常用候选词，格式：{"translation": "主要翻译", "phonetic": "拼音", "definitions": [{"definition": "释义", "examples": ["例句1", "例句2"]}]}`;
+      
+      case 'english_sentence':
+        return `将英文句子"${input}"翻译成中文，提供自然流畅的翻译，格式：{"translation": "中文翻译", "phonetic": "拼音", "definitions": [{"definition": "释义", "examples": ["例句1", "例句2"]}]}`;
+      
+      case 'english':
+        return `将英文单词"${input}"翻译成中文，提供主要释义，格式：{"translation": "中文翻译", "phonetic": "拼音", "definitions": [{"definition": "释义", "examples": ["例句1", "例句2"]}]}`;
+      
+      default:
+        return `将"${input}"翻译成中文，格式：{"translation": "中文翻译", "phonetic": "拼音", "definitions": [{"definition": "释义", "examples": ["例句1", "例句2"]}]}`;
+    }
+  }
 }
