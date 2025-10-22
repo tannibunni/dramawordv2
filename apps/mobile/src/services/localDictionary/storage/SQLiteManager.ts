@@ -184,16 +184,15 @@ export class SQLiteManager {
     }
 
     try {
-      // 标准化拼音：移除空格、声调数字、转小写
-      const normalizedPinyin = pinyin.toLowerCase().replace(/\s+/g, '').replace(/[0-9]/g, '');
+      // 标准化拼音：只移除声调数字、转小写，保持空格格式
+      const normalizedPinyin = pinyin.toLowerCase().replace(/[0-9]/g, '');
 
       console.log(`🔍 [SQLiteManager] 拼音查询开始: 输入="${pinyin}", 标准化="${normalizedPinyin}", 限制=${limit}`);
 
-      // 🔧 精确匹配：pinyin字段去除空格和所有声调数字(0-9)后完全相等
+      // 🔧 精确匹配：pinyin字段只去除声调数字(0-9)，保持空格格式
       // SQLite不支持正则，所以需要多次REPLACE来去除所有数字
-      // 构建嵌套的REPLACE函数链：LOWER(pinyin) -> 去空格 -> 去0-9
+      // 构建嵌套的REPLACE函数链：LOWER(pinyin) -> 去0-9
       let pinyinExpr = 'LOWER(pinyin)';
-      pinyinExpr = `REPLACE(${pinyinExpr}, ' ', '')`;  // 去空格
       for (let i = 0; i <= 9; i++) {
         pinyinExpr = `REPLACE(${pinyinExpr}, '${i}', '')`;  // 去数字0-9
       }
