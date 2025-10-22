@@ -2109,23 +2109,25 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                   >
                     <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
                       <Ionicons name="search-outline" size={18} color={colors.neutral[400]} style={{ marginRight: 8 }} />
-                      <Text style={styles.recentWordText} numberOfLines={1} ellipsizeMode="tail">
-                        <Text style={{ fontWeight: 'bold', color: colors.text.primary }}>
-                          {suggestion.chinese}
+                      <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}>
+                        <Text style={styles.recentWordText} numberOfLines={1} ellipsizeMode="tail">
+                          <Text style={{ fontWeight: 'bold', color: colors.text.primary }}>
+                            {suggestion.chinese}
+                          </Text>
+                          {suggestion.pinyin && (
+                            <Text style={{ fontWeight: 'normal', color: colors.text.secondary }}>
+                              {' - '}{suggestion.pinyin}
+                            </Text>
+                          )}
+                          {suggestion.english && (
+                            <Text style={{ fontWeight: 'normal', color: colors.text.tertiary }}>
+                              {' - '}{suggestion.english}
+                            </Text>
+                          )}
                         </Text>
-                        {suggestion.pinyin && (
-                          <Text style={{ fontWeight: 'normal', color: colors.text.secondary }}>
-                            {' - '}{suggestion.pinyin}
-                          </Text>
-                        )}
-                        {suggestion.english && (
-                          <Text style={{ fontWeight: 'normal', color: colors.text.tertiary }}>
-                            {' - '}{suggestion.english}
-                          </Text>
-                        )}
-                      </Text>
+                        <Ionicons name="chevron-forward" size={16} color={colors.text.tertiary} style={{ marginLeft: 8 }} />
+                      </View>
                     </View>
-                    <Ionicons name="chevron-forward" size={16} color={colors.text.tertiary} />
                   </TouchableOpacity>
                 ))}
               </View>
