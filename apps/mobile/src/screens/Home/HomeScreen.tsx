@@ -375,9 +375,8 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       setPinyinSuggestions([]);
       setShowPinyinSuggestions(false);
     } else {
-      // 检查是否是拼音输入（包含空格或声调）
-      const isPinyinInput = /^[a-z\s]+$/.test(text.toLowerCase()) && text.includes(' ');
-      if (isPinyinInput) {
+      // 检查是否是拼音输入（小写字母，可能包含空格）
+      if (isPinyin(text)) {
         console.log('🔍 检测到拼音输入，开始实时查询:', text);
         handlePinyinInput(text);
       } else {
