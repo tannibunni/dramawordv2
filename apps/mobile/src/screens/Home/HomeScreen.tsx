@@ -420,13 +420,18 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         // 🔧 只有离线词典有结果才显示下拉菜单
         if (offlineResult.success && offlineResult.candidates && offlineResult.candidates.length > 0) {
           // 将离线词典结果转换为建议列表格式
-          const suggestions = offlineResult.candidates.map((candidate, index) => ({
-            id: `${pinyinText}-${index}`,
-            chinese: candidate.word,
-            english: candidate.translation,
-            pinyin: candidate.pinyin,
-            audioUrl: undefined, // 离线词典暂时没有audioUrl
-          }));
+          const suggestions = offlineResult.candidates.map((candidate, index) => {
+            // 为离线词典结果生成Google TTS音频URL
+            const audioUrl = `https://translate.google.com/translate_tts?ie=UTF-8&tl=zh-cn&client=tw-ob&q=${encodeURIComponent(candidate.word)}`;
+            
+            return {
+              id: `${pinyinText}-${index}`,
+              chinese: candidate.word,
+              english: candidate.translation,
+              pinyin: candidate.pinyin,
+              audioUrl: audioUrl, // 使用Google TTS生成音频URL
+            };
+          });
           
           console.log('✅ 离线词典查询成功，找到候选词:', suggestions.length);
           setPinyinSuggestions(suggestions);
