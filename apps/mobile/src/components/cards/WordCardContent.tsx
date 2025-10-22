@@ -311,7 +311,7 @@ const WordCardContent: React.FC<WordCardContentProps> = ({ wordData, onPlayAudio
                         styles.candidateText,
                         candidateText === (wordData.translation || wordData.correctedWord || wordData.word) && styles.selectedCandidateText
                       ]}>
-                        {candidateText}
+                        {String(candidateText)}
                       </Text>
                     </TouchableOpacity>
                   );
