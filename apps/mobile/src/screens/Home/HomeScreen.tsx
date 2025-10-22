@@ -2364,7 +2364,7 @@ const styles = StyleSheet.create({
   },
   suggestionContainer: {
     position: 'relative',
-    zIndex: 1000,
+    zIndex: 10, // 降低zIndex，避免遮挡Recent内容
     // 确保下拉菜单与搜索框无缝连接
     marginTop: -16, // 向上偏移，与搜索框重叠
   },

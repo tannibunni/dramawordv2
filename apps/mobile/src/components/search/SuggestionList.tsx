@@ -97,7 +97,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 16,
     elevation: 12,
-    zIndex: 1000,
+    zIndex: 10, // 降低zIndex，避免遮挡其他内容
     // 添加顶部圆角，底部直角，模拟Google搜索效果
     borderTopLeftRadius: 0,
     borderTopRightRadius: 0,
