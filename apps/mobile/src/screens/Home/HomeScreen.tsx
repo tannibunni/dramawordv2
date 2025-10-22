@@ -410,8 +410,8 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         // 创建CC-CEDICT离线词典实例
         const ccedictProvider = new CCEDICTProvider();
         
-        // 查询离线词典（使用标准化后的拼音）
-        const offlineResult = await ccedictProvider.lookup(normalizedPinyin);
+        // 查询离线词典（使用拼音查询方法）
+        const offlineResult = await ccedictProvider.lookupByPinyin(normalizedPinyin);
         
         console.log('🔍 离线词典查询结果:', {
           success: offlineResult.success,

@@ -224,8 +224,8 @@ export class CCEDICTProvider implements LocalDictionaryProvider {
         };
       }
 
-      // 标准化拼音：移除空格并转小写
-      const normalizedPinyin = pinyin.toLowerCase().replace(/\s+/g, '');
+      // 标准化拼音：只转小写，保持空格格式
+      const normalizedPinyin = pinyin.toLowerCase();
 
       console.log(`🔍 [CCEDICTProvider] 拼音查询: 输入="${pinyin}", 标准化="${normalizedPinyin}"`);
 
