@@ -2226,12 +2226,12 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                           </Text>
                           {suggestion.pinyin && (
                             <Text style={{ fontWeight: 'normal', color: colors.text.secondary }}>
-                              {' - '}{suggestion.pinyin}
+                              {' - '}{String(suggestion.pinyin)}
                             </Text>
                           )}
                           {suggestion.english && (
                             <Text style={{ fontWeight: 'normal', color: colors.text.tertiary }}>
-                              {' - '}{suggestion.english}
+                              {' - '}{String(suggestion.english)}
                             </Text>
                           )}
                         </Text>
@@ -2280,12 +2280,12 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                             </Text>
                             {word.pinyin && (
                               <Text style={{ fontWeight: 'normal', color: colors.text.secondary }}>
-                                {' - '}{word.pinyin}
+                                {' - '}{String(word.pinyin)}
                               </Text>
                             )}
                             {word.englishDefinition && (
                               <Text style={{ fontWeight: 'normal', color: colors.text.tertiary }}>
-                                {' - '}{word.englishDefinition}
+                                {' - '}{String(word.englishDefinition)}
                               </Text>
                             )}
                             {!word.pinyin && !word.englishDefinition && word.word !== word.translation && (
