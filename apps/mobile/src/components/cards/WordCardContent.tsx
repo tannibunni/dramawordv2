@@ -400,56 +400,59 @@ const WordCardContent: React.FC<WordCardContentProps> = ({ wordData, onPlayAudio
                       }
                     };
 
+                    // 获取例句发音文本
+                    const getExampleAudioText = () => {
+                      const example = ex as any;
+                      if (wordData.language === 'zh' || wordData.language === 'zh-CN') {
+                        // 中文词汇：播放中文例句
+                        return example.chinese || '';
+                      } else if (wordData.language === 'ja') {
+                        // 日语：播放日语例句
+                        return example.japanese || example.english || '';
+                      } else if (wordData.language === 'ko') {
+                        // 韩语：播放韩语例句
+                        return example.korean || example.english || '';
+                      } else if (wordData.language === 'fr') {
+                        // 法语：播放法语例句
+                        return example.french || example.english || '';
+                      } else if (wordData.language === 'es') {
+                        // 西班牙语：播放西班牙语例句
+                        return example.spanish || example.english || '';
+                      } else {
+                        // 英语或其他语言：播放英语例句
+                        return example.english || '';
+                      }
+                    };
+
                     return (
                       <View key={exIdx} style={styles.exampleContainer}>
-                        <Text style={styles.exampleLabelAndText} selectable>{getExampleText()}</Text>
-                        <Text style={styles.exampleChineseText} selectable>{ex.chinese}</Text>
-                        {/* 中文例句拼音显示 */}
-                        {wordData.language === 'zh' || wordData.language === 'zh-CN' ? (
-                          ex.pinyin && (
-                            <Text style={styles.examplePinyin} selectable>{ex.pinyin}</Text>
-                          )
-                        ) : null}
+                        <View style={styles.exampleContent}>
+                          <View style={styles.exampleTextContainer}>
+                            <Text style={styles.exampleLabelAndText} selectable>{getExampleText()}</Text>
+                            <Text style={styles.exampleChineseText} selectable>{ex.chinese}</Text>
+                            {/* 中文例句拼音显示 */}
+                            {wordData.language === 'zh' || wordData.language === 'zh-CN' ? (
+                              ex.pinyin && (
+                                <Text style={styles.examplePinyin} selectable>{ex.pinyin}</Text>
+                              )
+                            ) : null}
+                          </View>
+                          {/* 每个例句的独立发音按钮 */}
+                          <TouchableOpacity 
+                            style={styles.exampleAudioButton}
+                            onPress={() => {
+                              const audioText = getExampleAudioText();
+                              if (audioText) {
+                                handlePlayExampleAudio(audioText, wordData.language);
+                              }
+                            }}
+                          >
+                            <Ionicons name="volume-high" size={16} color={colors.primary[500]} />
+                          </TouchableOpacity>
+                        </View>
                       </View>
                     );
                   })}
-                  {/* 例句发音按钮 - 放在最底下 */}
-                  <View style={styles.examplesAudioContainer}>
-                    <TouchableOpacity 
-                      style={styles.examplesAudioButton}
-                      onPress={() => {
-                        // 根据单词语言播放对应语言的例句
-                        const firstExample = def.examples[0];
-                        if (firstExample) {
-                          if (wordData.language === 'zh' || wordData.language === 'zh-CN') {
-                            // 中文词汇：播放中文例句
-                            handlePlayExampleAudio(firstExample.chinese, 'zh');
-                          } else if (wordData.language === 'en') {
-                            // 英文词汇：播放英文例句
-                            handlePlayExampleAudio(firstExample.english, 'en');
-                          } else if (wordData.language === 'ja') {
-                            // 日文词汇：播放日文例句
-                            const japaneseText = firstExample.japanese || firstExample.english;
-                            if (japaneseText) handlePlayExampleAudio(japaneseText, 'ja');
-                          } else if (wordData.language === 'ko') {
-                            // 韩文词汇：播放韩文例句
-                            const koreanText = firstExample.korean || firstExample.english;
-                            if (koreanText) handlePlayExampleAudio(koreanText, 'ko');
-                          } else if (wordData.language === 'fr') {
-                            // 法文词汇：播放法文例句
-                            const frenchText = firstExample.french || firstExample.english;
-                            if (frenchText) handlePlayExampleAudio(frenchText, 'fr');
-                          } else if (wordData.language === 'es') {
-                            // 西班牙文词汇：播放西班牙文例句
-                            const spanishText = firstExample.spanish || firstExample.english;
-                            if (spanishText) handlePlayExampleAudio(spanishText, 'es');
-                          }
-                        }
-                      }}
-                    >
-                      <Ionicons name="volume-high" size={18} color={colors.primary[500]} />
-                    </TouchableOpacity>
-                  </View>
                 </View>
               )}
             </View>
@@ -597,56 +600,59 @@ const WordCardContent: React.FC<WordCardContentProps> = ({ wordData, onPlayAudio
                       }
                     };
 
+                    // 获取例句发音文本
+                    const getExampleAudioText = () => {
+                      const example = ex as any;
+                      if (wordData.language === 'zh' || wordData.language === 'zh-CN') {
+                        // 中文词汇：播放中文例句
+                        return example.chinese || '';
+                      } else if (wordData.language === 'ja') {
+                        // 日语：播放日语例句
+                        return example.japanese || example.english || '';
+                      } else if (wordData.language === 'ko') {
+                        // 韩语：播放韩语例句
+                        return example.korean || example.english || '';
+                      } else if (wordData.language === 'fr') {
+                        // 法语：播放法语例句
+                        return example.french || example.english || '';
+                      } else if (wordData.language === 'es') {
+                        // 西班牙语：播放西班牙语例句
+                        return example.spanish || example.english || '';
+                      } else {
+                        // 英语或其他语言：播放英语例句
+                        return example.english || '';
+                      }
+                    };
+
                     return (
                       <View key={exIdx} style={styles.exampleContainer}>
-                        <Text style={styles.exampleLabelAndText} selectable>{getExampleText()}</Text>
-                        <Text style={styles.exampleChineseText} selectable>{ex.chinese}</Text>
-                        {/* 中文例句拼音显示 */}
-                        {wordData.language === 'zh' || wordData.language === 'zh-CN' ? (
-                          ex.pinyin && (
-                            <Text style={styles.examplePinyin} selectable>{ex.pinyin}</Text>
-                          )
-                        ) : null}
+                        <View style={styles.exampleContent}>
+                          <View style={styles.exampleTextContainer}>
+                            <Text style={styles.exampleLabelAndText} selectable>{getExampleText()}</Text>
+                            <Text style={styles.exampleChineseText} selectable>{ex.chinese}</Text>
+                            {/* 中文例句拼音显示 */}
+                            {wordData.language === 'zh' || wordData.language === 'zh-CN' ? (
+                              ex.pinyin && (
+                                <Text style={styles.examplePinyin} selectable>{ex.pinyin}</Text>
+                              )
+                            ) : null}
+                          </View>
+                          {/* 每个例句的独立发音按钮 */}
+                          <TouchableOpacity 
+                            style={styles.exampleAudioButton}
+                            onPress={() => {
+                              const audioText = getExampleAudioText();
+                              if (audioText) {
+                                handlePlayExampleAudio(audioText, wordData.language);
+                              }
+                            }}
+                          >
+                            <Ionicons name="volume-high" size={16} color={colors.primary[500]} />
+                          </TouchableOpacity>
+                        </View>
                       </View>
                     );
                   })}
-                  {/* 例句发音按钮 - 放在最底下 */}
-                  <View style={styles.examplesAudioContainer}>
-                    <TouchableOpacity 
-                      style={styles.examplesAudioButton}
-                      onPress={() => {
-                        // 根据单词语言播放对应语言的例句
-                        const firstExample = def.examples[0];
-                        if (firstExample) {
-                          if (wordData.language === 'zh' || wordData.language === 'zh-CN') {
-                            // 中文词汇：播放中文例句
-                            handlePlayExampleAudio(firstExample.chinese, 'zh');
-                          } else if (wordData.language === 'en') {
-                            // 英文词汇：播放英文例句
-                            handlePlayExampleAudio(firstExample.english, 'en');
-                          } else if (wordData.language === 'ja') {
-                            // 日文词汇：播放日文例句
-                            const japaneseText = firstExample.japanese || firstExample.english;
-                            if (japaneseText) handlePlayExampleAudio(japaneseText, 'ja');
-                          } else if (wordData.language === 'ko') {
-                            // 韩文词汇：播放韩文例句
-                            const koreanText = firstExample.korean || firstExample.english;
-                            if (koreanText) handlePlayExampleAudio(koreanText, 'ko');
-                          } else if (wordData.language === 'fr') {
-                            // 法文词汇：播放法文例句
-                            const frenchText = firstExample.french || firstExample.english;
-                            if (frenchText) handlePlayExampleAudio(frenchText, 'fr');
-                          } else if (wordData.language === 'es') {
-                            // 西班牙文词汇：播放西班牙文例句
-                            const spanishText = firstExample.spanish || firstExample.english;
-                            if (spanishText) handlePlayExampleAudio(spanishText, 'es');
-                          }
-                        }
-                      }}
-                    >
-                      <Ionicons name="volume-high" size={18} color={colors.primary[500]} />
-                    </TouchableOpacity>
-                  </View>
                 </View>
               )}
             </View>
@@ -902,6 +908,15 @@ const styles = StyleSheet.create({
   exampleContainer: {
     marginTop: 4,
     paddingLeft: 0, // 移除左缩进，让内容左对齐
+  },
+  exampleContent: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+  },
+  exampleTextContainer: {
+    flex: 1,
+    marginRight: 8,
   },
   exampleTextRow: {
     flexDirection: 'row',
