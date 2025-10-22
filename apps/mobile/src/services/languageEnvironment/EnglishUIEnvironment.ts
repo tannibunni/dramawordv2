@@ -14,6 +14,7 @@ import { API_CONFIG } from '../../config/api';
 import { DictionaryManager } from '../dictionaryManager/DictionaryManager';
 import { CCEDICTProvider } from '../localDictionary/providers/CCEDICTProvider';
 import { DirectTranslationService } from '../directTranslationService';
+import { isPinyin } from '../../utils/inputDetector';
 
 const API_BASE_URL = API_CONFIG.BASE_URL;
 
@@ -402,7 +403,7 @@ export class EnglishUIEnvironment implements LanguageEnvironment {
         }
         
         // 🔧 Step 2: 判断是否为句子，选择不同的API
-        const isSentence = input.split(/\s+/).length >= 3; // 3个或以上单词认为是句子
+        const isSentence = input.split(/\s+/).length >= 3 && !isPinyin(input); // 3个或以上单词且不是拼音才认为是句子
         
         if (isSentence) {
           // 对于句子，使用句子翻译API
