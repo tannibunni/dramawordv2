@@ -2222,7 +2222,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                       <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}>
                         <Text style={styles.recentWordText} numberOfLines={1} ellipsizeMode="tail">
                           <Text style={{ fontWeight: 'bold', color: colors.text.primary }}>
-                            {suggestion.chinese}
+                            {String(suggestion.chinese)}
                           </Text>
                           {suggestion.pinyin && (
                             <Text style={{ fontWeight: 'normal', color: colors.text.secondary }}>
@@ -2276,7 +2276,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                           <Ionicons name="time-outline" size={18} color={colors.neutral[400]} style={{ marginRight: 8 }} />
                           <Text style={styles.recentWordText} numberOfLines={1} ellipsizeMode="tail">
                             <Text style={{ fontWeight: 'bold', color: colors.text.primary }}>
-                              {word.translation || word.word}
+                              {String(word.translation || word.word)}
                             </Text>
                             {word.pinyin && (
                               <Text style={{ fontWeight: 'normal', color: colors.text.secondary }}>
@@ -2290,7 +2290,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                             )}
                             {!word.pinyin && !word.englishDefinition && word.word !== word.translation && (
                               <Text style={{ fontWeight: 'normal', color: colors.text.secondary }}>
-                                {' - '}{word.word}
+                                {' - '}{String(word.word)}
                               </Text>
                             )}
                           </Text>
