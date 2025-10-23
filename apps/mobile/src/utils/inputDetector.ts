@@ -250,44 +250,16 @@ function analyzeForChineseEnvironment(
     };
   }
 
-  // 2. 英文字符 - 可能是拼音或英文
+  // 2. 英文字符 - 统一处理，让AI智能判断
   if (englishRatio > 0.7 && otherRatio < 0.3) {
-    // 在中文环境中，优先检查拼音
-    const isPinyin = isLikelyPinyin(input);
-    
-    if (isPinyin) {
-      // 拼音，转换为中文
-      return {
-        type: 'pinyin',
-        confidence: 0.8,
-        suggestions: {
-          pinyin: input
-        }
-      };
-    } else {
-      // 检查是否为英文句子
-      const isEnglishSentenceInput = isEnglishSentence(input);
-      
-      if (isEnglishSentenceInput) {
-        // 英文句子，翻译成中文
-        return {
-          type: 'english_sentence',
-          confidence: 0.9,
-          suggestions: {
-            pinyin: input
-          }
-        };
-      } else {
-        // 英文单词，翻译成中文
-        return {
-          type: 'english',
-          confidence: 0.8,
-          suggestions: {
-            pinyin: input
-          }
-        };
+    // 所有字母输入统一处理，让OpenAI智能判断是拼音还是英文
+    return {
+      type: 'alphabet_input', // 新的统一类型
+      confidence: 0.8,
+      suggestions: {
+        pinyin: input
       }
-    }
+    };
   }
 
   // 3. 混合类型 - 中英混合，中文分析

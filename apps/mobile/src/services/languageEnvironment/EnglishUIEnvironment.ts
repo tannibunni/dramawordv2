@@ -861,6 +861,12 @@ export class EnglishUIEnvironment implements LanguageEnvironment {
    * 🔧 生成OpenAI智能提示词
    */
   private generateOpenAIPrompt(input: string, inputType: string): string {
+    // 统一处理所有字母输入，让AI智能判断
+    if (inputType === 'alphabet_input') {
+      return `智能分析输入"${input}"并返回中文翻译。请判断是拼音还是英文，然后提供相应的中文翻译。`;
+    }
+    
+    // 保留其他类型的处理
     switch (inputType) {
       case 'pinyin':
         return `将拼音"${input}"转换为中文词汇，提供3-5个常用候选词，格式：{"translation": "主要翻译", "phonetic": "拼音", "definitions": [{"definition": "释义", "examples": ["例句1", "例句2"]}]}`;

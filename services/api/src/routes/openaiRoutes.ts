@@ -48,6 +48,7 @@ function getPromptKey(inputType: string): string {
     'english_sentence': 'english_sentence_to_chinese',
     'chinese': 'chinese_to_english',
     'chinese_sentence': 'chinese_sentence_to_english',
+    'alphabet_input': 'alphabet_input', // 新增：统一字母输入处理
     'general': 'general_translation'
   };
   
@@ -64,6 +65,7 @@ function getDefaultPrompt(inputType: string): string {
     'english_sentence': '将英文句子翻译成中文，提供自然流畅的翻译',
     'chinese': '提供中文词汇的英文释义和例句',
     'chinese_sentence': '将中文句子翻译成英文，提供自然流畅的翻译',
+    'alphabet_input': '智能分析输入并判断是拼音还是英文，然后提供相应的中文翻译', // 新增
     'general': '根据输入类型提供适当的翻译或释义'
   };
   
