@@ -138,8 +138,10 @@ export class UnifiedQueryService {
             correctedWord: candidate,
             translation: candidate,
             translationSource: result.source || 'unknown',
-            candidates: [candidate],
-            language: targetLanguage
+            candidates: result.candidates.map(c => typeof c === 'string' ? c : String(c)),
+            language: targetLanguage,
+            // 🔧 传递完整的OpenAI数据，包括phonetic、pinyin、definitions等
+            ...result.wordData
           }
         }))
       };
