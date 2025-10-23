@@ -76,7 +76,7 @@ function getDefaultPrompt(inputType: string): string {
  */
 router.post('/chat', async (req, res) => {
   try {
-    const { prompt, model = 'gpt-4o-mini', max_tokens = 200, inputType = 'general', uiLanguage = 'en', targetLanguage = 'zh-CN' } = req.body;
+    const { prompt, model = 'gpt-4o-mini', max_tokens = 500, inputType = 'general', uiLanguage = 'en', targetLanguage = 'zh-CN' } = req.body;
     
     if (!prompt) {
       return res.status(400).json({
@@ -140,10 +140,12 @@ router.post('/chat', async (req, res) => {
       parsedResponse = JSON.parse(cleanedResponse);
     } catch (parseError) {
       logger.warn(`⚠️ JSON解析失败，返回原始文本:`, parseError);
-      parsedResponse = {
-        translation: responseText,
-        text: responseText
-      };
+      // 如果JSON解析失败，返回错误而不是字符串
+      return res.status(500).json({
+        success: false,
+        error: 'OpenAI返回的JSON格式无效',
+        details: parseError.message
+      });
     }
     
     res.json({
