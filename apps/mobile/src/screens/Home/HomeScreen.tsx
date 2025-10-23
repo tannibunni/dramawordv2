@@ -26,6 +26,7 @@ import { unifiedQueryService } from '../../services/unifiedQueryService';
 // import { AmbiguousChoiceCard } from '../../components/cards/AmbiguousChoiceCard'; // 不再需要弹窗组件
 import WordCard from '../../components/cards/WordCard';
 // import SuggestionList from '../../components/search/SuggestionList'; // 不再需要悬浮下拉菜单
+import SearchResultsContainer from '../../components/search/SearchResultsContainer';
 import { useShowList } from '../../context/ShowListContext';
 import { useVocabulary } from '../../context/VocabularyContext';
 import { TMDBService, TMDBShow } from '../../services/tmdbService';
@@ -161,10 +162,10 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                       // 触发下载（重用实例，调用downloadAndParse方法）
                       console.log('🔍 开始调用downloadAndParse()...');
                       console.log('🔍 ccedictProviderInstance类型:', typeof ccedictProviderInstance);
-                      console.log('🔍 ccedictProviderInstance方法:', Object.getOwnPropertyNames(Object.getPrototypeOf(ccedictProviderInstance)));
-                      console.log('🔍 downloadAndParse方法存在吗:', typeof ccedictProviderInstance.downloadAndParse);
+                      console.log('🔍 ccedictProviderInstance方法:', ccedictProviderInstance ? Object.getOwnPropertyNames(Object.getPrototypeOf(ccedictProviderInstance)) : 'null');
+                      console.log('🔍 downloadAndParse方法存在吗:', ccedictProviderInstance ? typeof ccedictProviderInstance.downloadAndParse : 'null');
                       
-                      if (typeof ccedictProviderInstance.downloadAndParse !== 'function') {
+                      if (!ccedictProviderInstance || typeof ccedictProviderInstance.downloadAndParse !== 'function') {
                         console.log('❌ downloadAndParse方法不存在！');
                         throw new Error('downloadAndParse方法不存在');
                       }
@@ -428,7 +429,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
               id: `${pinyinText}-${index}`,
               chinese: candidate.word,
               english: candidate.translation,
-              pinyin: candidate.pinyin,
+              pinyin: candidate.pinyin || '',
               audioUrl: audioUrl, // 使用Google TTS生成音频URL
             };
           });
@@ -1520,7 +1521,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         // 添加候选词选择回调
         const resultWithCallback = {
           ...result.data,
-          onCandidateSelect: createCandidateSelectHandler(searchWord, result.data.candidates)
+          onCandidateSelect: createCandidateSelectHandler(searchWord, result.data.candidates || [])
         };
         
         setSearchResult(resultWithCallback);
@@ -1898,475 +1899,120 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         
         {/* 移除悬浮的拼音建议列表，改为在Recent区域显示 */}
         
-        {/* 内容区：有查词结果时只显示卡片，有拼音候选词时显示候选词，否则显示最近查词 */}
-        {showAmbiguousChoice ? (
-          <View style={styles.wordCardWrapper}>
-            <View style={styles.recentSection}>
-              <View style={styles.recentHeader}>
-                <Text style={styles.sectionTitle}>"{ambiguousInput}" 的查询结果</Text>
-                <Text style={styles.sectionSubtitle}>请选择您想要的翻译：</Text>
-                <Text style={{ fontSize: 12, color: '#666' }}>调试: showAmbiguousChoice={String(showAmbiguousChoice)}, options={ambiguousOptions?.length}</Text>
-                <Text style={{ fontSize: 12, color: '#666' }}>其他状态: pinyinCandidates={pinyinCandidates.length}, chToEnCandidates={chToEnCandidates.length}, enToJaCandidates={enToJaCandidates.length}</Text>
-              </View>
-              <View style={styles.wordsContainer}>
-                {Array.isArray(ambiguousOptions) && ambiguousOptions.map((option, index) => (
-                  <TouchableOpacity
-                    key={index}
-                    style={styles.recentWordItem}
-                    onPress={() => handleAmbiguousChoice(option)}
-                    disabled={isLoading}
-                  >
-                    <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
-                      <Ionicons 
-                        name={option.type === 'dictionary' ? 'book-outline' : 'language-outline'} 
-                        size={18} 
-                        color={colors.primary[500]} 
-                        style={{ marginRight: 8 }}
-                      />
-                      <View style={{ flex: 1 }}>
-                        <Text style={styles.recentWordText} numberOfLines={1} ellipsizeMode="tail">
-                          <Text style={{ fontWeight: 'bold', color: colors.text.primary }}>
-                            {String(option.title)}
-                          </Text>
-                        </Text>
-                        {/* 显示拼音信息 */}
-                        {option.data?.phonetic && (
-                          <Text style={{ fontSize: 12, color: colors.text.secondary, fontStyle: 'italic', marginTop: 2 }}>
-                            {String(option.data.phonetic)}
-                          </Text>
-                        )}
-                        {option.data?.pinyin && option.data.pinyin !== option.data.phonetic && (
-                          <Text style={{ fontSize: 11, color: colors.primary[600], fontStyle: 'italic', marginTop: 1 }}>
-                            {String(option.data.pinyin)}
-                          </Text>
-                        )}
-                      </View>
-                    </View>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-          </View>
-        ) : enToChCandidates.length > 0 ? (
-          <View style={styles.wordCardWrapper}>
-            <View style={[styles.wordCardCustom, styles.fixedCandidateCard] }>
-              {/* 关闭按钮 */}
-              <TouchableOpacity style={styles.closeButton} onPress={() => { setEnToChCandidates([]); setEnToChQuery(''); }}>
-                <Ionicons name="close" size={26} color={colors.text.secondary} />
-              </TouchableOpacity>
-              <Text style={{ fontSize: 20, fontWeight: 'bold', color: colors.text.primary, marginBottom: 16, marginTop: 8 }}>
-                "{enToChQuery}"{t('english_to_chinese', appLanguage)}
-              </Text>
-              {enToChCandidates.map((chinese, idx) => (
-                <TouchableOpacity key={chinese} onPress={async () => {
-                  setIsLoading(true);
-                  setEnToChCandidates([]);
-                  setEnToChQuery('');
-                  setSearchText(chinese);
-                  // 切换到中文搜索界面
-                  setSelectedLanguage('CHINESE');
-                  console.log(`🔍 点击英文翻译候选词: ${chinese}`);
-                  
-                  // 安全检查appLanguage
-                  const safeAppLanguage = appLanguage || 'en-US';
-                  
-                  // 使用统一的中文词汇查询API
-                  const result = await wordService.getChineseWordDetails(chinese, safeAppLanguage);
-                  if (result.success && result.data) {
-                    setSearchResult(result.data);
-                    setSearchText('');
-                    // 将中文查词加入最近查词历史
-                    const definition = result.data.definitions && result.data.definitions[0]?.definition ? result.data.definitions[0].definition : t('no_definition', 'zh-CN');
-                    const pinyin = result.data.pinyin || result.data.phonetic || '';
-                    const englishDefinition = result.data.definitions?.[0]?.definition || '';
-                    await wordService.saveSearchHistory(chinese, definition, undefined, pinyin, englishDefinition);
-                    setRecentWords(prev => {
-                      const filtered = prev.filter(w => w.word !== chinese);
-                      return [
-                        {
-                          id: Date.now().toString(),
-                          word: chinese,
-                          translation: definition,
-                          timestamp: Date.now(),
-                          pinyin: pinyin,
-                          englishDefinition: englishDefinition,
-                        },
-                        ...filtered
-                      ];
-                    });
-                  } else {
-                    console.log(`❌ 查询中文词汇详细信息失败: ${chinese}`);
-                    Alert.alert('错误', '查询失败，请重试');
-                  }
-                  setIsLoading(false);
-                }} style={{ paddingVertical: 10, paddingHorizontal: 24, borderRadius: 16, backgroundColor: colors.primary[50], marginBottom: 10 }}>
-                  <Text style={{ fontSize: 18, color: colors.primary[700], fontWeight: '500' }}>{chinese}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
-            ) : chToJaCandidates.length > 0 ? (
-              <View style={styles.wordCardWrapper}>
-                <View style={[styles.wordCardCustom, styles.fixedCandidateCard] }>
-                  {/* 关闭按钮 */}
-                  <TouchableOpacity style={styles.closeButton} onPress={() => { setChToJaCandidates([]); setChToJaQuery(''); }}>
-                    <Ionicons name="close" size={26} color={colors.text.secondary} />
-                  </TouchableOpacity>
-                  <Text style={{ fontSize: 20, fontWeight: 'bold', color: colors.text.primary, marginBottom: 16, marginTop: 8 }}>
-                    "{chToJaQuery}" 的日语翻译
-                  </Text>
-                  {chToJaCandidates.map((japanese, idx) => (
-                    <TouchableOpacity key={japanese} onPress={async () => {
-                      setIsLoading(true);
-                      setChToJaCandidates([]);
-                      setChToJaQuery('');
-                      setSearchText(japanese);
-                      // 切换到日语搜索界面
-                      setSelectedLanguage('JAPANESE');
-                      console.log(`🔍 点击中文翻译候选词: ${japanese}`);
-                      
-                      // 使用日语词汇查询API
-                      const result = await wordService.searchWord(japanese, 'ja', appLanguage || 'en-US');
-                      if (result.success && result.data) {
-                        setSearchResult(result.data);
-                        setSearchText('');
-                        const definition = result.data.definitions && result.data.definitions[0]?.definition ? result.data.definitions[0].definition : t('no_definition', 'zh-CN');
-                        await wordService.saveSearchHistory(japanese, definition);
-                        setRecentWords(prev => {
-                          const filtered = prev.filter(w => w.word !== japanese);
-                          return [
-                            {
-                              id: Date.now().toString(),
-                              word: japanese,
-                              translation: definition,
-                              timestamp: Date.now(),
-                            },
-                            ...filtered
-                          ];
-                        });
-                      } else {
-                        console.log(`❌ 查询日语词汇详细信息失败: ${japanese}`);
-                        Alert.alert('错误', '查询失败，请重试');
-                      }
-                      setIsLoading(false);
-                    }} style={{ paddingVertical: 10, paddingHorizontal: 24, borderRadius: 16, backgroundColor: colors.primary[50], marginBottom: 10 }}>
-                      <Text style={{ fontSize: 18, color: colors.primary[700], fontWeight: '500' }}>{japanese}</Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              </View>
-            ) : enToJaCandidates.length > 0 ? (
-              <View style={styles.wordCardWrapper}>
-                <View style={[styles.wordCardCustom, styles.fixedCandidateCard] }>
-                  {/* 关闭按钮 */}
-                  <TouchableOpacity style={styles.closeButton} onPress={() => { setEnToJaCandidates([]); setEnToJaQuery(''); }}>
-                    <Ionicons name="close" size={26} color={colors.text.secondary} />
-                  </TouchableOpacity>
-                  <Text style={{ fontSize: 20, fontWeight: 'bold', color: colors.text.primary, marginBottom: 16, marginTop: 8 }}>
-                    "{enToJaQuery}" 的日语翻译
-                  </Text>
-                  {enToJaCandidates.map((japanese, idx) => (
-                    <TouchableOpacity key={japanese} onPress={async () => {
-                      setIsLoading(true);
-                      setEnToJaCandidates([]);
-                      setEnToJaQuery('');
-                      setSearchText(japanese);
-                      // 切换到日语搜索界面
-                      setSelectedLanguage('JAPANESE');
-                      console.log(`🔍 点击英文翻译候选词: ${japanese}`);
-                      
-                      // 使用日语词汇查询API
-                      const result = await wordService.searchWord(japanese, 'ja', appLanguage || 'en-US');
-                      if (result.success && result.data) {
-                        setSearchResult(result.data);
-                        setSearchText('');
-                        const definition = result.data.definitions && result.data.definitions[0]?.definition ? result.data.definitions[0].definition : t('no_definition', 'zh-CN');
-                        await wordService.saveSearchHistory(japanese, definition);
-                        setRecentWords(prev => {
-                          const filtered = prev.filter(w => w.word !== japanese);
-                          return [
-                            {
-                              id: Date.now().toString(),
-                              word: japanese,
-                              translation: definition,
-                              timestamp: Date.now(),
-                            },
-                            ...filtered
-                          ];
-                        });
-                      } else {
-                        console.log(`❌ 查询日语词汇详细信息失败: ${japanese}`);
-                        Alert.alert('错误', '查询失败，请重试');
-                      }
-                      setIsLoading(false);
-                    }} style={{ paddingVertical: 10, paddingHorizontal: 24, borderRadius: 16, backgroundColor: colors.primary[50], marginBottom: 10 }}>
-                      <Text style={{ fontSize: 18, color: colors.primary[700], fontWeight: '500' }}>{japanese}</Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              </View>
-            ) : pinyinCandidates.length > 0 ? (
-              <View style={styles.wordCardWrapper}>
-                <View style={[styles.wordCardCustom, styles.fixedCandidateCard] }>
-                  {/* 关闭按钮 */}
-                  <TouchableOpacity style={styles.closeButton} onPress={() => { setPinyinCandidates([]); setPinyinQuery(''); }}>
-                    <Ionicons name="close" size={26} color={colors.text.secondary} />
-                  </TouchableOpacity>
-                  <Text style={{ fontSize: 20, fontWeight: 'bold', color: colors.text.primary, marginBottom: 16, marginTop: 8 }}>
-                    "{pinyinQuery}" 的中文候选词
-                  </Text>
-                  {pinyinCandidates.map((chinese, idx) => {
-                    // 获取对应的英文释义
-                    const candidates = pinyinCache[pinyinQuery.toLowerCase()];
-                    const candidate = candidates ? candidates.find(item => item.chinese === chinese) : null;
-                    const englishMeaning = candidate ? candidate.english : '';
-                    
-                    return (
-                      <TouchableOpacity key={chinese} onPress={async () => {
-                        setIsLoading(true);
-                        setPinyinCandidates([]);
-                        setPinyinQuery('');
-                        setSearchText(chinese);
-                        // 切换到中文搜索界面
-                        setSelectedLanguage('CHINESE');
-                        console.log(`🔍 点击拼音候选词: ${chinese}`);
-                        
-                        // 安全检查appLanguage
-                        const safeAppLanguage = appLanguage || 'en-US';
-                        
-                        // 使用新的中文词汇查询API
-                        const result = await wordService.getChineseWordDetails(chinese, safeAppLanguage);
-                        if (result.success && result.data) {
-                          setSearchResult(result.data);
-                          setSearchText('');
-                          const definition = result.data.definitions && result.data.definitions[0]?.definition ? result.data.definitions[0].definition : t('no_definition', 'zh-CN');
-                          await wordService.saveSearchHistory(chinese, definition);
-                          setRecentWords(prev => {
-                            const filtered = prev.filter(w => w.word !== chinese);
-                            return [
-                              {
-                                id: Date.now().toString(),
-                                word: chinese,
-                                translation: definition,
-                                timestamp: Date.now(),
-                              },
-                              ...filtered
-                            ];
-                          });
-                        } else {
-                          console.log(`❌ 查询中文词汇详细信息失败: ${chinese}`);
-                          Alert.alert('错误', '查询失败，请重试');
-                        }
-                        setIsLoading(false);
-                      }} style={{ paddingVertical: 12, paddingHorizontal: 24, borderRadius: 16, backgroundColor: colors.primary[50], marginBottom: 10 }}>
-                        <Text style={{ fontSize: 18, color: colors.primary[700], fontWeight: '500', marginBottom: 2 }}>{chinese}</Text>
-                        {englishMeaning && (
-                          <Text style={{ fontSize: 14, color: colors.primary[600], fontStyle: 'italic' }}>{englishMeaning}</Text>
-                        )}
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
-              </View>
-        ) : chToEnCandidates.length > 0 ? (
-          <View style={styles.wordCardWrapper}>
-            <View style={[styles.wordCardCustom, styles.fixedCandidateCard] }>
-              {/* 关闭按钮 */}
-              <TouchableOpacity style={styles.closeButton} onPress={() => { setChToEnCandidates([]); setChToEnQuery(''); }}>
-                <Ionicons name="close" size={26} color={colors.text.secondary} />
-              </TouchableOpacity>
-              <Text style={{ fontSize: 20, fontWeight: 'bold', color: colors.text.primary, marginBottom: 16, marginTop: 8 }}>
-                "{chToEnQuery}"{t('chinese_to_target', appLanguage, { target: getCurrentLanguageConfig()?.name || t('target_language', appLanguage) })}
-              </Text>
-              {chToEnCandidates.map((en, idx) => (
-                <TouchableOpacity key={en} onPress={async () => {
-                  setIsLoading(true);
-                  setChToEnCandidates([]);
-                  setChToEnQuery('');
-                  setSearchText(en);
-                  // 使用当前选择的目标语言进行搜索
-                  const currentLanguageConfig = getCurrentLanguageConfig();
-                  // 添加安全检查
-                  if (!currentLanguageConfig) {
-                    console.error('❌ 无法获取当前语言配置');
-                    Alert.alert(t('error', appLanguage), t('language_config_error', appLanguage));
-                    setIsLoading(false);
-                    return;
-                  }
-                  
-                  const targetLanguage = currentLanguageConfig.code;
-                  console.log('🔍 候选词搜索参数:', { word: en, targetLanguage, uiLanguage: appLanguage });
-                  const result = await wordService.searchWord(en.toLowerCase(), targetLanguage, appLanguage);
-                  if (result.success && result.data) {
-                    setSearchResult(result.data);
-                    setSearchText('');
-                    // 新增：将英文查词也加入最近查词历史
-                    const definition = result.data.definitions && result.data.definitions[0]?.definition ? result.data.definitions[0].definition : t('no_definition', appLanguage);
-                    await wordService.saveSearchHistory(en, definition);
-                    setRecentWords(prev => {
-                      const filtered = prev.filter(w => w.word !== en);
-                      return [
-                        {
-                          id: Date.now().toString(),
-                          word: en,
-                          translation: definition,
-                          timestamp: Date.now(),
-                        },
-                        ...filtered
-                      ];
-                    });
-                  } else {
-                    Alert.alert('查询失败', result.error || '无法找到该单词');
-                  }
-                  setIsLoading(false);
-                }} style={{ paddingVertical: 10, paddingHorizontal: 24, borderRadius: 16, backgroundColor: colors.primary[50], marginBottom: 10 }}>
-                  <Text style={{ fontSize: 18, color: colors.primary[700], fontWeight: '500' }}>{en}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
-        ) : searchResult ? (
-          <View style={styles.wordCardWrapper}>
-            <WordCard
-              wordData={searchResult}
-              onIgnore={() => setSearchResult(null)}
-              onCollect={handleCollect}
-              onPlayAudio={handlePlayAudio}
-            />
-          </View>
-        ) : searchSuggestions.length > 0 ? (
-          <View style={styles.wordCardWrapper}>
-            <View style={[styles.wordCardCustom, { alignItems: 'center', justifyContent: 'center', padding: 32, borderRadius: 20, backgroundColor: colors.background.secondary, shadowColor: colors.neutral[900], shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.15, shadowRadius: 16, elevation: 8, maxWidth: 350, minHeight: 220 }] }>
-                                <Text style={{ fontSize: 20, fontWeight: 'bold', color: colors.text.primary, marginBottom: 16 }}>{t('search_suggestions', appLanguage)}</Text>
-              {searchSuggestions.map(sug => (
-                <TouchableOpacity key={sug} onPress={() => { setSearchText(sug); setSearchSuggestions([]); setTimeout(() => handleSearch(), 0); }} style={{ paddingVertical: 10, paddingHorizontal: 24, borderRadius: 16, backgroundColor: colors.primary[50], marginBottom: 10 }}>
-                  <Text style={{ fontSize: 18, color: colors.primary[700], fontWeight: '500' }}>{sug}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
-        ) : showPinyinSuggestions && pinyinSuggestions.length > 0 ? (
-          <ScrollView style={styles.recentContainer} showsVerticalScrollIndicator={false}>
-            <View style={styles.recentSection}>
-              <View style={styles.recentHeader}>
-                <Text style={styles.sectionTitle}>{pinyinSuggestions.length} 个候选词</Text>
-              </View>
-              <View style={styles.wordsContainer}>
-                {pinyinSuggestions.map((suggestion, index) => (
-                  <TouchableOpacity
-                    key={suggestion.id}
-                    style={styles.recentWordItem}
-                    onPress={() => handlePinyinSuggestionSelect(suggestion)}
-                    disabled={isLoading}
-                  >
-                    <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
-                      <Ionicons name="search-outline" size={18} color={colors.neutral[400]} style={{ marginRight: 8 }} />
-                      <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}>
-                        <Text style={styles.recentWordText} numberOfLines={1} ellipsizeMode="tail">
-                          <Text style={{ fontWeight: 'bold', color: colors.text.primary }}>
-                            {String(suggestion.chinese)}
-                          </Text>
-                          {suggestion.pinyin && (
-                            <Text style={{ fontWeight: 'normal', color: colors.text.secondary }}>
-                              {' - '}{String(suggestion.pinyin)}
-                            </Text>
-                          )}
-                          {suggestion.english && (
-                            <Text style={{ fontWeight: 'normal', color: colors.text.tertiary }}>
-                              {' - '}{String(suggestion.english)}
-                            </Text>
-                          )}
-                        </Text>
-                        <Ionicons name="chevron-forward" size={16} color={colors.text.tertiary} style={{ marginLeft: 8 }} />
-                      </View>
-                    </View>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-          </ScrollView>
-        ) : (
-          <ScrollView style={styles.recentContainer} showsVerticalScrollIndicator={false}>
-            <View style={styles.recentSection}>
-              <View style={styles.recentHeader}>
-                <Text style={styles.sectionTitle}>{t('recent_searches', appLanguage)}</Text>
-                {recentWords.length > 0 && (
-                  <TouchableOpacity 
-                    style={styles.clearHistoryButton}
-                    onPress={handleClearSearchHistory}
-                  >
-                    <Ionicons name="trash-outline" size={18} color={colors.text.secondary} />
-                  </TouchableOpacity>
-                )}
-              </View>
-              <View style={styles.wordsContainer}>
-                {isLoadingRecent ? (
-                  <View style={styles.loadingContainer}>
-                    <ActivityIndicator size="large" color={colors.primary[500]} />
-                    <Text style={styles.loadingText}>{t('loading', appLanguage)}</Text>
-                  </View>
-                ) : recentWords.length > 0 ? (
-                  recentWords.map((word) => {
-                    return (
-                      <TouchableOpacity
-                        key={word.id}
-                        style={styles.recentWordItem}
-                        onPress={() => handleRecentWordPress(word)}
-                        disabled={isLoading}
-                      >
-                        <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
-                          <Ionicons name="time-outline" size={18} color={colors.neutral[400]} style={{ marginRight: 8 }} />
-                          <Text style={styles.recentWordText} numberOfLines={1} ellipsizeMode="tail">
-                            <Text style={{ fontWeight: 'bold', color: colors.text.primary }}>
-                              {String(word.translation || word.word)}
-                            </Text>
-                            {word.pinyin && (
-                              <Text style={{ fontWeight: 'normal', color: colors.text.secondary }}>
-                                {' - '}{String(word.pinyin)}
-                              </Text>
-                            )}
-                            {word.englishDefinition && (
-                              <Text style={{ fontWeight: 'normal', color: colors.text.tertiary }}>
-                                {' - '}{String(word.englishDefinition)}
-                              </Text>
-                            )}
-                            {!word.pinyin && !word.englishDefinition && word.word !== word.translation && (
-                              <Text style={{ fontWeight: 'normal', color: colors.text.secondary }}>
-                                {' - '}{String(word.word)}
-                              </Text>
-                            )}
-                          </Text>
-                        </View>
-                      </TouchableOpacity>
-                    );
-                  })
-                ) : (
-                  <View style={styles.emptyState}>
-                    <Ionicons name="search-outline" size={48} color={colors.text.tertiary} />
-                    <Text style={styles.emptyStateText}>{t('no_recent_searches', appLanguage)}</Text>
-                  </View>
-                )}
-                
-                {/* Load More 按钮 */}
-                {recentWords.length > 0 && hasMoreRecentWords && (
-                  <TouchableOpacity
-                    style={styles.loadMoreButton}
-                    onPress={loadMoreRecentWords}
-                    disabled={isLoadingMoreRecent}
-                  >
-                    {isLoadingMoreRecent ? (
-                      <ActivityIndicator size="small" color={colors.primary[500]} />
-                    ) : (
-                      <Text style={styles.loadMoreText}>
-                        {appLanguage === 'zh-CN' ? '加载更多' : 'Load More'}
-                      </Text>
-                    )}
-                  </TouchableOpacity>
-                )}
-              </View>
-            </View>
-          </ScrollView>
-        )}
+        {/* 内容区：使用新的SearchResultsContainer组件管理所有搜索相关状态 */}
+        <SearchResultsContainer
+          // 搜索相关状态
+          searchText={searchText}
+          searchResult={searchResult}
+          searchSuggestions={searchSuggestions}
+          isLoading={isLoading}
+          
+          // 候选词状态
+          enToChCandidates={enToChCandidates}
+          enToChQuery={enToChQuery}
+          chToJaCandidates={chToJaCandidates}
+          chToJaQuery={chToJaQuery}
+          enToJaCandidates={enToJaCandidates}
+          enToJaQuery={enToJaQuery}
+          pinyinCandidates={pinyinCandidates}
+          pinyinQuery={pinyinQuery}
+          chToEnCandidates={chToEnCandidates}
+          chToEnQuery={chToEnQuery}
+          
+          // 歧义选择状态
+          ambiguousOptions={ambiguousOptions}
+          showAmbiguousChoice={showAmbiguousChoice}
+          ambiguousInput={ambiguousInput}
+          
+          // 拼音建议状态
+          pinyinSuggestions={pinyinSuggestions}
+          showPinyinSuggestions={showPinyinSuggestions}
+          
+          // 历史记录状态
+          recentWords={recentWords}
+          isLoadingRecent={isLoadingRecent}
+          recentWordsPage={recentWordsPage}
+          hasMoreRecentWords={hasMoreRecentWords}
+          isLoadingMoreRecent={isLoadingMoreRecent}
+          
+          // 缓存状态
+          pinyinCache={pinyinCache}
+          
+          // 语言配置
+          appLanguage={appLanguage}
+          selectedLanguage={selectedLanguage}
+          
+          // 回调函数
+          onSearchResult={setSearchResult}
+          onClearSearchResult={() => setSearchResult(null)}
+          onSetCandidates={(type, candidates, query) => {
+            switch (type) {
+              case 'enToCh':
+                setEnToChCandidates(candidates);
+                setEnToChQuery(query);
+                break;
+              case 'chToJa':
+                setChToJaCandidates(candidates);
+                setChToJaQuery(query);
+                break;
+              case 'enToJa':
+                setEnToJaCandidates(candidates);
+                setEnToJaQuery(query);
+                break;
+              case 'pinyin':
+                setPinyinCandidates(candidates);
+                setPinyinQuery(query);
+                break;
+              case 'chToEn':
+                setChToEnCandidates(candidates);
+                setChToEnQuery(query);
+                break;
+            }
+          }}
+          onClearCandidates={(type) => {
+            switch (type) {
+              case 'enToCh':
+                setEnToChCandidates([]);
+                setEnToChQuery('');
+                break;
+              case 'chToJa':
+                setChToJaCandidates([]);
+                setChToJaQuery('');
+                break;
+              case 'enToJa':
+                setEnToJaCandidates([]);
+                setEnToJaQuery('');
+                break;
+              case 'pinyin':
+                setPinyinCandidates([]);
+                setPinyinQuery('');
+                break;
+              case 'chToEn':
+                setChToEnCandidates([]);
+                setChToEnQuery('');
+                break;
+            }
+          }}
+          onSetAmbiguousChoice={(options, input) => {
+            setAmbiguousOptions(options);
+            setShowAmbiguousChoice(true);
+            setAmbiguousInput(input);
+          }}
+          onClearAmbiguousChoice={() => {
+            setShowAmbiguousChoice(false);
+            setAmbiguousOptions([]);
+            setAmbiguousInput('');
+          }}
+          onSetPinyinSuggestions={(suggestions, show) => {
+            setPinyinSuggestions(suggestions);
+            setShowPinyinSuggestions(show);
+          }}
+          onRecentWordPress={handleRecentWordPress}
+          onLoadMoreRecent={loadMoreRecentWords}
+          onClearHistory={handleClearSearchHistory}
+          onPlayAudio={handlePlayAudio}
+          onCollect={handleCollect}
+        />
       </KeyboardAvoidingView>
       {/* 收藏弹窗 */}
       <Modal
