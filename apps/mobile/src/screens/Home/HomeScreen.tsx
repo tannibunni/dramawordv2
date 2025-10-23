@@ -23,7 +23,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { colors } from '../../constants/colors';
 import { wordService, RecentWord } from '../../services/wordService';
 import { unifiedQueryService } from '../../services/unifiedQueryService';
-import { AmbiguousChoiceCard } from '../../components/cards/AmbiguousChoiceCard';
+// import { AmbiguousChoiceCard } from '../../components/cards/AmbiguousChoiceCard'; // 不再需要弹窗组件
 import WordCard from '../../components/cards/WordCard';
 // import SuggestionList from '../../components/search/SuggestionList'; // 不再需要悬浮下拉菜单
 import { useShowList } from '../../context/ShowListContext';
@@ -2177,12 +2177,51 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
             </View>
           </View>
         ) : showAmbiguousChoice ? (
-          <AmbiguousChoiceCard
-            options={Array.isArray(ambiguousOptions) ? ambiguousOptions : []}
-            onSelect={handleAmbiguousChoice}
-            onClose={() => setShowAmbiguousChoice(false)}
-            input={ambiguousInput}
-          />
+          <View style={styles.wordCardWrapper}>
+            <View style={styles.recentSection}>
+              <View style={styles.recentHeader}>
+                <Text style={styles.sectionTitle}>"{ambiguousInput}" 的查询结果</Text>
+                <Text style={styles.sectionSubtitle}>请选择您想要的翻译：</Text>
+              </View>
+              <View style={styles.wordsContainer}>
+                {Array.isArray(ambiguousOptions) && ambiguousOptions.map((option, index) => (
+                  <TouchableOpacity
+                    key={index}
+                    style={styles.recentWordItem}
+                    onPress={() => handleAmbiguousChoice(option)}
+                    disabled={isLoading}
+                  >
+                    <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+                      <Ionicons 
+                        name={option.type === 'dictionary' ? 'book-outline' : 'language-outline'} 
+                        size={18} 
+                        color={colors.primary[500]} 
+                        style={{ marginRight: 8 }} 
+                      />
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.recentWordText} numberOfLines={1} ellipsizeMode="tail">
+                          <Text style={{ fontWeight: 'bold', color: colors.text.primary }}>
+                            {String(option.title)}
+                          </Text>
+                        </Text>
+                        {/* 显示拼音信息 */}
+                        {option.data?.phonetic && (
+                          <Text style={{ fontSize: 12, color: colors.text.secondary, fontStyle: 'italic', marginTop: 2 }}>
+                            {String(option.data.phonetic)}
+                          </Text>
+                        )}
+                        {option.data?.pinyin && option.data.pinyin !== option.data.phonetic && (
+                          <Text style={{ fontSize: 11, color: colors.primary[600], fontStyle: 'italic', marginTop: 1 }}>
+                            {String(option.data.pinyin)}
+                          </Text>
+                        )}
+                      </View>
+                    </View>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+          </View>
         ) : searchResult ? (
           <View style={styles.wordCardWrapper}>
             <WordCard
@@ -2581,6 +2620,12 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: colors.text.primary,
     marginBottom: 16,
+  },
+  sectionSubtitle: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: colors.text.secondary,
+    marginBottom: 8,
   },
   wordsContainer: {
     gap: 12,
