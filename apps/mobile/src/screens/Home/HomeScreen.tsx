@@ -504,6 +504,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     setSearchText('');
     
     // 进入完整的中文词汇查询流程
+    console.log('🔍 设置isLoading=true');
     setIsLoading(true);
     setSearchResult(null);
     
@@ -562,6 +563,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       };
       setSearchResult(wordData);
     } finally {
+      console.log('🔍 设置isLoading=false');
       setIsLoading(false);
     }
     
