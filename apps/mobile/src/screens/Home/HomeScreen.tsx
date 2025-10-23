@@ -1899,7 +1899,55 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         {/* 移除悬浮的拼音建议列表，改为在Recent区域显示 */}
         
         {/* 内容区：有查词结果时只显示卡片，有拼音候选词时显示候选词，否则显示最近查词 */}
-        {enToChCandidates.length > 0 ? (
+        {showAmbiguousChoice ? (
+          <View style={styles.wordCardWrapper}>
+            <View style={styles.recentSection}>
+              <View style={styles.recentHeader}>
+                <Text style={styles.sectionTitle}>"{ambiguousInput}" 的查询结果</Text>
+                <Text style={styles.sectionSubtitle}>请选择您想要的翻译：</Text>
+                <Text style={{ fontSize: 12, color: '#666' }}>调试: showAmbiguousChoice={String(showAmbiguousChoice)}, options={ambiguousOptions?.length}</Text>
+                <Text style={{ fontSize: 12, color: '#666' }}>其他状态: pinyinCandidates={pinyinCandidates.length}, chToEnCandidates={chToEnCandidates.length}, enToJaCandidates={enToJaCandidates.length}</Text>
+              </View>
+              <View style={styles.wordsContainer}>
+                {Array.isArray(ambiguousOptions) && ambiguousOptions.map((option, index) => (
+                  <TouchableOpacity
+                    key={index}
+                    style={styles.recentWordItem}
+                    onPress={() => handleAmbiguousChoice(option)}
+                    disabled={isLoading}
+                  >
+                    <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+                      <Ionicons 
+                        name={option.type === 'dictionary' ? 'book-outline' : 'language-outline'} 
+                        size={18} 
+                        color={colors.primary[500]} 
+                        style={{ marginRight: 8 }}
+                      />
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.recentWordText} numberOfLines={1} ellipsizeMode="tail">
+                          <Text style={{ fontWeight: 'bold', color: colors.text.primary }}>
+                            {String(option.title)}
+                          </Text>
+                        </Text>
+                        {/* 显示拼音信息 */}
+                        {option.data?.phonetic && (
+                          <Text style={{ fontSize: 12, color: colors.text.secondary, fontStyle: 'italic', marginTop: 2 }}>
+                            {String(option.data.phonetic)}
+                          </Text>
+                        )}
+                        {option.data?.pinyin && option.data.pinyin !== option.data.phonetic && (
+                          <Text style={{ fontSize: 11, color: colors.primary[600], fontStyle: 'italic', marginTop: 1 }}>
+                            {String(option.data.pinyin)}
+                          </Text>
+                        )}
+                      </View>
+                    </View>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+          </View>
+        ) : enToChCandidates.length > 0 ? (
           <View style={styles.wordCardWrapper}>
             <View style={[styles.wordCardCustom, styles.fixedCandidateCard] }>
               {/* 关闭按钮 */}
@@ -2175,54 +2223,6 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                   <Text style={{ fontSize: 18, color: colors.primary[700], fontWeight: '500' }}>{en}</Text>
                 </TouchableOpacity>
               ))}
-            </View>
-          </View>
-        ) : showAmbiguousChoice ? (
-          <View style={styles.wordCardWrapper}>
-            <View style={styles.recentSection}>
-              <View style={styles.recentHeader}>
-                <Text style={styles.sectionTitle}>"{ambiguousInput}" 的查询结果</Text>
-                <Text style={styles.sectionSubtitle}>请选择您想要的翻译：</Text>
-                <Text style={{ fontSize: 12, color: '#666' }}>调试: showAmbiguousChoice={String(showAmbiguousChoice)}, options={ambiguousOptions?.length}</Text>
-                <Text style={{ fontSize: 12, color: '#666' }}>其他状态: pinyinCandidates={pinyinCandidates.length}, chToEnCandidates={chToEnCandidates.length}, enToJaCandidates={enToJaCandidates.length}</Text>
-              </View>
-              <View style={styles.wordsContainer}>
-                {Array.isArray(ambiguousOptions) && ambiguousOptions.map((option, index) => (
-                  <TouchableOpacity
-                    key={index}
-                    style={styles.recentWordItem}
-                    onPress={() => handleAmbiguousChoice(option)}
-                    disabled={isLoading}
-                  >
-                    <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
-                      <Ionicons 
-                        name={option.type === 'dictionary' ? 'book-outline' : 'language-outline'} 
-                        size={18} 
-                        color={colors.primary[500]} 
-                        style={{ marginRight: 8 }} 
-                      />
-                      <View style={{ flex: 1 }}>
-                        <Text style={styles.recentWordText} numberOfLines={1} ellipsizeMode="tail">
-                          <Text style={{ fontWeight: 'bold', color: colors.text.primary }}>
-                            {String(option.title)}
-                          </Text>
-                        </Text>
-                        {/* 显示拼音信息 */}
-                        {option.data?.phonetic && (
-                          <Text style={{ fontSize: 12, color: colors.text.secondary, fontStyle: 'italic', marginTop: 2 }}>
-                            {String(option.data.phonetic)}
-                          </Text>
-                        )}
-                        {option.data?.pinyin && option.data.pinyin !== option.data.phonetic && (
-                          <Text style={{ fontSize: 11, color: colors.primary[600], fontStyle: 'italic', marginTop: 1 }}>
-                            {String(option.data.pinyin)}
-                          </Text>
-                        )}
-                      </View>
-                    </View>
-                  </TouchableOpacity>
-                ))}
-              </View>
             </View>
           </View>
         ) : searchResult ? (
