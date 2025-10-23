@@ -2009,6 +2009,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
             setPinyinSuggestions(suggestions);
             setShowPinyinSuggestions(show);
           }}
+          onPinyinSuggestionSelect={handlePinyinSuggestionSelect}
           onRecentWordPress={handleRecentWordPress}
           onLoadMoreRecent={loadMoreRecentWords}
           onClearHistory={handleClearSearchHistory}

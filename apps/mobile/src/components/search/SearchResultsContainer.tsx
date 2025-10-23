@@ -73,6 +73,13 @@ interface SearchResultsContainerProps {
   onSetAmbiguousChoice: (options: any[], input: string) => void;
   onClearAmbiguousChoice: () => void;
   onSetPinyinSuggestions: (suggestions: any[], show: boolean) => void;
+  onPinyinSuggestionSelect: (suggestion: {
+    id: string;
+    chinese: string;
+    english: string;
+    pinyin: string;
+    audioUrl?: string;
+  }) => void;
   onRecentWordPress: (word: RecentWord) => void;
   onLoadMoreRecent: () => void;
   onClearHistory: () => void;
@@ -130,6 +137,7 @@ const SearchResultsContainer: React.FC<SearchResultsContainerProps> = ({
   onSetAmbiguousChoice,
   onClearAmbiguousChoice,
   onSetPinyinSuggestions,
+  onPinyinSuggestionSelect,
   onRecentWordPress,
   onLoadMoreRecent,
   onClearHistory,
@@ -272,7 +280,7 @@ const SearchResultsContainer: React.FC<SearchResultsContainerProps> = ({
     }
   };
 
-  // 处理拼音建议选择
+  // 处理拼音建议选择 - 直接调用传入的回调函数
   const handlePinyinSuggestionSelect = async (suggestion: {
     id: string;
     chinese: string;
@@ -280,79 +288,8 @@ const SearchResultsContainer: React.FC<SearchResultsContainerProps> = ({
     pinyin: string;
     audioUrl?: string;
   }) => {
-    console.log('🎯 用户选择了拼音建议:', suggestion.chinese);
-    
-    // 隐藏建议列表
-    onSetPinyinSuggestions([], false);
-    
-    try {
-      console.log('🔍 开始完整的中文词汇查询流程:', suggestion.chinese);
-      
-      // 使用wordService.getChineseWordDetails进行完整查询
-      const result = await wordService.getChineseWordDetails(suggestion.chinese, appLanguage || 'en-US');
-      
-      if (result.success && result.data) {
-        console.log('✅ 完整中文词汇查询成功:', result.data);
-        onSearchResult(result.data);
-      } else {
-        console.log('❌ 完整中文词汇查询失败，使用基础数据');
-        // 如果查询失败，使用基础数据
-        const wordData = {
-          word: suggestion.pinyin,
-          correctedWord: suggestion.chinese,
-          translation: suggestion.chinese,
-          language: 'zh',
-          phonetic: suggestion.pinyin,
-          pinyin: suggestion.pinyin,
-          audioUrl: suggestion.audioUrl,
-          definitions: [{
-            definition: suggestion.english,
-            examples: []
-          }],
-          translationSource: 'pinyin_suggestion',
-          searchCount: 1,
-          lastSearched: new Date(),
-          createdAt: new Date(),
-          updatedAt: new Date()
-        };
-        onSearchResult(wordData);
-      }
-    } catch (error) {
-      console.error('❌ 拼音建议选择处理失败:', error);
-      // 出错时使用基础数据
-      const wordData = {
-        word: suggestion.pinyin,
-        correctedWord: suggestion.chinese,
-        translation: suggestion.chinese,
-        language: 'zh',
-        phonetic: suggestion.pinyin,
-        pinyin: suggestion.pinyin,
-        audioUrl: suggestion.audioUrl,
-        definitions: [{
-          definition: suggestion.english,
-          examples: []
-        }],
-        translationSource: 'pinyin_suggestion',
-        searchCount: 1,
-        lastSearched: new Date(),
-        createdAt: new Date(),
-        updatedAt: new Date()
-      };
-      onSearchResult(wordData);
-    }
-    
-    // 保存到搜索历史
-    try {
-      await wordService.saveSearchHistory(
-        suggestion.chinese, // 使用中文词汇作为搜索词
-        suggestion.chinese,
-        undefined,
-        suggestion.pinyin,
-        suggestion.english
-      );
-    } catch (error) {
-      console.error('❌ 保存拼音建议选择到历史记录失败:', error);
-    }
+    console.log('🎯 SearchResultsContainer: 调用onPinyinSuggestionSelect');
+    onPinyinSuggestionSelect(suggestion);
   };
 
   // 渲染逻辑：按优先级显示不同的内容
