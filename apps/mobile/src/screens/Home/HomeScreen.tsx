@@ -1042,6 +1042,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         setAmbiguousOptions((queryResult as any).options);
         setShowAmbiguousChoice(true);
         setAmbiguousInput(word);
+        console.log(`🔍 设置歧义选择状态: showAmbiguousChoice=true, options=${(queryResult as any).options?.length}`);
         setIsLoading(false);
         return;
       } else if (queryResult.type === 'dictionary') {
@@ -2182,6 +2183,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
               <View style={styles.recentHeader}>
                 <Text style={styles.sectionTitle}>"{ambiguousInput}" 的查询结果</Text>
                 <Text style={styles.sectionSubtitle}>请选择您想要的翻译：</Text>
+                <Text style={{ fontSize: 12, color: '#666' }}>调试: showAmbiguousChoice={String(showAmbiguousChoice)}, options={ambiguousOptions?.length}</Text>
               </View>
               <View style={styles.wordsContainer}>
                 {Array.isArray(ambiguousOptions) && ambiguousOptions.map((option, index) => (
