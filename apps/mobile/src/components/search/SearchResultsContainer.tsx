@@ -368,8 +368,22 @@ const SearchResultsContainer: React.FC<SearchResultsContainerProps> = ({
     searchSuggestionsLength: searchSuggestions.length,
     showPinyinSuggestions,
     pinyinSuggestionsLength: pinyinSuggestions.length,
-    recentWordsLength: recentWords.length
+    recentWordsLength: recentWords.length,
+    isLoading
   });
+
+  // 如果正在加载，显示加载状态
+  if (isLoading) {
+    console.log('🔍 渲染加载状态');
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+        <ActivityIndicator size="large" color="#007AFF" />
+        <Text style={{ marginTop: 10, fontSize: 16, color: '#666' }}>
+          {appLanguage === 'zh-CN' ? '正在查询...' : 'Searching...'}
+        </Text>
+      </View>
+    );
+  }
 
   if (showAmbiguousChoice) {
     console.log('🔍 渲染AmbiguousChoiceSection');
