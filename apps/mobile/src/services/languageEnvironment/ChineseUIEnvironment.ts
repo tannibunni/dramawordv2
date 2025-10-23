@@ -762,7 +762,10 @@ export class ChineseUIEnvironment implements LanguageEnvironment {
         body: JSON.stringify({
           prompt: prompt,
           model: 'gpt-4o-mini', // 使用最便宜的模型
-          max_tokens: 200
+          max_tokens: 500, // 增加token限制防止截断
+          inputType: analysis.type, // 传递输入类型
+          uiLanguage: 'zh', // UI语言
+          targetLanguage: 'en' // 目标语言
         })
       });
 
