@@ -2184,6 +2184,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                 <Text style={styles.sectionTitle}>"{ambiguousInput}" 的查询结果</Text>
                 <Text style={styles.sectionSubtitle}>请选择您想要的翻译：</Text>
                 <Text style={{ fontSize: 12, color: '#666' }}>调试: showAmbiguousChoice={String(showAmbiguousChoice)}, options={ambiguousOptions?.length}</Text>
+                <Text style={{ fontSize: 12, color: '#666' }}>其他状态: pinyinCandidates={pinyinCandidates.length}, chToEnCandidates={chToEnCandidates.length}, enToJaCandidates={enToJaCandidates.length}</Text>
               </View>
               <View style={styles.wordsContainer}>
                 {Array.isArray(ambiguousOptions) && ambiguousOptions.map((option, index) => (
