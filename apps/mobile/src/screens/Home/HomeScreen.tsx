@@ -578,7 +578,8 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         suggestion.chinese,
         undefined,
         suggestion.pinyin,
-        suggestion.english
+        suggestion.english,
+        searchResult // 传递完整的词卡数据
       );
       
       // 更新本地历史记录显示
@@ -1509,13 +1510,28 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       return;
     }
     
-    // 直接使用历史记录中的词进行查询
+    // 优先使用缓存的完整词卡数据
+    if (word.wordData) {
+      console.log('✅ 使用缓存的词卡数据:', word.wordData);
+      
+      // 添加候选词选择回调
+      const resultWithCallback = {
+        ...word.wordData,
+        onCandidateSelect: createCandidateSelectHandler(word.word, word.wordData.candidates || [])
+      };
+      
+      setSearchResult(resultWithCallback);
+      setSearchText('');
+      return;
+    }
+    
+    // 如果没有缓存数据，则进行查询
     const searchWord = word.word.trim();
     setIsLoading(true);
     setSearchResult(null);
     
     try {
-      console.log('🔍 从历史记录查询词:', searchWord);
+      console.log('🔍 从历史记录查询词（无缓存）:', searchWord);
       
       // 直接使用wordService.getChineseWordDetails进行查询
       // 这会优先从缓存获取，如果没有缓存则调用API
