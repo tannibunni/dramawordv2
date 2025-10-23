@@ -4,6 +4,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import MainLayout from './components/navigation/MainLayout';
 import { ShowListProvider } from './context/ShowListContext';
 import { VocabularyProvider } from './context/VocabularyContext';
+import { SavedSentencesProvider } from './context/SavedSentencesContext';
 import { AuthProvider } from './context/AuthContext';
 import { LanguageProvider } from './context/LanguageContext';
 import { AppLanguageProvider } from './context/AppLanguageContext';
@@ -302,12 +303,13 @@ const AppContent = () => {
       <LanguageProvider>
         <ShowListProvider>
           <VocabularyProvider>
-            <NavigationProvider>
-              <AuthGuard>
-                <MainLayout />
-              </AuthGuard>
-
-            </NavigationProvider>
+            <SavedSentencesProvider>
+              <NavigationProvider>
+                <AuthGuard>
+                  <MainLayout />
+                </AuthGuard>
+              </NavigationProvider>
+            </SavedSentencesProvider>
           </VocabularyProvider>
         </ShowListProvider>
       </LanguageProvider>
