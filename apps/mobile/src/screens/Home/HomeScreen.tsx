@@ -23,6 +23,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { colors } from '../../constants/colors';
 import { wordService, RecentWord } from '../../services/wordService';
 import { unifiedQueryService } from '../../services/unifiedQueryService';
+import audioService from '../../services/audioService';
 // import { AmbiguousChoiceCard } from '../../components/cards/AmbiguousChoiceCard'; // 不再需要弹窗组件
 import WordCard from '../../components/cards/WordCard';
 // import SuggestionList from '../../components/search/SuggestionList'; // 不再需要悬浮下拉菜单
@@ -1719,16 +1720,25 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
 
   // 停止音频播放
   const stopAudio = async () => {
-    if (currentSound) {
-      try {
-        console.log('🎵 停止音频播放');
+    try {
+      console.log('🎵 停止所有音频播放');
+      
+      // 停止主音频（单词发音）
+      if (currentSound) {
+        console.log('🎵 停止主音频');
         await currentSound.stopAsync();
         await currentSound.unloadAsync();
         setCurrentSound(null);
-        console.log('🎵 音频已停止并释放');
-      } catch (error) {
-        console.error('🎵 停止音频失败:', error);
+        console.log('🎵 主音频已停止并释放');
       }
+      
+      // 停止例句音频
+      console.log('🎵 停止例句音频');
+      await audioService.stopAudio();
+      console.log('🎵 例句音频已停止');
+      
+    } catch (error) {
+      console.error('🎵 停止音频失败:', error);
     }
   };
 
