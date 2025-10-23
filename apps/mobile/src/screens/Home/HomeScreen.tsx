@@ -1478,13 +1478,13 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         } else {
           // 处理旧格式：option.data是候选词数组
           console.log(`⚠️ 使用旧格式的候选词数组`);
-          if (option.data && option.data.length > 0) {
-            if (selectedLanguage === 'JAPANESE') {
-              setEnToJaCandidates(option.data);
-              setEnToJaQuery(ambiguousInput);
-            } else {
-              setEnToChCandidates(option.data);
-              setEnToChQuery(ambiguousInput);
+        if (option.data && option.data.length > 0) {
+          if (selectedLanguage === 'JAPANESE') {
+            setEnToJaCandidates(option.data);
+            setEnToJaQuery(ambiguousInput);
+          } else {
+            setEnToChCandidates(option.data);
+            setEnToChQuery(ambiguousInput);
             }
           }
         }
@@ -1513,16 +1513,16 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     // 优先使用缓存的完整词卡数据
     if (word.wordData) {
       console.log('✅ 使用缓存的词卡数据:', word.wordData);
-      
-      // 添加候选词选择回调
-      const resultWithCallback = {
+          
+          // 添加候选词选择回调
+          const resultWithCallback = {
         ...word.wordData,
         onCandidateSelect: createCandidateSelectHandler(word.word, word.wordData.candidates || [])
-      };
-      
-      setSearchResult(resultWithCallback);
+          };
+          
+          setSearchResult(resultWithCallback);
       setSearchText('');
-      return;
+          return;
     }
     
     // 如果没有缓存数据，则进行查询
@@ -1537,22 +1537,22 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       // 这会优先从缓存获取，如果没有缓存则调用API
       const result = await wordService.getChineseWordDetails(searchWord, appLanguage || 'en-US');
       
-      if (result.success && result.data) {
+        if (result.success && result.data) {
         console.log('✅ 历史记录查询成功:', result.data);
         
         // 添加候选词选择回调
-        const resultWithCallback = {
-          ...result.data,
+          const resultWithCallback = {
+            ...result.data,
           onCandidateSelect: createCandidateSelectHandler(searchWord, result.data.candidates || [])
         };
         
-        setSearchResult(resultWithCallback);
+          setSearchResult(resultWithCallback);
         setSearchText('');
         setIsLoading(false);
         return;
-      } else {
+        } else {
         console.log('❌ 历史记录查询失败，显示错误信息');
-        Alert.alert(t('query_failed', appLanguage), t('get_word_detail_failed', appLanguage));
+          Alert.alert(t('query_failed', appLanguage), t('get_word_detail_failed', appLanguage));
       }
     } catch (error) {
       console.error('❌ 历史记录查询失败:', error);
@@ -2031,20 +2031,20 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                 setEnToChQuery('');
                 break;
               case 'chToJa':
-                setChToJaCandidates([]);
-                setChToJaQuery('');
+                      setChToJaCandidates([]);
+                      setChToJaQuery('');
                 break;
               case 'enToJa':
-                setEnToJaCandidates([]);
-                setEnToJaQuery('');
+                      setEnToJaCandidates([]);
+                      setEnToJaQuery('');
                 break;
               case 'pinyin':
-                setPinyinCandidates([]);
-                setPinyinQuery('');
+                        setPinyinCandidates([]);
+                        setPinyinQuery('');
                 break;
               case 'chToEn':
-                setChToEnCandidates([]);
-                setChToEnQuery('');
+                  setChToEnCandidates([]);
+                  setChToEnQuery('');
                 break;
             }
           }}
@@ -2066,7 +2066,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
           onRecentWordPress={handleRecentWordPress}
           onLoadMoreRecent={loadMoreRecentWords}
           onClearHistory={handleClearSearchHistory}
-          onPlayAudio={handlePlayAudio}
+              onPlayAudio={handlePlayAudio}
           onCollect={handleCollect}
         />
       </KeyboardAvoidingView>

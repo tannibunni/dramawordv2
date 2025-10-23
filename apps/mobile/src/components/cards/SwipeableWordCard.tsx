@@ -85,7 +85,9 @@ const SwipeableWordCard: React.FC<SwipeableWordCardProps> = ({
             <View style={styles.collapsedContent}>
               {/* 单词区域 */}
               <View style={styles.wordSection}>
-                <Text style={styles.word}>{wordData.correctedWord || wordData.word}</Text>
+                <Text style={styles.word}>
+                  {wordData.translation || wordData.correctedWord || wordData.word}
+                </Text>
                 <View style={styles.phoneticContainer}>
                   <Text style={styles.phonetic}>{wordData.phonetic}</Text>
                   <TouchableOpacity style={styles.audioButton} onPress={handlePlayAudio}>
