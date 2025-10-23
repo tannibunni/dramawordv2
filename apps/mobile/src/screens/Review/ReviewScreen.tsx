@@ -245,19 +245,20 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
       console.warn(`⚠️ 获取词卡数据失败，使用 fallback: ${reviewWord.word}`, error);
     }
     
-    // fallback: 使用基本数据
+    // fallback: 使用基本数据，确保显示中文翻译
     console.log(`📝 使用 fallback 词卡数据: ${reviewWord.word}`);
     return {
       word: reviewWord.word,
+      correctedWord: reviewWord.correctedWord || reviewWord.translation,
       phonetic: reviewWord.phonetic,
       definitions: [
         {
-          partOfSpeech: 'noun',
-          definition: reviewWord.translation,
+          partOfSpeech: 'phrase',
+          definition: reviewWord.translation, // 这里应该是中文翻译
           examples: [
             {
-              english: `Example sentence with ${reviewWord.word}`,
-              chinese: `包含 ${reviewWord.word} 的例句`,
+              english: reviewWord.word, // 英文原文
+              chinese: reviewWord.translation, // 中文翻译
             },
           ],
         },
@@ -283,18 +284,19 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
       return wordData;
     } catch (error) {
       console.error(`❌ 词卡数据加载失败: ${reviewWord.word}`, error);
-      // 返回 fallback 数据
+      // 返回 fallback 数据，确保显示中文翻译
       const fallbackData = {
         word: reviewWord.word,
+        correctedWord: reviewWord.correctedWord || reviewWord.translation,
         phonetic: reviewWord.phonetic,
         definitions: [
           {
-            partOfSpeech: 'noun',
-            definition: reviewWord.translation,
+            partOfSpeech: 'phrase',
+            definition: reviewWord.translation, // 中文翻译
             examples: [
               {
-                english: `Example sentence with ${reviewWord.word}`,
-                chinese: `包含 ${reviewWord.word} 的例句`,
+                english: reviewWord.word, // 英文原文
+                chinese: reviewWord.translation, // 中文翻译
               },
             ],
           },
