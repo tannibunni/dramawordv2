@@ -197,6 +197,7 @@ const getTranslationSourceText = (source: string, language: string = 'zh-CN'): s
     case 'google_translation':
       return t('translation_from_google', language as any);
     case 'openai_translation':
+    case 'openai': // 添加对"openai"的支持
       return t('translation_from_openai', language as any);
     case 'memory_cache':
     case 'database_cache':
@@ -208,6 +209,19 @@ const getTranslationSourceText = (source: string, language: string = 'zh-CN'): s
 
 const WordCardContent: React.FC<WordCardContentProps> = ({ wordData, onPlayAudio, style, scrollable = false, onScroll, showHeader = true }) => {
   const { appLanguage } = useAppLanguage();
+  
+  // 调试信息：显示所有OpenAI返回的字段
+  console.log('🔍 WordCardContent渲染数据:', {
+    word: wordData.word,
+    correctedWord: wordData.correctedWord,
+    phonetic: wordData.phonetic,
+    pinyin: wordData.pinyin,
+    candidates: wordData.candidates,
+    definitionsCount: wordData.definitions?.length,
+    slangMeaning: wordData.slangMeaning,
+    phraseExplanation: wordData.phraseExplanation,
+    translationSource: wordData.translationSource
+  });
   
   // 检查内容是否有效（不是"无内容"的提示）
   const hasValidSlangMeaning = (slang: any) => {
@@ -319,10 +333,17 @@ const WordCardContent: React.FC<WordCardContentProps> = ({ wordData, onPlayAudio
               </View>
             </View>
           )}
-          {/* 统一使用 phonetic 字段显示音标 */}
-          <Text style={styles.phonetic} selectable>
-            {wordData.phonetic}
-          </Text>
+          {/* 显示音标和拼音 */}
+          {wordData.phonetic && (
+            <Text style={styles.phonetic} selectable>
+              {wordData.phonetic}
+            </Text>
+          )}
+          {wordData.pinyin && wordData.pinyin !== wordData.phonetic && (
+            <Text style={styles.pinyin} selectable>
+              {wordData.pinyin}
+            </Text>
+          )}
           {/* 翻译来源标注 */}
           {wordData.translationSource && (
             <View style={styles.translationSourceContainer}>
