@@ -30,8 +30,6 @@ import WordCard from '../../components/cards/WordCard';
 import SearchResultsContainer from '../../components/search/SearchResultsContainer';
 import { useShowList } from '../../context/ShowListContext';
 import { useVocabulary } from '../../context/VocabularyContext';
-import { useSavedSentences } from '../../context/SavedSentencesContext';
-import SentenceCollectButton from '../../components/buttons/SentenceCollectButton';
 import { TMDBService, TMDBShow } from '../../services/tmdbService';
 import { Audio } from 'expo-av';
 import LanguagePicker from '../../components/common/LanguagePicker';
