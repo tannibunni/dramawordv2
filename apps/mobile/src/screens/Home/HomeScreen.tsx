@@ -60,6 +60,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   const [hasMoreRecentWords, setHasMoreRecentWords] = useState(false);
   const [isLoadingMoreRecent, setIsLoadingMoreRecent] = useState(false);
   const [searchResult, setSearchResult] = useState<any>(null);
+  const [currentSound, setCurrentSound] = useState<Audio.Sound | null>(null);
   const { shows, addShow } = useShowList();
   const { vocabulary, addWord, isWordInShow } = useVocabulary();
   const [showCollectModal, setShowCollectModal] = useState(false);
@@ -1671,6 +1672,9 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         uri: searchResult.audioUrl 
       });
       console.log('🎵 音频实例创建成功');
+      
+      // 保存当前音频实例
+      setCurrentSound(sound);
 
       // 设置播放状态监听
       sound.setOnPlaybackStatusUpdate((status: any) => {
@@ -1710,6 +1714,21 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         t('play_failed', appLanguage), 
         `无法播放发音\n\n错误信息: ${error instanceof Error ? error.message : String(error)}\n\n音频URL: ${searchResult?.audioUrl}`
       );
+    }
+  };
+
+  // 停止音频播放
+  const stopAudio = async () => {
+    if (currentSound) {
+      try {
+        console.log('🎵 停止音频播放');
+        await currentSound.stopAsync();
+        await currentSound.unloadAsync();
+        setCurrentSound(null);
+        console.log('🎵 音频已停止并释放');
+      } catch (error) {
+        console.error('🎵 停止音频失败:', error);
+      }
     }
   };
 
@@ -1946,7 +1965,10 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
           
           // 回调函数
           onSearchResult={setSearchResult}
-          onClearSearchResult={() => setSearchResult(null)}
+          onClearSearchResult={async () => {
+            await stopAudio();
+            setSearchResult(null);
+          }}
           onSetCandidates={(type, candidates, query) => {
             switch (type) {
               case 'enToCh':
