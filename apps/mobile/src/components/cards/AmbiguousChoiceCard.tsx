@@ -53,10 +53,19 @@ export const AmbiguousChoiceCard: React.FC<AmbiguousChoiceCardProps> = ({
               <View style={styles.optionHeader}>
                 <Ionicons
                   name={option.type === 'dictionary' ? 'book' : 'language'}
-                  size={24}
+                  size={20}
                   color={colors.primary[600]}
                 />
-                <Text style={styles.optionTitle}>{option.title}</Text>
+                <View style={styles.optionTitleContainer}>
+                  <Text style={styles.optionTitle}>{option.title}</Text>
+                  {/* 显示拼音信息 */}
+                  {option.data?.phonetic && (
+                    <Text style={styles.phoneticText}>{option.data.phonetic}</Text>
+                  )}
+                  {option.data?.pinyin && option.data.pinyin !== option.data.phonetic && (
+                    <Text style={styles.pinyinText}>{option.data.pinyin}</Text>
+                  )}
+                </View>
               </View>
               <Text style={styles.optionDescription}>{option.description}</Text>
               
@@ -106,12 +115,12 @@ const styles = StyleSheet.create({
   },
   card: {
     backgroundColor: colors.background.primary,
-    borderRadius: 16,
-    padding: 20,
-    margin: 20,
-    maxWidth: 400,
-    width: '90%',
-    maxHeight: '80%',
+    borderRadius: 12,
+    padding: 16,
+    margin: 16,
+    maxWidth: 380,
+    width: '92%',
+    maxHeight: '75%',
   },
   closeButton: {
     position: 'absolute',
@@ -120,60 +129,75 @@ const styles = StyleSheet.create({
     zIndex: 1,
   },
   title: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: 'bold',
     color: colors.text.primary,
-    marginBottom: 8,
-    marginTop: 8,
+    marginBottom: 6,
+    marginTop: 6,
   },
   subtitle: {
-    fontSize: 16,
+    fontSize: 14,
     color: colors.text.secondary,
-    marginBottom: 20,
+    marginBottom: 16,
   },
   optionsContainer: {
-    gap: 16,
+    gap: 12,
   },
   optionCard: {
     backgroundColor: colors.background.secondary,
-    borderRadius: 12,
-    padding: 16,
+    borderRadius: 10,
+    padding: 12,
     borderWidth: 1,
     borderColor: colors.border.light,
   },
   optionHeader: {
     flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
+    alignItems: 'flex-start',
+    marginBottom: 6,
+  },
+  optionTitleContainer: {
+    flex: 1,
+    marginLeft: 10,
   },
   optionTitle: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '600',
     color: colors.text.primary,
-    marginLeft: 12,
+    marginBottom: 2,
+  },
+  phoneticText: {
+    fontSize: 12,
+    color: colors.text.secondary,
+    fontStyle: 'italic',
+    marginBottom: 1,
+  },
+  pinyinText: {
+    fontSize: 11,
+    color: colors.primary[600],
+    fontStyle: 'italic',
   },
   optionDescription: {
-    fontSize: 14,
+    fontSize: 13,
     color: colors.text.secondary,
-    marginBottom: 12,
+    marginBottom: 8,
   },
   previewContainer: {
     backgroundColor: colors.background.primary,
-    borderRadius: 8,
-    padding: 12,
+    borderRadius: 6,
+    padding: 8,
   },
   previewItem: {
-    marginBottom: 8,
+    marginBottom: 6,
   },
   previewLabel: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '600',
     color: colors.text.secondary,
-    marginBottom: 4,
+    marginBottom: 3,
   },
   previewText: {
-    fontSize: 14,
+    fontSize: 13,
     color: colors.text.primary,
-    lineHeight: 20,
+    lineHeight: 18,
   },
 });
