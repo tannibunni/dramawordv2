@@ -361,11 +361,13 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   };
 
   // 处理搜索输入变化，添加防抖和状态管理
-  const handleInputChange = (text: string) => {
+  const handleInputChange = async (text: string) => {
     setSearchText(text);
     
     // 如果输入为空，清理相关状态
     if (!text.trim()) {
+      // 停止音频播放
+      await stopAudio();
       setSearchResult(null);
       setSearchSuggestions([]);
       setChToEnCandidates([]);
@@ -1885,7 +1887,10 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
               {searchResult ? (
                 <>
                   <Text style={styles.searchResultWord}>{searchResult.correctedWord || searchResult.word}</Text>
-                  <TouchableOpacity onPress={() => setSearchResult(null)} style={styles.clearButton}>
+                  <TouchableOpacity onPress={async () => {
+                    await stopAudio();
+                    setSearchResult(null);
+                  }} style={styles.clearButton}>
                     <Ionicons name="close" size={22} color={colors.text.secondary} />
                   </TouchableOpacity>
                 </>
