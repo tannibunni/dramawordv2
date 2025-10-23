@@ -1027,13 +1027,13 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         const translationResult = queryResult.data.correctedWord || queryResult.data.translation || '';
         const pinyin = queryResult.data.pinyin || queryResult.data.phonetic || '';
         const englishDefinition = queryResult.data.definitions?.[0]?.definition || '';
-        await wordService.saveSearchHistory(word, translationResult, undefined, pinyin, englishDefinition);
+        await wordService.saveSearchHistory(translationResult, translationResult, undefined, pinyin, englishDefinition);
         setRecentWords(prev => {
-          const filtered = prev.filter(w => w.word !== word);
+          const filtered = prev.filter(w => w.word !== translationResult);
           return [
             {
               id: Date.now().toString(),
-              word: word,
+              word: translationResult, // 使用中文翻译作为word
               translation: translationResult,
               timestamp: Date.now(),
               pinyin: pinyin,
