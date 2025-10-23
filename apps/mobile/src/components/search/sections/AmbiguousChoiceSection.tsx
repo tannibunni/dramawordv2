@@ -79,9 +79,8 @@ const styles = {
     marginBottom: 32,
   },
   recentHeader: {
-    flexDirection: 'row' as const,
-    justifyContent: 'space-between' as const,
-    alignItems: 'center' as const,
+    flexDirection: 'column' as const,
+    alignItems: 'flex-start' as const,
     marginBottom: 16,
   },
   sectionTitle: {
