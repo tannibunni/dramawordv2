@@ -774,26 +774,21 @@ export class ChineseUIEnvironment implements LanguageEnvironment {
       console.log(`✅ OpenAI响应:`, result);
 
       if (result.success && result.data) {
-        // 格式化OpenAI结果
-        const translation = result.data.translation || result.data.text || input;
-        const phonetic = result.data.phonetic || result.data.pinyin || '';
-        const definitions = result.data.definitions || [{
-          definition: translation,
-          examples: result.data.examples || []
-        }];
-
+        // OpenAI返回的数据已经是WordData格式，直接使用
+        const wordData = result.data;
+        
+        // 确保audioUrl使用正确的词条而不是整个JSON
+        const audioWord = wordData.word || wordData.correctedWord || input;
+        const audioUrl = `https://translate.google.com/translate_tts?ie=UTF-8&tl=zh-cn&client=tw-ob&q=${encodeURIComponent(audioWord)}`;
+        
         return {
           success: true,
-          candidates: [translation],
+          candidates: wordData.candidates || [wordData.word || wordData.correctedWord],
           source: 'openai',
           confidence: 0.9,
           wordData: {
-            word: input,
-            correctedWord: translation,
-            translation: translation,
-            phonetic: phonetic,
-            audioUrl: `https://translate.google.com/translate_tts?ie=UTF-8&tl=zh-cn&client=tw-ob&q=${encodeURIComponent(translation)}`,
-            definitions: definitions,
+            ...wordData,
+            audioUrl: audioUrl,
             language: this.targetLanguage
           }
         };
