@@ -2,7 +2,7 @@
 import { Request, Response } from 'express';
 import * as fs from 'fs';
 import * as path from 'path';
-import { API_BASE_URL } from '../../../constants/config';
+import { getApiBaseUrl } from '../utils/urlHelper';
 
 export class DictionaryFileController {
   private static readonly DICTIONARY_DIR = path.join(__dirname, '../../data/dictionaries');
@@ -55,7 +55,7 @@ export class DictionaryFileController {
             available: true,
             fileSize: stats.size,
             lastModified: stats.mtime.toISOString(),
-            downloadUrl: `${API_BASE_URL}/api/dictionary/download/${key}`
+            downloadUrl: `${getApiBaseUrl()}/api/dictionary/download/${key}`
           });
         } catch (error) {
           // 文件不存在
@@ -195,7 +195,7 @@ export class DictionaryFileController {
           available: true,
           fileSize: stats.size,
           lastModified: stats.mtime.toISOString(),
-          downloadUrl: `${API_BASE_URL}/api/dictionary/download/${dictionaryId}`
+          downloadUrl: `${getApiBaseUrl()}/api/dictionary/download/${dictionaryId}`
         }
       });
       
