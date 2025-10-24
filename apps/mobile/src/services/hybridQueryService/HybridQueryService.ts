@@ -339,7 +339,7 @@ export class HybridQueryService {
   }> {
     try {
       // 根据目标语言检查本地词典可用性
-      const providerName = targetLanguage ? this.getDictionaryProviderName(targetLanguage) : 'ccedict';
+      const providerName = targetLanguage ? this.getDictionaryProviderName(targetLanguage) : '';
       const localAvailable = providerName ? await this.dictionaryManager.isDictionaryAvailable(providerName) : false;
       const storageStats = await this.dictionaryManager.getStorageStats();
       
