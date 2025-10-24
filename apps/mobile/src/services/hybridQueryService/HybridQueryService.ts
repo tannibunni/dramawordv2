@@ -51,9 +51,8 @@ export class HybridQueryService {
       console.log(`🔍 智能混合查询: "${input}" (${uiLanguage} -> ${targetLanguage})`);
 
       // 1. 检查本地词库可用性
-      const hasLocalDictionary = await this.dictionaryManager.isDictionaryAvailable(
-        this.getDictionaryProviderName(targetLanguage)
-      );
+      const providerName = this.getDictionaryProviderName(targetLanguage);
+      const hasLocalDictionary = providerName ? await this.dictionaryManager.isDictionaryAvailable(providerName) : false;
 
       // 2. 决定查询策略
       const queryStrategy = this.strategy.determineStrategy(
@@ -332,14 +331,16 @@ export class HybridQueryService {
   /**
    * 获取查询统计信息
    */
-  async getQueryStats(): Promise<{
+  async getQueryStats(targetLanguage?: string): Promise<{
     localDictionaryAvailable: boolean;
     onlineTranslationAvailable: boolean;
     totalLocalEntries: number;
     storageSize: number;
   }> {
     try {
-      const localAvailable = await this.dictionaryManager.isDictionaryAvailable('ccedict');
+      // 根据目标语言检查本地词典可用性
+      const providerName = targetLanguage ? this.getDictionaryProviderName(targetLanguage) : 'ccedict';
+      const localAvailable = providerName ? await this.dictionaryManager.isDictionaryAvailable(providerName) : false;
       const storageStats = await this.dictionaryManager.getStorageStats();
       
       return {
@@ -467,7 +468,8 @@ export class HybridQueryService {
       case 'ko':
         return 'korean';
       default:
-        return 'ccedict';
+        // 对于不支持的语言，返回空字符串，表示没有本地词典
+        return '';
     }
   }
 
