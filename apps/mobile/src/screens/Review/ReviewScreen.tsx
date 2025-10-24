@@ -46,6 +46,7 @@ import { ReviewProgressBar } from './components/ReviewProgressBar';
 import { ReviewModeSelector } from './components/ReviewModeSelector';
 import { ReviewEmptyState } from './components/ReviewEmptyState';
 import { guestDataAdapter } from '../../services/guestDataAdapter';
+import { cacheService, CACHE_KEYS } from '../../services/cacheService';
 
 const { width, height } = Dimensions.get('window');
 
@@ -238,8 +239,17 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
       // 优先从 wordService 获取真实词卡数据
       // 对于翻译的句子，应该查询中文翻译而不是英文原文
       const queryWord = reviewWord.translation || reviewWord.correctedWord || reviewWord.word;
+      
+      // 检查缓存中是否有错误数据，如果有则清除
+      const cacheKey = `${queryWord}_en_zh-CN`;
+      const cached = await cacheService.get(CACHE_KEYS.WORD_DETAIL, cacheKey);
+      if (cached && cached.definitions?.[0]?.definition === '查询失败，请重试') {
+        console.log(`🗑️ 清除错误的缓存数据: ${cacheKey}`);
+        await cacheService.delete(CACHE_KEYS.WORD_DETAIL, cacheKey);
+      }
+      
       const wordDetail = await wordService.getWordDetail(queryWord);
-      if (wordDetail) {
+      if (wordDetail && wordDetail.definitions?.[0]?.definition !== '查询失败，请重试') {
         console.log(`✅ 获取到真实词卡数据: ${queryWord}`);
         return wordDetail;
       }
