@@ -700,18 +700,30 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         // 中文目标语言：使用中文词汇API
         result = await wordService.getChineseWordDetails(suggestion.chinese, appLanguage || 'en-US');
       } else if (selectedLanguage === 'JAPANESE') {
-        // 日语目标语言：使用统一查询服务
-        const { unifiedQueryService } = await import('../../services/unifiedQueryService');
-        const unifiedResult = await unifiedQueryService.query(suggestion.chinese, appLanguage || 'en-US', 'ja');
+        // 日语目标语言：直接使用候选词数据，不重新查询OpenAI
+        console.log('🔍 日语候选词选择：直接使用候选词数据');
         
-        if (unifiedResult.type === 'translation' && unifiedResult.data) {
-          result = { success: true, data: unifiedResult.data };
-        } else if (unifiedResult.type === 'ambiguous' && (unifiedResult as any).options && (unifiedResult as any).options.length > 0) {
-          // 如果有多个选项，使用第一个
-          result = { success: true, data: (unifiedResult as any).options[0].data };
-        } else {
-          result = { success: false, error: '查询失败' };
-        }
+        // 构建WordData对象
+        const wordData = {
+          word: suggestion.chinese, // 日语汉字
+          correctedWord: suggestion.chinese,
+          candidates: [suggestion.chinese],
+          phonetic: suggestion.pinyin, // 罗马音
+          pinyin: suggestion.pinyin, // 罗马音
+          kana: suggestion.pinyin, // 假名（这里用罗马音代替）
+          definitions: [{
+            partOfSpeech: 'noun', // 默认词性，可以从候选词数据中获取
+            definition: suggestion.english, // 英文释义
+            examples: [] // 暂时没有例句
+          }],
+          slangMeaning: undefined,
+          phraseExplanation: undefined,
+          translationSource: 'local_dictionary',
+          language: 'ja',
+          audioUrl: suggestion.audioUrl
+        };
+        
+        result = { success: true, data: wordData };
       } else {
         // 其他语言：使用统一查询服务
         const { unifiedQueryService } = await import('../../services/unifiedQueryService');
