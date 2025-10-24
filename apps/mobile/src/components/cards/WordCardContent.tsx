@@ -189,6 +189,23 @@ const getLanguageLabel = (languageCode: string, appLanguage: string) => {
   }
 };
 
+// 获取翻译来源文本
+const getTranslationSourceText = (source: string, language: string = 'zh-CN'): string => {
+  switch (source) {
+    case 'azure_translation':
+      return t('translation_from_azure', language as any);
+    case 'google_translation':
+      return t('translation_from_google', language as any);
+    case 'openai_translation':
+    case 'openai': // 添加对"openai"的支持
+      return t('translation_from_openai', language as any);
+    case 'memory_cache':
+    case 'database_cache':
+      return t('translation_from_cache', language as any);
+    default:
+      return t('translation_from_cache', language as any);
+  }
+};
 
 const WordCardContent: React.FC<WordCardContentProps> = ({ wordData, onPlayAudio, style, scrollable = false, onScroll, showHeader = true }) => {
   const { appLanguage } = useAppLanguage();
@@ -327,7 +344,33 @@ const WordCardContent: React.FC<WordCardContentProps> = ({ wordData, onPlayAudio
               {wordData.pinyin}
             </Text>
           )}
+          {/* 翻译来源标注 */}
+          {wordData.translationSource && (
+            <View style={styles.translationSourceContainer}>
+              <Text style={styles.translationSourceText}>
+                {getTranslationSourceText(wordData.translationSource)}
+              </Text>
+            </View>
+          )}
           
+          {/* 来源 TAG 区域 */}
+          {Array.isArray(wordData.sources) && wordData.sources.length > 0 && (
+            <View style={styles.sourceTagsContainer}>
+              {wordData.sources.map((src, idx) => (
+                <View
+                  key={src.id || idx}
+                  style={[
+                    styles.sourceTag,
+                    src.type === 'wordbook' && styles.wordbookTag
+                  ]}
+                >
+                  <Text style={styles.sourceTagText} numberOfLines={1} ellipsizeMode="tail">
+                    {src.type === 'wordbook' ? `来源：${src.name}` : `来源：${src.name}`}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          )}
         </View>
         <TouchableOpacity style={styles.audioButton} onPress={handlePlayAudio} activeOpacity={0.7}>
           <Ionicons name="volume-medium" size={22} color={colors.primary[500]} />
@@ -986,6 +1029,26 @@ const styles = StyleSheet.create({
     marginLeft: 8,
     fontStyle: 'italic',
   },
+  sourceTagsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginTop: 4,
+    gap: 4,
+  },
+  sourceTag: {
+    backgroundColor: '#f0f0f0',
+    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    marginRight: 4,
+  },
+  wordbookTag: {
+    backgroundColor: '#e8f5e8',
+  },
+  sourceTagText: {
+    fontSize: 12,
+    color: '#666',
+  },
   languageTagContainer: {
     marginBottom: 6,
   },
@@ -1025,6 +1088,16 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
     overflow: 'hidden',
     marginBottom: 2,
+  },
+  translationSourceContainer: {
+    marginTop: 8,
+    marginBottom: 4,
+  },
+  translationSourceText: {
+    fontSize: 12,
+    color: '#888',
+    fontStyle: 'italic',
+    textAlign: 'center',
   },
 });
 
