@@ -694,8 +694,38 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     try {
       console.log('🔍 开始完整的中文词汇查询流程:', suggestion.chinese);
       
-      // 使用wordService.getChineseWordDetails进行完整查询
-      const result = await wordService.getChineseWordDetails(suggestion.chinese, appLanguage || 'en-US');
+      // 根据目标语言选择正确的查询方法
+      let result;
+      if (selectedLanguage === 'CHINESE') {
+        // 中文目标语言：使用中文词汇API
+        result = await wordService.getChineseWordDetails(suggestion.chinese, appLanguage || 'en-US');
+      } else if (selectedLanguage === 'JAPANESE') {
+        // 日语目标语言：使用统一查询服务
+        const { unifiedQueryService } = await import('../../services/unifiedQueryService');
+        const unifiedResult = await unifiedQueryService.query(suggestion.chinese, appLanguage || 'en-US', 'ja');
+        
+        if (unifiedResult.type === 'translation' && unifiedResult.data) {
+          result = { success: true, data: unifiedResult.data };
+        } else if (unifiedResult.type === 'ambiguous' && (unifiedResult as any).options && (unifiedResult as any).options.length > 0) {
+          // 如果有多个选项，使用第一个
+          result = { success: true, data: (unifiedResult as any).options[0].data };
+        } else {
+          result = { success: false, error: '查询失败' };
+        }
+      } else {
+        // 其他语言：使用统一查询服务
+        const { unifiedQueryService } = await import('../../services/unifiedQueryService');
+        const unifiedResult = await unifiedQueryService.query(suggestion.chinese, appLanguage || 'en-US', selectedLanguage.toLowerCase());
+        
+        if (unifiedResult.type === 'translation' && unifiedResult.data) {
+          result = { success: true, data: unifiedResult.data };
+        } else if (unifiedResult.type === 'ambiguous' && (unifiedResult as any).options && (unifiedResult as any).options.length > 0) {
+          // 如果有多个选项，使用第一个
+          result = { success: true, data: (unifiedResult as any).options[0].data };
+        } else {
+          result = { success: false, error: '查询失败' };
+        }
+      }
       
       if (result.success && result.data) {
         console.log('✅ 完整中文词汇查询成功:', result.data);
