@@ -24,7 +24,7 @@ function getPromptTemplate(inputType: string, uiLanguage: string = 'en', targetL
     }
     
     const promptData = JSON.parse(fs.readFileSync(promptPath, 'utf8'));
-    const promptKey = getPromptKey(inputType);
+    const promptKey = getPromptKey(inputType, targetLanguage);
     
     if (!promptData[promptKey]) {
       logger.warn(`⚠️ Prompt键不存在: ${promptKey} in ${promptPath}`);
@@ -41,18 +41,32 @@ function getPromptTemplate(inputType: string, uiLanguage: string = 'en', targetL
 /**
  * 根据输入类型获取prompt键
  */
-function getPromptKey(inputType: string): string {
-  const keyMap: { [key: string]: string } = {
-    'pinyin': 'pinyin_to_chinese',
-    'english': 'english_to_chinese',
-    'english_sentence': 'english_sentence_to_chinese',
-    'chinese': 'chinese_to_english',
-    'chinese_sentence': 'chinese_sentence_to_english',
-    'alphabet_input': 'alphabet_input', // 新增：统一字母输入处理
-    'general': 'general_translation'
-  };
-  
-  return keyMap[inputType] || 'general_translation';
+function getPromptKey(inputType: string, targetLanguage: string = 'zh-CN'): string {
+  // 根据目标语言选择不同的prompt键映射
+  if (targetLanguage === 'ja') {
+    const japaneseKeyMap: { [key: string]: string } = {
+      'romaji': 'romaji_to_japanese',
+      'english': 'english_to_japanese',
+      'english_sentence': 'english_sentence_to_japanese',
+      'japanese': 'japanese_to_english',
+      'japanese_sentence': 'japanese_sentence_to_english',
+      'alphabet_input': 'alphabet_input',
+      'general': 'general_translation'
+    };
+    return japaneseKeyMap[inputType] || 'general_translation';
+  } else {
+    // 中文和其他语言的默认映射
+    const keyMap: { [key: string]: string } = {
+      'pinyin': 'pinyin_to_chinese',
+      'english': 'english_to_chinese',
+      'english_sentence': 'english_sentence_to_chinese',
+      'chinese': 'chinese_to_english',
+      'chinese_sentence': 'chinese_sentence_to_english',
+      'alphabet_input': 'alphabet_input',
+      'general': 'general_translation'
+    };
+    return keyMap[inputType] || 'general_translation';
+  }
 }
 
 /**
