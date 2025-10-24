@@ -247,21 +247,22 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
       console.warn(`⚠️ 获取词卡数据失败，使用 fallback: ${reviewWord.word}`, error);
     }
     
-    // fallback: 使用基本数据
-    console.log(`📝 使用 fallback 词卡数据: ${reviewWord.word}`);
+    // fallback: 使用复习数据构建词卡
+    console.log(`📝 使用复习数据构建词卡: ${reviewWord.word}`);
     return {
-      word: reviewWord.word,
-      translation: reviewWord.translation, // 添加中文翻译字段
-      correctedWord: reviewWord.correctedWord, // 添加修正翻译字段
+      word: reviewWord.translation || reviewWord.correctedWord || reviewWord.word,
+      translation: reviewWord.translation,
+      correctedWord: reviewWord.correctedWord,
       phonetic: reviewWord.phonetic,
+      pinyin: reviewWord.phonetic, // 使用phonetic作为pinyin
       definitions: [
         {
           partOfSpeech: 'noun',
-          definition: reviewWord.translation,
+          definition: reviewWord.translation || reviewWord.word,
           examples: [
             {
               english: `Example sentence with ${reviewWord.word}`,
-              chinese: `包含 ${reviewWord.word} 的例句`,
+              chinese: `包含 ${reviewWord.translation || reviewWord.word} 的例句`,
             },
           ],
         },
@@ -269,6 +270,10 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
       searchCount: reviewWord.reviewCount,
       lastSearched: reviewWord.lastReviewed,
       isCollected: false,
+      // 生成音频URL
+      audioUrl: reviewWord.translation || reviewWord.correctedWord || reviewWord.word 
+        ? `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(reviewWord.translation || reviewWord.correctedWord || reviewWord.word)}&tl=zh&client=tw-ob`
+        : undefined,
     };
   };
 
