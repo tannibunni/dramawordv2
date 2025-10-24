@@ -461,6 +461,12 @@ const WordCardContent: React.FC<WordCardContentProps> = ({ wordData, onPlayAudio
                               <Text style={styles.examplePinyin} selectable>{ex.pinyin}</Text>
                             )
                           ) : null}
+                          {/* 日语例句罗马音显示 */}
+                          {wordData.language === 'ja' ? (
+                            ex.romaji && (
+                              <Text style={styles.examplePinyin} selectable>{ex.romaji}</Text>
+                            )
+                          ) : null}
                         </View>
                         {/* 每个例句的独立发音按钮 - 放在文本下方 */}
                         <View style={styles.exampleAudioContainer}>
@@ -660,6 +666,12 @@ const WordCardContent: React.FC<WordCardContentProps> = ({ wordData, onPlayAudio
                           {wordData.language === 'zh' || wordData.language === 'zh-CN' ? (
                             ex.pinyin && (
                               <Text style={styles.examplePinyin} selectable>{ex.pinyin}</Text>
+                            )
+                          ) : null}
+                          {/* 日语例句罗马音显示 */}
+                          {wordData.language === 'ja' ? (
+                            ex.romaji && (
+                              <Text style={styles.examplePinyin} selectable>{ex.romaji}</Text>
                             )
                           ) : null}
                         </View>
