@@ -16,6 +16,7 @@ interface ReviewWord {
   incorrectCount?: number;
   consecutiveIncorrect?: number;
   consecutiveCorrect?: number;
+  wordData?: WordData; // 新增：完整的词卡数据缓存
 }
 
 interface ReviewLogicProps {
@@ -164,7 +165,29 @@ export const useReviewLogic = ({ type, id, reviewMode }: ReviewLogicProps) => {
     
     const batch = await getReviewBatch(vocabulary, filterFn);
     console.log('review batch:', batch);
-    setWords(batch);
+    
+    // 确保每个复习词都包含完整的wordData缓存
+    const wordsWithData = batch.map((word: any) => ({
+      ...word,
+      // 如果word已经是WordWithSource，它已经包含了完整的WordData信息
+      // 我们只需要确保wordData字段被正确设置
+      wordData: word.wordData || {
+        word: word.word,
+        translation: word.translation,
+        phonetic: word.phonetic,
+        pinyin: word.pinyin,
+        romaji: word.romaji,
+        kana: word.kana,
+        definitions: word.definitions,
+        audioUrl: word.audioUrl,
+        language: word.language,
+        // 保留其他WordData字段
+        ...word
+      }
+    }));
+    
+    console.log('words with data:', wordsWithData);
+    setWords(wordsWithData);
   }, [vocabulary, type, id, getReviewBatch]);
 
   // 初始化错词管理器

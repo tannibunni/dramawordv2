@@ -16,6 +16,7 @@ interface ReviewWord {
   incorrectCount?: number;
   consecutiveIncorrect?: number;
   consecutiveCorrect?: number;
+  wordData?: WordData; // 新增：完整的词卡数据缓存
 }
 
 interface ReviewActionsProps {

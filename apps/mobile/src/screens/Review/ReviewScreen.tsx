@@ -61,6 +61,7 @@ interface ReviewWord {
   incorrectCount?: number;
   consecutiveIncorrect?: number;
   consecutiveCorrect?: number;
+  wordData?: WordData; // 新增：完整的词卡数据缓存
 }
 
 interface ReviewSession {
@@ -234,8 +235,14 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
 
   // 将 ReviewWord 转换为 WordData 格式
   const convertToWordData = async (reviewWord: ReviewWord): Promise<WordData> => {
+    // 1. 优先使用缓存的完整词卡数据
+    if (reviewWord.wordData) {
+      console.log(`✅ 使用缓存的词卡数据: ${reviewWord.word}`);
+      return reviewWord.wordData;
+    }
+    
     try {
-      // 优先从 wordService 获取真实词卡数据
+      // 2. 如果没有缓存，从 wordService 获取真实词卡数据
       // 对于翻译的句子，应该查询中文翻译而不是英文原文
       const queryWord = reviewWord.translation || reviewWord.correctedWord || reviewWord.word;
       const wordDetail = await wordService.getWordDetail(queryWord);
