@@ -235,32 +235,14 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
 
   // 将 ReviewWord 转换为 WordData 格式
   const convertToWordData = async (reviewWord: ReviewWord): Promise<WordData> => {
-    try {
-      // 优先从 wordService 获取真实词卡数据
-      // 对于翻译的句子，应该查询中文翻译而不是英文原文
-      const queryWord = reviewWord.translation || reviewWord.correctedWord || reviewWord.word;
-      
-      // 检查缓存中是否有错误数据，如果有则清除
-      const cacheKey = `${queryWord}_en_zh-CN`;
-      const cached = await cacheService.get(CACHE_KEYS.WORD_DETAIL, cacheKey);
-      if (cached && cached.definitions?.[0]?.definition === '查询失败，请重试') {
-        console.log(`🗑️ 清除错误的缓存数据: ${cacheKey}`);
-        await cacheService.delete(CACHE_KEYS.WORD_DETAIL, cacheKey);
-      }
-      
-      const wordDetail = await wordService.getWordDetail(queryWord);
-      if (wordDetail && wordDetail.definitions?.[0]?.definition !== '查询失败，请重试') {
-        console.log(`✅ 获取到真实词卡数据: ${queryWord}`);
-        return wordDetail;
-      }
-    } catch (error) {
-      console.warn(`⚠️ 获取词卡数据失败，使用 fallback: ${reviewWord.word}`, error);
-    }
-    
-    // fallback: 使用复习数据构建词卡
+    // 直接使用复习数据构建词卡，避免API调用失败的问题
     console.log(`📝 使用复习数据构建词卡: ${reviewWord.word}`);
+    
+    // 确定主要显示词汇
+    const mainWord = reviewWord.translation || reviewWord.correctedWord || reviewWord.word;
+    
     return {
-      word: reviewWord.translation || reviewWord.correctedWord || reviewWord.word,
+      word: mainWord,
       translation: reviewWord.translation,
       correctedWord: reviewWord.correctedWord,
       phonetic: reviewWord.phonetic,
@@ -281,8 +263,8 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
       lastSearched: reviewWord.lastReviewed,
       isCollected: false,
       // 生成音频URL
-      audioUrl: reviewWord.translation || reviewWord.correctedWord || reviewWord.word 
-        ? `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(reviewWord.translation || reviewWord.correctedWord || reviewWord.word)}&tl=zh&client=tw-ob`
+      audioUrl: mainWord 
+        ? `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(mainWord)}&tl=zh&client=tw-ob`
         : undefined,
     };
   };
