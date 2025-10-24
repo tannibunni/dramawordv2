@@ -89,7 +89,9 @@ const SwipeableWordCard: React.FC<SwipeableWordCardProps> = ({
                   {wordData.translation || wordData.correctedWord || wordData.word}
                 </Text>
                 <View style={styles.phoneticContainer}>
-                  <Text style={styles.phonetic}>{wordData.phonetic}</Text>
+                  <Text style={styles.phonetic}>
+                    {wordData.pinyin || wordData.phonetic}
+                  </Text>
                   <TouchableOpacity style={styles.audioButton} onPress={handlePlayAudio}>
                     <Ionicons name="volume-high" size={20} color={colors.primary[500]} />
                   </TouchableOpacity>
