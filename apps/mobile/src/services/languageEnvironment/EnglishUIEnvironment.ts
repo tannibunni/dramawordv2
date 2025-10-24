@@ -363,6 +363,12 @@ export class EnglishUIEnvironment implements LanguageEnvironment {
     console.log(`🔍 在线翻译查询: ${input} (${analysis.type})`);
     
     try {
+      // 🔧 对于日语输入，直接使用OpenAI处理
+      if (this.targetLanguage === 'ja') {
+        console.log(`📌 日语目标语言，使用OpenAI处理: ${input}`);
+        return await this.queryWithOpenAI(input, analysis);
+      }
+      
       // 🔧 对于拼音输入，优先使用离线CC-CEDICT词典
       if (analysis.type === 'pinyin' && this.targetLanguage === 'zh') {
         const pinyinQuery = input.toLowerCase().replace(/\s+/g, '');
