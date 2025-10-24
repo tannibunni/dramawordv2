@@ -356,6 +356,22 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
   const handlePlayAudio = async (word: string) => {
     console.log('🎵 ReviewScreen - 开始播放音频:', word);
     
+    // 检查当前词卡是否有audioUrl
+    const currentWord = words[swiperIndex];
+    if (currentWord && currentWord.wordData && currentWord.wordData.audioUrl) {
+      console.log('🎵 ReviewScreen - 使用wordData.audioUrl:', currentWord.wordData.audioUrl);
+      try {
+        const { Audio } = await import('expo-av');
+        const { sound } = await Audio.Sound.createAsync({ uri: currentWord.wordData.audioUrl });
+        await sound.playAsync();
+        console.log('✅ ReviewScreen - 使用wordData.audioUrl播放成功');
+        return;
+      } catch (error) {
+        console.error('❌ ReviewScreen - wordData.audioUrl播放失败:', error);
+        // 继续使用audioService作为备用
+      }
+    }
+    
     try {
       // 检测词汇语言
       const language = /[\u4e00-\u9fff]/.test(word) ? 'zh' : 'en';

@@ -36,18 +36,30 @@ const SwipeableWordCard: React.FC<SwipeableWordCardProps> = ({
   // 播放发音
   const handlePlayAudio = async () => {
     const word = wordData.correctedWord || wordData.word;
-    console.log('🎵 单词:', word);
+    console.log('🎵 SwipeableWordCard - 开始播放音频:', word);
+    console.log('🎵 SwipeableWordCard - wordData.audioUrl:', wordData.audioUrl);
     
     try {
+      // 优先使用wordData中的audioUrl
+      if (wordData.audioUrl) {
+        console.log('🎵 SwipeableWordCard - 使用wordData.audioUrl:', wordData.audioUrl);
+        const { Audio } = await import('expo-av');
+        const { sound } = await Audio.Sound.createAsync({ uri: wordData.audioUrl });
+        await sound.playAsync();
+        console.log('✅ SwipeableWordCard - 音频播放成功');
+        return;
+      }
+      
+      // 如果没有audioUrl，使用onPlayAudio回调
       if (onPlayAudio) {
+        console.log('🎵 SwipeableWordCard - 使用onPlayAudio回调');
         await onPlayAudio(word);
-        console.log('✅ 音频播放成功');
+        console.log('✅ SwipeableWordCard - 音频播放成功');
       } else {
-        console.warn('⚠️ onPlayAudio 回调未提供');
-        // 可以在这里添加本地音频播放逻辑作为备用
+        console.warn('⚠️ SwipeableWordCard - onPlayAudio 回调未提供，且没有audioUrl');
       }
     } catch (error) {
-      console.error('❌ 音频播放失败:', error);
+      console.error('❌ SwipeableWordCard - 音频播放失败:', error);
       // 可以在这里添加用户提示
     }
   };
