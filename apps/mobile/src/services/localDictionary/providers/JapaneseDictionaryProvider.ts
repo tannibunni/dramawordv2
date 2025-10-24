@@ -602,7 +602,12 @@ export class JapaneseDictionaryProvider implements LocalDictionaryProvider {
         { word: '家', kana: 'いえ', romaji: 'ie', translation: 'house', partOfSpeech: 'noun', frequency: 45 },
         { word: '水', kana: 'みず', romaji: 'mizu', translation: 'water', partOfSpeech: 'noun', frequency: 40 },
         { word: '食べ物', kana: 'たべもの', romaji: 'tabemono', translation: 'food', partOfSpeech: 'noun', frequency: 35 },
-        { word: '本', kana: 'ほん', romaji: 'hon', translation: 'book', partOfSpeech: 'noun', frequency: 30 }
+        { word: '本', kana: 'ほん', romaji: 'hon', translation: 'book', partOfSpeech: 'noun', frequency: 30 },
+        { word: '寿司', kana: 'すし', romaji: 'sushi', translation: 'sushi', partOfSpeech: 'noun', frequency: 25 },
+        { word: 'ラーメン', kana: 'らーめん', romaji: 'raamen', translation: 'ramen', partOfSpeech: 'noun', frequency: 20 },
+        { word: 'お寿司', kana: 'おすし', romaji: 'osushi', translation: 'sushi (polite)', partOfSpeech: 'noun', frequency: 15 },
+        { word: '魚', kana: 'さかな', romaji: 'sakana', translation: 'fish', partOfSpeech: 'noun', frequency: 10 },
+        { word: '肉', kana: 'にく', romaji: 'niku', translation: 'meat', partOfSpeech: 'noun', frequency: 5 }
       ];
       
       // 将基本词汇添加到解析结果中
