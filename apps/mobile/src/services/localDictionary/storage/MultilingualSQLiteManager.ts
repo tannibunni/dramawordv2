@@ -285,6 +285,27 @@ export class MultilingualSQLiteManager {
       console.log(`🔍 [MultilingualSQLiteManager] 查询完成，结果数量=${results.length}`);
       if (results.length > 0) {
         console.log(`🔍 [MultilingualSQLiteManager] 前3条结果:`, results.slice(0, 3).map(r => `${r.word}[${r.romaji}]`).join(', '));
+      } else {
+        // 如果没有结果，检查数据库中是否有任何日语数据
+        console.log(`🔍 [MultilingualSQLiteManager] 无结果，检查数据库中的日语数据...`);
+        const debugResults = await this.db.getAllAsync(`
+          SELECT word, kana, romaji, translation
+          FROM multilingual_entries e
+          LEFT JOIN multilingual_translations t ON e.id = t.entry_id AND t.language = 'en'
+          WHERE e.language = 'ja'
+          LIMIT 5
+        `);
+        console.log(`🔍 [MultilingualSQLiteManager] 数据库中的日语数据样本:`, debugResults);
+        
+        // 检查是否有包含"ni"的罗马音
+        const niResults = await this.db.getAllAsync(`
+          SELECT word, kana, romaji, translation
+          FROM multilingual_entries e
+          LEFT JOIN multilingual_translations t ON e.id = t.entry_id AND t.language = 'en'
+          WHERE e.language = 'ja' AND e.romaji LIKE '%ni%'
+          LIMIT 5
+        `);
+        console.log(`🔍 [MultilingualSQLiteManager] 包含"ni"的罗马音数据:`, niResults);
       }
 
       return results as MultilingualEntry[];
