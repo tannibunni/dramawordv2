@@ -293,25 +293,9 @@ const SearchResultsContainer: React.FC<SearchResultsContainerProps> = ({
   };
 
   // 渲染逻辑：按优先级显示不同的内容
-  console.log('🔍 SearchResultsContainer渲染状态:', {
-    showAmbiguousChoice,
-    ambiguousOptionsLength: ambiguousOptions?.length,
-    enToChCandidatesLength: enToChCandidates.length,
-    chToJaCandidatesLength: chToJaCandidates.length,
-    enToJaCandidatesLength: enToJaCandidates.length,
-    pinyinCandidatesLength: pinyinCandidates.length,
-    chToEnCandidatesLength: chToEnCandidates.length,
-    searchResult: !!searchResult,
-    searchSuggestionsLength: searchSuggestions.length,
-    showPinyinSuggestions,
-    pinyinSuggestionsLength: pinyinSuggestions.length,
-    recentWordsLength: recentWords.length,
-    isLoading
-  });
 
   // 如果正在加载，显示加载状态
   if (isLoading) {
-    console.log('🔍 渲染加载状态');
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 }}>
         <ActivityIndicator size="large" color="#007AFF" />
@@ -323,7 +307,6 @@ const SearchResultsContainer: React.FC<SearchResultsContainerProps> = ({
   }
 
   if (showAmbiguousChoice) {
-    console.log('🔍 渲染AmbiguousChoiceSection');
     return (
       <AmbiguousChoiceSection
         ambiguousInput={ambiguousInput}
@@ -335,7 +318,6 @@ const SearchResultsContainer: React.FC<SearchResultsContainerProps> = ({
   }
 
   if (enToChCandidates.length > 0) {
-    console.log('🔍 渲染CandidateSection (enToCh)');
     return (
       <CandidateSection
         type="enToCh"
@@ -441,7 +423,6 @@ const SearchResultsContainer: React.FC<SearchResultsContainerProps> = ({
   }
 
   // 默认显示历史记录
-  console.log('🔍 渲染RecentWordsSection (默认)');
   return (
     <RecentWordsSection
       recentWords={recentWords}

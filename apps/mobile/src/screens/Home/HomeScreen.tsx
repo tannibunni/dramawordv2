@@ -2355,10 +2355,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                   ...wordbooks,
                   ...allShows
                 ];
-                console.log('🔍 调试信息 - 所有 shows:', shows);
-                console.log('🔍 调试信息 - 单词本列表:', wordbooks);
-                console.log('🔍 调试信息 - 所有剧集列表:', allShows);
-                console.log('🔍 调试信息 - 最终数据源:', data);
+                // 调试信息已移除，减少日志噪音
                 return (
                   <FlatList
                     data={data}
