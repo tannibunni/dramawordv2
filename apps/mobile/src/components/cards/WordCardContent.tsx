@@ -189,23 +189,6 @@ const getLanguageLabel = (languageCode: string, appLanguage: string) => {
   }
 };
 
-// 获取翻译来源文本
-const getTranslationSourceText = (source: string, language: string = 'zh-CN'): string => {
-  switch (source) {
-    case 'azure_translation':
-      return t('translation_from_azure', language as any);
-    case 'google_translation':
-      return t('translation_from_google', language as any);
-    case 'openai_translation':
-    case 'openai': // 添加对"openai"的支持
-      return t('translation_from_openai', language as any);
-    case 'memory_cache':
-    case 'database_cache':
-      return t('translation_from_cache', language as any);
-    default:
-      return t('translation_from_cache', language as any);
-  }
-};
 
 const WordCardContent: React.FC<WordCardContentProps> = ({ wordData, onPlayAudio, style, scrollable = false, onScroll, showHeader = true }) => {
   const { appLanguage } = useAppLanguage();
@@ -343,14 +326,6 @@ const WordCardContent: React.FC<WordCardContentProps> = ({ wordData, onPlayAudio
             <Text style={styles.pinyin} selectable>
               {wordData.pinyin}
             </Text>
-          )}
-          {/* 翻译来源标注 */}
-          {wordData.translationSource && (
-            <View style={styles.translationSourceContainer}>
-              <Text style={styles.translationSourceText}>
-                {getTranslationSourceText(wordData.translationSource)}
-              </Text>
-            </View>
           )}
           
           {/* 来源 TAG 区域 */}
@@ -1088,16 +1063,6 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
     overflow: 'hidden',
     marginBottom: 2,
-  },
-  translationSourceContainer: {
-    marginTop: 8,
-    marginBottom: 4,
-  },
-  translationSourceText: {
-    fontSize: 12,
-    color: '#888',
-    fontStyle: 'italic',
-    textAlign: 'center',
   },
 });
 
