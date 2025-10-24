@@ -46,7 +46,6 @@ import { ReviewProgressBar } from './components/ReviewProgressBar';
 import { ReviewModeSelector } from './components/ReviewModeSelector';
 import { ReviewEmptyState } from './components/ReviewEmptyState';
 import { guestDataAdapter } from '../../services/guestDataAdapter';
-import { cacheService, CACHE_KEYS } from '../../services/cacheService';
 
 const { width, height } = Dimensions.get('window');
 
@@ -235,26 +234,34 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
 
   // 将 ReviewWord 转换为 WordData 格式
   const convertToWordData = async (reviewWord: ReviewWord): Promise<WordData> => {
-    // 直接使用复习数据构建词卡，避免API调用失败的问题
-    console.log(`📝 使用复习数据构建词卡: ${reviewWord.word}`);
+    try {
+      // 优先从 wordService 获取真实词卡数据
+      // 对于翻译的句子，应该查询中文翻译而不是英文原文
+      const queryWord = reviewWord.translation || reviewWord.correctedWord || reviewWord.word;
+      const wordDetail = await wordService.getWordDetail(queryWord);
+      if (wordDetail) {
+        console.log(`✅ 获取到真实词卡数据: ${queryWord}`);
+        return wordDetail;
+      }
+    } catch (error) {
+      console.warn(`⚠️ 获取词卡数据失败，使用 fallback: ${reviewWord.word}`, error);
+    }
     
-    // 确定主要显示词汇
-    const mainWord = reviewWord.translation || reviewWord.correctedWord || reviewWord.word;
-    
+    // fallback: 使用基本数据
+    console.log(`📝 使用 fallback 词卡数据: ${reviewWord.word}`);
     return {
-      word: mainWord,
-      translation: reviewWord.translation,
-      correctedWord: reviewWord.correctedWord,
+      word: reviewWord.word,
+      translation: reviewWord.translation, // 添加中文翻译字段
+      correctedWord: reviewWord.correctedWord, // 添加修正翻译字段
       phonetic: reviewWord.phonetic,
-      pinyin: reviewWord.phonetic, // 使用phonetic作为pinyin
       definitions: [
         {
           partOfSpeech: 'noun',
-          definition: reviewWord.translation || reviewWord.word,
+          definition: reviewWord.translation,
           examples: [
             {
               english: `Example sentence with ${reviewWord.word}`,
-              chinese: `包含 ${reviewWord.translation || reviewWord.word} 的例句`,
+              chinese: `包含 ${reviewWord.word} 的例句`,
             },
           ],
         },
@@ -262,10 +269,6 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
       searchCount: reviewWord.reviewCount,
       lastSearched: reviewWord.lastReviewed,
       isCollected: false,
-      // 生成音频URL
-      audioUrl: mainWord 
-        ? `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(mainWord)}&tl=zh&client=tw-ob`
-        : undefined,
     };
   };
 

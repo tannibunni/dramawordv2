@@ -59,9 +59,25 @@ const RecentWordsSection: React.FC<RecentWordsSectionProps> = ({
                     <Text style={{ fontWeight: 'bold', color: colors.text.primary }}>
                       {String(word.translation || word.word)}
                     </Text>
+                    {/* 多语言语音显示 */}
                     {word.pinyin && (
                       <Text style={{ fontWeight: 'normal', color: colors.text.secondary }}>
                         {' - '}{String(word.pinyin)}
+                      </Text>
+                    )}
+                    {word.romaji && (
+                      <Text style={{ fontWeight: 'normal', color: colors.text.secondary }}>
+                        {' - '}{String(word.romaji)}
+                      </Text>
+                    )}
+                    {word.kana && (
+                      <Text style={{ fontWeight: 'normal', color: colors.text.secondary }}>
+                        {' - '}{String(word.kana)}
+                      </Text>
+                    )}
+                    {word.phonetic && !word.pinyin && !word.romaji && !word.kana && (
+                      <Text style={{ fontWeight: 'normal', color: colors.text.secondary }}>
+                        {' - '}{String(word.phonetic)}
                       </Text>
                     )}
                     {word.englishDefinition && (
@@ -69,7 +85,7 @@ const RecentWordsSection: React.FC<RecentWordsSectionProps> = ({
                         {' - '}{String(word.englishDefinition)}
                       </Text>
                     )}
-                    {!word.pinyin && !word.englishDefinition && word.word !== word.translation && (
+                    {!word.pinyin && !word.romaji && !word.kana && !word.phonetic && !word.englishDefinition && word.word !== word.translation && (
                       <Text style={{ fontWeight: 'normal', color: colors.text.secondary }}>
                         {' - '}{String(word.word)}
                       </Text>

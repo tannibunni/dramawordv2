@@ -24,8 +24,13 @@ export interface RecentWord {
   translation: string;
   timestamp: number;
   candidates?: string[]; // 新增
-  pinyin?: string; // 拼音
+  // 多语言语音表示字段
+  pinyin?: string; // 中文拼音
+  romaji?: string; // 日语罗马音
+  kana?: string; // 日语假名
+  phonetic?: string; // 通用音标（英语、法语、西班牙语、德语、韩语等）
   englishDefinition?: string; // 英文释义
+  language?: string; // 语言代码 (en, ja, ko, fr, es, de, zh)
   wordData?: WordData; // 新增：完整的词卡数据
 }
 
@@ -374,8 +379,40 @@ export class WordService {
     }
   }
 
+  // 从WordData中提取语音数据
+  private extractPhoneticData(wordData: WordData): {
+    pinyin?: string;
+    romaji?: string;
+    kana?: string;
+    phonetic?: string;
+    language?: string;
+  } {
+    return {
+      pinyin: wordData.pinyin,
+      romaji: wordData.romaji,
+      kana: wordData.kana,
+      phonetic: wordData.phonetic,
+      language: wordData.language
+    };
+  }
+
   // 保存查词记录（支持本地/云端）
-  async saveSearchHistory(word: string, definition: string, candidates?: string[], pinyin?: string, englishDefinition?: string, wordData?: WordData): Promise<boolean> {
+  async saveSearchHistory(
+    word: string, 
+    definition: string, 
+    candidates?: string[], 
+    phoneticData?: {
+      pinyin?: string; // 中文拼音
+      romaji?: string; // 日语罗马音
+      kana?: string; // 日语假名
+      phonetic?: string; // 通用音标
+      language?: string; // 语言代码
+    },
+    englishDefinition?: string, 
+    wordData?: WordData
+  ): Promise<boolean> {
+    // 如果提供了wordData，优先从中提取语音数据
+    const finalPhoneticData = wordData ? this.extractPhoneticData(wordData) : phoneticData;
     const token = await getUserToken();
     
     // 检查是否为游客模式（有token但没有userInfo）
@@ -394,7 +431,12 @@ export class WordService {
           translation: definition,
           timestamp: Date.now(),
           ...(candidates ? { candidates } : {}),
-          ...(pinyin ? { pinyin } : {}),
+          // 多语言语音字段
+          ...(finalPhoneticData?.pinyin ? { pinyin: finalPhoneticData.pinyin } : {}),
+          ...(finalPhoneticData?.romaji ? { romaji: finalPhoneticData.romaji } : {}),
+          ...(finalPhoneticData?.kana ? { kana: finalPhoneticData.kana } : {}),
+          ...(finalPhoneticData?.phonetic ? { phonetic: finalPhoneticData.phonetic } : {}),
+          ...(finalPhoneticData?.language ? { language: finalPhoneticData.language } : {}),
           ...(englishDefinition ? { englishDefinition } : {}),
           ...(wordData ? { wordData } : {})
         }, ...history.filter(w => w.word !== word)];
@@ -434,7 +476,14 @@ export class WordService {
           word: word.toLowerCase().trim(),
           definition,
           timestamp: Date.now(),
-          ...(candidates ? { candidates } : {})
+          ...(candidates ? { candidates } : {}),
+          // 多语言语音字段
+          ...(finalPhoneticData?.pinyin ? { pinyin: finalPhoneticData.pinyin } : {}),
+          ...(finalPhoneticData?.romaji ? { romaji: finalPhoneticData.romaji } : {}),
+          ...(finalPhoneticData?.kana ? { kana: finalPhoneticData.kana } : {}),
+          ...(finalPhoneticData?.phonetic ? { phonetic: finalPhoneticData.phonetic } : {}),
+          ...(finalPhoneticData?.language ? { language: finalPhoneticData.language } : {}),
+          ...(englishDefinition ? { englishDefinition } : {})
         },
         userId,
         operation: 'create',

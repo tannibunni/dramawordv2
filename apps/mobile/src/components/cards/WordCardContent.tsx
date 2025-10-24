@@ -588,13 +588,7 @@ const WordCardContent: React.FC<WordCardContentProps> = ({ wordData, onPlayAudio
         </ScrollView>
       ) : (
         <View style={{ marginBottom: 8 }}>
-          {wordData.definitions?.map((def, idx) => {
-            console.log(`🔍 渲染定义 ${idx}:`, {
-              partOfSpeech: def.partOfSpeech,
-              definition: def.definition,
-              examples: def.examples
-            });
-            return (
+          {wordData.definitions?.map((def, idx) => (
             <View key={idx} style={styles.definitionBlock}>
               <View style={styles.posTagWrapper}>
                 <Text style={styles.posTag}>{getPartOfSpeechLabel(def.partOfSpeech, appLanguage)}</Text>

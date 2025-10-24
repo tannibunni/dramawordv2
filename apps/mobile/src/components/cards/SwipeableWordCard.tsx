@@ -72,10 +72,6 @@ const SwipeableWordCard: React.FC<SwipeableWordCardProps> = ({
                 showHeader={true}
                 scrollable={false}
               />
-              {/* 调试信息 */}
-              <Text style={{ fontSize: 12, color: 'red', marginTop: 10 }}>
-                调试: definitions数量: {wordData.definitions?.length || 0}
-              </Text>
               {/* 单词来源信息 */}
               {wordData.lastSearched && (
                 <View style={styles.originSection}>
