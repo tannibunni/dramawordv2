@@ -236,9 +236,11 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
   const convertToWordData = async (reviewWord: ReviewWord): Promise<WordData> => {
     try {
       // 优先从 wordService 获取真实词卡数据
-      const wordDetail = await wordService.getWordDetail(reviewWord.word);
+      // 对于翻译的句子，应该查询中文翻译而不是英文原文
+      const queryWord = reviewWord.translation || reviewWord.correctedWord || reviewWord.word;
+      const wordDetail = await wordService.getWordDetail(queryWord);
       if (wordDetail) {
-        console.log(`✅ 获取到真实词卡数据: ${reviewWord.word}`);
+        console.log(`✅ 获取到真实词卡数据: ${queryWord}`);
         return wordDetail;
       }
     } catch (error) {
