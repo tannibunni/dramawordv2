@@ -250,6 +250,20 @@ const WordCardContent: React.FC<WordCardContentProps> = ({ wordData, onPlayAudio
       {showHeader && (
         <View style={styles.headerRow}>
         <View style={{ flex: 1 }}>
+          {/* 语言标签 */}
+          {wordData.language && (
+            <View style={styles.languageTagContainer}>
+              {(() => {
+                const languageLabel = getLanguageLabel(wordData.language, appLanguage);
+                return (
+                  <View style={styles.languageTag}>
+                    <Text style={styles.languageFlag}>{languageLabel.flag}</Text>
+                    <Text style={styles.languageName}>{languageLabel.name}</Text>
+                  </View>
+                );
+              })()}
+            </View>
+          )}
           <View style={styles.wordContainer}>
             <Text style={styles.word} selectable>{wordData.correctedWord || wordData.translation || wordData.word}</Text>
             {wordData.kana && (
@@ -314,24 +328,6 @@ const WordCardContent: React.FC<WordCardContentProps> = ({ wordData, onPlayAudio
             </Text>
           )}
           
-          {/* 来源 TAG 区域 */}
-          {Array.isArray(wordData.sources) && wordData.sources.length > 0 && (
-            <View style={styles.sourceTagsContainer}>
-              {wordData.sources.map((src, idx) => (
-                <View
-                  key={src.id || idx}
-                  style={[
-                    styles.sourceTag,
-                    src.type === 'wordbook' && styles.wordbookTag
-                  ]}
-                >
-                  <Text style={styles.sourceTagText} numberOfLines={1} ellipsizeMode="tail">
-                    {src.type === 'wordbook' ? `来源：${src.name}` : `来源：${src.name}`}
-                  </Text>
-                </View>
-              ))}
-            </View>
-          )}
         </View>
         <TouchableOpacity style={styles.audioButton} onPress={handlePlayAudio} activeOpacity={0.7}>
           <Ionicons name="volume-medium" size={22} color={colors.primary[500]} />
@@ -990,25 +986,26 @@ const styles = StyleSheet.create({
     marginLeft: 8,
     fontStyle: 'italic',
   },
-  sourceTagsContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    marginTop: 4,
-    gap: 4,
+  languageTagContainer: {
+    marginBottom: 6,
   },
-  sourceTag: {
-    backgroundColor: '#f0f0f0',
+  languageTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f8f9fa',
     borderRadius: 12,
     paddingHorizontal: 8,
-    paddingVertical: 2,
+    paddingVertical: 4,
+    alignSelf: 'flex-start',
+  },
+  languageFlag: {
+    fontSize: 16,
     marginRight: 4,
   },
-  wordbookTag: {
-    backgroundColor: '#e8f5e8',
-  },
-  sourceTagText: {
+  languageName: {
     fontSize: 12,
     color: '#666',
+    fontWeight: '500',
   },
   specialBlock: {
     marginTop: 12,
