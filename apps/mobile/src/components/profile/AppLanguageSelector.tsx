@@ -14,8 +14,6 @@ import { colors } from '../../constants/colors';
 import { useAppLanguage } from '../../context/AppLanguageContext';
 import { APP_LANGUAGES, AppLanguage, t, TranslationKey } from '../../constants/translations';
 import { SUPPORTED_LANGUAGES } from '../../constants/config';
-import OfflineDictionarySection from './OfflineDictionarySection';
-import { DictionaryManager } from '../../services/dictionaryManager/DictionaryManager';
 
 interface AppLanguageSelectorProps {
   visible: boolean;
@@ -31,13 +29,6 @@ const AppLanguageSelector: React.FC<AppLanguageSelectorProps> = ({
   const { appLanguage, setAppLanguage } = useAppLanguage();
   const [selectedLanguages, setSelectedLanguages] = useState<string[]>([]);
   const [activeTab, setActiveTab] = useState<'app' | 'learning'>(defaultTab || 'app');
-  const [dictionaryStatuses, setDictionaryStatuses] = useState<Record<string, { 
-    available: boolean; 
-    downloading: boolean; 
-    name?: string; 
-    fileSize?: number; 
-  }>>({});
-  const dictionaryManager = DictionaryManager.getInstance();
 
   // 加载学习语言设置
   useEffect(() => {
@@ -50,7 +41,6 @@ const AppLanguageSelector: React.FC<AppLanguageSelectorProps> = ({
   useEffect(() => {
     if (visible && activeTab === 'learning') {
       loadLearningLanguages();
-      loadDictionaryStatuses();
     }
   }, [visible, activeTab]);
 
@@ -69,97 +59,8 @@ const AppLanguageSelector: React.FC<AppLanguageSelectorProps> = ({
     }
   };
 
-  const loadDictionaryStatuses = async () => {
-    try {
-      const status = await dictionaryManager.getDictionaryStatus();
-      if (status) {
-        const newStatuses: Record<string, { 
-          available: boolean; 
-          downloading: boolean; 
-          name?: string; 
-          fileSize?: number; 
-        }> = {};
-        status.dictionaries.forEach((dict: any) => {
-          newStatuses[dict.language] = {
-            available: dict.available || false,
-            downloading: false,
-            name: dict.name,
-            fileSize: dict.fileSize || 0
-          };
-        });
-        setDictionaryStatuses(newStatuses);
-      }
-    } catch (error) {
-      console.error('加载词库状态失败:', error);
-    }
-  };
 
-  const formatFileSize = (bytes: number): string => {
-    if (bytes === 0) return '0 B';
-    const k = 1024;
-    const sizes = ['B', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
-  };
 
-  const handleDownloadDictionary = async (languageCode: string) => {
-    const languageMap: { [key: string]: string } = {
-      'zh': 'CC-CEDICT',
-      'ja': 'JMdict'
-    };
-    
-    const dictionaryName = languageMap[languageCode];
-    if (!dictionaryName) return;
-
-    try {
-      // 更新下载状态
-      setDictionaryStatuses(prev => ({
-        ...prev,
-        [languageCode]: {
-          ...prev[languageCode],
-          downloading: true
-        }
-      }));
-
-      const success = await dictionaryManager.downloadDictionary(dictionaryName);
-      
-      // 更新状态
-      setDictionaryStatuses(prev => ({
-        ...prev,
-        [languageCode]: {
-          available: success,
-          downloading: false
-        }
-      }));
-
-      if (success) {
-        Alert.alert(
-          appLanguage === 'zh-CN' ? '下载成功' : 'Download Successful',
-          appLanguage === 'zh-CN' 
-            ? `${dictionaryName} 词库下载完成` 
-            : `${dictionaryName} dictionary downloaded successfully`,
-          [{ text: appLanguage === 'zh-CN' ? '确定' : 'OK' }]
-        );
-      } else {
-        Alert.alert(
-          appLanguage === 'zh-CN' ? '下载失败' : 'Download Failed',
-          appLanguage === 'zh-CN' 
-            ? '词库下载失败，请检查网络连接后重试' 
-            : 'Dictionary download failed, please check your internet connection and try again',
-          [{ text: appLanguage === 'zh-CN' ? '确定' : 'OK' }]
-        );
-      }
-    } catch (error) {
-      console.error('下载词库失败:', error);
-      setDictionaryStatuses(prev => ({
-        ...prev,
-        [languageCode]: {
-          ...prev[languageCode],
-          downloading: false
-        }
-      }));
-    }
-  };
 
   const handleLanguageSelect = async (language: AppLanguage) => {
     await setAppLanguage(language);
@@ -250,8 +151,6 @@ const AppLanguageSelector: React.FC<AppLanguageSelectorProps> = ({
   const renderLearningLanguageItem = (code: string, language: any) => {
     console.log('Profile渲染语言项', code, language);
     const isSelected = selectedLanguages.includes(code);
-    const dictStatus = dictionaryStatuses[code];
-    const hasDictionary = ['zh', 'ja'].includes(code); // 只有这些语言有离线词库
     
     // 防护措施：确保language对象存在且有必要的属性
     if (!language || typeof language !== 'object') {
@@ -294,54 +193,6 @@ const AppLanguageSelector: React.FC<AppLanguageSelectorProps> = ({
             )}
           </View>
         </TouchableOpacity>
-        
-        {/* 离线词库信息 - 只在语言被选中时显示 */}
-        {hasDictionary && isSelected && dictStatus && (
-          <View style={styles.dictionaryInfoContainer}>
-            <View style={styles.dictionaryInfo}>
-              <Ionicons name="library-outline" size={16} color={colors.text.secondary} />
-              <View style={styles.dictionaryDetails}>
-                <Text style={styles.dictionaryName}>
-                  {dictStatus?.name || (code === 'zh' ? 'CC-CEDICT' : code === 'ja' ? 'JMdict' : 'Korean Dictionary') || 'Dictionary'}
-                </Text>
-                {dictStatus?.fileSize && typeof dictStatus.fileSize === 'number' && dictStatus.fileSize > 0 && (
-                  <Text style={styles.dictionarySize}>
-                    {formatFileSize(dictStatus.fileSize)}
-                  </Text>
-                )}
-              </View>
-            </View>
-            
-            <TouchableOpacity
-              style={[
-                styles.downloadButton,
-                dictStatus?.available && styles.downloadedButton
-              ]}
-              onPress={() => handleDownloadDictionary(code)}
-              disabled={dictStatus?.downloading}
-              activeOpacity={0.7}
-            >
-              {dictStatus?.downloading ? (
-                <Ionicons name="hourglass" size={16} color={colors.text.secondary} />
-              ) : dictStatus?.available ? (
-                <Ionicons name="checkmark-circle" size={16} color={colors.success[500]} />
-              ) : (
-                <Ionicons name="download" size={16} color={colors.primary[500]} />
-              )}
-              <Text style={[
-                styles.downloadButtonText,
-                dictStatus?.available && styles.downloadedText
-              ]}>
-                {dictStatus?.downloading 
-                  ? (appLanguage === 'zh-CN' ? '下载中' : 'Downloading')
-                  : dictStatus?.available 
-                  ? (appLanguage === 'zh-CN' ? '已下载' : 'Downloaded')
-                  : (appLanguage === 'zh-CN' ? '下载' : 'Download')
-                }
-              </Text>
-            </TouchableOpacity>
-          </View>
-        )}
       </View>
     );
   };
@@ -664,54 +515,6 @@ const styles = StyleSheet.create({
   },
   languageItemContainer: {
     marginBottom: 0,
-  },
-  dictionaryInfoContainer: {
-    backgroundColor: colors.background.tertiary,
-    borderRadius: 8,
-    padding: 12,
-    marginTop: 8,
-    marginLeft: 16,
-    marginRight: 16,
-  },
-  dictionaryInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  dictionaryDetails: {
-    marginLeft: 8,
-    flex: 1,
-  },
-  dictionaryName: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: colors.text.primary,
-    marginBottom: 2,
-  },
-  dictionarySize: {
-    fontSize: 12,
-    color: colors.text.secondary,
-  },
-  downloadButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.primary[50],
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 6,
-  },
-  downloadedButton: {
-    backgroundColor: colors.success[50],
-  },
-  downloadButtonText: {
-    fontSize: 12,
-    color: colors.primary[500],
-    fontWeight: '500',
-    marginLeft: 4,
-  },
-  downloadedText: {
-    color: colors.success[500],
   },
 
 });
