@@ -825,8 +825,8 @@ export class EnglishUIEnvironment implements LanguageEnvironment {
           model: 'gpt-4o-mini', // 使用最便宜的模型
           max_tokens: 500, // 增加token限制防止截断
           inputType: analysis.type, // 传递输入类型
-          uiLanguage: 'en', // UI语言
-          targetLanguage: 'zh-CN' // 目标语言
+          uiLanguage: this.uiLanguage, // UI语言
+          targetLanguage: this.targetLanguage // 目标语言
         })
       });
 
@@ -843,7 +843,9 @@ export class EnglishUIEnvironment implements LanguageEnvironment {
         
         // 确保audioUrl使用正确的词条而不是整个JSON
         const audioWord = wordData.word || wordData.correctedWord || input;
-        const audioUrl = `https://translate.google.com/translate_tts?ie=UTF-8&tl=zh-cn&client=tw-ob&q=${encodeURIComponent(audioWord)}`;
+        // 根据目标语言设置正确的TTS语言
+        const ttsLanguage = this.targetLanguage === 'ja' ? 'ja' : 'zh-cn';
+        const audioUrl = `https://translate.google.com/translate_tts?ie=UTF-8&tl=${ttsLanguage}&client=tw-ob&q=${encodeURIComponent(audioWord)}`;
         
         return {
           success: true,
@@ -873,24 +875,59 @@ export class EnglishUIEnvironment implements LanguageEnvironment {
    * 🔧 生成OpenAI智能提示词
    */
   private generateOpenAIPrompt(input: string, inputType: string): string {
+    // 根据目标语言生成不同的提示词
+    const targetLang = this.targetLanguage;
+    const uiLang = this.uiLanguage;
+    
     // 统一处理所有字母输入，让AI智能判断
     if (inputType === 'alphabet_input') {
-      return `智能分析输入"${input}"并返回中文翻译。请判断是拼音还是英文，然后提供相应的中文翻译。`;
+      if (targetLang === 'ja') {
+        return `智能分析输入"${input}"并返回日语翻译。请判断是罗马音还是英文，然后提供相应的日语翻译。返回格式：{"translation": "日语翻译", "phonetic": "罗马音", "kana": "假名", "definitions": [{"definition": "英文释义", "examples": [{"japanese": "日语例句", "english": "英文翻译"}]}]}`;
+      } else if (targetLang === 'zh') {
+        return `智能分析输入"${input}"并返回中文翻译。请判断是拼音还是英文，然后提供相应的中文翻译。返回格式：{"translation": "中文翻译", "phonetic": "拼音", "definitions": [{"definition": "英文释义", "examples": ["中文例句1", "中文例句2"]}]}`;
+      }
     }
     
-    // 保留其他类型的处理
-    switch (inputType) {
-      case 'pinyin':
-        return `将拼音"${input}"转换为中文词汇，提供3-5个常用候选词，格式：{"translation": "主要翻译", "phonetic": "拼音", "definitions": [{"definition": "释义", "examples": ["例句1", "例句2"]}]}`;
+    // 根据目标语言和输入类型生成提示词
+    switch (targetLang) {
+      case 'ja':
+        switch (inputType) {
+          case 'romaji':
+            return `将罗马音"${input}"转换为日语词汇，提供3-5个常用候选词，格式：{"translation": "日语翻译", "phonetic": "罗马音", "kana": "假名", "definitions": [{"definition": "英文释义", "examples": [{"japanese": "日语例句", "english": "英文翻译"}]}]}`;
+          
+          case 'english_sentence':
+            return `将英文句子"${input}"翻译成日语，提供自然流畅的翻译，格式：{"translation": "日语翻译", "phonetic": "罗马音", "kana": "假名", "definitions": [{"definition": "英文释义", "examples": [{"japanese": "日语例句", "english": "英文翻译"}]}]}`;
+          
+          case 'english':
+            return `将英文单词"${input}"翻译成日语，提供主要释义，格式：{"translation": "日语翻译", "phonetic": "罗马音", "kana": "假名", "definitions": [{"definition": "英文释义", "examples": [{"japanese": "日语例句", "english": "英文翻译"}]}]}`;
+          
+          case 'japanese_kanji':
+            return `提供日语汉字"${input}"的详细信息，格式：{"translation": "日语翻译", "phonetic": "罗马音", "kana": "假名", "definitions": [{"definition": "英文释义", "examples": [{"japanese": "日语例句", "english": "英文翻译"}]}]}`;
+          
+          case 'japanese_kana':
+            return `提供日语假名"${input}"的详细信息，格式：{"translation": "日语翻译", "phonetic": "罗马音", "kana": "假名", "definitions": [{"definition": "英文释义", "examples": [{"japanese": "日语例句", "english": "英文翻译"}]}]}`;
+          
+          default:
+            return `将"${input}"翻译成日语，格式：{"translation": "日语翻译", "phonetic": "罗马音", "kana": "假名", "definitions": [{"definition": "英文释义", "examples": [{"japanese": "日语例句", "english": "英文翻译"}]}]}`;
+        }
       
-      case 'english_sentence':
-        return `将英文句子"${input}"翻译成中文，提供自然流畅的翻译，格式：{"translation": "中文翻译", "phonetic": "拼音", "definitions": [{"definition": "释义", "examples": ["例句1", "例句2"]}]}`;
-      
-      case 'english':
-        return `将英文单词"${input}"翻译成中文，提供主要释义，格式：{"translation": "中文翻译", "phonetic": "拼音", "definitions": [{"definition": "释义", "examples": ["例句1", "例句2"]}]}`;
+      case 'zh':
+        switch (inputType) {
+          case 'pinyin':
+            return `将拼音"${input}"转换为中文词汇，提供3-5个常用候选词，格式：{"translation": "中文翻译", "phonetic": "拼音", "definitions": [{"definition": "英文释义", "examples": ["中文例句1", "中文例句2"]}]}`;
+          
+          case 'english_sentence':
+            return `将英文句子"${input}"翻译成中文，提供自然流畅的翻译，格式：{"translation": "中文翻译", "phonetic": "拼音", "definitions": [{"definition": "英文释义", "examples": ["中文例句1", "中文例句2"]}]}`;
+          
+          case 'english':
+            return `将英文单词"${input}"翻译成中文，提供主要释义，格式：{"translation": "中文翻译", "phonetic": "拼音", "definitions": [{"definition": "英文释义", "examples": ["中文例句1", "中文例句2"]}]}`;
+          
+          default:
+            return `将"${input}"翻译成中文，格式：{"translation": "中文翻译", "phonetic": "拼音", "definitions": [{"definition": "英文释义", "examples": ["中文例句1", "中文例句2"]}]}`;
+        }
       
       default:
-        return `将"${input}"翻译成中文，格式：{"translation": "中文翻译", "phonetic": "拼音", "definitions": [{"definition": "释义", "examples": ["例句1", "例句2"]}]}`;
+        return `将"${input}"翻译成${targetLang}，格式：{"translation": "翻译", "phonetic": "音标", "definitions": [{"definition": "释义", "examples": ["例句1", "例句2"]}]}`;
     }
   }
 }
