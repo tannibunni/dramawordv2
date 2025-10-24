@@ -308,40 +308,77 @@ export class MultilingualSQLiteManager {
       // 开始事务
       await this.db.execAsync('BEGIN TRANSACTION');
       
-      for (const entry of entries) {
-        // 插入词条
-        const entryResult = await this.db.runAsync(`
-          INSERT INTO multilingual_entries (word, language, phonetic, kana, romaji, pinyin, partOfSpeech, frequency)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        `, [
-          entry.word,
-          language,
-          entry.phonetic || null,
-          entry.kana || null,
-          entry.romaji || null,
-          entry.pinyin || null,
-          entry.partOfSpeech || 'noun',
-          entry.frequency || 0
-        ]);
+      let successCount = 0;
+      let errorCount = 0;
+      
+      for (let i = 0; i < entries.length; i++) {
+        const entry = entries[i];
         
-        const entryId = entryResult.lastInsertRowId;
-        
-        // 插入翻译
-        if (entry.translation) {
-          await this.db.runAsync(`
-            INSERT INTO multilingual_translations (entry_id, language, translation)
-            VALUES (?, ?, ?)
-          `, [entryId, 'en', entry.translation]);
+        try {
+          // 验证必要字段
+          if (!entry.word || !entry.translation) {
+            console.log(`⚠️ 跳过无效词条 ${i}: 缺少必要字段`, entry);
+            errorCount++;
+            continue;
+          }
+          
+          // 插入词条
+          const entryResult = await this.db.runAsync(`
+            INSERT INTO multilingual_entries (word, language, phonetic, kana, romaji, pinyin, partOfSpeech, frequency)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+          `, [
+            entry.word,
+            language,
+            entry.phonetic || null,
+            entry.kana || null,
+            entry.romaji || null,
+            entry.pinyin || null,
+            entry.partOfSpeech || 'noun',
+            entry.frequency || 0
+          ]);
+          
+          const entryId = entryResult.lastInsertRowId;
+          
+          // 插入翻译
+          if (entry.translation) {
+            await this.db.runAsync(`
+              INSERT INTO multilingual_translations (entry_id, language, translation)
+              VALUES (?, ?, ?)
+            `, [entryId, 'en', entry.translation]);
+          }
+          
+          successCount++;
+          
+          // 每100条记录输出一次进度
+          if (successCount % 100 === 0) {
+            console.log(`📊 已插入 ${successCount} 条词条...`);
+          }
+          
+        } catch (entryError) {
+          console.error(`❌ 插入词条 ${i} 失败:`, entryError);
+          console.error(`❌ 词条内容:`, entry);
+          errorCount++;
+          
+          // 如果错误太多，停止插入
+          if (errorCount > 50) {
+            console.error('❌ 错误过多，停止插入');
+            break;
+          }
         }
       }
       
       // 提交事务
       await this.db.execAsync('COMMIT');
       
-      console.log(`✅ 成功插入 ${entries.length} 条 ${language} 词条`);
+      console.log(`✅ 批量插入完成: 成功 ${successCount} 条，失败 ${errorCount} 条`);
+      
     } catch (error) {
       // 回滚事务
-      await this.db.execAsync('ROLLBACK');
+      try {
+        await this.db.execAsync('ROLLBACK');
+      } catch (rollbackError) {
+        console.error('❌ 回滚事务失败:', rollbackError);
+      }
       console.error('❌ 批量插入词条失败:', error);
       throw error;
     }

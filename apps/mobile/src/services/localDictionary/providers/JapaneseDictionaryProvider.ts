@@ -538,34 +538,48 @@ export class JapaneseDictionaryProvider implements LocalDictionaryProvider {
         try {
           // 提取汉字 (keb)
           const kebMatch = entryXml.match(/<keb>([^<]+)<\/keb>/);
-          const word = kebMatch ? kebMatch[1] : '';
+          const word = kebMatch ? kebMatch[1].trim() : '';
           
           // 提取假名 (reb)
           const rebMatch = entryXml.match(/<reb>([^<]+)<\/reb>/);
-          const kana = rebMatch ? rebMatch[1] : '';
+          const kana = rebMatch ? rebMatch[1].trim() : '';
           
           // 提取罗马音 (reb with romaji)
           const romajiMatch = entryXml.match(/<reb>([^<]+)<\/reb>/);
-          const romaji = romajiMatch ? this.convertKanaToRomaji(romajiMatch[1]) : '';
+          const romaji = romajiMatch ? this.convertKanaToRomaji(romajiMatch[1].trim()) : '';
           
           // 提取英文释义 (gloss)
           const glossMatches = entryXml.match(/<gloss[^>]*>([^<]+)<\/gloss>/g);
-          const translations = glossMatches ? glossMatches.map(g => g.replace(/<\/?gloss[^>]*>/g, '')) : [];
+          const translations = glossMatches ? glossMatches.map(g => g.replace(/<\/?gloss[^>]*>/g, '').trim()) : [];
           const translation = translations.join(', ');
           
-          if (word && kana && translation) {
+          // 验证必要字段
+          if (word && kana && translation && word.length > 0 && kana.length > 0 && translation.length > 0) {
             entries.push({
               word: word,
               kana: kana,
               romaji: romaji,
               translation: translation,
               partOfSpeech: 'noun', // 默认词性
-              frequency: 100 - Math.floor(i / 10) // 简单的频率计算
+              frequency: Math.max(1, 100 - Math.floor(i / 10)) // 确保频率至少为1
             });
             processedCount++;
+            
+            // 每100条记录输出一次进度
+            if (processedCount % 100 === 0) {
+              console.log(`📊 已解析 ${processedCount} 条词条...`);
+            }
+          } else {
+            console.log(`⚠️ 跳过无效词条 ${i}: 缺少必要字段`, {
+              word: word,
+              kana: kana,
+              translation: translation
+            });
+            errorCount++;
           }
         } catch (entryError) {
           console.log(`⚠️ 解析词条 ${i} 失败:`, entryError);
+          console.log(`⚠️ 词条XML:`, entryXml.substring(0, 200) + '...');
           errorCount++;
         }
       }
