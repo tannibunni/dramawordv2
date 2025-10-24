@@ -201,7 +201,8 @@ export class HybridQueryService {
         case 'online_only':
           return await environment.queryOnlineTranslation(input, analysis);
         case 'hybrid':
-          return await environment.queryHybrid(input, analysis);
+          // 避免无限递归，直接调用在线翻译
+          return await environment.queryOnlineTranslation(input, analysis);
         default:
           return await environment.queryOnlineTranslation(input, analysis);
       }
