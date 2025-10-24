@@ -28,14 +28,27 @@ export class JapaneseDictionaryProvider implements LocalDictionaryProvider {
    */
   async isAvailable(): Promise<boolean> {
     try {
+      console.log('🔍 检查日语词库可用性...');
+      
       if (!this.isInitialized) {
+        console.log('🔧 初始化日语词库...');
         await this.initialize();
       }
       
       const count = await this.sqliteManager.getEntryCount('ja');
-      return count > 0;
+      console.log(`📊 日语词库条目数量: ${count}`);
+      
+      const isAvailable = count > 0;
+      console.log(`✅ 日语词库可用性: ${isAvailable ? '可用' : '不可用'}`);
+      
+      return isAvailable;
     } catch (error) {
       console.error('❌ 检查日语词库可用性失败:', error);
+      console.error('❌ 错误详情:', {
+        name: error.name,
+        message: error.message,
+        stack: error.stack
+      });
       return false;
     }
   }
@@ -364,13 +377,22 @@ export class JapaneseDictionaryProvider implements LocalDictionaryProvider {
       
       // 删除旧文件（如果存在）
       try {
-        await this.storage.deleteDictionaryFile('jmdict.xml');
+        console.log('🗑️ 尝试删除旧的JMdict文件...');
+        const deleteResult = await this.storage.deleteDictionaryFile('jmdict.xml');
+        if (deleteResult) {
+          console.log('✅ 旧JMdict文件删除成功');
+        } else {
+          console.log('⚠️ 旧JMdict文件删除失败或文件不存在');
+        }
       } catch (deleteError) {
         console.log('⚠️ 删除旧文件失败（可能不存在）:', deleteError);
       }
       
       // 下载词典
+      console.log('🔍 获取支持的下载源...');
       const sources = this.downloader.getSupportedSources();
+      console.log('📋 支持的下载源:', sources.map(s => `${s.name} (${s.language})`).join(', '));
+      
       const jmdictSource = sources.find(source => source.name === 'JMdict');
       
       if (!jmdictSource) {
@@ -379,6 +401,10 @@ export class JapaneseDictionaryProvider implements LocalDictionaryProvider {
       }
       
       console.log('📥 开始下载JMdict词典文件...');
+      console.log('🔗 下载URL:', jmdictSource.url);
+      console.log('📁 目标文件名:', jmdictSource.filename);
+      console.log('📊 预计大小:', jmdictSource.size, 'bytes');
+      
       const downloadResult = await this.downloader.downloadDictionary(jmdictSource);
       
       if (!downloadResult.success) {
@@ -388,6 +414,7 @@ export class JapaneseDictionaryProvider implements LocalDictionaryProvider {
       
       this.originalDownloadUri = downloadResult.originalUri || null;
       console.log('✅ 下载成功，开始解析...');
+      console.log('🔗 原始下载URI:', this.originalDownloadUri);
       
       const content = await this.storage.readDictionaryFileWithFallback('jmdict.xml', this.originalDownloadUri);
       
@@ -397,6 +424,8 @@ export class JapaneseDictionaryProvider implements LocalDictionaryProvider {
       }
       
       console.log(`📄 文件内容长度: ${content.length} 字符`);
+      console.log(`📄 文件内容前100字符: ${content.substring(0, 100)}...`);
+      
       const parseSuccess = await this.parseDictionaryFile(content);
       
       if (!parseSuccess) {

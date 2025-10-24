@@ -244,12 +244,19 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     const promptJMDICTDownload = async () => {
       if (selectedLanguage === 'JAPANESE') {
         console.log('🔍 检测到目标语言为日语，检查JMdict词库...');
+        console.log('🎯 当前目标语言:', selectedLanguage);
         try {
           // 重用实例
           if (!jmdictProviderInstance) {
+            console.log('🆕 创建新的JapaneseDictionaryProvider实例');
             jmdictProviderInstance = new JapaneseDictionaryProvider();
+          } else {
+            console.log('♻️ 重用现有的JapaneseDictionaryProvider实例');
           }
+          
+          console.log('🔍 检查JMdict词库可用性...');
           const isAvailable = await jmdictProviderInstance.isAvailable();
+          console.log('📊 JMdict词库可用性结果:', isAvailable);
           
           if (!isAvailable) {
             // 显示下载提示弹窗
@@ -281,12 +288,22 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                     try {
                       // 触发下载（重用实例，调用downloadAndParse方法）
                       console.log('🔍 开始调用JMdict downloadAndParse()...');
+                      console.log('🔍 实例检查:', {
+                        exists: !!jmdictProviderInstance,
+                        hasMethod: !!(jmdictProviderInstance && typeof jmdictProviderInstance.downloadAndParse === 'function'),
+                        methodType: typeof jmdictProviderInstance?.downloadAndParse
+                      });
                       
                       if (!jmdictProviderInstance || typeof jmdictProviderInstance.downloadAndParse !== 'function') {
                         console.log('❌ JMdict downloadAndParse方法不存在！');
+                        console.log('❌ 实例详情:', {
+                          instance: jmdictProviderInstance,
+                          methods: jmdictProviderInstance ? Object.getOwnPropertyNames(jmdictProviderInstance) : 'null'
+                        });
                         throw new Error('JMdict downloadAndParse方法不存在');
                       }
                       
+                      console.log('✅ 开始执行JMdict downloadAndParse()...');
                       const success = await jmdictProviderInstance.downloadAndParse();
                       console.log('🔍 JMdict downloadAndParse()返回结果:', success);
                       

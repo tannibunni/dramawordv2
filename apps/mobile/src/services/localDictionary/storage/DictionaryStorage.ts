@@ -290,11 +290,33 @@ export class DictionaryStorage {
   async deleteDictionaryFile(dictionaryName: string): Promise<boolean> {
     try {
       const filePath = this.getDictionaryPath(dictionaryName);
+      console.log(`🗑️ 尝试删除文件: ${filePath}`);
+      
+      // 先检查文件是否存在
+      const fileInfo = await FileSystem.getInfoAsync(filePath);
+      console.log(`📁 文件信息:`, {
+        exists: fileInfo.exists,
+        isDirectory: fileInfo.isDirectory,
+        size: fileInfo.size,
+        uri: fileInfo.uri
+      });
+      
+      if (!fileInfo.exists) {
+        console.log(`⚠️ 文件不存在，无需删除: ${dictionaryName}`);
+        return true; // 文件不存在，认为删除成功
+      }
+      
       await FileSystem.deleteAsync(filePath);
       console.log(`✅ 词库文件删除成功: ${dictionaryName}`);
       return true;
     } catch (error) {
       console.error(`❌ 删除词库文件失败: ${dictionaryName}`, error);
+      console.error(`❌ 错误详情:`, {
+        name: error.name,
+        message: error.message,
+        code: error.code,
+        stack: error.stack
+      });
       return false;
     }
   }
