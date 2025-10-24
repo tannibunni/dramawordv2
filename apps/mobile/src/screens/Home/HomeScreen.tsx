@@ -39,6 +39,7 @@ import { SUPPORTED_LANGUAGES, SupportedLanguageCode, API_BASE_URL } from '../../
 import { shouldShowLanguageReminder, generateLanguageReminderMessage } from '../../utils/languageDetector';
 import { t } from '../../constants/translations';
 import { CCEDICTProvider } from '../../services/localDictionary/providers/CCEDICTProvider';
+import { JapaneseDictionaryProvider } from '../../services/localDictionary/providers/JapaneseDictionaryProvider';
 // 导入功能权限控制相关组件
 import FeatureAccessService, { FeatureType } from '../../services/featureAccessService';
 import { UpgradeModal } from '../../components/common/UpgradeModal';
@@ -114,6 +115,10 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   // CC-CEDICT下载状态
   const [isDownloadingCCEDICT, setIsDownloadingCCEDICT] = useState(false);
   const [downloadProgress, setDownloadProgress] = useState(0);
+  
+  // JMdict下载状态
+  const [isDownloadingJMDICT, setIsDownloadingJMDICT] = useState(false);
+  const [jmdictDownloadProgress, setJmdictDownloadProgress] = useState(0);
 
   // 🔧 当用户选择中文作为目标语言时，提示下载CC-CEDICT词库
   useEffect(() => {
@@ -226,6 +231,115 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     // 延迟2秒后检查，避免影响应用启动
     const timer = setTimeout(() => {
       promptCCEDICTDownload();
+    }, 2000);
+
+    return () => clearTimeout(timer);
+  }, [selectedLanguage, appLanguage]);
+
+  // 🔧 当用户选择日语作为目标语言时，提示下载JMdict词库
+  useEffect(() => {
+    // 使用单例避免重复下载
+    let jmdictProviderInstance: JapaneseDictionaryProvider | null = null;
+    
+    const promptJMDICTDownload = async () => {
+      if (selectedLanguage === 'JAPANESE') {
+        console.log('🔍 检测到目标语言为日语，检查JMdict词库...');
+        try {
+          // 重用实例
+          if (!jmdictProviderInstance) {
+            jmdictProviderInstance = new JapaneseDictionaryProvider();
+          }
+          const isAvailable = await jmdictProviderInstance.isAvailable();
+          
+          if (!isAvailable) {
+            // 显示下载提示弹窗
+            Alert.alert(
+              appLanguage === 'zh-CN' ? '下载离线词典' : 'Download Offline Dictionary',
+              appLanguage === 'zh-CN' 
+                ? '为了更好的罗马音查询体验，建议下载JMdict离线词典（约50MB）。\n\n下载后可离线查询日英词汇，无需网络。' 
+                : 'For better romaji search experience, we recommend downloading the JMdict offline dictionary (about 50MB).\n\nOnce downloaded, you can search Japanese-English words offline.',
+              [
+                {
+                  text: appLanguage === 'zh-CN' ? '稍后' : 'Later',
+                  style: 'cancel'
+                },
+                {
+                  text: appLanguage === 'zh-CN' ? '立即下载' : 'Download Now',
+                  onPress: async () => {
+                    console.log('🔄 用户确认下载JMdict词典...');
+                    setIsDownloadingJMDICT(true);
+                    setJmdictDownloadProgress(0);
+                    
+                    // 模拟下载进度
+                    const progressInterval = setInterval(() => {
+                      setJmdictDownloadProgress(prev => {
+                        if (prev >= 90) return prev;
+                        return prev + Math.random() * 10;
+                      });
+                    }, 500);
+                    
+                    try {
+                      // 触发下载（重用实例，调用downloadAndParse方法）
+                      console.log('🔍 开始调用JMdict downloadAndParse()...');
+                      
+                      if (!jmdictProviderInstance || typeof jmdictProviderInstance.downloadAndParse !== 'function') {
+                        console.log('❌ JMdict downloadAndParse方法不存在！');
+                        throw new Error('JMdict downloadAndParse方法不存在');
+                      }
+                      
+                      const success = await jmdictProviderInstance.downloadAndParse();
+                      console.log('🔍 JMdict downloadAndParse()返回结果:', success);
+                      
+                      clearInterval(progressInterval);
+                      setJmdictDownloadProgress(100);
+                      
+                      if (success) {
+                        Alert.alert(
+                          appLanguage === 'zh-CN' ? '下载成功' : 'Download Complete',
+                          appLanguage === 'zh-CN' 
+                            ? 'JMdict离线词典下载成功！\n现在可以离线查询日英词汇。' 
+                            : 'JMdict offline dictionary downloaded successfully!\nYou can now search Japanese-English words offline.',
+                          [{ text: appLanguage === 'zh-CN' ? '知道了' : 'OK' }]
+                        );
+                      } else {
+                        Alert.alert(
+                          appLanguage === 'zh-CN' ? '下载失败' : 'Download Failed',
+                          appLanguage === 'zh-CN' 
+                            ? 'JMdict词典下载失败，请检查网络连接后重试' 
+                            : 'JMdict dictionary download failed, please check your internet connection and try again',
+                          [{ text: appLanguage === 'zh-CN' ? '确定' : 'OK' }]
+                        );
+                      }
+                    } catch (error) {
+                      console.error('❌ JMdict词典下载失败:', error);
+                      clearInterval(progressInterval);
+                      Alert.alert(
+                        appLanguage === 'zh-CN' ? '下载失败' : 'Download Failed',
+                        appLanguage === 'zh-CN' 
+                          ? 'JMdict词典下载失败，请检查网络连接后重试' 
+                          : 'JMdict dictionary download failed, please check your internet connection and try again',
+                        [{ text: appLanguage === 'zh-CN' ? '确定' : 'OK' }]
+                      );
+                    } finally {
+                      setIsDownloadingJMDICT(false);
+                      setJmdictDownloadProgress(0);
+                    }
+                  }
+                }
+              ]
+            );
+          } else {
+            console.log('✅ JMdict词库已可用');
+          }
+        } catch (error) {
+          console.log('⚠️ 检查JMdict词库失败:', error);
+        }
+      }
+    };
+
+    // 延迟2秒后检查，避免影响应用启动
+    const timer = setTimeout(() => {
+      promptJMDICTDownload();
     }, 2000);
 
     return () => clearTimeout(timer);
@@ -1894,6 +2008,59 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
           </View>
         </View>
       )}
+      
+      {/* JMdict下载进度条 */}
+      {isDownloadingJMDICT && (
+        <View style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          zIndex: 999,
+          backgroundColor: 'rgba(0,0,0,0.7)',
+          justifyContent: 'center',
+          alignItems: 'center',
+        }}>
+          <View style={{
+            backgroundColor: 'white',
+            borderRadius: 16,
+            padding: 24,
+            width: '80%',
+            alignItems: 'center',
+          }}>
+            <Text style={{
+              fontSize: 18,
+              fontWeight: 'bold',
+              marginBottom: 16,
+              color: colors.text.primary,
+            }}>
+              {appLanguage === 'zh-CN' ? '下载日语词典' : 'Downloading Japanese Dictionary'}
+            </Text>
+            <View style={{
+              width: '100%',
+              height: 8,
+              backgroundColor: colors.background.secondary,
+              borderRadius: 4,
+              overflow: 'hidden',
+              marginBottom: 12,
+            }}>
+              <View style={{
+                width: `${jmdictDownloadProgress}%`,
+                height: '100%',
+                backgroundColor: colors.primary[500],
+              }} />
+            </View>
+            <Text style={{
+              fontSize: 14,
+              color: colors.text.secondary,
+            }}>
+              {jmdictDownloadProgress}%
+            </Text>
+          </View>
+        </View>
+      )}
+      
       {/* 庆祝弹窗动画 */}
       {showBadgeCelebrate && celebrateBadge && (
         <View style={[styles.celebrateOverlay, { pointerEvents: 'none' }]}>

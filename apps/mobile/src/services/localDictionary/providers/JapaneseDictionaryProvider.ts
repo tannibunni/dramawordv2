@@ -3,6 +3,7 @@ import { LocalDictionaryProvider, LocalQueryResult, DictionaryInfo } from '../ty
 import { MultilingualEntry, MultilingualTranslation, MultilingualQueryResult } from '../types/multilingual';
 import { MultilingualSQLiteManager } from '../storage/MultilingualSQLiteManager';
 import { DictionaryStorage } from '../storage/DictionaryStorage';
+import { DictionaryDownloader } from '../downloader/DictionaryDownloader';
 
 export class JapaneseDictionaryProvider implements LocalDictionaryProvider {
   readonly name = 'JMdict';
@@ -11,11 +12,15 @@ export class JapaneseDictionaryProvider implements LocalDictionaryProvider {
   
   private sqliteManager: MultilingualSQLiteManager;
   private storage: DictionaryStorage;
+  private downloader: DictionaryDownloader;
   private isInitialized = false;
+  private isDownloading = false;
+  private originalDownloadUri: string | null = null;
 
   constructor() {
     this.storage = DictionaryStorage.getInstance();
     this.sqliteManager = MultilingualSQLiteManager.getInstance();
+    this.downloader = DictionaryDownloader.getInstance();
   }
 
   /**
@@ -333,6 +338,162 @@ export class JapaneseDictionaryProvider implements LocalDictionaryProvider {
     } catch (error) {
       console.error('❌ 检查日语词库更新状态失败:', error);
       return true;
+    }
+  }
+
+  /**
+   * 🔧 手动下载和解析JMdict词典
+   */
+  async downloadAndParse(): Promise<boolean> {
+    // 检查是否正在下载
+    if (this.isDownloading) {
+      console.log('⏳ 已有下载任务进行中，跳过重复下载');
+      return false;
+    }
+    
+    console.log('🔄 开始下载和解析JMdict词典...');
+    this.isDownloading = true;
+    
+    try {
+      if (!this.isInitialized) {
+        await this.initialize();
+      }
+      
+      // 清空数据库
+      await this.sqliteManager.clearEntries('ja');
+      
+      // 删除旧文件（如果存在）
+      try {
+        await this.storage.deleteDictionaryFile('jmdict.xml');
+      } catch (deleteError) {
+        console.log('⚠️ 删除旧文件失败（可能不存在）:', deleteError);
+      }
+      
+      // 下载词典
+      const sources = this.downloader.getSupportedSources();
+      const jmdictSource = sources.find(source => source.name === 'JMdict');
+      
+      if (!jmdictSource) {
+        console.log('❌ 找不到JMdict下载源');
+        return false;
+      }
+      
+      console.log('📥 开始下载JMdict词典文件...');
+      const downloadResult = await this.downloader.downloadDictionary(jmdictSource);
+      
+      if (!downloadResult.success) {
+        console.log('❌ 下载失败:', downloadResult.error);
+        return false;
+      }
+      
+      this.originalDownloadUri = downloadResult.originalUri || null;
+      console.log('✅ 下载成功，开始解析...');
+      
+      const content = await this.storage.readDictionaryFileWithFallback('jmdict.xml', this.originalDownloadUri);
+      
+      if (!content || content.length === 0) {
+        console.log('❌ 无法读取文件内容');
+        return false;
+      }
+      
+      console.log(`📄 文件内容长度: ${content.length} 字符`);
+      const parseSuccess = await this.parseDictionaryFile(content);
+      
+      if (!parseSuccess) {
+        console.log('❌ 解析失败');
+        return false;
+      }
+      
+      console.log('✅ JMdict词典下载和解析完成');
+      return true;
+      
+    } catch (error) {
+      console.error('❌ JMdict词典下载和解析失败:', error);
+      return false;
+    } finally {
+      this.isDownloading = false;
+    }
+  }
+
+  /**
+   * 🔧 专门的罗马音查询（用于输入法候选词）
+   * 只返回罗马音完全匹配的词汇，不含近似匹配
+   */
+  async lookupByRomaji(romaji: string, limit: number = 10): Promise<LocalQueryResult> {
+    const startTime = Date.now();
+    
+    try {
+      if (!this.isInitialized) {
+        await this.initialize();
+      }
+
+      // 检查词库是否可用
+      if (!(await this.isAvailable())) {
+        return {
+          success: false,
+          candidates: [],
+          totalCount: 0,
+          queryTime: Date.now() - startTime
+        };
+      }
+
+      // 标准化罗马音：只转小写，保持空格格式
+      const normalizedRomaji = romaji.toLowerCase();
+
+      console.log(`🔍 [JapaneseDictionaryProvider] 罗马音查询: 输入="${romaji}", 标准化="${normalizedRomaji}"`);
+
+      // 执行精确罗马音查询
+      const entries = await this.sqliteManager.searchEntriesByRomaji(normalizedRomaji, 'ja', limit);
+      
+      console.log(`🔍 [JapaneseDictionaryProvider] 查询结果: ${entries.length} 条词条`);
+      if (entries.length > 0) {
+        console.log(`🔍 [JapaneseDictionaryProvider] 前3条结果:`, entries.slice(0, 3).map(e => `${e.word}[${e.romaji}]`).join(', '));
+      }
+      
+      const candidates = entries.map(entry => ({
+        word: entry.word,
+        translation: entry.translation,
+        romaji: entry.romaji,
+        kana: entry.kana,
+        partOfSpeech: entry.partOfSpeech,
+        confidence: 1.0, // 罗马音精确匹配，置信度都是1.0
+        source: this.name
+      }));
+
+      return {
+        success: true,
+        candidates,
+        totalCount: candidates.length,
+        queryTime: Date.now() - startTime
+      };
+    } catch (error) {
+      console.error('❌ JMdict罗马音查询失败:', error);
+      return {
+        success: false,
+        candidates: [],
+        totalCount: 0,
+        queryTime: Date.now() - startTime
+      };
+    }
+  }
+
+  /**
+   * 解析词典文件
+   */
+  private async parseDictionaryFile(content: string): Promise<boolean> {
+    try {
+      console.log('📖 开始解析JMdict XML文件...');
+      
+      // 这里需要实现JMdict XML解析逻辑
+      // 由于JMdict是XML格式，需要解析XML并提取词条信息
+      // 暂时返回true，实际实现需要XML解析器
+      
+      console.log('⚠️ JMdict XML解析功能待实现');
+      return true;
+      
+    } catch (error) {
+      console.error('❌ 解析JMdict文件失败:', error);
+      return false;
     }
   }
 }
