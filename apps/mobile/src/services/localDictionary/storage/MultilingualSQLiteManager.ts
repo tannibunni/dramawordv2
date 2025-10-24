@@ -267,20 +267,23 @@ export class MultilingualSQLiteManager {
 
       console.log(`🔍 [MultilingualSQLiteManager] 罗马音查询开始: 输入="${romaji}", 标准化="${normalizedRomaji}", 语言="${language}", 限制=${limit}`);
 
-      // 精确匹配罗马音
+      // 使用模糊匹配罗马音（支持部分匹配）
       const sql = `
         SELECT e.*, t.translation
         FROM multilingual_entries e
         LEFT JOIN multilingual_translations t ON e.id = t.entry_id AND t.language = 'en'
-        WHERE e.language = ? AND LOWER(e.romaji) = ?
+        WHERE e.language = ? AND LOWER(e.romaji) LIKE ?
         ORDER BY e.frequency DESC, e.word ASC
         LIMIT ?
       `;
+      
+      // 构建模糊匹配模式：支持开头匹配和包含匹配
+      const searchPattern = `%${normalizedRomaji}%`;
 
       console.log(`🔍 [MultilingualSQLiteManager] 执行SQL查询`);
-      console.log(`🔍 [MultilingualSQLiteManager] 参数: language="${language}", normalizedRomaji="${normalizedRomaji}", limit=${limit}`);
+      console.log(`🔍 [MultilingualSQLiteManager] 参数: language="${language}", searchPattern="${searchPattern}", limit=${limit}`);
 
-      const results = await this.db.getAllAsync(sql, [language, normalizedRomaji, limit]);
+      const results = await this.db.getAllAsync(sql, [language, searchPattern, limit]);
 
       console.log(`🔍 [MultilingualSQLiteManager] 查询完成，结果数量=${results.length}`);
       if (results.length > 0) {
