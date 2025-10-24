@@ -454,7 +454,14 @@ const WordCardContent: React.FC<WordCardContentProps> = ({ wordData, onPlayAudio
                         {/* 例句文本内容 */}
                         <View style={styles.exampleTextContainer}>
                           <Text style={styles.exampleLabelAndText} selectable>{getExampleText()}</Text>
-                          <Text style={styles.exampleChineseText} selectable>{ex.chinese}</Text>
+                          {/* 根据语言显示对应的释义 */}
+                          {wordData.language === 'zh' || wordData.language === 'zh-CN' ? (
+                            <Text style={styles.exampleChineseText} selectable>{ex.chinese}</Text>
+                          ) : wordData.language === 'ja' ? (
+                            <Text style={styles.exampleChineseText} selectable>{ex.english}</Text>
+                          ) : (
+                            <Text style={styles.exampleChineseText} selectable>{ex.english}</Text>
+                          )}
                           {/* 中文例句拼音显示 */}
                           {wordData.language === 'zh' || wordData.language === 'zh-CN' ? (
                             ex.pinyin && (
@@ -525,7 +532,14 @@ const WordCardContent: React.FC<WordCardContentProps> = ({ wordData, onPlayAudio
                       {(wordData.slangMeaning as any).examples.map((ex: any, exIdx: number) => (
                           <View key={exIdx} style={styles.exampleContainer}>
                           <Text style={styles.exampleLabelAndText} selectable>{ex.english}</Text>
-                          <Text style={styles.exampleChineseText} selectable>{ex.chinese}</Text>
+                          {/* 根据语言显示对应的释义 */}
+                          {wordData.language === 'zh' || wordData.language === 'zh-CN' ? (
+                            <Text style={styles.exampleChineseText} selectable>{ex.chinese}</Text>
+                          ) : wordData.language === 'ja' ? (
+                            <Text style={styles.exampleChineseText} selectable>{ex.english}</Text>
+                          ) : (
+                            <Text style={styles.exampleChineseText} selectable>{ex.english}</Text>
+                          )}
                         {/* 中文例句拼音显示 */}
                         {wordData.language === 'zh' || wordData.language === 'zh-CN' ? (
                           ex.pinyin && (
@@ -576,7 +590,14 @@ const WordCardContent: React.FC<WordCardContentProps> = ({ wordData, onPlayAudio
                       {(wordData.phraseExplanation as any).examples.map((ex: any, exIdx: number) => (
                           <View key={exIdx} style={styles.exampleContainer}>
                           <Text style={styles.exampleLabelAndText} selectable>{ex.english}</Text>
-                          <Text style={styles.exampleChineseText} selectable>{ex.chinese}</Text>
+                          {/* 根据语言显示对应的释义 */}
+                          {wordData.language === 'zh' || wordData.language === 'zh-CN' ? (
+                            <Text style={styles.exampleChineseText} selectable>{ex.chinese}</Text>
+                          ) : wordData.language === 'ja' ? (
+                            <Text style={styles.exampleChineseText} selectable>{ex.english}</Text>
+                          ) : (
+                            <Text style={styles.exampleChineseText} selectable>{ex.english}</Text>
+                          )}
                         {/* 中文例句拼音显示 */}
                         {wordData.language === 'zh' || wordData.language === 'zh-CN' ? (
                           ex.pinyin && (
@@ -661,7 +682,14 @@ const WordCardContent: React.FC<WordCardContentProps> = ({ wordData, onPlayAudio
                         {/* 例句文本内容 */}
                         <View style={styles.exampleTextContainer}>
                           <Text style={styles.exampleLabelAndText} selectable>{getExampleText()}</Text>
-                          <Text style={styles.exampleChineseText} selectable>{ex.chinese}</Text>
+                          {/* 根据语言显示对应的释义 */}
+                          {wordData.language === 'zh' || wordData.language === 'zh-CN' ? (
+                            <Text style={styles.exampleChineseText} selectable>{ex.chinese}</Text>
+                          ) : wordData.language === 'ja' ? (
+                            <Text style={styles.exampleChineseText} selectable>{ex.english}</Text>
+                          ) : (
+                            <Text style={styles.exampleChineseText} selectable>{ex.english}</Text>
+                          )}
                           {/* 中文例句拼音显示 */}
                           {wordData.language === 'zh' || wordData.language === 'zh-CN' ? (
                             ex.pinyin && (
@@ -732,7 +760,14 @@ const WordCardContent: React.FC<WordCardContentProps> = ({ wordData, onPlayAudio
                       {(wordData.slangMeaning as any).examples.map((ex: any, exIdx: number) => (
                         <View key={exIdx} style={styles.exampleContainer}>
                           <Text style={styles.exampleLabelAndText} selectable>{ex.english}</Text>
-                          <Text style={styles.exampleChineseText} selectable>{ex.chinese}</Text>
+                          {/* 根据语言显示对应的释义 */}
+                          {wordData.language === 'zh' || wordData.language === 'zh-CN' ? (
+                            <Text style={styles.exampleChineseText} selectable>{ex.chinese}</Text>
+                          ) : wordData.language === 'ja' ? (
+                            <Text style={styles.exampleChineseText} selectable>{ex.english}</Text>
+                          ) : (
+                            <Text style={styles.exampleChineseText} selectable>{ex.english}</Text>
+                          )}
                         {/* 中文例句拼音显示 */}
                         {wordData.language === 'zh' || wordData.language === 'zh-CN' ? (
                           ex.pinyin && (
@@ -783,7 +818,14 @@ const WordCardContent: React.FC<WordCardContentProps> = ({ wordData, onPlayAudio
                       {(wordData.phraseExplanation as any).examples.map((ex: any, exIdx: number) => (
                         <View key={exIdx} style={styles.exampleContainer}>
                           <Text style={styles.exampleLabelAndText} selectable>{ex.english}</Text>
-                          <Text style={styles.exampleChineseText} selectable>{ex.chinese}</Text>
+                          {/* 根据语言显示对应的释义 */}
+                          {wordData.language === 'zh' || wordData.language === 'zh-CN' ? (
+                            <Text style={styles.exampleChineseText} selectable>{ex.chinese}</Text>
+                          ) : wordData.language === 'ja' ? (
+                            <Text style={styles.exampleChineseText} selectable>{ex.english}</Text>
+                          ) : (
+                            <Text style={styles.exampleChineseText} selectable>{ex.english}</Text>
+                          )}
                         {/* 中文例句拼音显示 */}
                         {wordData.language === 'zh' || wordData.language === 'zh-CN' ? (
                           ex.pinyin && (
