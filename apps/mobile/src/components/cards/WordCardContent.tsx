@@ -250,20 +250,6 @@ const WordCardContent: React.FC<WordCardContentProps> = ({ wordData, onPlayAudio
       {showHeader && (
         <View style={styles.headerRow}>
         <View style={{ flex: 1 }}>
-          {/* 语言标签 */}
-          {wordData.language && (
-            <View style={styles.languageTagContainer}>
-              {(() => {
-                const languageLabel = getLanguageLabel(wordData.language, appLanguage);
-                return (
-                  <View style={styles.languageTag}>
-                    <Text style={styles.languageFlag}>{languageLabel.flag}</Text>
-                    <Text style={styles.languageName}>{languageLabel.name}</Text>
-                  </View>
-                );
-              })()}
-            </View>
-          )}
           <View style={styles.wordContainer}>
             <Text style={styles.word} selectable>{wordData.correctedWord || wordData.translation || wordData.word}</Text>
             {wordData.kana && (
@@ -1023,27 +1009,6 @@ const styles = StyleSheet.create({
   sourceTagText: {
     fontSize: 12,
     color: '#666',
-  },
-  languageTagContainer: {
-    marginBottom: 6,
-  },
-  languageTag: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#f8f9fa',
-    borderRadius: 12,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    alignSelf: 'flex-start',
-  },
-  languageFlag: {
-    fontSize: 16,
-    marginRight: 4,
-  },
-  languageName: {
-    fontSize: 12,
-    color: '#666',
-    fontWeight: '500',
   },
   specialBlock: {
     marginTop: 12,
