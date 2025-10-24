@@ -249,6 +249,8 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ type, id }) => {
     console.log(`📝 使用 fallback 词卡数据: ${reviewWord.word}`);
     return {
       word: reviewWord.word,
+      translation: reviewWord.translation, // 添加中文翻译字段
+      correctedWord: reviewWord.correctedWord, // 添加修正翻译字段
       phonetic: reviewWord.phonetic,
       definitions: [
         {
