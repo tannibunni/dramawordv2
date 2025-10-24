@@ -532,7 +532,7 @@ export class JapaneseDictionaryProvider implements LocalDictionaryProvider {
       
       console.log(`📋 找到 ${entriesMatch.length} 个词条`);
       
-      for (let i = 0; i < Math.min(entriesMatch.length, 1000); i++) { // 限制解析前1000个词条
+      for (let i = 0; i < Math.min(entriesMatch.length, 5000); i++) { // 增加解析词条数量到5000个
         const entryXml = entriesMatch[i];
         
         try {
@@ -585,6 +585,29 @@ export class JapaneseDictionaryProvider implements LocalDictionaryProvider {
       }
       
       console.log(`📊 解析完成: 成功 ${processedCount} 条，错误 ${errorCount} 条`);
+      
+      // 添加基本日语词汇，确保包含常用词
+      const basicJapaneseWords = [
+        { word: '日本', kana: 'にほん', romaji: 'nihon', translation: 'Japan', partOfSpeech: 'noun', frequency: 100 },
+        { word: '日本語', kana: 'にほんご', romaji: 'nihongo', translation: 'Japanese language', partOfSpeech: 'noun', frequency: 95 },
+        { word: '日本人', kana: 'にほんじん', romaji: 'nihonjin', translation: 'Japanese person', partOfSpeech: 'noun', frequency: 90 },
+        { word: '東京', kana: 'とうきょう', romaji: 'toukyou', translation: 'Tokyo', partOfSpeech: 'noun', frequency: 85 },
+        { word: '大阪', kana: 'おおさか', romaji: 'oosaka', translation: 'Osaka', partOfSpeech: 'noun', frequency: 80 },
+        { word: '京都', kana: 'きょうと', romaji: 'kyouto', translation: 'Kyoto', partOfSpeech: 'noun', frequency: 75 },
+        { word: '学校', kana: 'がっこう', romaji: 'gakkou', translation: 'school', partOfSpeech: 'noun', frequency: 70 },
+        { word: '先生', kana: 'せんせい', romaji: 'sensei', translation: 'teacher', partOfSpeech: 'noun', frequency: 65 },
+        { word: '学生', kana: 'がくせい', romaji: 'gakusei', translation: 'student', partOfSpeech: 'noun', frequency: 60 },
+        { word: '友達', kana: 'ともだち', romaji: 'tomodachi', translation: 'friend', partOfSpeech: 'noun', frequency: 55 },
+        { word: '家族', kana: 'かぞく', romaji: 'kazoku', translation: 'family', partOfSpeech: 'noun', frequency: 50 },
+        { word: '家', kana: 'いえ', romaji: 'ie', translation: 'house', partOfSpeech: 'noun', frequency: 45 },
+        { word: '水', kana: 'みず', romaji: 'mizu', translation: 'water', partOfSpeech: 'noun', frequency: 40 },
+        { word: '食べ物', kana: 'たべもの', romaji: 'tabemono', translation: 'food', partOfSpeech: 'noun', frequency: 35 },
+        { word: '本', kana: 'ほん', romaji: 'hon', translation: 'book', partOfSpeech: 'noun', frequency: 30 }
+      ];
+      
+      // 将基本词汇添加到解析结果中
+      entries.push(...basicJapaneseWords);
+      console.log(`📝 添加了 ${basicJapaneseWords.length} 个基本日语词汇`);
       
       if (entries.length > 0) {
         // 存储到数据库
