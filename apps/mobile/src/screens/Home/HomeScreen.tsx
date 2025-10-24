@@ -617,10 +617,44 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
             }
           }
         } else if (selectedLanguage === 'JAPANESE') {
-          // 日语目标语言：不显示拼音建议，因为输入的是罗马音而不是拼音
-          console.log('🔍 日语目标语言：不显示拼音建议');
-          setPinyinSuggestions([]);
-          setShowPinyinSuggestions(false);
+          // 日语目标语言：查询罗马音建议
+          console.log('🔍 日语目标语言：查询罗马音建议');
+          try {
+            const japaneseProvider = new JapaneseDictionaryProvider();
+            const isAvailable = await japaneseProvider.isAvailable();
+            
+            if (isAvailable) {
+              console.log('🔍 日语词典可用，查询罗马音:', pinyinText);
+              const romajiResult = await japaneseProvider.lookupByRomaji(pinyinText, 10);
+              
+              if (romajiResult.success && romajiResult.candidates && romajiResult.candidates.length > 0) {
+                const suggestions = romajiResult.candidates.map((candidate, index) => {
+                  const audioUrl = `https://translate.google.com/translate_tts?ie=UTF-8&tl=ja&client=tw-ob&q=${encodeURIComponent(candidate.word)}`;
+                  return {
+                    id: `${pinyinText}-${index}`,
+                    chinese: candidate.word,
+                    english: candidate.translation,
+                    pinyin: candidate.romaji || '',
+                    audioUrl: audioUrl,
+                  };
+                });
+                setPinyinSuggestions(suggestions);
+                setShowPinyinSuggestions(true);
+              } else {
+                console.log('🔍 罗马音查询无结果');
+                setPinyinSuggestions([]);
+                setShowPinyinSuggestions(false);
+              }
+            } else {
+              console.log('🔍 日语词典不可用，跳过罗马音查询');
+              setPinyinSuggestions([]);
+              setShowPinyinSuggestions(false);
+            }
+          } catch (error) {
+            console.error('❌ 罗马音查询失败:', error);
+            setPinyinSuggestions([]);
+            setShowPinyinSuggestions(false);
+          }
         } else {
           // 其他目标语言：不显示拼音建议
           console.log('🔍 其他目标语言：不显示拼音建议');

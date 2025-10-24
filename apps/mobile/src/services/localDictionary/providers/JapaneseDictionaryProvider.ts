@@ -512,17 +512,114 @@ export class JapaneseDictionaryProvider implements LocalDictionaryProvider {
   private async parseDictionaryFile(content: string): Promise<boolean> {
     try {
       console.log('📖 开始解析JMdict XML文件...');
+      console.log(`📄 文件内容长度: ${content.length} 字符`);
       
-      // 这里需要实现JMdict XML解析逻辑
-      // 由于JMdict是XML格式，需要解析XML并提取词条信息
-      // 暂时返回true，实际实现需要XML解析器
+      // 简单的XML解析，提取词条信息
+      // JMdict格式: <entry><k_ele><keb>漢字</keb></k_ele><r_ele><reb>かんじ</reb></r_ele><sense><gloss>meaning</gloss></sense></entry>
       
-      console.log('⚠️ JMdict XML解析功能待实现');
-      return true;
+      const entries = [];
+      let processedCount = 0;
+      let errorCount = 0;
+      
+      // 使用正则表达式提取词条
+      const entryRegex = /<entry[^>]*>(.*?)<\/entry>/gs;
+      const entriesMatch = content.match(entryRegex);
+      
+      if (!entriesMatch) {
+        console.log('❌ 未找到任何词条');
+        return false;
+      }
+      
+      console.log(`📋 找到 ${entriesMatch.length} 个词条`);
+      
+      for (let i = 0; i < Math.min(entriesMatch.length, 1000); i++) { // 限制解析前1000个词条
+        const entryXml = entriesMatch[i];
+        
+        try {
+          // 提取汉字 (keb)
+          const kebMatch = entryXml.match(/<keb>([^<]+)<\/keb>/);
+          const word = kebMatch ? kebMatch[1] : '';
+          
+          // 提取假名 (reb)
+          const rebMatch = entryXml.match(/<reb>([^<]+)<\/reb>/);
+          const kana = rebMatch ? rebMatch[1] : '';
+          
+          // 提取罗马音 (reb with romaji)
+          const romajiMatch = entryXml.match(/<reb>([^<]+)<\/reb>/);
+          const romaji = romajiMatch ? this.convertKanaToRomaji(romajiMatch[1]) : '';
+          
+          // 提取英文释义 (gloss)
+          const glossMatches = entryXml.match(/<gloss[^>]*>([^<]+)<\/gloss>/g);
+          const translations = glossMatches ? glossMatches.map(g => g.replace(/<\/?gloss[^>]*>/g, '')) : [];
+          const translation = translations.join(', ');
+          
+          if (word && kana && translation) {
+            entries.push({
+              word: word,
+              kana: kana,
+              romaji: romaji,
+              translation: translation,
+              partOfSpeech: 'noun', // 默认词性
+              frequency: 100 - Math.floor(i / 10) // 简单的频率计算
+            });
+            processedCount++;
+          }
+        } catch (entryError) {
+          console.log(`⚠️ 解析词条 ${i} 失败:`, entryError);
+          errorCount++;
+        }
+      }
+      
+      console.log(`📊 解析完成: 成功 ${processedCount} 条，错误 ${errorCount} 条`);
+      
+      if (entries.length > 0) {
+        // 存储到数据库
+        await this.sqliteManager.insertMultilingualEntries(entries, 'ja');
+        console.log(`✅ 成功存储 ${entries.length} 条日语词条到数据库`);
+        return true;
+      } else {
+        console.log('❌ 没有成功解析任何词条');
+        return false;
+      }
       
     } catch (error) {
       console.error('❌ 解析JMdict文件失败:', error);
       return false;
     }
+  }
+
+  /**
+   * 将假名转换为罗马音
+   */
+  private convertKanaToRomaji(kana: string): string {
+    // 简单的假名到罗马音转换
+    const kanaToRomaji: { [key: string]: string } = {
+      'あ': 'a', 'い': 'i', 'う': 'u', 'え': 'e', 'お': 'o',
+      'か': 'ka', 'き': 'ki', 'く': 'ku', 'け': 'ke', 'こ': 'ko',
+      'が': 'ga', 'ぎ': 'gi', 'ぐ': 'gu', 'げ': 'ge', 'ご': 'go',
+      'さ': 'sa', 'し': 'shi', 'す': 'su', 'せ': 'se', 'そ': 'so',
+      'ざ': 'za', 'じ': 'ji', 'ず': 'zu', 'ぜ': 'ze', 'ぞ': 'zo',
+      'た': 'ta', 'ち': 'chi', 'つ': 'tsu', 'て': 'te', 'と': 'to',
+      'だ': 'da', 'ぢ': 'ji', 'づ': 'zu', 'で': 'de', 'ど': 'do',
+      'な': 'na', 'に': 'ni', 'ぬ': 'nu', 'ね': 'ne', 'の': 'no',
+      'は': 'ha', 'ひ': 'hi', 'ふ': 'fu', 'へ': 'he', 'ほ': 'ho',
+      'ば': 'ba', 'び': 'bi', 'ぶ': 'bu', 'べ': 'be', 'ぼ': 'bo',
+      'ぱ': 'pa', 'ぴ': 'pi', 'ぷ': 'pu', 'ぺ': 'pe', 'ぽ': 'po',
+      'ま': 'ma', 'み': 'mi', 'む': 'mu', 'め': 'me', 'も': 'mo',
+      'や': 'ya', 'ゆ': 'yu', 'よ': 'yo',
+      'ら': 'ra', 'り': 'ri', 'る': 'ru', 'れ': 're', 'ろ': 'ro',
+      'わ': 'wa', 'を': 'wo', 'ん': 'n'
+    };
+    
+    let romaji = '';
+    for (const char of kana) {
+      if (kanaToRomaji[char]) {
+        romaji += kanaToRomaji[char];
+      } else {
+        romaji += char; // 保持原字符
+      }
+    }
+    
+    return romaji;
   }
 }

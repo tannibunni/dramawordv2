@@ -253,6 +253,101 @@ export class MultilingualSQLiteManager {
   }
 
   /**
+   * 🔧 通过罗马音精确查询词条（用于日语输入法候选词）
+   * 罗马音必须完全匹配（忽略大小写）
+   */
+  async searchEntriesByRomaji(romaji: string, language: string, limit: number = 10): Promise<MultilingualEntry[]> {
+    if (!this.db) {
+      throw new Error('数据库未初始化');
+    }
+
+    try {
+      // 标准化罗马音：只转小写，保持空格格式
+      const normalizedRomaji = romaji.toLowerCase();
+
+      console.log(`🔍 [MultilingualSQLiteManager] 罗马音查询开始: 输入="${romaji}", 标准化="${normalizedRomaji}", 语言="${language}", 限制=${limit}`);
+
+      // 精确匹配罗马音
+      const sql = `
+        SELECT e.*, t.translation
+        FROM multilingual_entries e
+        LEFT JOIN multilingual_translations t ON e.id = t.entry_id AND t.language = 'en'
+        WHERE e.language = ? AND LOWER(e.romaji) = ?
+        ORDER BY e.frequency DESC, e.word ASC
+        LIMIT ?
+      `;
+
+      console.log(`🔍 [MultilingualSQLiteManager] 执行SQL查询`);
+      console.log(`🔍 [MultilingualSQLiteManager] 参数: language="${language}", normalizedRomaji="${normalizedRomaji}", limit=${limit}`);
+
+      const results = await this.db.getAllAsync(sql, [language, normalizedRomaji, limit]);
+
+      console.log(`🔍 [MultilingualSQLiteManager] 查询完成，结果数量=${results.length}`);
+      if (results.length > 0) {
+        console.log(`🔍 [MultilingualSQLiteManager] 前3条结果:`, results.slice(0, 3).map(r => `${r.word}[${r.romaji}]`).join(', '));
+      }
+
+      return results as MultilingualEntry[];
+    } catch (error) {
+      console.error('❌ 罗马音查询失败:', error);
+      return [];
+    }
+  }
+
+  /**
+   * 🔧 批量插入多语言词条
+   */
+  async insertMultilingualEntries(entries: any[], language: string): Promise<void> {
+    if (!this.db) {
+      throw new Error('数据库未初始化');
+    }
+
+    try {
+      console.log(`📥 开始批量插入 ${entries.length} 条 ${language} 词条...`);
+      
+      // 开始事务
+      await this.db.execAsync('BEGIN TRANSACTION');
+      
+      for (const entry of entries) {
+        // 插入词条
+        const entryResult = await this.db.runAsync(`
+          INSERT INTO multilingual_entries (word, language, phonetic, kana, romaji, pinyin, partOfSpeech, frequency)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        `, [
+          entry.word,
+          language,
+          entry.phonetic || null,
+          entry.kana || null,
+          entry.romaji || null,
+          entry.pinyin || null,
+          entry.partOfSpeech || 'noun',
+          entry.frequency || 0
+        ]);
+        
+        const entryId = entryResult.lastInsertRowId;
+        
+        // 插入翻译
+        if (entry.translation) {
+          await this.db.runAsync(`
+            INSERT INTO multilingual_translations (entry_id, language, translation)
+            VALUES (?, ?, ?)
+          `, [entryId, 'en', entry.translation]);
+        }
+      }
+      
+      // 提交事务
+      await this.db.execAsync('COMMIT');
+      
+      console.log(`✅ 成功插入 ${entries.length} 条 ${language} 词条`);
+    } catch (error) {
+      // 回滚事务
+      await this.db.execAsync('ROLLBACK');
+      console.error('❌ 批量插入词条失败:', error);
+      throw error;
+    }
+  }
+
+  /**
    * 清空指定语言的词条
    */
   async clearEntries(language?: string): Promise<void> {
