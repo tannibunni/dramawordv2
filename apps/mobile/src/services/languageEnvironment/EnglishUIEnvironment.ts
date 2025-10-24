@@ -13,6 +13,7 @@ import {
 import { API_CONFIG } from '../../config/api';
 import { DictionaryManager } from '../dictionaryManager/DictionaryManager';
 import { CCEDICTProvider } from '../localDictionary/providers/CCEDICTProvider';
+import { JapaneseDictionaryProvider } from '../localDictionary/providers/JapaneseDictionaryProvider';
 import { DirectTranslationService } from '../directTranslationService';
 import { isPinyin } from '../../utils/inputDetector';
 
@@ -317,9 +318,20 @@ export class EnglishUIEnvironment implements LanguageEnvironment {
   }
   
   selectQueryStrategy(input: string, analysis: InputAnalysis): QueryStrategy {
-    // 🔧 本地词典已禁用，统一使用在线翻译
-    // 所有输入类型都使用在线翻译+OpenAI增强
-    return 'online_only';
+    // 根据目标语言和输入类型决定查询策略
+    if (this.targetLanguage === 'zh' && analysis.type === 'pinyin') {
+      // 中文目标语言 + 拼音输入：优先使用本地CC-CEDICT词典
+      return 'hybrid';
+    } else if (this.targetLanguage === 'ja' && analysis.type === 'romaji') {
+      // 日语目标语言 + 罗马音输入：优先使用本地JMdict词典
+      return 'hybrid';
+    } else if (this.targetLanguage === 'ko' && analysis.type === 'korean') {
+      // 韩语目标语言 + 韩文输入：优先使用本地韩语词典
+      return 'hybrid';
+    } else {
+      // 其他情况：使用在线翻译
+      return 'online_only';
+    }
   }
   
   async queryLocalDictionary(input: string, analysis: InputAnalysis): Promise<UnifiedQueryResult> {

@@ -33,7 +33,7 @@ export class SmartHybridQueryStrategy implements HybridQueryStrategy {
   /**
    * 决定查询策略
    * 
-   * 🔧 已禁用本地词典功能，始终使用在线翻译+OpenAI
+   * 根据目标语言和本地词典可用性决定查询策略
    */
   determineStrategy(
     input: string,
@@ -42,14 +42,24 @@ export class SmartHybridQueryStrategy implements HybridQueryStrategy {
     hasLocalDictionary: boolean
   ): QueryStrategy {
     
-    // 🚫 本地词典功能已禁用
-    // 始终使用在线翻译（谷歌）+ OpenAI 增强
+    // 如果有本地词典，优先使用本地词典
+    if (hasLocalDictionary) {
+      return {
+        useLocalDictionary: true,
+        useOnlineTranslation: true,
+        useOpenAI: true,
+        priority: 'local_first',
+        reason: `使用本地${targetLanguage}词典+在线翻译增强`
+      };
+    }
+    
+    // 没有本地词典，使用在线翻译+OpenAI
     return {
       useLocalDictionary: false,
       useOnlineTranslation: true,
       useOpenAI: true,
       priority: 'online_first',
-      reason: '使用谷歌翻译+OpenAI增强（本地词典已禁用）'
+      reason: '使用在线翻译+OpenAI增强（无本地词典）'
     };
   }
 
