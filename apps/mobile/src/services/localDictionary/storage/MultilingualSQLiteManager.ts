@@ -277,8 +277,8 @@ export class MultilingualSQLiteManager {
         LIMIT ?
       `;
       
-      // 构建模糊匹配模式：支持开头匹配和包含匹配
-      const searchPattern = `%${normalizedRomaji}%`;
+      // 构建开头匹配模式：优先匹配以输入开头的罗马音
+      const searchPattern = `${normalizedRomaji}%`;
 
       console.log(`🔍 [MultilingualSQLiteManager] 执行SQL查询`);
       console.log(`🔍 [MultilingualSQLiteManager] 参数: language="${language}", searchPattern="${searchPattern}", limit=${limit}`);
