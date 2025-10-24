@@ -84,14 +84,6 @@ const SwipeableWordCard: React.FC<SwipeableWordCardProps> = ({
                 showHeader={true}
                 scrollable={false}
               />
-              {/* 单词来源信息 */}
-              {wordData.lastSearched && (
-                <View style={styles.originSection}>
-                  <Text style={styles.originTitle}>{t('learning_record', appLanguage)}</Text>
-                  <Text style={styles.originText}>{t('search_count', appLanguage)} {wordData.searchCount || 0}</Text>
-                  <Text style={styles.originText}>{t('last_learned', appLanguage)} {wordData.lastSearched}</Text>
-                </View>
-              )}
             </ScrollView>
           ) : (
             <View style={styles.collapsedContent}>
@@ -211,24 +203,7 @@ const styles = StyleSheet.create({
     maxHeight: 500, // 从 400 增加到 500，让内容区域有更多空间，但不超过卡片总高度
   },
   expandedContentContainer: {
-    paddingBottom: 28, // 从 20 增加到 28，底部留出更多空间给提示文字
-  },
-  originSection: {
-    marginTop: 16,
-    paddingTop: 16,
-    borderTopWidth: 1,
-    borderTopColor: colors.border.light,
-  },
-  originTitle: {
-    fontSize: 14,
-    color: colors.text.secondary,
-    fontWeight: '600',
-    marginBottom: 4,
-  },
-  originText: {
-    fontSize: 12,
-    color: colors.text.secondary,
-    marginBottom: 2,
+    paddingBottom: 20, // 减少底部padding，因为移除了originSection
   },
   swipeHintsContainer: {
     flexDirection: 'row',
