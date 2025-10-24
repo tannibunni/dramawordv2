@@ -403,84 +403,98 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     pinyinDebounceTimer.current = setTimeout(async () => {
       try {
         console.log('🔍 开始实时拼音查询:', pinyinText);
+        console.log('🔍 目标语言:', selectedLanguage);
         
-        // 🔧 拼音标准化：支持不带空格的拼音输入
-        const normalizedPinyin = normalizePinyin(pinyinText);
-        console.log('🔍 标准化拼音:', normalizedPinyin);
+        // 🔧 根据目标语言选择正确的词典
+        if (selectedLanguage === 'CHINESE') {
+          // 中文目标语言：使用CC-CEDICT词典查询拼音
+          console.log('🔍 中文目标语言：查询CC-CEDICT词典');
+          
+          // 🔧 拼音标准化：支持不带空格的拼音输入
+          const normalizedPinyin = normalizePinyin(pinyinText);
+          console.log('🔍 标准化拼音:', normalizedPinyin);
         
-        // 🔧 只查询离线词典（CC-CEDICT）
-        console.log('🔍 拼音查询：只查询离线词典（CC-CEDICT）');
-        
-        // 创建CC-CEDICT离线词典实例
-        const ccedictProvider = new CCEDICTProvider();
-        
-        // 查询离线词典（使用拼音查询方法）
-        const offlineResult = await ccedictProvider.lookupByPinyin(normalizedPinyin);
-        
-        console.log('🔍 离线词典查询结果:', {
-          success: offlineResult.success,
-          candidatesCount: offlineResult.candidates?.length || 0
-        });
-        
-        // 🔧 离线词典有结果时显示下拉菜单
-        if (offlineResult.success && offlineResult.candidates && offlineResult.candidates.length > 0) {
-          // 将离线词典结果转换为建议列表格式
-          const suggestions = offlineResult.candidates.map((candidate, index) => {
-            // 为离线词典结果生成Google TTS音频URL
-            const audioUrl = `https://translate.google.com/translate_tts?ie=UTF-8&tl=zh-cn&client=tw-ob&q=${encodeURIComponent(candidate.word)}`;
-            
-            return {
-              id: `${pinyinText}-${index}`,
-              chinese: candidate.word,
-              english: candidate.translation,
-              pinyin: candidate.pinyin || '',
-              audioUrl: audioUrl, // 使用Google TTS生成音频URL
-            };
+          // 创建CC-CEDICT离线词典实例
+          const ccedictProvider = new CCEDICTProvider();
+          
+          // 查询离线词典（使用拼音查询方法）
+          const offlineResult = await ccedictProvider.lookupByPinyin(normalizedPinyin);
+          
+          console.log('🔍 离线词典查询结果:', {
+            success: offlineResult.success,
+            candidatesCount: offlineResult.candidates?.length || 0
           });
           
-          console.log('✅ 离线词典查询成功，找到候选词:', suggestions.length);
-          setPinyinSuggestions(suggestions);
-          setShowPinyinSuggestions(true);
-        } else {
-          // 离线词典无结果，尝试调用OpenAI API
-          console.log('⚠️ 离线词典无结果，尝试调用OpenAI API');
-          try {
-            const response = await fetch(`${API_BASE_URL}/api/pinyin/candidates/${encodeURIComponent(normalizedPinyin)}`);
-            if (response.ok) {
-              const result = await response.json();
-              if (result.success && result.data && result.data.candidates && result.data.candidates.length > 0) {
-                // 将OpenAI API结果转换为建议列表格式
-                const suggestions = result.data.candidates.map((candidate: any, index: number) => {
-                  // 为OpenAI API结果生成Google TTS音频URL
-                  const audioUrl = `https://translate.google.com/translate_tts?ie=UTF-8&tl=zh-cn&client=tw-ob&q=${encodeURIComponent(candidate.chinese)}`;
+          // 🔧 离线词典有结果时显示下拉菜单
+          if (offlineResult.success && offlineResult.candidates && offlineResult.candidates.length > 0) {
+            // 将离线词典结果转换为建议列表格式
+            const suggestions = offlineResult.candidates.map((candidate, index) => {
+              // 为离线词典结果生成Google TTS音频URL
+              const audioUrl = `https://translate.google.com/translate_tts?ie=UTF-8&tl=zh-cn&client=tw-ob&q=${encodeURIComponent(candidate.word)}`;
+              
+              return {
+                id: `${pinyinText}-${index}`,
+                chinese: candidate.word,
+                english: candidate.translation,
+                pinyin: candidate.pinyin || '',
+                audioUrl: audioUrl, // 使用Google TTS生成音频URL
+              };
+            });
+            
+            console.log('✅ 离线词典查询成功，找到候选词:', suggestions.length);
+            setPinyinSuggestions(suggestions);
+            setShowPinyinSuggestions(true);
+          } else {
+            // 离线词典无结果，尝试调用OpenAI API
+            console.log('⚠️ 离线词典无结果，尝试调用OpenAI API');
+            try {
+              const response = await fetch(`${API_BASE_URL}/api/pinyin/candidates/${encodeURIComponent(normalizedPinyin)}`);
+              if (response.ok) {
+                const result = await response.json();
+                if (result.success && result.data && result.data.candidates && result.data.candidates.length > 0) {
+                  // 将OpenAI API结果转换为建议列表格式
+                  const suggestions = result.data.candidates.map((candidate: any, index: number) => {
+                    // 为OpenAI API结果生成Google TTS音频URL
+                    const audioUrl = `https://translate.google.com/translate_tts?ie=UTF-8&tl=zh-cn&client=tw-ob&q=${encodeURIComponent(candidate.chinese)}`;
+                    
+                    return {
+                      id: `${pinyinText}-${index}`,
+                      chinese: candidate.chinese,
+                      english: candidate.english,
+                      pinyin: candidate.pinyin || normalizedPinyin,
+                      audioUrl: audioUrl,
+                    };
+                  });
                   
-                  return {
-                    id: `${pinyinText}-${index}`,
-                    chinese: candidate.chinese,
-                    english: candidate.english,
-                    pinyin: candidate.pinyin || normalizedPinyin,
-                    audioUrl: audioUrl,
-                  };
-                });
-                
-                console.log('✅ OpenAI API查询成功，找到候选词:', suggestions.length);
-                setPinyinSuggestions(suggestions);
-                setShowPinyinSuggestions(true);
+                  console.log('✅ OpenAI API查询成功，找到候选词:', suggestions.length);
+                  setPinyinSuggestions(suggestions);
+                  setShowPinyinSuggestions(true);
+                } else {
+                  console.log('⚠️ OpenAI API无结果，隐藏下拉菜单');
+                  setPinyinSuggestions([]);
+                  setShowPinyinSuggestions(false);
+                }
               } else {
-                console.log('⚠️ OpenAI API无结果，隐藏下拉菜单');
+                console.log('⚠️ OpenAI API调用失败，隐藏下拉菜单');
                 setPinyinSuggestions([]);
                 setShowPinyinSuggestions(false);
               }
-            } else {
-              console.log('⚠️ OpenAI API调用失败，隐藏下拉菜单');
+            } catch (error) {
+              console.error('❌ OpenAI API调用失败:', error);
               setPinyinSuggestions([]);
               setShowPinyinSuggestions(false);
             }
-          } catch (error) {
-            console.error('❌ OpenAI API调用失败:', error);
-            setPinyinSuggestions([]);
-            setShowPinyinSuggestions(false);
           }
+        } else if (selectedLanguage === 'JAPANESE') {
+          // 日语目标语言：不显示拼音建议，因为输入的是罗马音而不是拼音
+          console.log('🔍 日语目标语言：不显示拼音建议');
+          setPinyinSuggestions([]);
+          setShowPinyinSuggestions(false);
+        } else {
+          // 其他目标语言：不显示拼音建议
+          console.log('🔍 其他目标语言：不显示拼音建议');
+          setPinyinSuggestions([]);
+          setShowPinyinSuggestions(false);
         }
       } catch (error) {
         console.error('❌ 实时拼音查询失败:', error);
