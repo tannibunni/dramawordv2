@@ -606,9 +606,9 @@ export class JapaneseDictionaryProvider implements LocalDictionaryProvider {
    * 将假名转换为罗马音
    */
   private convertKanaToRomaji(kana: string): string {
-    // 扩展的假名到罗马音转换表
+    // 扩展的假名到罗马音转换表（包括平假名和片假名）
     const kanaToRomaji: { [key: string]: string } = {
-      // 基本假名
+      // 平假名基本假名
       'あ': 'a', 'い': 'i', 'う': 'u', 'え': 'e', 'お': 'o',
       'か': 'ka', 'き': 'ki', 'く': 'ku', 'け': 'ke', 'こ': 'ko',
       'が': 'ga', 'ぎ': 'gi', 'ぐ': 'gu', 'げ': 'ge', 'ご': 'go',
@@ -625,10 +625,32 @@ export class JapaneseDictionaryProvider implements LocalDictionaryProvider {
       'ら': 'ra', 'り': 'ri', 'る': 'ru', 'れ': 're', 'ろ': 'ro',
       'わ': 'wa', 'を': 'wo', 'ん': 'n',
       
-      // 小假名
-      'っ': 'tsu', 'ゃ': 'ya', 'ゅ': 'yu', 'ょ': 'yo',
+      // 片假名基本假名
+      'ア': 'a', 'イ': 'i', 'ウ': 'u', 'エ': 'e', 'オ': 'o',
+      'カ': 'ka', 'キ': 'ki', 'ク': 'ku', 'ケ': 'ke', 'コ': 'ko',
+      'ガ': 'ga', 'ギ': 'gi', 'グ': 'gu', 'ゲ': 'ge', 'ゴ': 'go',
+      'サ': 'sa', 'シ': 'shi', 'ス': 'su', 'セ': 'se', 'ソ': 'so',
+      'ザ': 'za', 'ジ': 'ji', 'ズ': 'zu', 'ゼ': 'ze', 'ゾ': 'zo',
+      'タ': 'ta', 'チ': 'chi', 'ツ': 'tsu', 'テ': 'te', 'ト': 'to',
+      'ダ': 'da', 'ヂ': 'ji', 'ヅ': 'zu', 'デ': 'de', 'ド': 'do',
+      'ナ': 'na', 'ニ': 'ni', 'ヌ': 'nu', 'ネ': 'ne', 'ノ': 'no',
+      'ハ': 'ha', 'ヒ': 'hi', 'フ': 'fu', 'ヘ': 'he', 'ホ': 'ho',
+      'バ': 'ba', 'ビ': 'bi', 'ブ': 'bu', 'ベ': 'be', 'ボ': 'bo',
+      'パ': 'pa', 'ピ': 'pi', 'プ': 'pu', 'ペ': 'pe', 'ポ': 'po',
+      'マ': 'ma', 'ミ': 'mi', 'ム': 'mu', 'メ': 'me', 'モ': 'mo',
+      'ヤ': 'ya', 'ユ': 'yu', 'ヨ': 'yo',
+      'ラ': 'ra', 'リ': 'ri', 'ル': 'ru', 'レ': 're', 'ロ': 'ro',
+      'ワ': 'wa', 'ヲ': 'wo', 'ン': 'n',
       
-      // 浊音和半浊音
+      // 小假名（平假名）
+      'ぁ': 'a', 'ぃ': 'i', 'ぅ': 'u', 'ぇ': 'e', 'ぉ': 'o',
+      'っ': '', 'ゃ': 'ya', 'ゅ': 'yu', 'ょ': 'yo',
+      
+      // 小假名（片假名）
+      'ァ': 'a', 'ィ': 'i', 'ゥ': 'u', 'ェ': 'e', 'ォ': 'o',
+      'ッ': '', 'ャ': 'ya', 'ュ': 'yu', 'ョ': 'yo',
+      
+      // 拗音（平假名）
       'きゃ': 'kya', 'きゅ': 'kyu', 'きょ': 'kyo',
       'ぎゃ': 'gya', 'ぎゅ': 'gyu', 'ぎょ': 'gyo',
       'しゃ': 'sha', 'しゅ': 'shu', 'しょ': 'sho',
@@ -639,29 +661,60 @@ export class JapaneseDictionaryProvider implements LocalDictionaryProvider {
       'びゃ': 'bya', 'びゅ': 'byu', 'びょ': 'byo',
       'ぴゃ': 'pya', 'ぴゅ': 'pyu', 'ぴょ': 'pyo',
       'みゃ': 'mya', 'みゅ': 'myu', 'みょ': 'myo',
-      'りゃ': 'rya', 'りゅ': 'ryu', 'りょ': 'ryo'
+      'りゃ': 'rya', 'りゅ': 'ryu', 'りょ': 'ryo',
+      
+      // 拗音（片假名）
+      'キャ': 'kya', 'キュ': 'kyu', 'キョ': 'kyo',
+      'ギャ': 'gya', 'ギュ': 'gyu', 'ギョ': 'gyo',
+      'シャ': 'sha', 'シュ': 'shu', 'ショ': 'sho',
+      'ジャ': 'ja', 'ジュ': 'ju', 'ジョ': 'jo',
+      'チャ': 'cha', 'チュ': 'chu', 'チョ': 'cho',
+      'ニャ': 'nya', 'ニュ': 'nyu', 'ニョ': 'nyo',
+      'ヒャ': 'hya', 'ヒュ': 'hyu', 'ヒョ': 'hyo',
+      'ビャ': 'bya', 'ビュ': 'byu', 'ビョ': 'byo',
+      'ピャ': 'pya', 'ピュ': 'pyu', 'ピョ': 'pyo',
+      'ミャ': 'mya', 'ミュ': 'myu', 'ミョ': 'myo',
+      'リャ': 'rya', 'リュ': 'ryu', 'リョ': 'ryo',
+      
+      // 长音符号
+      'ー': ''
     };
     
     let romaji = '';
     let i = 0;
+    let lastChar = '';
     
     while (i < kana.length) {
-      // 检查3字符组合（如 きゃ）
+      // 检查3字符组合
       if (i + 2 < kana.length && kanaToRomaji[kana.substring(i, i + 3)]) {
-        romaji += kanaToRomaji[kana.substring(i, i + 3)];
+        const converted = kanaToRomaji[kana.substring(i, i + 3)];
+        romaji += converted;
+        lastChar = converted;
         i += 3;
       }
-      // 检查2字符组合（如 きゃ）
+      // 检查2字符组合
       else if (i + 1 < kana.length && kanaToRomaji[kana.substring(i, i + 2)]) {
-        romaji += kanaToRomaji[kana.substring(i, i + 2)];
+        const converted = kanaToRomaji[kana.substring(i, i + 2)];
+        romaji += converted;
+        lastChar = converted;
         i += 2;
       }
       // 单字符
       else if (kanaToRomaji[kana[i]]) {
-        romaji += kanaToRomaji[kana[i]];
+        const converted = kanaToRomaji[kana[i]];
+        // 处理促音（っ/ッ）：重复下一个辅音
+        if (converted === '' && i + 1 < kana.length) {
+          const nextChar = kana[i + 1];
+          if (kanaToRomaji[nextChar] && kanaToRomaji[nextChar].length > 0) {
+            romaji += kanaToRomaji[nextChar][0]; // 添加下一个字符的首字母
+          }
+        } else {
+          romaji += converted;
+          lastChar = converted;
+        }
         i += 1;
       } else {
-        romaji += kana[i]; // 保持原字符
+        // 未知字符，跳过
         i += 1;
       }
     }
