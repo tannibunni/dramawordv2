@@ -537,6 +537,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         console.log('🔍 目标语言:', selectedLanguage);
         
         // 🔧 根据目标语言选择正确的词典
+        console.log('🔍 当前目标语言:', selectedLanguage);
         if (selectedLanguage === 'CHINESE') {
           // 中文目标语言：使用CC-CEDICT词典查询拼音
           console.log('🔍 中文目标语言：查询CC-CEDICT词典');
@@ -622,10 +623,15 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
           try {
             const japaneseProvider = new JapaneseDictionaryProvider();
             const isAvailable = await japaneseProvider.isAvailable();
+            console.log('🔍 日语词典可用性:', isAvailable);
             
             if (isAvailable) {
               console.log('🔍 日语词典可用，查询罗马音:', pinyinText);
               const romajiResult = await japaneseProvider.lookupByRomaji(pinyinText, 10);
+              console.log('🔍 罗马音查询结果:', {
+                success: romajiResult.success,
+                candidatesCount: romajiResult.candidates?.length || 0
+              });
               
               if (romajiResult.success && romajiResult.candidates && romajiResult.candidates.length > 0) {
                 const suggestions = romajiResult.candidates.map((candidate, index) => {
