@@ -847,8 +847,8 @@ export class EnglishUIEnvironment implements LanguageEnvironment {
         // OpenAI返回的数据已经是WordData格式，直接使用
         const wordData = result.data;
         
-        // 确保audioUrl使用正确的词条而不是整个JSON
-        const audioWord = wordData.word || wordData.correctedWord || input;
+        // 对于翻译查询，使用翻译结果生成TTS；对于其他查询，使用原文
+        const audioWord = wordData.translation || wordData.word || wordData.correctedWord || input;
         // 根据目标语言设置正确的TTS语言
         const ttsLanguage = this.targetLanguage === 'ja' ? 'ja' : 'zh-cn';
         const audioUrl = `https://translate.google.com/translate_tts?ie=UTF-8&tl=${ttsLanguage}&client=tw-ob&q=${encodeURIComponent(audioWord)}`;
