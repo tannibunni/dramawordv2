@@ -8,6 +8,7 @@ import { Audio } from 'expo-av';
 import { SUPPORTED_LANGUAGES } from '../../constants/config';
 import audioService from '../../services/audioService';
 import { t } from '../../constants/translations';
+import { LanguageDisplayStrategyFactory } from './strategies/LanguageDisplayStrategyFactory';
 
 interface WordCardContentProps {
   wordData: WordData;
@@ -210,6 +211,9 @@ const getTranslationSourceText = (source: string, language: string = 'zh-CN'): s
 const WordCardContent: React.FC<WordCardContentProps> = ({ wordData, onPlayAudio, style, scrollable = false, onScroll, showHeader = true }) => {
   const { appLanguage } = useAppLanguage();
   
+  // 获取语言显示策略
+  const displayStrategy = LanguageDisplayStrategyFactory.getStrategy(wordData.language || 'en');
+  
   // 调试信息：显示所有OpenAI返回的字段
   console.log('🔍 WordCardContent渲染数据:', {
     word: wordData.word,
@@ -220,7 +224,8 @@ const WordCardContent: React.FC<WordCardContentProps> = ({ wordData, onPlayAudio
     definitionsCount: wordData.definitions?.length,
     slangMeaning: wordData.slangMeaning,
     phraseExplanation: wordData.phraseExplanation,
-    translationSource: wordData.translationSource
+    translationSource: wordData.translationSource,
+    language: wordData.language
   });
   
   // 检查内容是否有效（不是"无内容"的提示）
@@ -282,9 +287,9 @@ const WordCardContent: React.FC<WordCardContentProps> = ({ wordData, onPlayAudio
             </View>
           )}
           <View style={styles.wordContainer}>
-            <Text style={styles.word} selectable>{wordData.correctedWord || wordData.translation || wordData.word}</Text>
-            {wordData.kana && (
-              <Text style={styles.kana} selectable>{wordData.kana}</Text>
+            <Text style={styles.word} selectable>{displayStrategy.getMainWord(wordData)}</Text>
+            {displayStrategy.shouldShowKana() && displayStrategy.getKanaText(wordData) && (
+              <Text style={styles.kana} selectable>{displayStrategy.getKanaText(wordData)}</Text>
             )}
           </View>
           {/* 候选词选择界面 */}
@@ -334,14 +339,9 @@ const WordCardContent: React.FC<WordCardContentProps> = ({ wordData, onPlayAudio
             </View>
           )}
           {/* 显示音标和拼音 */}
-          {wordData.phonetic && (
+          {displayStrategy.shouldShowPhonetic() && displayStrategy.getPhonetic(wordData) && (
             <Text style={styles.phonetic} selectable>
-              {wordData.phonetic}
-            </Text>
-          )}
-          {wordData.pinyin && wordData.pinyin !== wordData.phonetic && (
-            <Text style={styles.pinyin} selectable>
-              {wordData.pinyin}
+              {displayStrategy.getPhonetic(wordData)}
             </Text>
           )}
           {/* 翻译来源标注 */}
