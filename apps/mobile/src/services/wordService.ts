@@ -1068,8 +1068,9 @@ export class WordService {
         return { success: false, error: '无效的UI语言参数' };
       }
       
-      // 检查缓存
-      const cached = await cacheService.get('chinese', `${word}_${uiLanguage}`);
+      // 检查缓存 - 使用与searchWord一致的缓存键格式
+      const cacheKey = `${word}_zh_${uiLanguage}`;
+      const cached = await cacheService.get(CACHE_KEYS.WORD_DETAIL, cacheKey);
       if (cached) {
         console.log(`✅ 从缓存返回中文词汇: ${word}`);
         return { success: true, data: cached as WordData };
@@ -1089,8 +1090,8 @@ export class WordService {
       console.log(`🔍 API返回结果:`, result);
       
       if (result.success && result.data) {
-        // 缓存结果
-        await cacheService.set('chinese', `${word}_${uiLanguage}`, result.data, { maxAge: 24 * 60 * 60 * 1000 }); // 24小时缓存
+        // 缓存结果 - 使用与searchWord一致的缓存键格式
+        await cacheService.set(CACHE_KEYS.WORD_DETAIL, cacheKey, result.data, { maxAge: 24 * 60 * 60 * 1000 }); // 24小时缓存
         
         console.log(`✅ 查询中文词汇成功: ${word}`);
         return { success: true, data: result.data };
