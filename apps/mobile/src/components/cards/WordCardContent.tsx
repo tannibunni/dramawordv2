@@ -55,6 +55,7 @@ const partOfSpeechMap: Record<string, Record<string, string>> = {
     'determiner': '限定词', 'det.': '限定词', 'DETERMINER': '限定词',
     'prefix': '前缀', 'prefix.': '前缀', 'PREFIX': '前缀',
     'suffix': '后缀', 'suffix.': '后缀', 'SUFFIX': '后缀',
+    'sentence': '句子', 'sent.': '句子', 'SENTENCE': '句子',
     // 韩语词性映射
     '명사': '名词', '명': '名词',
     '동사': '动词', '동': '动词',
@@ -85,6 +86,7 @@ const partOfSpeechMap: Record<string, Record<string, string>> = {
     'determiner': 'Determiner', 'det.': 'Determiner', 'DETERMINER': 'Determiner',
     'prefix': 'Prefix', 'prefix.': 'Prefix', 'PREFIX': 'Prefix',
     'suffix': 'Suffix', 'suffix.': 'Suffix', 'SUFFIX': 'Suffix',
+    'sentence': 'Sentence', 'sent.': 'Sentence', 'SENTENCE': 'Sentence',
     // 韩语词性映射（英文界面）
     '명사': 'Noun', '명': 'Noun',
     '동사': 'Verb', '동': 'Verb',
