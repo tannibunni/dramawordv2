@@ -820,6 +820,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
             timestamp: Date.now(),
             pinyin: suggestion.pinyin,
             englishDefinition: suggestion.english,
+            wordData: searchResult, // 保存完整的词卡数据
           },
           ...filtered
         ];
@@ -1265,6 +1266,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
               timestamp: Date.now(),
               pinyin: pinyin,
               englishDefinition: englishDefinition,
+              wordData: queryResult.data, // 保存完整的词卡数据
             },
             ...filtered
           ];
@@ -1657,6 +1659,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                   word: ambiguousInput,
                   translation: translationResult,
                   timestamp: Date.now(),
+                  wordData: option.data, // 保存完整的词卡数据
                 },
                 ...filtered
               ];
