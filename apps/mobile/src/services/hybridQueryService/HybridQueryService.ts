@@ -78,22 +78,22 @@ export class HybridQueryService {
         }
       }
 
-      // 4. 执行在线翻译查询
-      if (queryStrategy.useOnlineTranslation) {
+      // 4. 先查询CloudWords (优先使用已有数据)
+      try {
+        cloudWordsResult = await this.queryCloudWords(input, targetLanguage, uiLanguage);
+        console.log(`☁️ CloudWords查询结果: ${cloudWordsResult ? '成功' : '失败'}`);
+      } catch (error) {
+        console.error('❌ CloudWords查询失败:', error);
+      }
+
+      // 5. 如果CloudWords没有数据，执行在线翻译查询
+      if (queryStrategy.useOnlineTranslation && !cloudWordsResult) {
         try {
           onlineResult = await this.queryOnlineTranslation(input, uiLanguage, targetLanguage);
           console.log(`🌐 在线翻译查询结果: ${onlineResult.candidates.length} 个候选词`);
         } catch (error) {
           console.error('❌ 在线翻译查询失败:', error);
         }
-      }
-
-      // 5. 先查询CloudWords (优先使用已有数据)
-      try {
-        cloudWordsResult = await this.queryCloudWords(input, targetLanguage, uiLanguage);
-        console.log(`☁️ CloudWords查询结果: ${cloudWordsResult ? '成功' : '失败'}`);
-      } catch (error) {
-        console.error('❌ CloudWords查询失败:', error);
       }
 
       // 6. 决定CloudWords集成策略
@@ -106,13 +106,14 @@ export class HybridQueryService {
 
       console.log(`☁️ CloudWords策略: ${cloudWordsStrategy.mergeStrategy}`);
 
-      // 7. 如果需要OpenAI补充，再次查询
+      // 7. 如果CloudWords没有数据且需要OpenAI，调用OpenAI生成
       if (cloudWordsStrategy.shouldQueryCloudWords && !cloudWordsResult) {
         try {
-          cloudWordsResult = await this.queryCloudWords(input, targetLanguage, uiLanguage);
-          console.log(`🤖 OpenAI补充查询结果: ${cloudWordsResult ? '成功' : '失败'}`);
+          console.log(`🤖 CloudWords无数据，调用OpenAI生成新数据`);
+          cloudWordsResult = await this.generateNewCloudWordsData(input, targetLanguage, uiLanguage);
+          console.log(`🤖 OpenAI生成结果: ${cloudWordsResult ? '成功' : '失败'}`);
         } catch (error) {
-          console.error('❌ OpenAI补充查询失败:', error);
+          console.error('❌ OpenAI生成失败:', error);
         }
       }
 
@@ -362,7 +363,7 @@ export class HybridQueryService {
   }
 
   /**
-   * CloudWords查询 (优先查询已有数据)
+   * CloudWords查询 (只查询已有数据，不自动生成)
    */
   private async queryCloudWords(
     input: string,
@@ -372,16 +373,15 @@ export class HybridQueryService {
     try {
       console.log(`☁️ CloudWords查询: "${input}" (${targetLanguage})`);
       
-      // 1. 先查询CloudWords中是否已有数据
+      // 只查询CloudWords中是否已有数据，不自动生成
       const existingData = await this.queryExistingCloudWords(input, targetLanguage);
       if (existingData) {
         console.log(`✅ 找到CloudWords已有数据: ${existingData.word}`);
         return existingData;
       }
       
-      // 2. 如果没有现有数据，调用OpenAI生成新数据
-      console.log(`🤖 CloudWords无现有数据，调用OpenAI生成`);
-      return await this.generateNewCloudWordsData(input, targetLanguage, uiLanguage);
+      console.log(`⚠️ CloudWords无现有数据`);
+      return null;
       
     } catch (error) {
       console.error('❌ CloudWords查询失败:', error);
