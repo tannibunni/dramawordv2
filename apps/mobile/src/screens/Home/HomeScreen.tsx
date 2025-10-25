@@ -1760,26 +1760,26 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     try {
       console.log('🔍 从历史记录查询词（无缓存）:', searchWord);
       
-      // 直接使用wordService.getChineseWordDetails进行查询
-      // 这会优先从缓存获取，如果没有缓存则调用API
-      const result = await wordService.getChineseWordDetails(searchWord, appLanguage || 'en-US');
+      // 使用统一查询服务处理不同目标语言的查询
+      const targetLanguageCode = SUPPORTED_LANGUAGES[selectedLanguage].code;
+      const queryResult = await unifiedQueryService.query(searchWord, appLanguage || 'en-US', targetLanguageCode);
       
-        if (result.success && result.data) {
-        console.log('✅ 历史记录查询成功:', result.data);
+      if (queryResult.type === 'translation') {
+        console.log('✅ 历史记录查询成功:', queryResult.data);
         
         // 添加候选词选择回调
-          const resultWithCallback = {
-            ...result.data,
-          onCandidateSelect: createCandidateSelectHandler(searchWord, result.data.candidates || [])
+        const resultWithCallback = {
+          ...queryResult.data,
+          onCandidateSelect: createCandidateSelectHandler(searchWord, queryResult.data.candidates || [])
         };
         
-          setSearchResult(resultWithCallback);
+        setSearchResult(resultWithCallback);
         setSearchText('');
         setIsLoading(false);
         return;
-        } else {
+      } else {
         console.log('❌ 历史记录查询失败，显示错误信息');
-          Alert.alert(t('query_failed', appLanguage), t('get_word_detail_failed', appLanguage));
+        Alert.alert(t('query_failed', appLanguage), t('get_word_detail_failed', appLanguage));
       }
     } catch (error) {
       console.error('❌ 历史记录查询失败:', error);
