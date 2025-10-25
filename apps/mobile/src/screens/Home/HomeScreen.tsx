@@ -926,6 +926,12 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       
       const response = await wordService.getRecentWords(page, 30);
       
+      // 调试：检查历史记录是否包含wordData
+      console.log('🔍 加载的历史记录数据:', response.data.map(item => ({
+        word: item.word,
+        hasWordData: !!item.wordData,
+        wordDataKeys: item.wordData ? Object.keys(item.wordData) : []
+      })));
       
       // 前端去重逻辑，确保没有重复单词
       const uniqueWords = response.data.reduce((acc: RecentWord[], current) => {
@@ -1730,6 +1736,11 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   // 点击历史词
   const handleRecentWordPress = async (word: RecentWord) => {
     console.log('🔍 用户点击历史记录词:', word.word);
+    console.log('🔍 历史记录wordData状态:', {
+      hasWordData: !!word.wordData,
+      wordDataKeys: word.wordData ? Object.keys(word.wordData) : [],
+      wordData: word.wordData
+    });
     
     // 新增：如果有 candidates，弹出候选词卡片
     if (word.candidates && word.candidates.length > 0) {
