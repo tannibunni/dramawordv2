@@ -855,7 +855,7 @@ export class EnglishUIEnvironment implements LanguageEnvironment {
         
         return {
           success: true,
-          candidates: wordData.candidates || [wordData.word || wordData.correctedWord],
+          candidates: wordData.candidates || [wordData.translation || wordData.word || wordData.correctedWord],
           source: 'openai',
           confidence: 0.9,
           wordData: {
