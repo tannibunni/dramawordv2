@@ -288,9 +288,6 @@ const WordCardContent: React.FC<WordCardContentProps> = ({ wordData, onPlayAudio
           )}
           <View style={styles.wordContainer}>
             <Text style={styles.word} selectable>{displayStrategy.getMainWord(wordData)}</Text>
-            {displayStrategy.shouldShowKana() && displayStrategy.getKanaText(wordData) && (
-              <Text style={styles.kana} selectable>{displayStrategy.getKanaText(wordData)}</Text>
-            )}
           </View>
           {/* 候选词选择界面 */}
           {wordData.candidates && wordData.candidates.length > 1 && (
@@ -338,7 +335,12 @@ const WordCardContent: React.FC<WordCardContentProps> = ({ wordData, onPlayAudio
               </View>
             </View>
           )}
-          {/* 显示音标 */}
+          {/* 显示假名和音标 */}
+          {displayStrategy.shouldShowKana() && displayStrategy.getKanaText(wordData) && (
+            <Text style={styles.kana} selectable>
+              {displayStrategy.getKanaText(wordData)}
+            </Text>
+          )}
           {displayStrategy.shouldShowPhonetic() && displayStrategy.getPhonetic(wordData) && (
             <Text style={styles.phonetic} selectable>
               {displayStrategy.getPhonetic(wordData)}
