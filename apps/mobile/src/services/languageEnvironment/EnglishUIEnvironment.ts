@@ -821,19 +821,23 @@ export class EnglishUIEnvironment implements LanguageEnvironment {
       console.log(`📝 OpenAI提示词: ${prompt}`);
       
       // 调用OpenAI API
+      const requestBody = {
+        prompt: prompt,
+        model: 'gpt-4o-mini', // 使用最便宜的模型
+        max_tokens: 500, // 增加token限制防止截断
+        inputType: analysis.type, // 传递输入类型
+        uiLanguage: this.uiLanguage, // UI语言
+        targetLanguage: this.targetLanguage // 目标语言
+      };
+      
+      console.log(`📤 发送给后端的请求:`, requestBody);
+      
       const response = await fetch(`${API_BASE_URL}/openai/chat`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          prompt: prompt,
-          model: 'gpt-4o-mini', // 使用最便宜的模型
-          max_tokens: 500, // 增加token限制防止截断
-          inputType: analysis.type, // 传递输入类型
-          uiLanguage: this.uiLanguage, // UI语言
-          targetLanguage: this.targetLanguage // 目标语言
-        })
+        body: JSON.stringify(requestBody)
       });
 
       if (!response.ok) {
