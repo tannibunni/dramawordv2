@@ -236,6 +236,17 @@ const WordCardContent: React.FC<WordCardContentProps> = ({ wordData, onPlayAudio
     language: wordData.language
   });
   
+  // 详细检查definitions中的partOfSpeech
+  if (wordData.definitions && wordData.definitions.length > 0) {
+    wordData.definitions.forEach((def, index) => {
+      console.log(`📝 Definition ${index}:`, {
+        partOfSpeech: def.partOfSpeech,
+        definition: def.definition,
+        examples: def.examples
+      });
+    });
+  }
+  
   // 检查内容是否有效（不是"无内容"的提示）
   const hasValidSlangMeaning = (slang: any) => {
     if (!slang) return false;
