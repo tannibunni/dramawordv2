@@ -2348,6 +2348,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
           onClearHistory={handleClearSearchHistory}
               onPlayAudio={handlePlayAudio}
           onCollect={handleCollect}
+          onPerformSearch={performSearch}
         />
       </KeyboardAvoidingView>
       {/* 收藏弹窗 */}
