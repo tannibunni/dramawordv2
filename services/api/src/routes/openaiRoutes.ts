@@ -133,7 +133,8 @@ router.post('/chat', async (req, res) => {
       throw new Error('No response from OpenAI');
     }
     
-    logger.info(`✅ OpenAI响应: ${responseText.substring(0, 100)}...`);
+    logger.info(`✅ OpenAI响应: ${responseText.substring(0, 200)}...`);
+    logger.info(`🔍 OpenAI完整响应: ${responseText}`);
     
     // 尝试解析JSON响应
     let parsedResponse;
@@ -154,6 +155,7 @@ router.post('/chat', async (req, res) => {
       cleanedResponse = cleanedResponse.replace(/[\x00-\x1F\x7F-\x9F]/g, '');
       
       parsedResponse = JSON.parse(cleanedResponse);
+      logger.info(`📊 解析后的JSON:`, JSON.stringify(parsedResponse, null, 2));
     } catch (parseError) {
       logger.warn(`⚠️ JSON解析失败，返回原始文本:`, parseError);
       // 如果JSON解析失败，返回错误而不是字符串
