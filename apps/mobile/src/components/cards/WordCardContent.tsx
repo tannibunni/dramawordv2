@@ -338,12 +338,7 @@ const WordCardContent: React.FC<WordCardContentProps> = ({ wordData, onPlayAudio
               </View>
             </View>
           )}
-          {/* 显示假名和音标 */}
-          {displayStrategy.shouldShowKana() && displayStrategy.getKanaText(wordData) && (
-            <Text style={styles.kana} selectable>
-              {displayStrategy.getKanaText(wordData)}
-            </Text>
-          )}
+          {/* 显示音标 */}
           {displayStrategy.shouldShowPhonetic() && displayStrategy.getPhonetic(wordData) && (
             <Text style={styles.phonetic} selectable>
               {displayStrategy.getPhonetic(wordData)}
