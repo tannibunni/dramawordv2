@@ -411,6 +411,12 @@ export class WordService {
     englishDefinition?: string, 
     wordData?: WordData
   ): Promise<boolean> {
+    console.log('💾 保存搜索历史:', {
+      word,
+      definition,
+      hasWordData: !!wordData,
+      wordDataKeys: wordData ? Object.keys(wordData) : []
+    });
     // 如果提供了wordData，优先从中提取语音数据
     const finalPhoneticData = wordData ? this.extractPhoneticData(wordData) : phoneticData;
     const token = await getUserToken();
@@ -442,6 +448,7 @@ export class WordService {
         }, ...history.filter(w => w.word !== word)];
         await AsyncStorage.setItem(SEARCH_HISTORY_KEY, JSON.stringify(history));
         console.log('✅ 游客模式：搜索历史已保存到本地');
+        console.log('💾 保存的历史记录包含wordData:', history[0].wordData ? '是' : '否');
         return true;
       } catch (e) {
         console.error('保存本地搜索历史失败:', e);
