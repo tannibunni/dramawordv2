@@ -1310,7 +1310,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
           // 保存搜索历史
           const definition = wordData.definitions[0]?.definition || t('no_definition', appLanguage);
           const phonetic = wordData.phonetic || wordData.kana || '';
-          await wordService.saveSearchHistory(word, definition, undefined, phonetic, definition);
+          await wordService.saveSearchHistory(word, definition, undefined, phonetic, definition, wordData);
           setRecentWords(prev => {
             const filtered = prev.filter(w => w.word !== word);
             return [
@@ -1368,7 +1368,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
             
             // 保存搜索历史
             const definition = result.data.definitions && result.data.definitions[0]?.definition ? result.data.definitions[0].definition : t('no_definition', 'zh-CN');
-            await wordService.saveSearchHistory(word, definition);
+            await wordService.saveSearchHistory(word, definition, undefined, undefined, undefined, result.data);
             setRecentWords(prev => {
               const filtered = prev.filter(w => w.word !== word);
               return [
@@ -1690,7 +1690,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
               const englishDefinition = result.data.definitions?.[0]?.definition || '';
               
               console.log(`💾 保存歧义选择搜索历史: ${ambiguousInput} -> ${translationResult}`);
-              await wordService.saveSearchHistory(ambiguousInput, translationResult, undefined, { pinyin }, englishDefinition);
+              await wordService.saveSearchHistory(ambiguousInput, translationResult, undefined, { pinyin }, englishDefinition, result.data);
               
               // 更新本地历史记录显示
               setRecentWords(prev => {
