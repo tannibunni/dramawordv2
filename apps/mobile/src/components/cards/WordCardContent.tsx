@@ -129,10 +129,15 @@ const specialLabelMap: Record<string, Record<string, string>> = {
 };
 
 const getPartOfSpeechLabel = (pos: string, lang: string) => {
-  if (!pos) return '';
+  if (!pos) {
+    console.log('⚠️ partOfSpeech为空:', { pos, lang });
+    return '';
+  }
   const map = partOfSpeechMap[lang] || partOfSpeechMap['en-US'];
   // 统一小写查找
-  return map[pos.trim().toLowerCase()] || map[pos.trim()] || pos;
+  const result = map[pos.trim().toLowerCase()] || map[pos.trim()] || pos;
+  console.log('🏷️ 词性映射:', { pos, lang, result, map: map[pos.trim().toLowerCase()] });
+  return result;
 };
 
 const getSpecialLabel = (type: 'slang' | 'phrase', lang: string) => {
@@ -224,6 +229,7 @@ const WordCardContent: React.FC<WordCardContentProps> = ({ wordData, onPlayAudio
     pinyin: wordData.pinyin,
     candidates: wordData.candidates,
     definitionsCount: wordData.definitions?.length,
+    definitions: wordData.definitions,
     slangMeaning: wordData.slangMeaning,
     phraseExplanation: wordData.phraseExplanation,
     translationSource: wordData.translationSource,
