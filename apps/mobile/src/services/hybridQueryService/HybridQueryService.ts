@@ -86,30 +86,10 @@ export class HybridQueryService {
         console.error('❌ CloudWords查询失败:', error);
       }
 
-      // 5. 如果CloudWords没有数据，执行在线翻译查询
-      if (queryStrategy.useOnlineTranslation && !cloudWordsResult) {
+      // 5. 如果CloudWords没有数据，直接调用OpenAI生成
+      if (!cloudWordsResult) {
         try {
-          onlineResult = await this.queryOnlineTranslation(input, uiLanguage, targetLanguage);
-          console.log(`🌐 在线翻译查询结果: ${onlineResult.candidates.length} 个候选词`);
-        } catch (error) {
-          console.error('❌ 在线翻译查询失败:', error);
-        }
-      }
-
-      // 6. 决定CloudWords集成策略
-      const cloudWordsStrategy = this.strategy.determineCloudWordsStrategy(
-        localResult, 
-        onlineResult, 
-        cloudWordsResult,
-        targetLanguage
-      );
-
-      console.log(`☁️ CloudWords策略: ${cloudWordsStrategy.mergeStrategy}`);
-
-      // 7. 如果CloudWords没有数据且需要OpenAI，调用OpenAI生成
-      if (cloudWordsStrategy.shouldQueryCloudWords && !cloudWordsResult) {
-        try {
-          console.log(`🤖 CloudWords无数据，调用OpenAI生成新数据`);
+          console.log(`🤖 CloudWords无数据，直接调用OpenAI生成新数据`);
           cloudWordsResult = await this.generateNewCloudWordsData(input, targetLanguage, uiLanguage);
           console.log(`🤖 OpenAI生成结果: ${cloudWordsResult ? '成功' : '失败'}`);
         } catch (error) {
@@ -117,10 +97,20 @@ export class HybridQueryService {
         }
       }
 
+      // 6. 决定CloudWords集成策略
+      const cloudWordsStrategy = this.strategy.determineCloudWordsStrategy(
+        localResult, 
+        null, // 不再使用onlineResult
+        cloudWordsResult,
+        targetLanguage
+      );
+
+      console.log(`☁️ CloudWords策略: ${cloudWordsStrategy.mergeStrategy}`);
+
       // 7. 合并结果
       const mergedResult = this.strategy.mergeResults(
         localResult, 
-        onlineResult, 
+        null, // 不再使用onlineResult
         cloudWordsResult, 
         cloudWordsStrategy
       );

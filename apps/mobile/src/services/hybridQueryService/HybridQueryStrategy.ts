@@ -127,6 +127,11 @@ export class SmartHybridQueryStrategy implements HybridQueryStrategy {
       return this.useOpenAIResult(cloudWordsResult);
     }
     
+    // 如果没有在线翻译结果，使用CloudWords结果
+    if (!onlineResult && cloudWordsResult) {
+      return this.useCloudWordsResult(cloudWordsResult);
+    }
+    
     // 默认使用在线翻译结果（谷歌翻译）
     return this.useOnlineResult(onlineResult);
   }
