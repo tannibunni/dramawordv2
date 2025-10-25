@@ -129,9 +129,9 @@ const specialLabelMap: Record<string, Record<string, string>> = {
 };
 
 const getPartOfSpeechLabel = (pos: string, lang: string) => {
-  if (!pos) {
-    console.log('⚠️ partOfSpeech为空:', { pos, lang });
-    return '';
+  if (!pos || pos.trim() === '') {
+    console.log('⚠️ partOfSpeech为空，不显示词性标签:', { pos, lang });
+    return null; // 返回 null 而不是空字符串
   }
   const map = partOfSpeechMap[lang] || partOfSpeechMap['en-US'];
   // 统一小写查找
@@ -410,9 +410,11 @@ const WordCardContent: React.FC<WordCardContentProps> = ({ wordData, onPlayAudio
         >
           {wordData.definitions?.map((def, idx) => (
             <View key={idx} style={styles.definitionBlock}>
-              <View style={styles.posTagWrapper}>
-                <Text style={styles.posTag}>{getPartOfSpeechLabel(def.partOfSpeech, appLanguage)}</Text>
-              </View>
+              {getPartOfSpeechLabel(def.partOfSpeech, appLanguage) && (
+                <View style={styles.posTagWrapper}>
+                  <Text style={styles.posTag}>{getPartOfSpeechLabel(def.partOfSpeech, appLanguage)}</Text>
+                </View>
+              )}
               <Text style={styles.definition} selectable>{def.definition}</Text>
               {def.examples && def.examples.length > 0 && (
                 <View style={styles.examplesBlock}>
@@ -638,9 +640,11 @@ const WordCardContent: React.FC<WordCardContentProps> = ({ wordData, onPlayAudio
         <View style={{ marginBottom: 8 }}>
           {wordData.definitions?.map((def, idx) => (
             <View key={idx} style={styles.definitionBlock}>
-              <View style={styles.posTagWrapper}>
-                <Text style={styles.posTag}>{getPartOfSpeechLabel(def.partOfSpeech, appLanguage)}</Text>
-              </View>
+              {getPartOfSpeechLabel(def.partOfSpeech, appLanguage) && (
+                <View style={styles.posTagWrapper}>
+                  <Text style={styles.posTag}>{getPartOfSpeechLabel(def.partOfSpeech, appLanguage)}</Text>
+                </View>
+              )}
               <Text style={styles.definition} selectable>{def.definition}</Text>
               {def.examples && def.examples.length > 0 && (
                 <View style={styles.examplesBlock}>
