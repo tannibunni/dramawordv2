@@ -155,6 +155,19 @@ router.post('/chat', async (req, res) => {
       cleanedResponse = cleanedResponse.replace(/[\x00-\x1F\x7F-\x9F]/g, '');
       
       parsedResponse = JSON.parse(cleanedResponse);
+      
+      // 🔧 对于句子翻译，强制设置partOfSpeech为"sentence"
+      if (inputType === 'english_sentence' || inputType === 'japanese_sentence') {
+        if (parsedResponse.definitions && Array.isArray(parsedResponse.definitions)) {
+          parsedResponse.definitions.forEach((def: any) => {
+            if (def && typeof def === 'object') {
+              def.partOfSpeech = 'sentence';
+            }
+          });
+        }
+        logger.info(`🔧 强制设置句子翻译的partOfSpeech为"sentence"`);
+      }
+      
       logger.info(`📊 解析后的JSON:`, JSON.stringify(parsedResponse, null, 2));
     } catch (parseError) {
       logger.warn(`⚠️ JSON解析失败，返回原始文本:`, parseError);
