@@ -188,7 +188,7 @@ const SearchResultsContainer: React.FC<SearchResultsContainerProps> = ({
             const englishDefinition = option.data.definitions?.[0]?.definition || '';
             
             console.log(`💾 保存歧义选择搜索历史: ${ambiguousInput} -> ${translationResult}`);
-            await wordService.saveSearchHistory(ambiguousInput, translationResult, undefined, pinyin, englishDefinition);
+            await wordService.saveSearchHistory(ambiguousInput, translationResult, undefined, { pinyin }, englishDefinition, option.data);
           } catch (error) {
             console.error('保存歧义选择搜索历史失败:', error);
           }

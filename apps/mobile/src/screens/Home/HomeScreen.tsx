@@ -804,7 +804,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         suggestion.chinese, // 使用中文词汇作为搜索词
         suggestion.chinese,
         undefined,
-        suggestion.pinyin,
+        { pinyin: suggestion.pinyin },
         suggestion.english,
         searchResult // 传递完整的词卡数据
       );
@@ -1248,14 +1248,13 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         };
         
         setSearchResult(resultWithCallback);
-        // 翻译情况下保持搜索框显示英文原句，不清空
-        // setSearchText(''); // 注释掉这行，保持显示原输入
+        setSearchText('');
         
         // 保存搜索历史
         const translationResult = queryResult.data.correctedWord || queryResult.data.translation || '';
         const pinyin = queryResult.data.pinyin || queryResult.data.phonetic || '';
         const englishDefinition = queryResult.data.definitions?.[0]?.definition || '';
-        await wordService.saveSearchHistory(translationResult, translationResult, undefined, pinyin, englishDefinition);
+        await wordService.saveSearchHistory(translationResult, translationResult, undefined, { pinyin }, englishDefinition, queryResult.data);
         setRecentWords(prev => {
           const filtered = prev.filter(w => w.word !== translationResult);
           return [
@@ -1647,7 +1646,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
             const englishDefinition = option.data.definitions?.[0]?.definition || '';
             
             console.log(`💾 保存歧义选择搜索历史: ${ambiguousInput} -> ${translationResult}`);
-            await wordService.saveSearchHistory(ambiguousInput, translationResult, undefined, pinyin, englishDefinition);
+            await wordService.saveSearchHistory(ambiguousInput, translationResult, undefined, { pinyin }, englishDefinition, option.data);
             
             // 更新本地历史记录显示
             setRecentWords(prev => {
@@ -1682,7 +1681,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
               const englishDefinition = result.data.definitions?.[0]?.definition || '';
               
               console.log(`💾 保存歧义选择搜索历史: ${ambiguousInput} -> ${translationResult}`);
-              await wordService.saveSearchHistory(ambiguousInput, translationResult, undefined, pinyin, englishDefinition);
+              await wordService.saveSearchHistory(ambiguousInput, translationResult, undefined, { pinyin }, englishDefinition);
               
               // 更新本地历史记录显示
               setRecentWords(prev => {
