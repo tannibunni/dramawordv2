@@ -842,6 +842,7 @@ export class EnglishUIEnvironment implements LanguageEnvironment {
 
       const result = await response.json();
       console.log(`✅ OpenAI响应:`, result);
+      console.log(`🔍 输入类型: ${analysis.type}, 目标语言: ${this.targetLanguage}`);
 
       if (result.success && result.data) {
         // OpenAI返回的数据已经是WordData格式，直接使用

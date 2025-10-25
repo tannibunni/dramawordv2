@@ -157,15 +157,21 @@ router.post('/chat', async (req, res) => {
       parsedResponse = JSON.parse(cleanedResponse);
       
       // 🔧 对于句子翻译，强制设置partOfSpeech为"sentence"
+      logger.info(`🔍 检查输入类型: ${inputType}`);
       if (inputType === 'english_sentence' || inputType === 'japanese_sentence') {
+        logger.info(`🔧 检测到句子翻译，开始修复partOfSpeech`);
         if (parsedResponse.definitions && Array.isArray(parsedResponse.definitions)) {
-          parsedResponse.definitions.forEach((def: any) => {
+          parsedResponse.definitions.forEach((def: any, index: number) => {
             if (def && typeof def === 'object') {
+              logger.info(`🔧 修复定义 ${index}: ${JSON.stringify(def)}`);
               def.partOfSpeech = 'sentence';
+              logger.info(`🔧 修复后: ${JSON.stringify(def)}`);
             }
           });
         }
-        logger.info(`🔧 强制设置句子翻译的partOfSpeech为"sentence"`);
+        logger.info(`🔧 强制设置句子翻译的partOfSpeech为"sentence"完成`);
+      } else {
+        logger.info(`⚠️ 输入类型不是句子翻译: ${inputType}`);
       }
       
       logger.info(`📊 解析后的JSON:`, JSON.stringify(parsedResponse, null, 2));
