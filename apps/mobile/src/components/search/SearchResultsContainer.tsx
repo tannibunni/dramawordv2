@@ -422,6 +422,32 @@ const SearchResultsContainer: React.FC<SearchResultsContainerProps> = ({
     );
   }
 
+  // 如果有搜索文本但没有候选词，显示在线查询提示
+  if (searchText && searchText.trim().length > 0 && !isLoading) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+        <Ionicons name="search-outline" size={48} color="#007AFF" style={{ marginBottom: 16 }} />
+        <Text style={{ fontSize: 18, fontWeight: '600', color: '#333', marginBottom: 8, textAlign: 'center' }}>
+          {appLanguage === 'zh-CN' ? '未找到本地候选词' : 'No local candidates found'}
+        </Text>
+        <Text style={{ fontSize: 14, color: '#666', textAlign: 'center', marginBottom: 20 }}>
+          {appLanguage === 'zh-CN' ? '点击搜索按钮进行在线查询' : 'Tap the search button for online query'}
+        </Text>
+        <View style={{ 
+          backgroundColor: '#007AFF', 
+          paddingHorizontal: 16, 
+          paddingVertical: 8, 
+          borderRadius: 8,
+          opacity: 0.8
+        }}>
+          <Text style={{ color: 'white', fontSize: 14, fontWeight: '500' }}>
+            {appLanguage === 'zh-CN' ? '点击搜索' : 'Tap to Search'}
+          </Text>
+        </View>
+      </View>
+    );
+  }
+
   // 默认显示历史记录
   return (
     <RecentWordsSection
