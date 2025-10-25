@@ -1248,7 +1248,8 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         };
         
         setSearchResult(resultWithCallback);
-        setSearchText('');
+        // 翻译情况下保持搜索框显示英文原句，不清空
+        // setSearchText(''); // 注释掉这行，保持显示原输入
         
         // 保存搜索历史
         const translationResult = queryResult.data.correctedWord || queryResult.data.translation || '';
