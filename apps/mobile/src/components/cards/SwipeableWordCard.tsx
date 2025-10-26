@@ -66,8 +66,7 @@ const SwipeableWordCard: React.FC<SwipeableWordCardProps> = ({
 
   return (
     <View style={styles.container}>
-        <View style={styles.card}>
-        
+      <View style={styles.card}>
         {/* 内容区域 */}
         <View style={styles.contentSection}>
           {expanded ? (
@@ -111,15 +110,17 @@ const SwipeableWordCard: React.FC<SwipeableWordCardProps> = ({
           )}
         </View>
         
-        
-      </View>
-        {/* 滑动提示区域 */}
+        {/* 滑动提示区域 - 移到卡片内部底部 */}
         <View style={styles.swipeHintsContainer}>
-          <Text style={styles.swipeHintLeft}>←左滑忘记</Text>
-          <Text style={styles.swipeHintRight}>右划记住→</Text>
+          <Text style={styles.swipeHintLeft}>
+            {appLanguage === 'zh-CN' ? '← 左滑忘记' : '← Swipe left to forget'}
+          </Text>
+          <Text style={styles.swipeHintRight}>
+            {appLanguage === 'zh-CN' ? '右滑记住 →' : 'Swipe right to remember →'}
+          </Text>
         </View>
       </View>
-    
+    </View>
   );
 };
 
@@ -138,12 +139,13 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background.secondary,
     borderRadius: 20,
     padding: 32, // 减少padding从60到32
+    paddingBottom: 60, // 增加底部padding为提示留出空间
     shadowColor: colors.neutral[900],
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.15,
     shadowRadius: 16,
     elevation: 8,
-    // 移除 justifyContent: 'space-between', // 避免空间分布问题
+    position: 'relative', // 确保绝对定位的提示相对于卡片定位
   },
   wordSection: {
     alignItems: 'center',
@@ -206,28 +208,30 @@ const styles = StyleSheet.create({
     paddingBottom: 20, // 减少底部padding，因为移除了originSection
   },
   swipeHintsContainer: {
+    position: 'absolute',
+    bottom: 16,
+    left: 16,
+    right: 16,
     flexDirection: 'row',
     justifyContent: 'space-between',
-    width: '100%',
-    paddingHorizontal: 20,
-    marginTop: 20, // 从 32 减少到 20，减少底部空白
+    alignItems: 'center',
   },
   swipeHintLeft: {
-    fontSize: 13,
+    fontSize: 12,
     color: colors.text.tertiary,
     fontStyle: 'italic',
-    backgroundColor: colors.background.tertiary,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    backgroundColor: 'rgba(0, 0, 0, 0.05)',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
     borderRadius: 12,
   },
   swipeHintRight: {
-    fontSize: 13,
+    fontSize: 12,
     color: colors.text.tertiary,
     fontStyle: 'italic',
-    backgroundColor: colors.background.tertiary,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    backgroundColor: 'rgba(0, 0, 0, 0.05)',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
     borderRadius: 12,
   },
 });
