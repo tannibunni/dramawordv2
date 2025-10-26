@@ -113,10 +113,10 @@ const SwipeableWordCard: React.FC<SwipeableWordCardProps> = ({
         {/* 滑动提示区域 - 移到卡片内部底部 */}
         <View style={styles.swipeHintsContainer}>
           <Text style={styles.swipeHintLeft}>
-            {appLanguage === 'zh-CN' ? '← 左滑忘记' : '← Swipe left to forget'}
+            {appLanguage === 'zh-CN' ? '← 忘记' : '← Forget'}
           </Text>
           <Text style={styles.swipeHintRight}>
-            {appLanguage === 'zh-CN' ? '右滑记住 →' : 'Swipe right to remember →'}
+            {appLanguage === 'zh-CN' ? '记住 →' : 'Remember →'}
           </Text>
         </View>
       </View>
@@ -219,8 +219,8 @@ const styles = StyleSheet.create({
   swipeHintLeft: {
     fontSize: 12,
     color: colors.text.tertiary,
-    fontStyle: 'italic',
-    backgroundColor: 'rgba(0, 0, 0, 0.05)',
+    fontStyle: 'bold',
+   
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 12,
@@ -228,8 +228,8 @@ const styles = StyleSheet.create({
   swipeHintRight: {
     fontSize: 12,
     color: colors.text.tertiary,
-    fontStyle: 'italic',
-    backgroundColor: 'rgba(0, 0, 0, 0.05)',
+    fontStyle: 'bold',
+    
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 12,
