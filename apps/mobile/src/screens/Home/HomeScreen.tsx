@@ -1781,6 +1781,29 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       if (queryResult.type === 'translation') {
         console.log('✅ 历史记录查询成功:', queryResult.data);
         
+        // 保存查询结果到历史记录，更新wordData缓存
+        const translationResult = queryResult.data.correctedWord || queryResult.data.translation || searchWord;
+        const pinyin = queryResult.data.pinyin || queryResult.data.phonetic || '';
+        const englishDefinition = queryResult.data.definitions?.[0]?.definition || '';
+        await wordService.saveSearchHistory(translationResult, translationResult, undefined, { pinyin }, englishDefinition, queryResult.data);
+        
+        // 更新本地历史记录状态，包含wordData
+        setRecentWords(prev => {
+          const filtered = prev.filter(w => w.word !== translationResult);
+          return [
+            {
+              id: Date.now().toString(),
+              word: translationResult,
+              translation: translationResult,
+              timestamp: Date.now(),
+              pinyin: pinyin,
+              englishDefinition: englishDefinition,
+              wordData: queryResult.data, // 保存完整的词卡数据
+            },
+            ...filtered
+          ];
+        });
+        
         // 添加候选词选择回调
         const resultWithCallback = {
           ...queryResult.data,
