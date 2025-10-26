@@ -800,13 +800,16 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     
     // 保存到搜索历史
     try {
+      // 使用result.data而不是searchResult，因为setSearchResult是异步的
+      const wordDataToSave = result?.success && result.data ? result.data : null;
+      
       await wordService.saveSearchHistory(
         suggestion.chinese, // 使用中文词汇作为搜索词
         suggestion.chinese,
         undefined,
         { pinyin: suggestion.pinyin },
         suggestion.english,
-        searchResult // 传递完整的词卡数据
+        wordDataToSave // 传递完整的词卡数据
       );
       
       // 更新本地历史记录显示
@@ -820,7 +823,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
             timestamp: Date.now(),
             pinyin: suggestion.pinyin,
             englishDefinition: suggestion.english,
-            wordData: searchResult, // 保存完整的词卡数据
+            wordData: wordDataToSave, // 保存完整的词卡数据
           },
           ...filtered
         ];
