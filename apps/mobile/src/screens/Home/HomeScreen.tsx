@@ -2144,7 +2144,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
               fontSize: 14,
               color: colors.text.secondary,
             }}>
-              {downloadProgress}%
+              {Math.round(downloadProgress)}%
             </Text>
           </View>
         </View>
@@ -2196,7 +2196,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
               fontSize: 14,
               color: colors.text.secondary,
             }}>
-              {jmdictDownloadProgress}%
+              {Math.round(jmdictDownloadProgress)}%
             </Text>
           </View>
         </View>
