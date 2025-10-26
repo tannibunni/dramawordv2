@@ -697,11 +697,13 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     setIsLoading(true);
     setSearchResult(null);
     
+    // 声明result变量在try块外部，以便在保存历史记录时使用
+    let result: any = null;
+    
     try {
       console.log('🔍 开始完整的中文词汇查询流程:', suggestion.chinese);
       
       // 根据目标语言选择正确的查询方法
-      let result;
       if (selectedLanguage === 'CHINESE') {
         // 中文目标语言：使用中文词汇API
         result = await wordService.getChineseWordDetails(suggestion.chinese, appLanguage || 'en-US');
