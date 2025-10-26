@@ -630,10 +630,8 @@ const VocabularyScreen: React.FC = () => {
           setFilterLanguageOptions(options);
           console.log('[VocabularyScreen] 加载的学习语言选项:', options);
           
-          // 自动选择第一个语言作为默认筛选语言
-          if (options.length > 0 && !selectedFilterLanguage) {
-            setSelectedFilterLanguage(options[0].code);
-          }
+          // 默认不选择任何语言（显示全部）
+          // 用户可以手动选择特定语言进行筛选
         }
       } catch (error) {
         console.error('[VocabularyScreen] 加载学习语言失败:', error);
@@ -748,6 +746,53 @@ const VocabularyScreen: React.FC = () => {
         </View>
       ) : (
         <View style={styles.listSection}>
+          {/* 语言筛选器 - 始终显示在顶部 */}
+          <View style={styles.languageFilterSliderWrapper}>
+            <ScrollView 
+              horizontal 
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.languageFilterScrollContent}
+            >
+              {/* All 标签 */}
+              <TouchableOpacity
+                style={[
+                  styles.languageFilterSliderButton,
+                  !selectedFilterLanguage && styles.languageFilterSliderButtonActive
+                ]}
+                onPress={() => setSelectedFilterLanguage('')}
+              >
+                <Text style={styles.languageFilterSliderFlag}>🌐</Text>
+                <Text style={[
+                  styles.languageFilterSliderText,
+                  !selectedFilterLanguage && styles.languageFilterSliderTextActive
+                ]}>
+                  {appLanguage === 'zh-CN' ? '全部' : 'All'}
+                </Text>
+              </TouchableOpacity>
+              
+              {/* 各语言标签 */}
+              {filterLanguageOptions.map((lang, index) => (
+                <TouchableOpacity
+                  key={`${lang.code}-${index}`}
+                  style={[
+                    styles.languageFilterSliderButton,
+                    selectedFilterLanguage === lang.code && styles.languageFilterSliderButtonActive
+                  ]}
+                  onPress={() => setSelectedFilterLanguage(lang.code)}
+                >
+                  <Text style={styles.languageFilterSliderFlag}>{lang.flag}</Text>
+                  <Text style={[
+                    styles.languageFilterSliderText,
+                    selectedFilterLanguage === lang.code && styles.languageFilterSliderTextActive
+                  ]}>
+                    {appLanguage === 'zh-CN' ? lang.name : lang.nativeName}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+          
+          {/* 搜索框 */}
           <View style={[
             styles.searchContainer,
             !isSearchExpanded && styles.searchContainerInactive
@@ -768,10 +813,6 @@ const VocabularyScreen: React.FC = () => {
                   onPress={() => {
                     setIsSearchExpanded(false);
                     setSearchText('');
-                    // 重置为第一个语言选项
-                    if (filterLanguageOptions.length > 0) {
-                      setSelectedFilterLanguage(filterLanguageOptions[0].code);
-                    }
                   }}
                   style={styles.searchCloseBtn}
                 >
@@ -792,36 +833,6 @@ const VocabularyScreen: React.FC = () => {
               </View>
             )}
           </View>
-          
-          {/* 语言筛选器 - 只在搜索展开后显示 */}
-          {isSearchExpanded && (
-            <View style={styles.languageFilterSliderWrapper}>
-              <ScrollView 
-                horizontal 
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.languageFilterScrollContent}
-              >
-                {filterLanguageOptions.map((lang, index) => (
-                  <TouchableOpacity
-                    key={`${lang.code}-${index}`}
-                    style={[
-                      styles.languageFilterSliderButton,
-                      selectedFilterLanguage === lang.code && styles.languageFilterSliderButtonActive
-                    ]}
-                    onPress={() => setSelectedFilterLanguage(lang.code)}
-                  >
-                    <Text style={styles.languageFilterSliderFlag}>{lang.flag}</Text>
-                    <Text style={[
-                      styles.languageFilterSliderText,
-                      selectedFilterLanguage === lang.code && styles.languageFilterSliderTextActive
-                    ]}>
-                      {appLanguage === 'zh-CN' ? lang.name : lang.nativeName}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-            </View>
-          )}
           <WordList
             words={filteredWords}
             onWordPress={(word) => { 
